@@ -31,7 +31,10 @@ export default function RootLayout({
 			<body
 				className={`${geistSans.variable} ${geistMono.variable} antialiased`}
 			>
-				<ClerkProvider publishableKey={env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}>
+				<ClerkProvider
+					publishableKey={env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+					afterSignOutUrl="/"
+				>
 					<ConvexClientProvider>
 						<ThemeProvider>{children}</ThemeProvider>
 					</ConvexClientProvider>

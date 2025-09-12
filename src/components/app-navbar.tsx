@@ -218,12 +218,12 @@ function AppNavBar() {
 						{/* Clerk Authentication Buttons */}
 						<div className="hidden sm:flex items-center gap-3">
 							<ThemeSwitcher />
-							<SignInButton mode="modal">
+							<SignInButton mode="modal" forceRedirectUrl="/home">
 								<Button variant="ghost" size="sm">
 									Sign In
 								</Button>
 							</SignInButton>
-							<SignUpButton mode="modal">
+							<SignUpButton mode="modal" forceRedirectUrl="/home">
 								<Button variant="glass" size="sm">
 									Sign Up
 								</Button>
