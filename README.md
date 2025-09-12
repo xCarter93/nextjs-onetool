@@ -1,36 +1,143 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# OneTool
+
+<div align="center">
+  <img src="./public/OneTool.png" alt="OneTool Logo" width="200" height="200" />
+</div>
+
+## Overview
+
+OneTool is a lightweight, modern alternative to Jobber for small field-service businesses (cleaning, landscaping, HVAC, trades). The product focuses on **clarity, speed, and essential workflows** without the bloat. MVP delivers: client & project tracking, quoting (with PDF + e-signature), task scheduling, invoicing & payments, notifications, and a concise insights dashboard.
+
+### Key Features
+
+- **Client Management**: Create, track, and manage client relationships with consent flags
+- **Project Tracking**: Link projects to clients with status tracking and task management
+- **Quote Management**: Create professional quotes with line items, PDF generation, and e-signature
+- **Task Scheduling**: Schedule and track tasks with reminders and calendar integration
+- **Invoice & Payments**: Generate invoices from quotes with Stripe payment integration
+- **Real-time Dashboard**: Key metrics and insights for business performance
+- **Multi-tenant Architecture**: Organization-scoped data with Clerk authentication
+
+## Tech Stack
+
+- **Frontend**: Next.js 15.5 (App Router, Turbopack), Tailwind CSS v4, shadcn/ui components
+- **Backend**: Convex (real-time database and functions)
+- **Authentication**: Clerk (auth + organizations + Stripe billing)
+- **Payments**: Stripe Checkout + Webhooks
+- **Email**: Resend
+- **SMS**: Twilio (basic reminders)
+- **Analytics**: PostHog
+- **Hosting**: Vercel (web), Convex Cloud (backend)
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 18+
+- pnpm (recommended) or npm/yarn
+- Convex account and deployment
+- Clerk account for authentication
+
+### Installation
+
+1. Clone the repository:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+git clone <repository-url>
+cd nextjs-onetool
+```
+
+2. Install dependencies:
+
+```bash
+pnpm install
+```
+
+3. Set up environment variables in `.env.local`:
+
+```bash
+# Convex
+CONVEX_DEPLOYMENT=your-convex-deployment
+NEXT_PUBLIC_CONVEX_URL=your-convex-url
+
+# Clerk (when implemented)
+# NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your-clerk-key
+# CLERK_SECRET_KEY=your-clerk-secret
+
+# Add other service keys as needed
+```
+
+4. Run the development server:
+
+```bash
 pnpm dev
-# or
-bun dev
+```
+
+5. Start Convex development server in a separate terminal:
+
+```bash
+npx convex dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Project Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+├── src/
+│   ├── app/                 # Next.js App Router pages
+│   ├── components/          # React components
+│   │   ├── ui/             # shadcn/ui components
+│   │   └── ...             # Custom components
+│   ├── lib/                # Utilities and configurations
+│   ├── hooks/              # Custom React hooks
+│   ├── providers/          # Context providers
+│   └── env.ts              # Environment variables
+├── convex/                 # Convex backend functions and schema
+├── public/                 # Static assets
+└── CLAUDE.md              # Development guidance
+```
 
-## Learn More
+## Development Commands
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+# Install dependencies
+pnpm install
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# Run development server with Turbopack
+pnpm dev
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+# Build for production with Turbopack
+pnpm build
 
-## Deploy on Vercel
+# Start production server
+pnpm start
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+# Run linter
+pnpm lint
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+# Convex development (run in separate terminal)
+npx convex dev
+```
+
+## Roadmap
+
+This project follows a 6-week MVP timeline:
+
+- **Week 1**: Project setup, authentication, basic UI ✅
+- **Week 2**: Organization setup, client management
+- **Week 3**: Projects, tasks, and scheduling
+- **Week 4**: Quotes with PDF generation and e-signature
+- **Week 5**: Invoices and Stripe payment integration
+- **Week 6**: Dashboard, notifications, and final polish
+
+## Contributing
+
+1. Check the [TODO.md](TODO.md) for current development tasks
+2. Review the [PRD.md](PRD.md) for detailed requirements
+3. Follow the development guidelines in [CLAUDE.md](CLAUDE.md)
+4. Create feature branches and submit pull requests
+
+## License
+
+This project is private and proprietary to OneTool.
