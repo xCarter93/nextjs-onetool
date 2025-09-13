@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { usePathname } from "next/navigation";
 import {
 	AudioWaveform,
 	Command,
@@ -53,7 +54,6 @@ const data = {
 			title: "Home",
 			url: "/home",
 			icon: Home,
-			isActive: true,
 		},
 		{
 			title: "Clients",
@@ -84,13 +84,53 @@ const data = {
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+	const pathname = usePathname();
+
+	// Function to determine if a navigation item should be active
+	const isNavItemActive = (navUrl: string, title: string) => {
+		// Settings should only be active for exact match
+		if (title === "Settings") {
+			return pathname === navUrl;
+		}
+
+		// For other items, check both plural and singular forms
+		if (title === "Clients") {
+			return pathname.startsWith("/clients") || pathname.startsWith("/client");
+		}
+
+		if (title === "Projects") {
+			return (
+				pathname.startsWith("/projects") || pathname.startsWith("/project")
+			);
+		}
+
+		if (title === "Quotes") {
+			return pathname.startsWith("/quotes") || pathname.startsWith("/quote");
+		}
+
+		if (title === "Invoices") {
+			return (
+				pathname.startsWith("/invoices") || pathname.startsWith("/invoice")
+			);
+		}
+
+		// Fallback for other items (like Home)
+		return pathname.startsWith(navUrl);
+	};
+
+	// Create navigation items with dynamic isActive property
+	const navigationItems = data.navMain.map((item) => ({
+		...item,
+		isActive: isNavItemActive(item.url, item.title),
+	}));
+
 	return (
 		<Sidebar collapsible="icon" {...props}>
 			<SidebarHeader>
 				<TeamSwitcher teams={data.teams} />
 			</SidebarHeader>
 			<SidebarContent>
-				<NavMain items={data.navMain} />
+				<NavMain items={navigationItems} />
 			</SidebarContent>
 			<SidebarFooter>
 				<NavUser />

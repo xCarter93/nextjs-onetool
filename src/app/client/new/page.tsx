@@ -22,7 +22,7 @@ export default function NewClientPage() {
 				{/* Add bottom padding for sticky footer */}
 				<OnboardingForm
 					title="New Client Onboarding"
-					subtitle="Let's gather the essential information to establish your client relationship."
+					subtitle="Let's gather comprehensive information to establish a complete client profile with all necessary details for effective relationship management."
 				/>
 			</div>
 			<StickyFormFooter
