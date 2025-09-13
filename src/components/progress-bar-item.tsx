@@ -1,4 +1,5 @@
 import { CheckIcon } from "@heroicons/react/24/solid";
+import Link from "next/link";
 
 export interface ProgressStep {
 	id: string;
@@ -33,7 +34,7 @@ export default function ProgressBarItem({
 				)}
 			>
 				{step.status === "complete" ? (
-					<a href={step.href || "#"} className="group">
+					<Link href={step.href || "#"} className="group">
 						<span
 							aria-hidden="true"
 							className="absolute top-0 left-0 h-full w-1.5 bg-transparent group-hover:bg-primary/30 lg:top-auto lg:bottom-0 lg:h-1.5 lg:w-full transition-colors duration-200"
@@ -61,9 +62,9 @@ export default function ProgressBarItem({
 								</span>
 							</span>
 						</span>
-					</a>
+					</Link>
 				) : step.status === "current" ? (
-					<a href={step.href || "#"} aria-current="step">
+					<Link href={step.href || "#"} aria-current="step">
 						<span
 							aria-hidden="true"
 							className="absolute top-0 left-0 h-full w-1.5 bg-gradient-to-b from-primary to-primary/80 lg:top-auto lg:bottom-0 lg:h-1.5 lg:w-full shadow-sm"
@@ -90,9 +91,9 @@ export default function ProgressBarItem({
 								</span>
 							</span>
 						</span>
-					</a>
+					</Link>
 				) : (
-					<a href={step.href || "#"} className="group">
+					<Link href={step.href || "#"} className="group">
 						<span
 							aria-hidden="true"
 							className="absolute top-0 left-0 h-full w-1.5 bg-transparent group-hover:bg-muted-foreground/20 lg:top-auto lg:bottom-0 lg:h-1.5 lg:w-full transition-colors duration-200"
@@ -119,7 +120,7 @@ export default function ProgressBarItem({
 								</span>
 							</span>
 						</span>
-					</a>
+					</Link>
 				)}
 
 				{stepIdx !== 0 ? (

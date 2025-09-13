@@ -12,8 +12,8 @@ export function OnboardingForm({
 	subtitle = "Let's gather the essential information to get started.",
 }: OnboardingFormProps) {
 	return (
-		<div className="mx-auto max-w-full px-6 lg:px-12 xl:px-16">
-			<div className="mx-auto max-w-6xl pt-8">
+		<div className="w-full px-6">
+			<div className="w-full pt-8 pb-24">
 				{/* Header */}
 				<div className="mb-8">
 					<h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">

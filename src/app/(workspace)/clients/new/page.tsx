@@ -1,6 +1,5 @@
 "use client";
 
-import { SidebarWithHeader } from "@/components/sidebar-with-header";
 import { OnboardingForm } from "@/components/onboarding-form";
 import { StickyFormFooter } from "@/components/sticky-form-footer";
 
@@ -16,21 +15,18 @@ export default function NewClientPage() {
 	};
 
 	return (
-		<SidebarWithHeader>
-			<div className="min-h-screen pb-20">
-				{" "}
-				{/* Add bottom padding for sticky footer */}
-				<OnboardingForm
-					title="New Client Onboarding"
-					subtitle="Let's gather comprehensive information to establish a complete client profile with all necessary details for effective relationship management."
-				/>
-			</div>
+		<div className="min-h-screen">
+			{/* Add bottom padding for sticky footer */}
+			<OnboardingForm
+				title="New Client Onboarding"
+				subtitle="Let's gather comprehensive information to establish a complete client profile with all necessary details for effective relationship management."
+			/>
 			<StickyFormFooter
 				onCancel={handleCancel}
 				onSave={handleSave}
 				cancelText="Cancel"
 				saveText="Create Client"
 			/>
-		</SidebarWithHeader>
+		</div>
 	);
 }

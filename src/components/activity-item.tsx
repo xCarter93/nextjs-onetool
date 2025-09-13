@@ -1,7 +1,11 @@
-import { Fragment } from "react";
-import Link from "next/link";
-// Icons no longer needed - using initials instead
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import {
+	CheckCircleIcon,
+	UserIcon,
+	BriefcaseIcon,
+	DocumentTextIcon,
+	CurrencyDollarIcon,
+} from "@heroicons/react/24/solid";
 
 interface Person {
 	name: string;
@@ -154,519 +158,124 @@ function getInitials(name: string): string {
 		.slice(0, 2);
 }
 
+function iconForActivity(activity: ActivityItemType) {
+	switch (activity.type) {
+		case "client_created":
+		case "client_updated":
+			return UserIcon;
+		case "project_created":
+		case "project_updated":
+			return BriefcaseIcon;
+		case "quote_created":
+		case "quote_sent":
+		case "quote_approved":
+			return DocumentTextIcon;
+		case "invoice_sent":
+		case "invoice_paid":
+			return CurrencyDollarIcon;
+		default:
+			return null;
+	}
+}
+
+function describeEvent(activity: ActivityItemType): string {
+	switch (activity.type) {
+		case "client_created":
+			return "created the client.";
+		case "project_created":
+			return "created the project.";
+		case "project_updated":
+			return `updated the project${"status" in activity && (activity as ProjectUpdatedActivity).status ? ` to ${(activity as ProjectUpdatedActivity).status}.` : "."}`;
+		case "client_updated":
+			return "updated client details.";
+		case "quote_created":
+			return "created a quote.";
+		case "quote_sent":
+			return "sent the quote.";
+		case "quote_approved":
+			return "approved the quote.";
+		case "invoice_sent":
+			return "sent the invoice.";
+		case "invoice_paid":
+			return "paid the invoice.";
+		case "assignment":
+			return "made an assignment.";
+		case "tags":
+			return "added tags.";
+		default:
+			return "performed an action.";
+	}
+}
+
 export default function ActivityItem({ activity, isLast }: ActivityItemProps) {
+	const Icon = iconForActivity(activity);
 	return (
-		<li>
-			<div className="relative pb-8">
-				{!isLast ? (
-					<span
-						aria-hidden="true"
-						className="absolute top-5 left-5 -ml-px h-full w-1.5 bg-border/80 dark:bg-border/80"
-					/>
-				) : null}
-				<div className="relative flex items-start space-x-3">
-					{activity.type === "comment" ? (
-						<CommentActivityItem activity={activity} />
-					) : activity.type === "assignment" ? (
-						<AssignmentActivityItem activity={activity} />
-					) : activity.type === "tags" ? (
-						<TagsActivityItem activity={activity} />
-					) : activity.type === "client_created" ? (
-						<ClientCreatedActivityItem activity={activity} />
-					) : activity.type === "project_created" ? (
-						<ProjectCreatedActivityItem activity={activity} />
-					) : activity.type === "project_updated" ? (
-						<ProjectUpdatedActivityItem activity={activity} />
-					) : activity.type === "client_updated" ? (
-						<ClientUpdatedActivityItem activity={activity} />
-					) : activity.type === "quote_created" ? (
-						<QuoteCreatedActivityItem activity={activity} />
-					) : activity.type === "quote_approved" ? (
-						<QuoteApprovedActivityItem activity={activity} />
-					) : activity.type === "quote_sent" ? (
-						<QuoteSentActivityItem activity={activity} />
-					) : activity.type === "invoice_sent" ? (
-						<InvoiceSentActivityItem activity={activity} />
-					) : activity.type === "invoice_paid" ? (
-						<InvoicePaidActivityItem activity={activity} />
-					) : null}
-				</div>
+		<li className="relative flex gap-x-4 items-center">
+			<div
+				className={classNames(
+					isLast ? "h-6" : "-bottom-6",
+					"absolute left-0 top-0 flex w-6 justify-center"
+				)}
+			>
+				<div className="w-px bg-border/70 dark:bg-border/60" />
 			</div>
-		</li>
-	);
-}
 
-function CommentActivityItem({ activity }: { activity: CommentActivity }) {
-	return (
-		<>
-			<div className="relative flex-shrink-0">
-				<Avatar className="size-10">
-					<AvatarImage src={activity.imageUrl} alt={activity.person.name} />
-					<AvatarFallback className="bg-muted text-muted-foreground">
-						{getInitials(activity.person.name)}
-					</AvatarFallback>
-				</Avatar>
-			</div>
-			<div className="min-w-0 flex-1">
-				<div>
-					<div className="text-sm">
-						<Link
-							href={activity.person.href}
-							className="font-medium text-foreground hover:text-muted-foreground"
-						>
-							{activity.person.name}
-						</Link>
+			{activity.type === "comment" ? (
+				<>
+					<Avatar className="relative size-6 flex-none">
+						<AvatarImage
+							src={(activity as CommentActivity).imageUrl}
+							alt={(activity as CommentActivity).person.name}
+						/>
+						<AvatarFallback className="bg-muted text-muted-foreground">
+							{getInitials((activity as CommentActivity).person.name)}
+						</AvatarFallback>
+					</Avatar>
+					<div className="flex-auto rounded-md p-3 ring-1 ring-inset ring-border/40 align-middle">
+						<div className="flex justify-between gap-x-4">
+							<div className="py-0.5 text-xs text-muted-foreground">
+								<span className="font-medium text-foreground">
+									{(activity as CommentActivity).person.name}
+								</span>{" "}
+								commented
+							</div>
+							<span className="flex-none py-0.5 text-xs text-muted-foreground">
+								{(activity as CommentActivity).date}
+							</span>
+						</div>
+						<p className="text-sm text-muted-foreground">
+							{(activity as CommentActivity).comment}
+						</p>
 					</div>
-					<p className="mt-0.5 text-sm text-muted-foreground">
-						Commented {activity.date}
-					</p>
-				</div>
-				<div className="mt-2 text-sm text-foreground">
-					<p>{activity.comment}</p>
-				</div>
-			</div>
-		</>
-	);
-}
-
-function AssignmentActivityItem({
-	activity,
-}: {
-	activity: AssignmentActivity;
-}) {
-	return (
-		<>
-			<div className="flex-shrink-0">
-				<div className="relative px-1">
-					<Avatar className="size-8">
-						<AvatarFallback className="bg-muted text-muted-foreground">
-							{getInitials(activity.person.name)}
-						</AvatarFallback>
-					</Avatar>
-				</div>
-			</div>
-			<div className="min-w-0 flex-1 py-1.5">
-				<div className="text-sm text-muted-foreground">
-					<Link
-						href={activity.person.href}
-						className="font-medium text-foreground hover:text-muted-foreground"
-					>
-						{activity.person.name}
-					</Link>{" "}
-					assigned{" "}
-					<Link
-						href={activity.assigned.href}
-						className="font-medium text-foreground hover:text-muted-foreground"
-					>
-						{activity.assigned.name}
-					</Link>{" "}
-					<span className="whitespace-nowrap">{activity.date}</span>
-				</div>
-			</div>
-		</>
-	);
-}
-
-function TagsActivityItem({ activity }: { activity: TagsActivity }) {
-	return (
-		<>
-			<div className="flex-shrink-0">
-				<div className="relative px-1">
-					<Avatar className="size-8">
-						<AvatarFallback className="bg-muted text-muted-foreground">
-							{getInitials(activity.person.name)}
-						</AvatarFallback>
-					</Avatar>
-				</div>
-			</div>
-			<div className="min-w-0 flex-1 py-0">
-				<div className="text-sm/8 text-muted-foreground">
-					<span className="mr-0.5">
-						<Link
-							href={activity.person.href}
-							className="font-medium text-foreground hover:text-muted-foreground"
-						>
+				</>
+			) : (
+				<>
+					<div className="relative flex size-6 flex-none items-center justify-center">
+						{activity.type === "invoice_paid" ? (
+							<CheckCircleIcon
+								aria-hidden="true"
+								className="size-5 text-indigo-500"
+							/>
+						) : Icon ? (
+							<Icon
+								aria-hidden="true"
+								className="size-4 text-muted-foreground"
+							/>
+						) : (
+							<div className="size-1.5 rounded-full bg-foreground/10 ring ring-border/40" />
+						)}
+					</div>
+					<p className="flex-auto py-0.5 text-xs text-muted-foreground">
+						<span className="font-medium text-foreground">
 							{activity.person.name}
-						</Link>{" "}
-						added tags
-					</span>{" "}
-					<span className="mr-0.5">
-						{activity.tags.map((tag) => (
-							<Fragment key={tag.name}>
-								<Link
-									href={tag.href}
-									className="inline-flex items-center gap-x-1.5 rounded-full bg-muted/50 px-2 py-1 text-xs font-medium text-foreground ring-1 ring-border/20 hover:bg-muted transition-colors"
-								>
-									<svg
-										viewBox="0 0 6 6"
-										aria-hidden="true"
-										className={classNames(tag.color, "size-1.5")}
-									>
-										<circle r={3} cx={3} cy={3} />
-									</svg>
-									{tag.name}
-								</Link>{" "}
-							</Fragment>
-						))}
+						</span>{" "}
+						{describeEvent(activity)}
+					</p>
+					<span className="flex-none py-0.5 text-xs text-muted-foreground">
+						{activity.date}
 					</span>
-					<span className="whitespace-nowrap">{activity.date}</span>
-				</div>
-			</div>
-		</>
-	);
-}
-
-function ClientCreatedActivityItem({
-	activity,
-}: {
-	activity: ClientCreatedActivity;
-}) {
-	return (
-		<>
-			<div className="relative flex-shrink-0">
-				<Avatar className="size-10">
-					<AvatarImage src={activity.imageUrl} alt={activity.person.name} />
-					<AvatarFallback className="bg-muted text-muted-foreground">
-						{getInitials(activity.person.name)}
-					</AvatarFallback>
-				</Avatar>
-			</div>
-			<div className="min-w-0 flex-1">
-				<div>
-					<div className="text-sm">
-						<Link
-							href={activity.person.href}
-							className="font-medium text-foreground hover:text-muted-foreground"
-						>
-							{activity.person.name}
-						</Link>
-					</div>
-					<p className="mt-0.5 text-sm text-muted-foreground">
-						Created client{" "}
-						<span className="font-medium text-foreground">
-							{activity.clientName}
-						</span>
-					</p>
-				</div>
-				<div className="mt-1 text-sm text-muted-foreground">
-					{activity.date}
-				</div>
-			</div>
-		</>
-	);
-}
-
-function ProjectCreatedActivityItem({
-	activity,
-}: {
-	activity: ProjectCreatedActivity;
-}) {
-	return (
-		<>
-			<div className="relative flex-shrink-0">
-				<Avatar className="size-10">
-					<AvatarFallback className="bg-green-500 text-white">
-						{getInitials(activity.person.name)}
-					</AvatarFallback>
-				</Avatar>
-			</div>
-			<div className="min-w-0 flex-1">
-				<div>
-					<div className="text-sm">
-						<Link
-							href={activity.person.href}
-							className="font-medium text-foreground hover:text-muted-foreground"
-						>
-							{activity.person.name}
-						</Link>
-					</div>
-					<p className="mt-0.5 text-sm text-muted-foreground">
-						Created project{" "}
-						<span className="font-medium text-foreground">
-							&ldquo;{activity.projectName}&rdquo;
-						</span>{" "}
-						for {activity.clientName}
-					</p>
-				</div>
-				<div className="mt-1 text-sm text-muted-foreground">
-					{activity.date}
-				</div>
-			</div>
-		</>
-	);
-}
-
-function ProjectUpdatedActivityItem({
-	activity,
-}: {
-	activity: ProjectUpdatedActivity;
-}) {
-	return (
-		<>
-			<div className="relative flex-shrink-0">
-				<Avatar className="size-10">
-					<AvatarFallback className="bg-blue-500 text-white">
-						{getInitials(activity.person.name)}
-					</AvatarFallback>
-				</Avatar>
-			</div>
-			<div className="min-w-0 flex-1">
-				<div>
-					<div className="text-sm">
-						<Link
-							href={activity.person.href}
-							className="font-medium text-foreground hover:text-muted-foreground"
-						>
-							{activity.person.name}
-						</Link>
-					</div>
-					<p className="mt-0.5 text-sm text-muted-foreground">
-						Updated project{" "}
-						<span className="font-medium text-foreground">
-							&ldquo;{activity.projectName}&rdquo;
-						</span>{" "}
-						to {activity.status}
-					</p>
-				</div>
-				<div className="mt-1 text-sm text-muted-foreground">
-					{activity.date}
-				</div>
-			</div>
-		</>
-	);
-}
-
-function ClientUpdatedActivityItem({
-	activity,
-}: {
-	activity: ClientUpdatedActivity;
-}) {
-	return (
-		<>
-			<div className="relative flex-shrink-0">
-				<Avatar className="size-10">
-					<AvatarFallback className="bg-orange-500 text-white">
-						{getInitials(activity.person.name)}
-					</AvatarFallback>
-				</Avatar>
-			</div>
-			<div className="min-w-0 flex-1">
-				<div>
-					<div className="text-sm">
-						<Link
-							href={activity.person.href}
-							className="font-medium text-foreground hover:text-muted-foreground"
-						>
-							{activity.person.name}
-						</Link>
-					</div>
-					<p className="mt-0.5 text-sm text-muted-foreground">
-						{activity.action} for{" "}
-						<span className="font-medium text-foreground">
-							{activity.clientName}
-						</span>
-					</p>
-				</div>
-				<div className="mt-1 text-sm text-muted-foreground">
-					{activity.date}
-				</div>
-			</div>
-		</>
-	);
-}
-
-function QuoteCreatedActivityItem({
-	activity,
-}: {
-	activity: QuoteCreatedActivity;
-}) {
-	return (
-		<>
-			<div className="relative flex-shrink-0">
-				<Avatar className="size-10">
-					<AvatarFallback className="bg-purple-500 text-white">
-						{getInitials(activity.person.name)}
-					</AvatarFallback>
-				</Avatar>
-			</div>
-			<div className="min-w-0 flex-1">
-				<div>
-					<div className="text-sm">
-						<Link
-							href={activity.person.href}
-							className="font-medium text-foreground hover:text-muted-foreground"
-						>
-							{activity.person.name}
-						</Link>
-					</div>
-					<p className="mt-0.5 text-sm text-muted-foreground">
-						Created quote for{" "}
-						<span className="font-medium text-foreground">
-							{activity.quoteAmount}
-						</span>{" "}
-						with {activity.clientName}
-					</p>
-				</div>
-				<div className="mt-1 text-sm text-muted-foreground">
-					{activity.date}
-				</div>
-			</div>
-		</>
-	);
-}
-
-function QuoteApprovedActivityItem({
-	activity,
-}: {
-	activity: QuoteApprovedActivity;
-}) {
-	return (
-		<>
-			<div className="relative flex-shrink-0">
-				<Avatar className="size-10">
-					<AvatarFallback className="bg-green-500 text-white">
-						{getInitials(activity.person.name)}
-					</AvatarFallback>
-				</Avatar>
-			</div>
-			<div className="min-w-0 flex-1">
-				<div>
-					<div className="text-sm">
-						<Link
-							href={activity.person.href}
-							className="font-medium text-foreground hover:text-muted-foreground"
-						>
-							{activity.person.name}
-						</Link>
-					</div>
-					<p className="mt-0.5 text-sm text-muted-foreground">
-						Quote approved for{" "}
-						<span className="font-medium text-foreground">
-							{activity.quoteAmount}
-						</span>{" "}
-						by {activity.clientName}
-					</p>
-				</div>
-				<div className="mt-1 text-sm text-muted-foreground">
-					{activity.date}
-				</div>
-			</div>
-		</>
-	);
-}
-
-function QuoteSentActivityItem({ activity }: { activity: QuoteSentActivity }) {
-	return (
-		<>
-			<div className="relative flex-shrink-0">
-				<Avatar className="size-10">
-					<AvatarFallback className="bg-blue-500 text-white">
-						{getInitials(activity.person.name)}
-					</AvatarFallback>
-				</Avatar>
-			</div>
-			<div className="min-w-0 flex-1">
-				<div>
-					<div className="text-sm">
-						<Link
-							href={activity.person.href}
-							className="font-medium text-foreground hover:text-muted-foreground"
-						>
-							{activity.person.name}
-						</Link>
-					</div>
-					<p className="mt-0.5 text-sm text-muted-foreground">
-						Sent quote for{" "}
-						<span className="font-medium text-foreground">
-							{activity.quoteAmount}
-						</span>{" "}
-						to {activity.clientName}
-					</p>
-				</div>
-				<div className="mt-1 text-sm text-muted-foreground">
-					{activity.date}
-				</div>
-			</div>
-		</>
-	);
-}
-
-function InvoiceSentActivityItem({
-	activity,
-}: {
-	activity: InvoiceSentActivity;
-}) {
-	return (
-		<>
-			<div className="relative flex-shrink-0">
-				<Avatar className="size-10">
-					<AvatarFallback className="bg-indigo-500 text-white">
-						{getInitials(activity.person.name)}
-					</AvatarFallback>
-				</Avatar>
-			</div>
-			<div className="min-w-0 flex-1">
-				<div>
-					<div className="text-sm">
-						<Link
-							href={activity.person.href}
-							className="font-medium text-foreground hover:text-muted-foreground"
-						>
-							{activity.person.name}
-						</Link>
-					</div>
-					<p className="mt-0.5 text-sm text-muted-foreground">
-						Sent invoice for{" "}
-						<span className="font-medium text-foreground">
-							{activity.invoiceAmount}
-						</span>{" "}
-						to {activity.clientName}
-					</p>
-				</div>
-				<div className="mt-1 text-sm text-muted-foreground">
-					{activity.date}
-				</div>
-			</div>
-		</>
-	);
-}
-
-function InvoicePaidActivityItem({
-	activity,
-}: {
-	activity: InvoicePaidActivity;
-}) {
-	return (
-		<>
-			<div className="relative flex-shrink-0">
-				<Avatar className="size-10">
-					<AvatarFallback className="bg-emerald-500 text-white">
-						{getInitials(activity.person.name)}
-					</AvatarFallback>
-				</Avatar>
-			</div>
-			<div className="min-w-0 flex-1">
-				<div>
-					<div className="text-sm">
-						<Link
-							href={activity.person.href}
-							className="font-medium text-foreground hover:text-muted-foreground"
-						>
-							{activity.person.name}
-						</Link>
-					</div>
-					<p className="mt-0.5 text-sm text-muted-foreground">
-						Invoice paid for{" "}
-						<span className="font-medium text-foreground">
-							{activity.invoiceAmount}
-						</span>{" "}
-						by {activity.clientName}
-					</p>
-				</div>
-				<div className="mt-1 text-sm text-muted-foreground">
-					{activity.date}
-				</div>
-			</div>
-		</>
+				</>
+			)}
+		</li>
 	);
 }

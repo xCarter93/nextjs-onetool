@@ -15,8 +15,8 @@ export function StickyFormFooter({
 }: StickyFormFooterProps) {
 	return (
 		<div className="sticky bottom-0 z-40 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-lg">
-			<div className="mx-auto max-w-full px-6 lg:px-12 xl:px-16">
-				<div className="mx-auto max-w-6xl">
+			<div className="w-full px-6">
+				<div className="w-full">
 					<div className="flex items-center justify-end gap-x-6 py-4">
 						<button
 							type="button"

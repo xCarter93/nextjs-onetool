@@ -105,10 +105,10 @@ export default function ActivityFeed({
 	// For now, just show all activities
 
 	return (
-		<div className="space-y-4">
+		<div className="space-y-3">
 			{/* Compact Activity Feed Header */}
-			<div className="flex items-center justify-between">
-				<h3 className="text-lg font-semibold text-foreground">
+			<div className="flex items-start justify-between mb-8">
+				<h3 className="text-base font-semibold text-foreground">
 					Recent Activity
 				</h3>
 				<ToggleGroup
@@ -118,7 +118,7 @@ export default function ActivityFeed({
 						const selectedKey = Array.from(keys)[0];
 						if (selectedKey) setSelectedFilter(selectedKey as TimeFilter);
 					}}
-					className="bg-muted dark:bg-muted backdrop-blur-sm rounded-lg p-1 border border-border dark:border-border shadow-sm ring-1 ring-border/20"
+					className="bg-muted/60 dark:bg-muted/60 backdrop-blur-sm rounded-md p-0.5 border border-border/60 shadow-xs ring-1 ring-border/20"
 				>
 					<ToggleGroupItem id="1d">1d</ToggleGroupItem>
 					<ToggleGroupItem id="3d">3d</ToggleGroupItem>
@@ -127,9 +127,9 @@ export default function ActivityFeed({
 				</ToggleGroup>
 			</div>
 
-			{/* Simplified Activity Feed */}
+			{/* Compact List */}
 			<ScrollArea className="h-96">
-				<ul role="list" className="space-y-3">
+				<ul role="list" className="space-y-3 pr-4">
 					{activities.map((activityItem, activityItemIdx) => (
 						<ActivityItem
 							key={activityItem.id}

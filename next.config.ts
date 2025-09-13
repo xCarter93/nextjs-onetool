@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+	experimental: {
+		viewTransition: true,
+		globalNotFound: true,
+	},
 	images: {
 		remotePatterns: [
 			{

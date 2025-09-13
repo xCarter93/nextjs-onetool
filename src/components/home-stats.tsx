@@ -10,6 +10,7 @@ import {
 	ChartBarIcon,
 	ClockIcon,
 } from "@heroicons/react/24/outline";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface StatItem {
 	name: string;
@@ -105,13 +106,13 @@ export default function HomeStats() {
 					const borderColor = colors[index % colors.length];
 
 					return (
-						<div
+						<Card
 							key={item.name}
-							className={`group relative bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-lg shadow-md dark:shadow-black/50 transition-all duration-200 hover:shadow-lg dark:hover:shadow-black/70 border-t-4 ${borderColor} overflow-hidden ring-1 ring-border/20 dark:ring-border/40`}
+							className={`group relative backdrop-blur-md transition-all duration-200 hover:shadow-lg dark:hover:shadow-black/70 border-t-4 ${borderColor} overflow-hidden ring-1 ring-border/20 dark:ring-border/40 py-0`}
 							role="article"
 							tabIndex={0}
 						>
-							<div className="relative p-4">
+							<CardContent className="relative p-4">
 								<div className="flex items-center justify-between mb-3">
 									<div className="flex items-center space-x-3">
 										<div className="flex items-center justify-center w-8 h-8 rounded-lg bg-muted/50 dark:bg-muted/70 text-muted-foreground dark:text-muted-foreground/90 ring-1 ring-border/10 dark:ring-border/30">
@@ -173,8 +174,8 @@ export default function HomeStats() {
 										)}
 									</div>
 								</dd>
-							</div>
-						</div>
+							</CardContent>
+						</Card>
 					);
 				})}
 			</dl>
