@@ -87,29 +87,37 @@ function classNames(...classes: string[]) {
 export default function HomeStats() {
 	return (
 		<div className="mb-8">
-			<h3 className="text-xl font-semibold text-foreground mb-6">
+			<h3 className="text-lg font-semibold text-foreground mb-4">
 				Business Overview (Month to Date)
 			</h3>
-			<dl className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-				{stats.map((item) => {
+			<dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+				{stats.map((item, index) => {
 					const Icon = item.icon;
+					// Define colors for different stat types
+					const colors = [
+						"border-t-orange-500", // Total Clients
+						"border-t-red-500", // Projects Completed
+						"border-t-green-500", // Approved Quotes
+						"border-t-blue-500", // Invoices Sent
+						"border-t-purple-500", // Revenue Goal
+						"border-t-yellow-500", // Pending Tasks
+					];
+					const borderColor = colors[index % colors.length];
+
 					return (
 						<div
 							key={item.name}
-							className="group relative bg-card/95 border border-border rounded-xl p-6 shadow-sm dark:shadow-black/40 transition-all duration-200 hover:shadow-md hover:scale-[1.01] focus-within:shadow-md hover:border-primary/20 ring-1 ring-border/5"
+							className={`group relative bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-lg shadow-md dark:shadow-black/50 transition-all duration-200 hover:shadow-lg dark:hover:shadow-black/70 border-t-4 ${borderColor} overflow-hidden ring-1 ring-border/20 dark:ring-border/40`}
 							role="article"
 							tabIndex={0}
 						>
-							{/* Subtle gradient overlay */}
-							<div className="absolute inset-0 rounded-xl bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-
-							<div className="relative">
-								<div className="flex items-center justify-between mb-4">
+							<div className="relative p-4">
+								<div className="flex items-center justify-between mb-3">
 									<div className="flex items-center space-x-3">
-										<div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 text-primary group-hover:bg-primary/15 transition-colors duration-200 ring-1 ring-border/10">
-											<Icon className="w-5 h-5" />
+										<div className="flex items-center justify-center w-8 h-8 rounded-lg bg-muted/50 dark:bg-muted/70 text-muted-foreground dark:text-muted-foreground/90 ring-1 ring-border/10 dark:ring-border/30">
+											<Icon className="w-4 h-4" />
 										</div>
-										<dt className="text-sm font-medium text-muted-foreground dark:text-muted-foreground/90">
+										<dt className="text-xs font-medium text-muted-foreground dark:text-muted-foreground/90 uppercase tracking-wide">
 											{item.name}
 										</dt>
 									</div>
@@ -118,11 +126,11 @@ export default function HomeStats() {
 										<div
 											className={classNames(
 												item.changeType === "increase"
-													? "bg-green-600/80 text-black dark:bg-green-500/80"
+													? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
 													: item.changeType === "decrease"
-														? "bg-red-600/80 text-black dark:bg-red-500/80"
-														: "bg-muted text-muted-foreground border border-border",
-												"inline-flex items-center rounded-full px-2 py-1 text-xs font-medium"
+														? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+														: "bg-muted text-muted-foreground",
+												"inline-flex items-center rounded-md px-2 py-1 text-xs font-medium"
 											)}
 										>
 											{item.changeType === "increase" ? (
@@ -147,13 +155,13 @@ export default function HomeStats() {
 								</div>
 
 								<dd className="mt-2">
-									<div className="flex flex-col space-y-1">
-										<div className="flex items-baseline space-x-2">
-											<span className="text-3xl font-bold text-foreground dark:text-white">
+									<div className="space-y-1">
+										<div className="flex items-center justify-between">
+											<span className="text-2xl font-bold text-foreground dark:text-foreground/95">
 												{item.stat}
 											</span>
 											{item.value && (
-												<span className="text-sm font-semibold text-primary">
+												<span className="text-sm font-semibold text-primary dark:text-primary/90">
 													{item.value}
 												</span>
 											)}

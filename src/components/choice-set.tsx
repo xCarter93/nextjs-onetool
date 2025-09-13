@@ -21,7 +21,7 @@ const SelectService: React.FC<SelectServiceProps> = ({
 	onChange,
 }) => {
 	return (
-		<div className="flex flex-wrap justify-center gap-4 max-w-lg mx-auto select-none p-2">
+		<div className="flex flex-wrap justify-center gap-6 max-w-lg mx-auto select-none p-2">
 			{options.map((option) => {
 				const IconComponent = option.icon;
 				const isChecked = selected === option.value;
@@ -29,7 +29,7 @@ const SelectService: React.FC<SelectServiceProps> = ({
 				return (
 					<label
 						key={option.value}
-						className="relative cursor-pointer w-24 sm:w-28"
+						className="relative cursor-pointer w-28 sm:w-32"
 					>
 						<input
 							type="radio"
@@ -41,38 +41,43 @@ const SelectService: React.FC<SelectServiceProps> = ({
 						/>
 
 						<div
-							className={`relative flex flex-col items-center justify-center p-4 rounded-xl border
-                bg-white/10 backdrop-blur-md border-white/20
-                transition-transform duration-300 ease-in-out
-                transform hover:scale-105 hover:z-10
-                ${isChecked ? "bg-gradient-to-br from-blue-400/20 to-blue-600/20 border-blue-400 shadow-lg" : "hover:border-blue-300"}`}
+							className={`group relative flex flex-col items-center justify-center p-6 rounded-2xl border transition-all duration-300 ease-in-out transform hover:scale-105 hover:z-10 shadow-lg hover:shadow-xl backdrop-blur-sm
+                ${
+									isChecked
+										? "bg-gradient-to-br from-primary/20 to-primary/30 border-primary/60 ring-2 ring-primary/40 shadow-primary/20"
+										: "bg-card/80 border-border/60 hover:border-primary/30 hover:bg-card/90"
+								}`}
 						>
 							{/* Selection checkmark */}
 							{isChecked && (
-								<div className="absolute -top-2 -right-2 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center shadow-lg animate-fade-in">
-									<Check className="w-4 h-4 text-white" />
+								<div className="absolute -top-2 -right-2 w-7 h-7 bg-gradient-to-br from-primary to-primary/80 rounded-full flex items-center justify-center shadow-lg ring-2 ring-background animate-fade-in">
+									<Check className="w-4 h-4 text-primary-foreground" />
 								</div>
 							)}
 
 							{/* Icon */}
 							<IconComponent
-								className={`w-8 h-8 mb-1 transition-all duration-300 ${
+								className={`w-10 h-10 mb-3 transition-all duration-300 ${
 									isChecked
-										? "text-blue-400 animate-bounce-in"
-										: "text-gray-400 group-hover:text-white"
+										? "text-primary animate-bounce-in"
+										: "text-muted-foreground group-hover:text-primary"
 								}`}
 							/>
 
 							{/* Text */}
 							<span
-								className={`text-sm font-medium text-center transition ${isChecked ? "text-blue-300" : "text-gray-300"}`}
+								className={`text-sm font-semibold text-center transition-colors duration-200 tracking-wide ${
+									isChecked
+										? "text-primary"
+										: "text-foreground group-hover:text-primary"
+								}`}
 							>
 								{option.text}
 							</span>
 
 							{/* Ripple effect */}
-							<div className="absolute inset-0 rounded-xl overflow-hidden">
-								<div className="absolute inset-0 bg-white/10 rounded-xl transform scale-0 peer-checked:animate-ripple" />
+							<div className="absolute inset-0 rounded-2xl overflow-hidden">
+								<div className="absolute inset-0 bg-primary/10 rounded-2xl transform scale-0 peer-checked:animate-ripple" />
 							</div>
 						</div>
 					</label>

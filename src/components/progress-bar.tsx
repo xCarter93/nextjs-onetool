@@ -15,7 +15,7 @@ export default function ProgressBar({ steps, className }: ProgressBarProps) {
 	return (
 		<div
 			className={classNames(
-				"lg:border-t lg:border-b lg:border-white/15",
+				"lg:border-t lg:border-b lg:border-border/60 dark:lg:border-border/40",
 				className
 			)}
 		>
@@ -25,7 +25,7 @@ export default function ProgressBar({ steps, className }: ProgressBarProps) {
 			>
 				<ol
 					role="list"
-					className="overflow-hidden rounded-md lg:flex lg:rounded-none lg:border-r lg:border-l lg:border-white/15"
+					className="overflow-hidden rounded-xl lg:flex lg:rounded-2xl lg:border-r lg:border-l lg:border-border/60 dark:lg:border-border/40 bg-card/50 backdrop-blur-sm shadow-sm ring-1 ring-border/10"
 				>
 					{steps.map((step, stepIdx) => (
 						<ProgressBarItem

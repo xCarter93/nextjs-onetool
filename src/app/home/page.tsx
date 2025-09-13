@@ -37,27 +37,43 @@ export default function Page() {
 	};
 	return (
 		<SidebarWithHeader>
-			<div className="bg-muted min-h-[100vh] flex-1 rounded-xl md:min-h-min p-6">
-				{/* Date Header */}
-				<div className="mb-8">
-					<h1 className="text-2xl font-semibold text-foreground mb-2">
-						{formatDate()}
-					</h1>
-					<p className="text-3xl font-bold text-muted-foreground">
-						{getWelcomeMessage()}
-					</p>
-				</div>
+			<div className="min-h-[100vh] flex-1 md:min-h-min">
+				{/* Enhanced Background with Gradient */}
+				<div className="relative bg-gradient-to-br from-background via-muted/30 to-muted/60 dark:from-background dark:via-muted/20 dark:to-muted/40 min-h-[100vh] md:min-h-min rounded-xl">
+					{/* Subtle Pattern Overlay */}
+					<div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(120,119,198,0.1),transparent_50%)] rounded-xl" />
 
-				<HomeStats />
-				<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-					{/* Getting Started Section */}
-					<div className="bg-card border border-border rounded-lg p-6 shadow-sm">
-						<GettingStarted />
-					</div>
+					<div className="relative p-6">
+						{/* Compact Date Header */}
+						<div className="mb-6">
+							<h1 className="text-lg font-medium text-muted-foreground mb-1">
+								{formatDate()}
+							</h1>
+							<h2 className="text-2xl font-bold text-foreground">
+								{getWelcomeMessage()}
+							</h2>
+						</div>
 
-					{/* Activity Feed Section */}
-					<div className="bg-card border border-border rounded-lg p-6 shadow-sm">
-						<ActivityFeed />
+						<HomeStats />
+
+						{/* Dashboard Layout */}
+						<div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
+							{/* Main Content Area - 3 columns */}
+							<div className="xl:col-span-3 space-y-6">
+								{/* Getting Started Section */}
+								<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-xl p-6 shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50">
+									<GettingStarted />
+								</div>
+							</div>
+
+							{/* Sidebar - 2 columns for more breathing room */}
+							<div className="xl:col-span-2 space-y-6">
+								{/* Activity Feed Section */}
+								<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-xl p-6 shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50">
+									<ActivityFeed />
+								</div>
+							</div>
+						</div>
 					</div>
 				</div>
 			</div>

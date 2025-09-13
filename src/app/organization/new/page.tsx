@@ -124,31 +124,34 @@ export default function OrganizationOnboarding() {
 	};
 
 	const renderStep1 = () => (
-		<div className="space-y-6">
+		<div className="space-y-8">
 			<div>
-				<h2 className="text-2xl font-semibold text-foreground mb-2">
-					Confirm Your Details
-				</h2>
-				<p className="text-muted-foreground">
+				<div className="flex items-center gap-3 mb-3">
+					<div className="w-1.5 h-6 bg-gradient-to-b from-primary to-primary/60 rounded-full" />
+					<h2 className="text-2xl font-semibold text-foreground tracking-tight">
+						Confirm Your Details
+					</h2>
+				</div>
+				<p className="text-muted-foreground ml-5 leading-relaxed">
 					Please review and confirm your personal information from your account.
 				</p>
 			</div>
 
-			<div className="space-y-4">
+			<div className="space-y-6">
 				<div>
-					<label className="block text-sm font-medium text-foreground mb-2">
+					<label className="block text-sm font-semibold text-foreground mb-3 tracking-wide">
 						Full Name
 					</label>
 					<Input
 						value={formData.name}
 						onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-						className="w-full"
+						className="w-full border-border dark:border-border bg-background dark:bg-background focus:bg-background dark:focus:bg-background transition-colors shadow-sm ring-1 ring-border/10"
 						placeholder="Your full name"
 					/>
 				</div>
 
 				<div>
-					<label className="block text-sm font-medium text-foreground mb-2">
+					<label className="block text-sm font-semibold text-foreground mb-3 tracking-wide">
 						Business Email
 					</label>
 					<Input
@@ -156,15 +159,18 @@ export default function OrganizationOnboarding() {
 						onChange={(e) =>
 							setFormData({ ...formData, email: e.target.value })
 						}
-						className="w-full"
+						className="w-full border-border dark:border-border bg-background dark:bg-background focus:bg-background dark:focus:bg-background transition-colors shadow-sm ring-1 ring-border/10"
 						placeholder="your.email@company.com"
 						type="email"
 					/>
 				</div>
 			</div>
 
-			<div className="flex justify-end pt-4">
-				<Button onClick={handleNext} className="px-6">
+			<div className="flex justify-end pt-6">
+				<Button
+					onClick={handleNext}
+					className="px-8 py-2.5 shadow-lg hover:shadow-xl transition-shadow"
+				>
 					Next Step
 				</Button>
 			</div>
@@ -172,19 +178,22 @@ export default function OrganizationOnboarding() {
 	);
 
 	const renderStep2 = () => (
-		<div className="space-y-6">
+		<div className="space-y-8">
 			<div>
-				<h2 className="text-2xl font-semibold text-foreground mb-2">
-					Business Details
-				</h2>
-				<p className="text-muted-foreground">
+				<div className="flex items-center gap-3 mb-3">
+					<div className="w-1.5 h-6 bg-gradient-to-b from-primary to-primary/60 rounded-full" />
+					<h2 className="text-2xl font-semibold text-foreground tracking-tight">
+						Business Details
+					</h2>
+				</div>
+				<p className="text-muted-foreground ml-5 leading-relaxed">
 					Tell us about your company to get started.
 				</p>
 			</div>
 
-			<div className="space-y-4">
+			<div className="space-y-6">
 				<div>
-					<label className="block text-sm font-medium text-foreground mb-2">
+					<label className="block text-sm font-semibold text-foreground mb-3 tracking-wide">
 						Company Name *
 					</label>
 					<Input
@@ -192,13 +201,13 @@ export default function OrganizationOnboarding() {
 						onChange={(e) =>
 							setFormData({ ...formData, companyName: e.target.value })
 						}
-						className="w-full"
+						className="w-full border-border dark:border-border bg-background dark:bg-background focus:bg-background dark:focus:bg-background transition-colors shadow-sm ring-1 ring-border/10"
 						placeholder="Acme Corporation"
 					/>
 				</div>
 
 				<div>
-					<label className="block text-sm font-medium text-foreground mb-2">
+					<label className="block text-sm font-semibold text-foreground mb-3 tracking-wide">
 						Company Website *
 					</label>
 					<Input
@@ -206,20 +215,20 @@ export default function OrganizationOnboarding() {
 						onChange={(e) =>
 							setFormData({ ...formData, companyWebsite: e.target.value })
 						}
-						className="w-full"
+						className="w-full border-border dark:border-border bg-background dark:bg-background focus:bg-background dark:focus:bg-background transition-colors shadow-sm ring-1 ring-border/10"
 						placeholder="https://www.acme.com"
 						type="url"
 					/>
 				</div>
 
 				<div>
-					<label className="block text-sm font-medium text-foreground mb-2">
+					<label className="block text-sm font-semibold text-foreground mb-3 tracking-wide">
 						Company Logo (Optional)
 					</label>
 					<div className="flex items-center gap-4">
-						<label className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
-							<Upload className="w-4 h-4" />
-							<span className="text-sm">
+						<label className="flex items-center gap-2 px-6 py-3 border border-border dark:border-border rounded-xl cursor-pointer hover:bg-muted/50 transition-all duration-200 bg-background dark:bg-background backdrop-blur-sm shadow-sm hover:shadow-md ring-1 ring-border/10">
+							<Upload className="w-5 h-5 text-primary" />
+							<span className="text-sm font-medium">
 								{formData.companyLogo
 									? formData.companyLogo.name
 									: "Choose file"}
@@ -232,23 +241,30 @@ export default function OrganizationOnboarding() {
 							/>
 						</label>
 						{formData.companyLogo && (
-							<div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+							<div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950 px-3 py-2 rounded-lg ring-1 ring-green-200 dark:ring-green-800 shadow-sm">
 								<Check className="w-4 h-4" />
 								File selected
 							</div>
 						)}
 					</div>
-					<p className="text-xs text-muted-foreground mt-1">
+					<p className="text-xs text-muted-foreground mt-2 ml-1">
 						Upload a PNG, JPG, or SVG file (max 5MB)
 					</p>
 				</div>
 			</div>
 
-			<div className="flex justify-between pt-4">
-				<Button intent="secondary" onClick={handlePrevious}>
+			<div className="flex justify-between pt-6">
+				<Button
+					intent="secondary"
+					onClick={handlePrevious}
+					className="px-6 py-2.5 shadow-md hover:shadow-lg transition-shadow"
+				>
 					Previous
 				</Button>
-				<Button onClick={handleNext} className="px-6">
+				<Button
+					onClick={handleNext}
+					className="px-8 py-2.5 shadow-lg hover:shadow-xl transition-shadow"
+				>
 					Next Step
 				</Button>
 			</div>
@@ -256,18 +272,21 @@ export default function OrganizationOnboarding() {
 	);
 
 	const renderStep3 = () => (
-		<div className="space-y-6">
+		<div className="space-y-8">
 			<div>
-				<h2 className="text-2xl font-semibold text-foreground mb-2">
-					Company Size
-				</h2>
-				<p className="text-muted-foreground">
+				<div className="flex items-center gap-3 mb-3">
+					<div className="w-1.5 h-6 bg-gradient-to-b from-primary to-primary/60 rounded-full" />
+					<h2 className="text-2xl font-semibold text-foreground tracking-tight">
+						Company Size
+					</h2>
+				</div>
+				<p className="text-muted-foreground ml-5 leading-relaxed">
 					Help us understand your team size to provide the best experience.
 				</p>
 			</div>
 
 			<div>
-				<label className="block text-sm font-medium text-foreground mb-4">
+				<label className="block text-sm font-semibold text-foreground mb-6 tracking-wide">
 					How many people work at your company? *
 				</label>
 				<SelectService
@@ -277,11 +296,18 @@ export default function OrganizationOnboarding() {
 				/>
 			</div>
 
-			<div className="flex justify-between pt-4">
-				<Button intent="secondary" onClick={handlePrevious}>
+			<div className="flex justify-between pt-6">
+				<Button
+					intent="secondary"
+					onClick={handlePrevious}
+					className="px-6 py-2.5 shadow-md hover:shadow-lg transition-shadow"
+				>
 					Previous
 				</Button>
-				<Button onClick={handleCreateOrganization} className="px-6">
+				<Button
+					onClick={handleCreateOrganization}
+					className="px-8 py-2.5 shadow-lg hover:shadow-xl transition-shadow bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary"
+				>
 					Create Organization
 				</Button>
 			</div>
@@ -303,26 +329,37 @@ export default function OrganizationOnboarding() {
 
 	return (
 		<SidebarWithHeader>
-			<div className="bg-muted min-h-screen flex-1 rounded-xl md:min-h-min p-6">
-				<div className="max-w-4xl mx-auto">
-					{/* Header */}
-					<div className="mb-8">
-						<h1 className="text-3xl font-bold text-foreground mb-2">
-							Create Your Organization
-						</h1>
-						<p className="text-muted-foreground">
-							Set up your organization profile to get started with OneTool.
-						</p>
-					</div>
+			<div className="min-h-screen flex-1">
+				{/* Enhanced Background with Gradient */}
+				<div className="relative bg-gradient-to-br from-background via-muted/30 to-muted/60 dark:from-background dark:via-muted/20 dark:to-muted/40 min-h-full rounded-xl">
+					{/* Subtle Pattern Overlay */}
+					<div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(120,119,198,0.1),transparent_50%)] rounded-xl" />
 
-					{/* Progress Bar */}
-					<div className="mb-8">
-						<ProgressBar steps={progressSteps} />
-					</div>
+					<div className="relative p-8 min-h-screen flex flex-col">
+						<div className="max-w-4xl mx-auto flex-1 flex flex-col py-8">
+							{/* Enhanced Header */}
+							<div className="mb-10">
+								<div className="flex items-center gap-3 mb-3">
+									<div className="w-2 h-8 bg-gradient-to-b from-primary to-primary/60 rounded-full" />
+									<h1 className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent tracking-tight">
+										Create Your Organization
+									</h1>
+								</div>
+								<p className="text-muted-foreground ml-5 leading-relaxed">
+									Set up your organization profile to get started with OneTool.
+								</p>
+							</div>
 
-					{/* Form Content */}
-					<div className="bg-card border border-border rounded-lg p-8 shadow-sm">
-						{renderCurrentStep()}
+							{/* Enhanced Progress Bar */}
+							<div className="mb-10">
+								<ProgressBar steps={progressSteps} />
+							</div>
+
+							{/* Enhanced Form Content with improved contrast */}
+							<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-2xl p-10 shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50 flex-shrink-0">
+								{renderCurrentStep()}
+							</div>
+						</div>
 					</div>
 				</div>
 			</div>

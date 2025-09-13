@@ -105,55 +105,40 @@ export default function ActivityFeed({
 	// For now, just show all activities
 
 	return (
-		<div className="space-y-6">
-			{/* Activity Feed Header with Toggle Group */}
+		<div className="space-y-4">
+			{/* Compact Activity Feed Header */}
 			<div className="flex items-center justify-between">
 				<h3 className="text-lg font-semibold text-foreground">
 					Recent Activity
 				</h3>
-				<div className="flex items-center gap-3">
-					<span className="text-sm font-medium text-muted-foreground dark:text-muted-foreground/90">
-						Time Range:
-					</span>
-					<ToggleGroup
-						size="sm"
-						selectedKeys={new Set([selectedFilter])}
-						onSelectionChange={(keys) => {
-							const selectedKey = Array.from(keys)[0];
-							if (selectedKey) setSelectedFilter(selectedKey as TimeFilter);
-						}}
-						className="bg-muted/70 rounded-md p-1 border border-border/60 ring-1 ring-border/5"
-					>
-						<ToggleGroupItem id="1d">1d</ToggleGroupItem>
-						<ToggleGroupItem id="3d">3d</ToggleGroupItem>
-						<ToggleGroupItem id="7d">7d</ToggleGroupItem>
-						<ToggleGroupItem id="2w">2w</ToggleGroupItem>
-					</ToggleGroup>
-				</div>
+				<ToggleGroup
+					size="sm"
+					selectedKeys={new Set([selectedFilter])}
+					onSelectionChange={(keys) => {
+						const selectedKey = Array.from(keys)[0];
+						if (selectedKey) setSelectedFilter(selectedKey as TimeFilter);
+					}}
+					className="bg-muted dark:bg-muted backdrop-blur-sm rounded-lg p-1 border border-border dark:border-border shadow-sm ring-1 ring-border/20"
+				>
+					<ToggleGroupItem id="1d">1d</ToggleGroupItem>
+					<ToggleGroupItem id="3d">3d</ToggleGroupItem>
+					<ToggleGroupItem id="7d">7d</ToggleGroupItem>
+					<ToggleGroupItem id="2w">2w</ToggleGroupItem>
+				</ToggleGroup>
 			</div>
 
-			{/* Activity Feed */}
-			<div className="relative">
-				{/* Top scroll shadow */}
-				<div className="absolute top-0 left-0 right-0 h-4 bg-gradient-to-b from-card/95 to-transparent z-10 pointer-events-none rounded-t-lg" />
-
-				{/* Bottom scroll shadow */}
-				<div className="absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-t from-card/95 to-transparent z-10 pointer-events-none rounded-b-lg" />
-
-				<ScrollArea className="h-96 rounded-lg border border-border bg-card/95 shadow-sm dark:shadow-black/40 ring-1 ring-border/5">
-					<div className="p-3">
-						<ul role="list" className="-mb-8">
-							{activities.map((activityItem, activityItemIdx) => (
-								<ActivityItem
-									key={activityItem.id}
-									activity={activityItem}
-									isLast={activityItemIdx === activities.length - 1}
-								/>
-							))}
-						</ul>
-					</div>
-				</ScrollArea>
-			</div>
+			{/* Simplified Activity Feed */}
+			<ScrollArea className="h-96">
+				<ul role="list" className="space-y-3">
+					{activities.map((activityItem, activityItemIdx) => (
+						<ActivityItem
+							key={activityItem.id}
+							activity={activityItem}
+							isLast={activityItemIdx === activities.length - 1}
+						/>
+					))}
+				</ul>
+			</ScrollArea>
 		</div>
 	);
 }
