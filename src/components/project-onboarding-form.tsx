@@ -12,17 +12,17 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { StickyFormFooter } from "@/components/sticky-form-footer";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import { useToastOperations } from "@/hooks/use-toast";
+import { useRouter } from "next/navigation";
 import type { Key } from "react-aria-components";
+import type { Id } from "../../convex/_generated/dataModel";
 
 interface Client {
-	id: string;
-	name: string;
-	email: string;
-	phone: string;
-	address: string;
-	city: string;
-	state: string;
-	zip: string;
+	_id: Id<"clients">;
+	companyName: string;
+	industry?: string;
 }
 
 interface ProjectOnboardingFormProps {
@@ -34,36 +34,28 @@ export function ProjectOnboardingForm({
 	title = "Create New Project",
 	subtitle = "Set up your project with all the essential details for successful execution.",
 }: ProjectOnboardingFormProps) {
+	const router = useRouter();
+	const toast = useToastOperations();
+
+	// Form state
 	const [projectType, setProjectType] = useState(new Set<Key>(["one-off"]));
-	const [selectedDate, setSelectedDate] = useState("2025-07-28");
 	const [reminderEnabled, setReminderEnabled] = useState(true);
 	const [isLoading, setIsLoading] = useState(false);
 	const [selectedClient, setSelectedClient] = useState<Client | null>(null);
 	const [showClientDropdown, setShowClientDropdown] = useState(false);
 
-	// Mock client data - in real app this would come from an API
-	const clients: Client[] = [
-		{
-			id: "1",
-			name: "ASMobbin Inc.",
-			email: "jasmith.mobbin@gmail.com",
-			phone: "+1 650 213 7390",
-			address: "1226 University Dr",
-			city: "Menlo Park",
-			state: "CA",
-			zip: "94025",
-		},
-		{
-			id: "2",
-			name: "Tech Solutions LLC",
-			email: "contact@techsolutions.com",
-			phone: "+1 555 123 4567",
-			address: "500 Main Street",
-			city: "San Francisco",
-			state: "CA",
-			zip: "94102",
-		},
-	];
+	// Form fields
+	const [projectTitle, setProjectTitle] = useState("");
+	const [projectInstructions, setProjectInstructions] = useState("");
+	const [startDate, setStartDate] = useState("");
+	const [endDate, setEndDate] = useState("");
+	const [scheduleForLater, setScheduleForLater] = useState(false);
+
+	// Fetch clients from Convex
+	const clients = useQuery(api.clients.list, {}) || [];
+
+	// Mutations
+	const createProject = useMutation(api.projects.create);
 
 	const handleProjectTypeChange = (keys: Set<Key>) => {
 		setProjectType(keys);
@@ -74,18 +66,96 @@ export function ProjectOnboardingForm({
 		setShowClientDropdown(false);
 	};
 
-	const handleSaveAsDraft = () => {
+	const handleSaveAsDraft = async () => {
+		if (!selectedClient) {
+			toast.error("Missing Client", "Please select a client before saving.");
+			return;
+		}
+
+		if (!projectTitle.trim()) {
+			toast.error(
+				"Missing Title",
+				"Please enter a project title before saving."
+			);
+			return;
+		}
+
 		setIsLoading(true);
-		// TODO: Implement save as draft functionality
-		console.log("Saving as draft...");
-		setTimeout(() => setIsLoading(false), 1000); // Simulate API call
+		try {
+			const projectData = {
+				clientId: selectedClient._id,
+				title: projectTitle,
+				description: projectInstructions || undefined,
+				instructions: projectInstructions || undefined,
+				status: "planned" as const,
+				projectType:
+					Array.from(projectType)[0] === "recurring"
+						? ("recurring" as const)
+						: ("one-off" as const),
+				startDate: startDate ? new Date(startDate).getTime() : undefined,
+				endDate: endDate ? new Date(endDate).getTime() : undefined,
+				invoiceReminderEnabled: reminderEnabled,
+				scheduleForLater: scheduleForLater,
+			};
+
+			const projectId = await createProject(projectData);
+			toast.success("Draft Saved", "Project has been saved as a draft.");
+			router.push(`/projects/${projectId}`);
+		} catch (error) {
+			console.error("Failed to save project:", error);
+			toast.error("Error", "Failed to save project. Please try again.");
+		} finally {
+			setIsLoading(false);
+		}
 	};
 
-	const handleCreateProject = () => {
+	const handleCreateProject = async () => {
+		if (!selectedClient) {
+			toast.error(
+				"Missing Client",
+				"Please select a client before creating the project."
+			);
+			return;
+		}
+
+		if (!projectTitle.trim()) {
+			toast.error(
+				"Missing Title",
+				"Please enter a project title before creating the project."
+			);
+			return;
+		}
+
 		setIsLoading(true);
-		// TODO: Implement create project functionality
-		console.log("Creating project...");
-		setTimeout(() => setIsLoading(false), 1000); // Simulate API call
+		try {
+			const projectData = {
+				clientId: selectedClient._id,
+				title: projectTitle,
+				description: projectInstructions || undefined,
+				instructions: projectInstructions || undefined,
+				status: "planned" as const,
+				projectType:
+					Array.from(projectType)[0] === "recurring"
+						? ("recurring" as const)
+						: ("one-off" as const),
+				startDate: startDate ? new Date(startDate).getTime() : undefined,
+				endDate: endDate ? new Date(endDate).getTime() : undefined,
+				invoiceReminderEnabled: reminderEnabled,
+				scheduleForLater: scheduleForLater,
+			};
+
+			const projectId = await createProject(projectData);
+			toast.success(
+				"Project Created",
+				"Project has been successfully created!"
+			);
+			router.push(`/projects/${projectId}`);
+		} catch (error) {
+			console.error("Failed to create project:", error);
+			toast.error("Error", "Failed to create project. Please try again.");
+		} finally {
+			setIsLoading(false);
+		}
 	};
 
 	return (
@@ -121,17 +191,17 @@ export function ProjectOnboardingForm({
 										{selectedClient ? (
 											<span className="flex items-center gap-3">
 												<div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-sm text-white font-medium">
-													{selectedClient.name
+													{selectedClient.companyName
 														.split(" ")
 														.map((n) => n[0])
 														.join("")}
 												</div>
 												<div>
 													<div className="font-medium text-gray-900 dark:text-white">
-														{selectedClient.name}
+														{selectedClient.companyName}
 													</div>
 													<div className="text-sm text-gray-500 dark:text-gray-400">
-														{selectedClient.email}
+														{selectedClient.industry || "No industry specified"}
 													</div>
 												</div>
 											</span>
@@ -148,24 +218,24 @@ export function ProjectOnboardingForm({
 											<div className="p-2 space-y-1 max-h-48 overflow-y-auto">
 												{clients.map((client) => (
 													<button
-														key={client.id}
+														key={client._id}
 														type="button"
 														onClick={() => handleClientSelect(client)}
 														className="w-full p-3 text-left hover:bg-gray-50 dark:hover:bg-white/5 rounded-md transition-colors"
 													>
 														<div className="flex items-center gap-3">
 															<div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-sm text-white font-medium">
-																{client.name
+																{client.companyName
 																	.split(" ")
 																	.map((n) => n[0])
 																	.join("")}
 															</div>
 															<div>
 																<div className="font-medium text-gray-900 dark:text-white">
-																	{client.name}
+																	{client.companyName}
 																</div>
 																<div className="text-sm text-gray-500 dark:text-gray-400">
-																	{client.email}
+																	{client.industry || "No industry specified"}
 																</div>
 															</div>
 														</div>
@@ -209,6 +279,8 @@ export function ProjectOnboardingForm({
 												name="project-title"
 												type="text"
 												placeholder="e.g., Workshop & Festival"
+												value={projectTitle}
+												onChange={(e) => setProjectTitle(e.target.value)}
 												className="w-full h-11"
 											/>
 										</div>
@@ -224,6 +296,8 @@ export function ProjectOnboardingForm({
 												id="project-instructions"
 												name="project-instructions"
 												rows={4}
+												value={projectInstructions}
+												onChange={(e) => setProjectInstructions(e.target.value)}
 												className="block w-full rounded-md bg-white dark:bg-white/5 px-3 py-2.5 text-base text-gray-900 dark:text-white border border-gray-300 dark:border-white/10 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors"
 												placeholder="Plan and execute a creative festival. Coordinate across logistics, event programming, marketing, and partner collaboration."
 											/>
@@ -353,15 +427,15 @@ export function ProjectOnboardingForm({
 										<div className="space-y-3">
 											<div className="p-4 bg-gray-50 dark:bg-white/5 rounded-lg">
 												<p className="text-base text-gray-900 dark:text-white font-medium">
-													{selectedClient.address}
+													Address information will be available after client
+													selection
 												</p>
 												<p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-													{selectedClient.city}, {selectedClient.state}{" "}
-													{selectedClient.zip}
+													Property details will be populated from client data
 												</p>
 											</div>
 											<Button intent="outline" size="sm">
-												Change Address
+												View Client Details
 											</Button>
 										</div>
 									) : (
@@ -388,29 +462,23 @@ export function ProjectOnboardingForm({
 											<div className="p-4 bg-gray-50 dark:bg-white/5 rounded-lg space-y-2">
 												<div className="flex items-center gap-2">
 													<span className="text-sm text-gray-500 dark:text-gray-400">
-														Phone:
+														Company:
 													</span>
-													<a
-														href={`tel:${selectedClient.phone}`}
-														className="text-base text-gray-900 dark:text-white font-medium hover:text-blue-600 dark:hover:text-blue-400"
-													>
-														{selectedClient.phone}
-													</a>
+													<span className="text-base text-gray-900 dark:text-white font-medium">
+														{selectedClient.companyName}
+													</span>
 												</div>
 												<div className="flex items-center gap-2">
 													<span className="text-sm text-gray-500 dark:text-gray-400">
-														Email:
+														Industry:
 													</span>
-													<a
-														href={`mailto:${selectedClient.email}`}
-														className="text-base text-blue-600 dark:text-blue-400 hover:underline"
-													>
-														{selectedClient.email}
-													</a>
+													<span className="text-base text-gray-900 dark:text-white">
+														{selectedClient.industry || "Not specified"}
+													</span>
 												</div>
 											</div>
 											<Button intent="outline" size="sm">
-												Edit Contact Info
+												View Client Details
 											</Button>
 										</div>
 									) : (
@@ -468,8 +536,8 @@ export function ProjectOnboardingForm({
 												<Input
 													id="start-date"
 													type="date"
-													value={selectedDate}
-													onChange={(e) => setSelectedDate(e.target.value)}
+													value={startDate}
+													onChange={(e) => setStartDate(e.target.value)}
 													className="w-full h-11"
 												/>
 											</div>
@@ -484,6 +552,8 @@ export function ProjectOnboardingForm({
 												<Input
 													id="end-date"
 													type="date"
+													value={endDate}
+													onChange={(e) => setEndDate(e.target.value)}
 													className="w-full h-11"
 												/>
 											</div>
@@ -523,6 +593,8 @@ export function ProjectOnboardingForm({
 											<input
 												id="schedule-later"
 												type="checkbox"
+												checked={scheduleForLater}
+												onChange={(e) => setScheduleForLater(e.target.checked)}
 												className="h-4 w-4 rounded border-gray-300 dark:border-white/10 text-blue-600 dark:text-indigo-500 focus:ring-blue-500 dark:focus:ring-indigo-500"
 											/>
 											<label

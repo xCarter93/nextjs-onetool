@@ -3,6 +3,7 @@
 import ActivityFeed from "@/components/activity-feed";
 import GettingStarted from "@/components/getting-started";
 import HomeStats from "@/components/home-stats";
+import RevenueGoalSetter from "@/components/revenue-goal-setter";
 import { useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 
@@ -66,6 +67,9 @@ export default function Page() {
 
 						{/* Sidebar - 2 columns for more breathing room */}
 						<div className="xl:col-span-2 space-y-6">
+							{/* Revenue Goal Setter */}
+							<RevenueGoalSetter />
+
 							{/* Activity Feed Section */}
 							<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-xl p-6 shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50">
 								<ActivityFeed />

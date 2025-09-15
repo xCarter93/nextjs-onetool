@@ -13,7 +13,23 @@ import type {
   FilterApi,
   FunctionReference,
 } from "convex/server";
+import type * as activities from "../activities.js";
+import type * as clientContacts from "../clientContacts.js";
+import type * as clientProperties from "../clientProperties.js";
+import type * as clients from "../clients.js";
+import type * as documents from "../documents.js";
 import type * as http from "../http.js";
+import type * as invoiceLineItems from "../invoiceLineItems.js";
+import type * as invoices from "../invoices.js";
+import type * as lib_activities from "../lib/activities.js";
+import type * as lib_auth from "../lib/auth.js";
+import type * as lib_shared from "../lib/shared.js";
+import type * as notifications from "../notifications.js";
+import type * as organizations from "../organizations.js";
+import type * as projects from "../projects.js";
+import type * as quoteLineItems from "../quoteLineItems.js";
+import type * as quotes from "../quotes.js";
+import type * as tasks from "../tasks.js";
 import type * as users from "../users.js";
 
 /**
@@ -25,7 +41,23 @@ import type * as users from "../users.js";
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  activities: typeof activities;
+  clientContacts: typeof clientContacts;
+  clientProperties: typeof clientProperties;
+  clients: typeof clients;
+  documents: typeof documents;
   http: typeof http;
+  invoiceLineItems: typeof invoiceLineItems;
+  invoices: typeof invoices;
+  "lib/activities": typeof lib_activities;
+  "lib/auth": typeof lib_auth;
+  "lib/shared": typeof lib_shared;
+  notifications: typeof notifications;
+  organizations: typeof organizations;
+  projects: typeof projects;
+  quoteLineItems: typeof quoteLineItems;
+  quotes: typeof quotes;
+  tasks: typeof tasks;
   users: typeof users;
 }>;
 export declare const api: FilterApi<

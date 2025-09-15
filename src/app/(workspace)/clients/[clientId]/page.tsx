@@ -1,6 +1,10 @@
 "use client";
 
 import { useParams } from "next/navigation";
+import { useQuery } from "convex/react";
+import { api } from "../../../../../convex/_generated/api";
+import { Id, Doc } from "../../../../../convex/_generated/dataModel";
+import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,83 +17,130 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
 	BuildingOffice2Icon,
 	EnvelopeIcon,
 	PlusIcon,
+	ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
 import { StarIcon as StarSolidIcon } from "@heroicons/react/24/solid";
 
-// Test data for the client
-const clientData = {
-	id: "1",
-	companyName: "ASMobbin",
-	status: "Lead",
-	primaryContact: {
-		name: "Mr. John Smith",
-		phone: {
-			main: "+1 650 213 7390",
-			work: "+1 650 213 7379",
-		},
-		email: "jdoe.mobbin@gmail.com",
-	},
-	leadSource: "Word Of Mouth",
-	categories: [
-		{ label: "Category", value: "Design" },
-		{ label: "Size", value: "10.0 cm" },
-		{ label: "Active", value: "Yes" },
-		{ label: "Dimensions", value: "10.0 × 20.0 cm" },
-		{ label: "Type", value: "Design" },
-	],
-	properties: [
-		{
-			id: 1,
-			address: "1226 University Dr, Menlo Park, CA 94025, USA",
-			city: "Menlo Park",
-			state: "California",
-			zipCode: "94025",
-		},
-		{
-			id: 2,
-			address: "75 Ayer Rajah Crescent #02-02",
-			city: "Singapore",
-			state: "California",
-			zipCode: "139953",
-		},
-	],
-	contacts: [
-		{
-			id: 1,
-			name: "Mr. Alex Smith",
-			role: "Manager",
-			department: "Billing Contact",
-			phone: "(650) 213-7390",
-			email: "alexsmith.mobbin+1@gmail.com",
-		},
-	],
-	billingHistory: {
-		currentBalance: 0,
-		hasHistory: false,
-	},
-	schedule: [
-		{
-			id: 1,
-			title: "New Dashboard Design",
-			description: "Create a new dashboard for ASMobbin new product feature",
-			date: "Aug 31, 2025 20:00",
-			assignee: "Sam Lee",
-		},
-	],
-};
+// Helper function to format lead source for display
+function formatLeadSource(leadSource?: string): string {
+	if (!leadSource) return "Not specified";
+	return leadSource
+		.split("-")
+		.map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+		.join(" ");
+}
+
+// Helper function to format status for display
+function formatStatus(status: string): string {
+	return status.charAt(0).toUpperCase() + status.slice(1);
+}
+
+// Helper function to format category for display
+function formatCategory(category?: string): string {
+	if (!category) return "Not specified";
+	return category.charAt(0).toUpperCase() + category.slice(1);
+}
+
+// Helper function to format phone number for display
+function formatPhoneNumber(phone?: string): string {
+	if (!phone) return "";
+	// Basic phone formatting - you can enhance this
+	return phone;
+}
 
 export default function ClientDetailPage() {
 	const params = useParams();
 	const clientId = params.clientId as string;
+	const toast = useToast();
 
-	// In a real application, you would use the clientId to fetch client data
-	// const clientData = await fetchClient(clientId);
+	// Fetch client data
+	const client = useQuery(api.clients.get, { id: clientId as Id<"clients"> });
+	const clientContacts = useQuery(api.clientContacts.listByClient, {
+		clientId: clientId as Id<"clients">,
+	});
+	const clientProperties = useQuery(api.clientProperties.listByClient, {
+		clientId: clientId as Id<"clients">,
+	});
+	const primaryContact = useQuery(api.clientContacts.getPrimaryContact, {
+		clientId: clientId as Id<"clients">,
+	});
 
-	// For now, we're using test data
+	// Fetch related data for tabs
+	const quotes = useQuery(api.quotes.list, {
+		clientId: clientId as Id<"clients">,
+	});
+	const projects = useQuery(api.projects.list, {
+		clientId: clientId as Id<"clients">,
+	});
+	const invoices = useQuery(api.invoices.list, {
+		clientId: clientId as Id<"clients">,
+	});
+	const clientTasks = useQuery(api.tasks.list, {
+		clientId: clientId as Id<"clients">,
+	});
+
+	// Loading state
+	if (
+		client === undefined ||
+		clientContacts === undefined ||
+		clientProperties === undefined ||
+		primaryContact === undefined ||
+		quotes === undefined ||
+		projects === undefined ||
+		invoices === undefined ||
+		clientTasks === undefined
+	) {
+		return (
+			<div className="min-h-[100vh] flex-1 md:min-h-min">
+				<div className="relative bg-gradient-to-br from-background via-muted/30 to-muted/60 dark:from-background dark:via-muted/20 dark:to-muted/40 min-h-[100vh] md:min-h-min rounded-xl">
+					<div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(120,119,198,0.1),transparent_50%)] rounded-xl" />
+					<div className="relative px-6 pt-8 pb-20">
+						<div className="mx-auto">
+							<div className="space-y-6">
+								<Skeleton className="h-12 w-64" />
+								<Skeleton className="h-32 w-full" />
+								<Skeleton className="h-64 w-full" />
+								<Skeleton className="h-64 w-full" />
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		);
+	}
+
+	// Error state
+	if (!client) {
+		return (
+			<div className="min-h-[100vh] flex-1 md:min-h-min">
+				<div className="relative bg-gradient-to-br from-background via-muted/30 to-muted/60 dark:from-background dark:via-muted/20 dark:to-muted/40 min-h-[100vh] md:min-h-min rounded-xl">
+					<div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(120,119,198,0.1),transparent_50%)] rounded-xl" />
+					<div className="relative px-6 pt-8 pb-20">
+						<div className="mx-auto">
+							<div className="flex flex-col items-center justify-center py-12 text-center">
+								<div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center mb-4">
+									<ExclamationTriangleIcon className="h-8 w-8 text-red-600 dark:text-red-400" />
+								</div>
+								<h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+									Client not found
+								</h3>
+								<p className="text-gray-600 dark:text-gray-400">
+									The client you&apos;re looking for doesn&apos;t exist or you
+									don&apos;t have permission to view it.
+								</p>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		);
+	}
+
 	return (
 		<div className="min-h-[100vh] flex-1 md:min-h-min">
 			{/* Enhanced Background with Gradient */}
@@ -99,30 +150,6 @@ export default function ClientDetailPage() {
 
 				<div className="relative px-6 pt-8 pb-20">
 					<div className="mx-auto">
-						{/* Success Message */}
-						<div className="mb-6 rounded-md bg-green-50 dark:bg-green-900/20 p-4 border border-green-200 dark:border-green-800">
-							<div className="flex">
-								<div className="flex-shrink-0">
-									<svg
-										className="h-5 w-5 text-green-400"
-										fill="currentColor"
-										viewBox="0 0 20 20"
-									>
-										<path
-											fillRule="evenodd"
-											d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-											clipRule="evenodd"
-										/>
-									</svg>
-								</div>
-								<div className="ml-3">
-									<p className="text-sm font-medium text-green-800 dark:text-green-200">
-										Task created for client {clientId}
-									</p>
-								</div>
-							</div>
-						</div>
-
 						{/* Client Header */}
 						<div className="flex items-center justify-between mb-8">
 							<div className="flex items-center gap-4">
@@ -132,26 +159,70 @@ export default function ClientDetailPage() {
 								<div>
 									<div className="flex items-center gap-3">
 										<h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-											{clientData.companyName}
+											{client.companyName}
 										</h1>
 										<Badge
 											variant="secondary"
-											className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
+											className={`${
+												client.status === "active"
+													? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
+													: client.status === "lead" ||
+														  client.status === "prospect"
+														? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
+														: "bg-gray-100 dark:bg-gray-900/30 text-gray-700 dark:text-gray-300"
+											}`}
 										>
-											{clientData.status}
+											{formatStatus(client.status)}
 										</Badge>
 									</div>
+									{client.industry && (
+										<p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+											{client.industry}
+										</p>
+									)}
 								</div>
 							</div>
 							<div className="flex items-center gap-3">
-								<Button intent="outline" size="sm">
-									<EnvelopeIcon className="h-4 w-4 mr-2" />
-									Email
-								</Button>
-								<Button intent="outline" size="sm">
+								{primaryContact?.email && (
+									<Button
+										intent="outline"
+										size="sm"
+										onClick={() => {
+											if (primaryContact?.email) {
+												window.open(`mailto:${primaryContact.email}`, "_blank");
+												toast.info(
+													"Email Client",
+													`Opening email to ${primaryContact.firstName} ${primaryContact.lastName}`
+												);
+											}
+										}}
+									>
+										<EnvelopeIcon className="h-4 w-4 mr-2" />
+										Email
+									</Button>
+								)}
+								<Button
+									intent="outline"
+									size="sm"
+									onClick={() => {
+										toast.info(
+											"Edit Client",
+											"Edit functionality coming soon!"
+										);
+									}}
+								>
 									Edit
 								</Button>
-								<Button intent="outline" size="sm">
+								<Button
+									intent="outline"
+									size="sm"
+									onClick={() => {
+										toast.info(
+											"More Actions",
+											"Additional actions menu coming soon!"
+										);
+									}}
+								>
 									More Actions
 								</Button>
 							</div>
@@ -166,46 +237,92 @@ export default function ClientDetailPage() {
 									<Card className="bg-transparent border-none shadow-none ring-0">
 										<CardHeader className="flex flex-row items-center justify-between">
 											<CardTitle className="text-xl">Properties</CardTitle>
-											<Button intent="outline" size="sm">
+											<Button
+												intent="outline"
+												size="sm"
+												onClick={() => {
+													toast.info(
+														"Add Property",
+														"Property creation functionality coming soon!"
+													);
+												}}
+											>
 												<PlusIcon className="h-4 w-4 mr-2" />
 												New Property
 											</Button>
 										</CardHeader>
 										<CardContent>
-											<div className="space-y-4">
-												{clientData.properties.map((property) => (
-													<div
-														key={property.id}
-														className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg"
-													>
-														<div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
-															<div>
-																<p className="font-medium text-gray-900 dark:text-white">
-																	{property.address.split(",")[0]}
-																</p>
-																<p className="text-gray-600 dark:text-gray-400">
-																	{property.address}
-																</p>
-															</div>
-															<div>
-																<p className="text-gray-900 dark:text-white">
-																	{property.city}
-																</p>
-															</div>
-															<div>
-																<p className="text-gray-900 dark:text-white">
-																	{property.state}
-																</p>
-															</div>
-															<div>
-																<p className="text-gray-900 dark:text-white">
-																	{property.zipCode}
-																</p>
+											{clientProperties && clientProperties.length > 0 ? (
+												<div className="space-y-4">
+													{clientProperties.map((property) => (
+														<div
+															key={property._id}
+															className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg"
+														>
+															<div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+																<div>
+																	<div className="flex items-center gap-2">
+																		{property.propertyName && (
+																			<p className="font-medium text-gray-900 dark:text-white">
+																				{property.propertyName}
+																			</p>
+																		)}
+																		{property.isPrimary && (
+																			<StarSolidIcon className="h-4 w-4 text-yellow-400" />
+																		)}
+																	</div>
+																	<p className="text-gray-600 dark:text-gray-400">
+																		{property.streetAddress}
+																	</p>
+																	{property.propertyType && (
+																		<Badge
+																			variant="outline"
+																			className="mt-1 text-xs"
+																		>
+																			{formatCategory(property.propertyType)}
+																		</Badge>
+																	)}
+																</div>
+																<div>
+																	<p className="text-gray-900 dark:text-white">
+																		{property.city}
+																	</p>
+																</div>
+																<div>
+																	<p className="text-gray-900 dark:text-white">
+																		{property.state}
+																	</p>
+																</div>
+																<div>
+																	<div>
+																		<p className="text-gray-900 dark:text-white">
+																			{property.zipCode}
+																		</p>
+																		{property.squareFootage && (
+																			<p className="text-xs text-gray-500 dark:text-gray-400">
+																				{property.squareFootage.toLocaleString()}{" "}
+																				sq ft
+																			</p>
+																		)}
+																	</div>
+																</div>
 															</div>
 														</div>
+													))}
+												</div>
+											) : (
+												<div className="flex flex-col items-center justify-center py-12 text-center">
+													<div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center mb-4">
+														<BuildingOffice2Icon className="h-8 w-8 text-gray-400" />
 													</div>
-												))}
-											</div>
+													<h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+														No properties
+													</h3>
+													<p className="text-gray-600 dark:text-gray-400">
+														No properties have been added for this client yet.
+													</p>
+												</div>
+											)}
 										</CardContent>
 									</Card>
 								</div>
@@ -213,39 +330,86 @@ export default function ClientDetailPage() {
 								{/* Contacts Section */}
 								<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-xl shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50">
 									<Card className="bg-transparent border-none shadow-none ring-0">
-										<CardHeader>
+										<CardHeader className="flex flex-row items-center justify-between">
 											<CardTitle className="text-xl">Contacts</CardTitle>
+											<Button
+												intent="outline"
+												size="sm"
+												onClick={() => {
+													toast.info(
+														"Add Contact",
+														"Contact creation functionality coming soon!"
+													);
+												}}
+											>
+												<PlusIcon className="h-4 w-4 mr-2" />
+												New Contact
+											</Button>
 										</CardHeader>
 										<CardContent>
-											<Table>
-												<TableHeader>
-													<TableRow>
-														<TableHead>Name</TableHead>
-														<TableHead>Role</TableHead>
-														<TableHead>Phone</TableHead>
-														<TableHead>Email</TableHead>
-													</TableRow>
-												</TableHeader>
-												<TableBody>
-													{clientData.contacts.map((contact) => (
-														<TableRow key={contact.id}>
-															<TableCell className="font-medium">
-																{contact.name}
-															</TableCell>
-															<TableCell>
-																<div>
-																	<p>{contact.role}</p>
-																	<p className="text-sm text-gray-500 dark:text-gray-400">
-																		{contact.department}
-																	</p>
-																</div>
-															</TableCell>
-															<TableCell>{contact.phone}</TableCell>
-															<TableCell>{contact.email}</TableCell>
+											{clientContacts && clientContacts.length > 0 ? (
+												<Table>
+													<TableHeader>
+														<TableRow>
+															<TableHead>Name</TableHead>
+															<TableHead>Role</TableHead>
+															<TableHead>Phone</TableHead>
+															<TableHead>Email</TableHead>
 														</TableRow>
-													))}
-												</TableBody>
-											</Table>
+													</TableHeader>
+													<TableBody>
+														{clientContacts.map((contact) => (
+															<TableRow key={contact._id}>
+																<TableCell className="font-medium">
+																	<div className="flex items-center gap-2">
+																		<span>
+																			{contact.firstName} {contact.lastName}
+																		</span>
+																		{contact.isPrimary && (
+																			<StarSolidIcon className="h-4 w-4 text-yellow-400" />
+																		)}
+																	</div>
+																</TableCell>
+																<TableCell>
+																	<div>
+																		{contact.jobTitle && (
+																			<p className="font-medium">
+																				{contact.jobTitle}
+																			</p>
+																		)}
+																		{contact.role && (
+																			<p className="text-sm text-gray-500 dark:text-gray-400">
+																				{contact.role}
+																			</p>
+																		)}
+																		{contact.department && (
+																			<p className="text-sm text-gray-500 dark:text-gray-400">
+																				{contact.department}
+																			</p>
+																		)}
+																	</div>
+																</TableCell>
+																<TableCell>
+																	{formatPhoneNumber(contact.phone)}
+																</TableCell>
+																<TableCell>{contact.email || "—"}</TableCell>
+															</TableRow>
+														))}
+													</TableBody>
+												</Table>
+											) : (
+												<div className="flex flex-col items-center justify-center py-12 text-center">
+													<div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center mb-4">
+														<EnvelopeIcon className="h-8 w-8 text-gray-400" />
+													</div>
+													<h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+														No contacts
+													</h3>
+													<p className="text-gray-600 dark:text-gray-400">
+														No contacts have been added for this client yet.
+													</p>
+												</div>
+											)}
 										</CardContent>
 									</Card>
 								</div>
@@ -259,114 +423,224 @@ export default function ClientDetailPage() {
 												intent="outline"
 												size="sm"
 												className="bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800"
+												onClick={() => {
+													toast.info(
+														"Create New",
+														"Project, quote, or task creation coming soon!"
+													);
+												}}
 											>
 												New
 											</Button>
 										</CardHeader>
 										<CardContent>
-											<Tabs defaultValue="active-work" className="w-full">
-												<TabsList className="grid w-full grid-cols-5">
-													<TabsTrigger value="active-work">
-														Active Work
+											<Tabs defaultValue="projects" className="w-full">
+												<TabsList className="grid w-full grid-cols-4">
+													<TabsTrigger value="projects">
+														Projects ({projects?.length || 0})
 													</TabsTrigger>
-													<TabsTrigger value="requests">Requests</TabsTrigger>
-													<TabsTrigger value="quotes">Quotes</TabsTrigger>
-													<TabsTrigger value="jobs">Jobs</TabsTrigger>
-													<TabsTrigger value="invoices">Invoices</TabsTrigger>
+													<TabsTrigger value="quotes">
+														Quotes ({quotes?.length || 0})
+													</TabsTrigger>
+													<TabsTrigger value="invoices">
+														Invoices ({invoices?.length || 0})
+													</TabsTrigger>
+													<TabsTrigger value="tasks">
+														Tasks ({clientTasks?.length || 0})
+													</TabsTrigger>
 												</TabsList>
-												<TabsContent value="active-work" className="mt-6">
-													<div className="flex flex-col items-center justify-center py-12 text-center">
-														<div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center mb-4">
-															<BuildingOffice2Icon className="h-8 w-8 text-gray-400" />
+												<TabsContent value="projects" className="mt-6">
+													{projects && projects.length > 0 ? (
+														<div className="space-y-4">
+															{projects.map((project: Doc<"projects">) => (
+																<div
+																	key={project._id}
+																	className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg"
+																>
+																	<div className="flex items-start justify-between">
+																		<div>
+																			<h4 className="font-medium text-gray-900 dark:text-white">
+																				{project.title}
+																			</h4>
+																			{project.description && (
+																				<p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+																					{project.description}
+																				</p>
+																			)}
+																		</div>
+																		<Badge
+																			variant="outline"
+																			className={`${
+																				project.status === "completed"
+																					? "bg-green-50 text-green-700 border-green-200"
+																					: project.status === "in-progress"
+																						? "bg-blue-50 text-blue-700 border-blue-200"
+																						: "bg-gray-50 text-gray-700 border-gray-200"
+																			}`}
+																		>
+																			{formatStatus(project.status)}
+																		</Badge>
+																	</div>
+																</div>
+															))}
 														</div>
-														<h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-															No active work
-														</h3>
-														<p className="text-gray-600 dark:text-gray-400">
-															No active jobs, invoices or quotes for this client
-															yet
-														</p>
-													</div>
-												</TabsContent>
-												<TabsContent value="requests" className="mt-6">
-													<div className="text-center py-8">
-														<p className="text-gray-600 dark:text-gray-400">
-															No requests found
-														</p>
-													</div>
+													) : (
+														<div className="flex flex-col items-center justify-center py-12 text-center">
+															<div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center mb-4">
+																<BuildingOffice2Icon className="h-8 w-8 text-gray-400" />
+															</div>
+															<h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+																No projects
+															</h3>
+															<p className="text-gray-600 dark:text-gray-400">
+																No projects have been created for this client
+																yet.
+															</p>
+														</div>
+													)}
 												</TabsContent>
 												<TabsContent value="quotes" className="mt-6">
-													<div className="text-center py-8">
-														<p className="text-gray-600 dark:text-gray-400">
-															No quotes found
-														</p>
-													</div>
-												</TabsContent>
-												<TabsContent value="jobs" className="mt-6">
-													<div className="text-center py-8">
-														<p className="text-gray-600 dark:text-gray-400">
-															No jobs found
-														</p>
-													</div>
+													{quotes && quotes.length > 0 ? (
+														<div className="space-y-4">
+															{quotes.map((quote: Doc<"quotes">) => (
+																<div
+																	key={quote._id}
+																	className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg"
+																>
+																	<div className="flex items-start justify-between">
+																		<div>
+																			<h4 className="font-medium text-gray-900 dark:text-white">
+																				Quote #{quote.quoteNumber}
+																			</h4>
+																			{quote.title && (
+																				<p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+																					{quote.title}
+																				</p>
+																			)}
+																		</div>
+																		<div className="text-right">
+																			<Badge
+																				variant="outline"
+																				className={`${
+																					quote.status === "approved"
+																						? "bg-green-50 text-green-700 border-green-200"
+																						: quote.status === "sent"
+																							? "bg-yellow-50 text-yellow-700 border-yellow-200"
+																							: "bg-gray-50 text-gray-700 border-gray-200"
+																				}`}
+																			>
+																				{formatStatus(quote.status)}
+																			</Badge>
+																			<p className="text-sm font-medium text-gray-900 dark:text-white mt-1">
+																				${quote.total.toLocaleString()}
+																			</p>
+																		</div>
+																	</div>
+																</div>
+															))}
+														</div>
+													) : (
+														<div className="text-center py-8">
+															<p className="text-gray-600 dark:text-gray-400">
+																No quotes found
+															</p>
+														</div>
+													)}
 												</TabsContent>
 												<TabsContent value="invoices" className="mt-6">
-													<div className="text-center py-8">
-														<p className="text-gray-600 dark:text-gray-400">
-															No invoices found
-														</p>
-													</div>
+													{invoices && invoices.length > 0 ? (
+														<div className="space-y-4">
+															{invoices.map((invoice: Doc<"invoices">) => (
+																<div
+																	key={invoice._id}
+																	className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg"
+																>
+																	<div className="flex items-start justify-between">
+																		<div>
+																			<h4 className="font-medium text-gray-900 dark:text-white">
+																				Invoice #{invoice.invoiceNumber}
+																			</h4>
+																		</div>
+																		<div className="text-right">
+																			<Badge
+																				variant="outline"
+																				className={`${
+																					invoice.status === "paid"
+																						? "bg-green-50 text-green-700 border-green-200"
+																						: invoice.status === "sent"
+																							? "bg-yellow-50 text-yellow-700 border-yellow-200"
+																							: "bg-red-50 text-red-700 border-red-200"
+																				}`}
+																			>
+																				{formatStatus(invoice.status)}
+																			</Badge>
+																			<p className="text-sm font-medium text-gray-900 dark:text-white mt-1">
+																				${invoice.total.toLocaleString()}
+																			</p>
+																		</div>
+																	</div>
+																</div>
+															))}
+														</div>
+													) : (
+														<div className="text-center py-8">
+															<p className="text-gray-600 dark:text-gray-400">
+																No invoices found
+															</p>
+														</div>
+													)}
+												</TabsContent>
+												<TabsContent value="tasks" className="mt-6">
+													{clientTasks && clientTasks.length > 0 ? (
+														<div className="space-y-4">
+															{clientTasks.map((task: Doc<"tasks">) => (
+																<div
+																	key={task._id}
+																	className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg"
+																>
+																	<div className="flex items-start justify-between">
+																		<div className="flex-1">
+																			<h4 className="font-medium text-gray-900 dark:text-white">
+																				{task.title}
+																			</h4>
+																			{task.description && (
+																				<p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+																					{task.description}
+																				</p>
+																			)}
+																			<p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+																				Date:{" "}
+																				{new Date(
+																					task.date
+																				).toLocaleDateString()}
+																				{task.startTime && ` ${task.startTime}`}
+																			</p>
+																		</div>
+																		<Badge
+																			variant="outline"
+																			className={`${
+																				task.status === "completed"
+																					? "bg-green-50 text-green-700 border-green-200"
+																					: task.status === "scheduled"
+																						? "bg-blue-50 text-blue-700 border-blue-200"
+																						: "bg-gray-50 text-gray-700 border-gray-200"
+																			}`}
+																		>
+																			{formatStatus(task.status)}
+																		</Badge>
+																	</div>
+																</div>
+															))}
+														</div>
+													) : (
+														<div className="text-center py-8">
+															<p className="text-gray-600 dark:text-gray-400">
+																No tasks found
+															</p>
+														</div>
+													)}
 												</TabsContent>
 											</Tabs>
-										</CardContent>
-									</Card>
-								</div>
-
-								{/* Schedule Section */}
-								<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-xl shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50">
-									<Card className="bg-transparent border-none shadow-none ring-0">
-										<CardHeader className="flex flex-row items-center justify-between">
-											<CardTitle className="text-xl">Schedule</CardTitle>
-											<Button
-												intent="outline"
-												size="sm"
-												className="bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800"
-											>
-												New
-											</Button>
-										</CardHeader>
-										<CardContent>
-											<div className="space-y-4">
-												<div className="font-medium text-gray-900 dark:text-white">
-													August
-												</div>
-												{clientData.schedule.map((item) => (
-													<div
-														key={item.id}
-														className="flex items-start gap-4 p-4 border border-gray-200 dark:border-gray-700 rounded-lg"
-													>
-														<input
-															type="checkbox"
-															className="mt-1 rounded border-gray-300 dark:border-gray-600"
-														/>
-														<div className="flex-1">
-															<h4 className="font-medium text-gray-900 dark:text-white">
-																{item.title}
-															</h4>
-															<p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-																{item.description}
-															</p>
-														</div>
-														<div className="text-right text-sm">
-															<p className="text-gray-900 dark:text-white">
-																{item.date}
-															</p>
-															<p className="text-gray-600 dark:text-gray-400">
-																Assigned to {item.assignee}
-															</p>
-														</div>
-													</div>
-												))}
-											</div>
 										</CardContent>
 									</Card>
 								</div>
@@ -382,59 +656,109 @@ export default function ClientDetailPage() {
 												<CardTitle className="text-lg">Contact info</CardTitle>
 											</CardHeader>
 											<CardContent className="space-y-4">
-												<div className="flex justify-between">
-													<span className="text-sm text-gray-600 dark:text-gray-400">
-														Primary contact
-													</span>
-													<span className="text-sm text-gray-900 dark:text-white">
-														{clientData.primaryContact.name}
-													</span>
-												</div>
-												<div className="flex justify-between items-center">
-													<span className="text-sm text-gray-600 dark:text-gray-400">
-														Main
-													</span>
-													<div className="flex items-center gap-2">
-														<span className="text-sm text-gray-900 dark:text-white">
-															{clientData.primaryContact.phone.main}
-														</span>
-														<StarSolidIcon className="h-4 w-4 text-yellow-400" />
+												{primaryContact ? (
+													<>
+														<div className="flex justify-between">
+															<span className="text-sm text-gray-600 dark:text-gray-400">
+																Primary contact
+															</span>
+															<div className="flex items-center gap-2">
+																<span className="text-sm text-gray-900 dark:text-white">
+																	{primaryContact.firstName}{" "}
+																	{primaryContact.lastName}
+																</span>
+																<StarSolidIcon className="h-4 w-4 text-yellow-400" />
+															</div>
+														</div>
+														{primaryContact.phone && (
+															<div className="flex justify-between">
+																<span className="text-sm text-gray-600 dark:text-gray-400">
+																	Phone
+																</span>
+																<span className="text-sm text-gray-900 dark:text-white">
+																	{formatPhoneNumber(primaryContact.phone)}
+																</span>
+															</div>
+														)}
+														{primaryContact.email && (
+															<div className="flex justify-between">
+																<span className="text-sm text-gray-600 dark:text-gray-400">
+																	Email
+																</span>
+																<span className="text-sm text-gray-900 dark:text-white">
+																	{primaryContact.email}
+																</span>
+															</div>
+														)}
+														{primaryContact.jobTitle && (
+															<div className="flex justify-between">
+																<span className="text-sm text-gray-600 dark:text-gray-400">
+																	Job Title
+																</span>
+																<span className="text-sm text-gray-900 dark:text-white">
+																	{primaryContact.jobTitle}
+																</span>
+															</div>
+														)}
+													</>
+												) : (
+													<div className="text-center py-4">
+														<p className="text-sm text-gray-600 dark:text-gray-400">
+															No primary contact set
+														</p>
 													</div>
-												</div>
-												<div className="flex justify-between">
-													<span className="text-sm text-gray-600 dark:text-gray-400">
-														Work
-													</span>
-													<span className="text-sm text-gray-900 dark:text-white">
-														{clientData.primaryContact.phone.work}
-													</span>
-												</div>
-												<div className="flex justify-between">
-													<span className="text-sm text-gray-600 dark:text-gray-400">
-														Main
-													</span>
-													<span className="text-sm text-gray-900 dark:text-white">
-														{clientData.primaryContact.email}
-													</span>
-												</div>
-												<div className="flex justify-between">
-													<span className="text-sm text-gray-600 dark:text-gray-400">
-														Lead Source
-													</span>
-													<span className="text-sm text-gray-900 dark:text-white">
-														{clientData.leadSource}
-													</span>
-												</div>
-												{clientData.categories.map((category, index) => (
-													<div key={index} className="flex justify-between">
+												)}
+
+												<div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+													<div className="flex justify-between">
 														<span className="text-sm text-gray-600 dark:text-gray-400">
-															{category.label}
+															Lead Source
 														</span>
 														<span className="text-sm text-gray-900 dark:text-white">
-															{category.value}
+															{formatLeadSource(client.leadSource)}
 														</span>
 													</div>
-												))}
+													{client.category && (
+														<div className="flex justify-between mt-3">
+															<span className="text-sm text-gray-600 dark:text-gray-400">
+																Category
+															</span>
+															<span className="text-sm text-gray-900 dark:text-white">
+																{formatCategory(client.category)}
+															</span>
+														</div>
+													)}
+													{client.clientSize && (
+														<div className="flex justify-between mt-3">
+															<span className="text-sm text-gray-600 dark:text-gray-400">
+																Size
+															</span>
+															<span className="text-sm text-gray-900 dark:text-white">
+																{formatCategory(client.clientSize)}
+															</span>
+														</div>
+													)}
+													{client.priorityLevel && (
+														<div className="flex justify-between mt-3">
+															<span className="text-sm text-gray-600 dark:text-gray-400">
+																Priority
+															</span>
+															<span className="text-sm text-gray-900 dark:text-white">
+																{formatCategory(client.priorityLevel)}
+															</span>
+														</div>
+													)}
+													{client.isActive !== undefined && (
+														<div className="flex justify-between mt-3">
+															<span className="text-sm text-gray-600 dark:text-gray-400">
+																Active
+															</span>
+															<span className="text-sm text-gray-900 dark:text-white">
+																{client.isActive ? "Yes" : "No"}
+															</span>
+														</div>
+													)}
+												</div>
 											</CardContent>
 										</Card>
 									</div>
@@ -444,15 +768,38 @@ export default function ClientDetailPage() {
 										<Card className="bg-transparent border-none shadow-none ring-0">
 											<CardHeader className="flex flex-row items-center justify-between">
 												<CardTitle className="text-lg">Tags</CardTitle>
-												<Button intent="outline" size="sm">
+												<Button
+													intent="outline"
+													size="sm"
+													onClick={() => {
+														toast.info(
+															"Add Tag",
+															"Tag management functionality coming soon!"
+														);
+													}}
+												>
 													<PlusIcon className="h-4 w-4 mr-2" />
 													New Tag
 												</Button>
 											</CardHeader>
 											<CardContent>
-												<p className="text-sm text-gray-600 dark:text-gray-400 italic">
-													This client has no tags
-												</p>
+												{client.tags && client.tags.length > 0 ? (
+													<div className="flex flex-wrap gap-2">
+														{client.tags.map((tag, index) => (
+															<Badge
+																key={index}
+																variant="secondary"
+																className="text-xs"
+															>
+																{tag}
+															</Badge>
+														))}
+													</div>
+												) : (
+													<p className="text-sm text-gray-600 dark:text-gray-400 italic">
+														This client has no tags
+													</p>
+												)}
 											</CardContent>
 										</Card>
 									</div>
@@ -478,74 +825,142 @@ export default function ClientDetailPage() {
 										<Card className="bg-transparent border-none shadow-none ring-0">
 											<CardHeader className="flex flex-row items-center justify-between">
 												<CardTitle className="text-lg">
-													Billing history
+													Billing summary
 												</CardTitle>
 												<Button
 													intent="outline"
 													size="sm"
 													className="bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800"
+													onClick={() => {
+														toast.info(
+															"Create Invoice",
+															"Invoice creation functionality coming soon!"
+														);
+													}}
 												>
-													New
+													New Invoice
 												</Button>
 											</CardHeader>
 											<CardContent className="space-y-4">
-												<div className="flex flex-col items-center text-center py-6">
-													<div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center mb-3">
-														<EnvelopeIcon className="h-6 w-6 text-gray-400" />
+												{invoices && invoices.length > 0 ? (
+													<>
+														<div className="space-y-3">
+															<div className="flex justify-between">
+																<span className="text-sm text-gray-600 dark:text-gray-400">
+																	Total invoices
+																</span>
+																<span className="text-sm font-medium text-gray-900 dark:text-white">
+																	{invoices.length}
+																</span>
+															</div>
+															<div className="flex justify-between">
+																<span className="text-sm text-gray-600 dark:text-gray-400">
+																	Total billed
+																</span>
+																<span className="text-sm font-medium text-gray-900 dark:text-white">
+																	$
+																	{invoices
+																		.reduce(
+																			(sum: number, inv: Doc<"invoices">) =>
+																				sum + inv.total,
+																			0
+																		)
+																		.toLocaleString()}
+																</span>
+															</div>
+															<div className="flex justify-between">
+																<span className="text-sm text-gray-600 dark:text-gray-400">
+																	Outstanding
+																</span>
+																<span className="text-sm font-medium text-gray-900 dark:text-white">
+																	$
+																	{invoices
+																		.filter(
+																			(inv: Doc<"invoices">) =>
+																				inv.status !== "paid"
+																		)
+																		.reduce(
+																			(sum: number, inv: Doc<"invoices">) =>
+																				sum + inv.total,
+																			0
+																		)
+																		.toLocaleString()}
+																</span>
+															</div>
+														</div>
+													</>
+												) : (
+													<div className="flex flex-col items-center text-center py-6">
+														<div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center mb-3">
+															<EnvelopeIcon className="h-6 w-6 text-gray-400" />
+														</div>
+														<h4 className="font-medium text-gray-900 dark:text-white mb-1">
+															No billing history
+														</h4>
+														<p className="text-sm text-gray-600 dark:text-gray-400">
+															This client hasn&apos;t been billed yet
+														</p>
 													</div>
-													<h4 className="font-medium text-gray-900 dark:text-white mb-1">
-														No billing history
-													</h4>
-													<p className="text-sm text-gray-600 dark:text-gray-400">
-														This client hasn&apos;t been billed yet
-													</p>
-												</div>
-												<div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-													<div className="flex justify-between">
-														<span className="text-sm text-gray-600 dark:text-gray-400">
-															Current balance
-														</span>
-														<span className="text-sm font-medium text-gray-900 dark:text-white">
-															Rp0.00
-														</span>
-													</div>
-												</div>
+												)}
 											</CardContent>
 										</Card>
 									</div>
 
-									{/* Internal Notes */}
+									{/* Client Notes */}
 									<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-xl shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50">
 										<Card className="bg-transparent border-none shadow-none ring-0">
 											<CardHeader>
-												<CardTitle className="text-lg">
-													Internal notes
-												</CardTitle>
+												<CardTitle className="text-lg">Client notes</CardTitle>
 												<p className="text-sm text-gray-600 dark:text-gray-400">
-													Internal notes will only be seen by your team
+													Internal notes visible only to your team
 												</p>
 											</CardHeader>
 											<CardContent>
-												<div className="space-y-4">
-													<textarea
-														className="w-full h-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 resize-none"
-														placeholder="Note details"
-													/>
-													<div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center">
-														<p className="text-sm text-gray-600 dark:text-gray-400">
-															Drag your files here or{" "}
-															<Button
-																intent="plain"
-																className="p-0 h-auto text-blue-600 dark:text-blue-400"
-															>
-																Select a File
-															</Button>
+												{client.notes ? (
+													<div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
+														<p className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">
+															{client.notes}
 														</p>
 													</div>
-												</div>
+												) : (
+													<div className="text-center py-6">
+														<p className="text-sm text-gray-600 dark:text-gray-400 italic">
+															No notes added for this client yet
+														</p>
+													</div>
+												)}
 											</CardContent>
 										</Card>
 									</div>
+
+									{/* Services Needed */}
+									{client.servicesNeeded &&
+										client.servicesNeeded.length > 0 && (
+											<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-xl shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50">
+												<Card className="bg-transparent border-none shadow-none ring-0">
+													<CardHeader>
+														<CardTitle className="text-lg">
+															Services needed
+														</CardTitle>
+													</CardHeader>
+													<CardContent>
+														<div className="space-y-2">
+															{client.servicesNeeded.map((service, index) => (
+																<div
+																	key={index}
+																	className="flex items-center gap-2"
+																>
+																	<div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+																	<span className="text-sm text-gray-900 dark:text-white">
+																		{service}
+																	</span>
+																</div>
+															))}
+														</div>
+													</CardContent>
+												</Card>
+											</div>
+										)}
 								</div>
 							</div>
 						</div>

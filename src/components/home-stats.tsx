@@ -92,23 +92,12 @@ export default function HomeStats() {
 				Business Overview (Month to Date)
 			</h3>
 			<dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-				{stats.map((item, index) => {
+				{stats.map((item) => {
 					const Icon = item.icon;
-					// Define colors for different stat types
-					const colors = [
-						"border-t-orange-500", // Total Clients
-						"border-t-red-500", // Projects Completed
-						"border-t-green-500", // Approved Quotes
-						"border-t-blue-500", // Invoices Sent
-						"border-t-purple-500", // Revenue Goal
-						"border-t-yellow-500", // Pending Tasks
-					];
-					const borderColor = colors[index % colors.length];
-
 					return (
 						<Card
 							key={item.name}
-							className={`group relative backdrop-blur-md transition-all duration-200 hover:shadow-lg dark:hover:shadow-black/70 border-t-4 ${borderColor} overflow-hidden ring-1 ring-border/20 dark:ring-border/40 py-0`}
+							className={`group relative backdrop-blur-md transition-all duration-200 hover:shadow-lg dark:hover:shadow-black/70 border-t-4 border-t-primary overflow-hidden ring-1 ring-border/20 dark:ring-border/40 py-0`}
 							role="article"
 							tabIndex={0}
 						>

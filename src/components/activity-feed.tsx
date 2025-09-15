@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import ActivityItem from "./activity-item";
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import ActivityItem, { ActivityWithUser } from "./activity-item";
 import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group";
 import { ScrollArea } from "./ui/scroll-area";
 
@@ -92,17 +94,34 @@ const activity = [
 
 type TimeFilter = "1d" | "3d" | "7d" | "2w";
 
+// Map time filter to days
+const TIME_FILTER_TO_DAYS: Record<TimeFilter, number> = {
+	"1d": 1,
+	"3d": 3,
+	"7d": 7,
+	"2w": 14,
+};
+
 interface ActivityFeedProps {
-	activities?: typeof activity;
+	fallbackActivities?: typeof activity; // For backward compatibility
+	limit?: number;
 }
 
 export default function ActivityFeed({
-	activities = activity,
+	fallbackActivities = activity,
+	limit = 50,
 }: ActivityFeedProps) {
 	const [selectedFilter, setSelectedFilter] = useState<TimeFilter>("7d");
 
-	// TODO: Implement filtering logic based on selectedFilter
-	// For now, just show all activities
+	// Fetch real activities from Convex
+	const convexActivities = useQuery(api.activities.getRecent, {
+		limit,
+		dayRange: TIME_FILTER_TO_DAYS[selectedFilter],
+	});
+
+	// Use real activities if available, otherwise fall back to sample data
+	const activities = convexActivities || fallbackActivities;
+	const isLoading = convexActivities === undefined;
 
 	return (
 		<div className="space-y-3">
@@ -129,15 +148,28 @@ export default function ActivityFeed({
 
 			{/* Compact List */}
 			<ScrollArea className="h-96">
-				<ul role="list" className="space-y-3 pr-4">
-					{activities.map((activityItem, activityItemIdx) => (
-						<ActivityItem
-							key={activityItem.id}
-							activity={activityItem}
-							isLast={activityItemIdx === activities.length - 1}
-						/>
-					))}
-				</ul>
+				{isLoading ? (
+					<div className="flex items-center justify-center h-32">
+						<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+					</div>
+				) : activities.length === 0 ? (
+					<div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
+						<p className="text-sm">No recent activity found</p>
+						<p className="text-xs mt-1">
+							Activity will appear here as you work
+						</p>
+					</div>
+				) : (
+					<ul role="list" className="space-y-3 pr-4">
+						{activities.map((activityItem, activityItemIdx) => (
+							<ActivityItem
+								key={"id" in activityItem ? activityItem.id : activityItem._id}
+								activity={activityItem}
+								isLast={activityItemIdx === activities.length - 1}
+							/>
+						))}
+					</ul>
+				)}
 			</ScrollArea>
 		</div>
 	);

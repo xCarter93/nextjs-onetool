@@ -1,330 +1,38 @@
 "use client";
 
-import React, { useState } from "react";
-import { useUser } from "@clerk/nextjs";
-import ProgressBar, { ProgressStep } from "@/components/progress-bar";
-import SelectService from "@/components/choice-set";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Users, Building2, Globe, Upload, Check } from "lucide-react";
+import React from "react";
+import { CreateOrganization } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
+import { useQuery } from "convex/react";
+import { api } from "../../../../../convex/_generated/api";
 
-interface FormData {
-	name: string;
-	email: string;
-	companyName: string;
-	companyWebsite: string;
-	companyLogo: File | null;
-	companySize: string;
-}
+export default function CreateOrganizationPage() {
+	const router = useRouter();
+	const needsMetadata = useQuery(api.organizations.needsMetadataCompletion);
 
-export default function OrganizationOnboarding() {
-	const { user } = useUser();
-	const [currentStep, setCurrentStep] = useState(1);
-	const [formData, setFormData] = useState<FormData>({
-		name: `${user?.firstName || ""} ${user?.lastName || ""}`.trim(),
-		email: user?.primaryEmailAddress?.emailAddress || "",
-		companyName: "",
-		companyWebsite: "",
-		companyLogo: null,
-		companySize: "",
-	});
-
-	const progressSteps: ProgressStep[] = [
-		{
-			id: "1",
-			name: "Confirm Details",
-			description: "Verify your personal information",
-			status:
-				currentStep === 1
-					? "current"
-					: currentStep > 1
-						? "complete"
-						: "upcoming",
-		},
-		{
-			id: "2",
-			name: "Business Details",
-			description: "Tell us about your company",
-			status:
-				currentStep === 2
-					? "current"
-					: currentStep > 2
-						? "complete"
-						: "upcoming",
-		},
-		{
-			id: "3",
-			name: "Company Size",
-			description: "Help us understand your team",
-			status:
-				currentStep === 3
-					? "current"
-					: currentStep > 3
-						? "complete"
-						: "upcoming",
-		},
-	];
-
-	const companySizeOptions = [
-		{
-			icon: Users,
-			text: "1-10",
-			value: "1-10",
-		},
-		{
-			icon: Building2,
-			text: "10-100",
-			value: "10-100",
-		},
-		{
-			icon: Globe,
-			text: "100+",
-			value: "100+",
-		},
-	];
-
-	const handleNext = () => {
-		if (currentStep < 3) {
-			setCurrentStep(currentStep + 1);
+	// If user needs to complete metadata, redirect to metadata completion
+	React.useEffect(() => {
+		if (needsMetadata === true) {
+			router.push("/organization/complete");
 		}
-	};
+	}, [needsMetadata, router]);
 
-	const handlePrevious = () => {
-		if (currentStep > 1) {
-			setCurrentStep(currentStep - 1);
-		}
-	};
-
-	const handleCreateOrganization = () => {
-		// Basic validation
-		if (
-			!formData.companyName.trim() ||
-			!formData.companyWebsite.trim() ||
-			!formData.companySize
-		) {
-			alert(
-				"Please fill in all required fields before creating your organization."
-			);
-			return;
-		}
-
-		// For now, just show success message
-		alert(
-			"Organization creation would happen here! Form data:\n" +
-				JSON.stringify(formData, null, 2)
-		);
-	};
-
-	const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-		const file = event.target.files?.[0];
-		if (file) {
-			setFormData({ ...formData, companyLogo: file });
-		}
-	};
-
-	const renderStep1 = () => (
-		<div className="space-y-8">
-			<div>
-				<div className="flex items-center gap-3 mb-3">
-					<div className="w-1.5 h-6 bg-gradient-to-b from-primary to-primary/60 rounded-full" />
-					<h2 className="text-2xl font-semibold text-foreground tracking-tight">
-						Confirm Your Details
+	// Show loading state while checking organization status
+	if (needsMetadata === undefined) {
+		return (
+			<div className="min-h-screen flex-1 flex items-center justify-center">
+				<div className="text-center">
+					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+					<h2 className="text-xl font-semibold text-foreground mb-2">
+						Checking organization status...
 					</h2>
-				</div>
-				<p className="text-muted-foreground ml-5 leading-relaxed">
-					Please review and confirm your personal information from your account.
-				</p>
-			</div>
-
-			<div className="space-y-6">
-				<div>
-					<label className="block text-sm font-semibold text-foreground mb-3 tracking-wide">
-						Full Name
-					</label>
-					<Input
-						value={formData.name}
-						onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-						className="w-full border-border dark:border-border bg-background dark:bg-background focus:bg-background dark:focus:bg-background transition-colors shadow-sm ring-1 ring-border/10"
-						placeholder="Your full name"
-					/>
-				</div>
-
-				<div>
-					<label className="block text-sm font-semibold text-foreground mb-3 tracking-wide">
-						Business Email
-					</label>
-					<Input
-						value={formData.email}
-						onChange={(e) =>
-							setFormData({ ...formData, email: e.target.value })
-						}
-						className="w-full border-border dark:border-border bg-background dark:bg-background focus:bg-background dark:focus:bg-background transition-colors shadow-sm ring-1 ring-border/10"
-						placeholder="your.email@company.com"
-						type="email"
-					/>
-				</div>
-			</div>
-
-			<div className="flex justify-end pt-6">
-				<Button
-					onClick={handleNext}
-					className="px-8 py-2.5 shadow-lg hover:shadow-xl transition-shadow"
-				>
-					Next Step
-				</Button>
-			</div>
-		</div>
-	);
-
-	const renderStep2 = () => (
-		<div className="space-y-8">
-			<div>
-				<div className="flex items-center gap-3 mb-3">
-					<div className="w-1.5 h-6 bg-gradient-to-b from-primary to-primary/60 rounded-full" />
-					<h2 className="text-2xl font-semibold text-foreground tracking-tight">
-						Business Details
-					</h2>
-				</div>
-				<p className="text-muted-foreground ml-5 leading-relaxed">
-					Tell us about your company to get started.
-				</p>
-			</div>
-
-			<div className="space-y-6">
-				<div>
-					<label className="block text-sm font-semibold text-foreground mb-3 tracking-wide">
-						Company Name *
-					</label>
-					<Input
-						value={formData.companyName}
-						onChange={(e) =>
-							setFormData({ ...formData, companyName: e.target.value })
-						}
-						className="w-full border-border dark:border-border bg-background dark:bg-background focus:bg-background dark:focus:bg-background transition-colors shadow-sm ring-1 ring-border/10"
-						placeholder="Acme Corporation"
-					/>
-				</div>
-
-				<div>
-					<label className="block text-sm font-semibold text-foreground mb-3 tracking-wide">
-						Company Website *
-					</label>
-					<Input
-						value={formData.companyWebsite}
-						onChange={(e) =>
-							setFormData({ ...formData, companyWebsite: e.target.value })
-						}
-						className="w-full border-border dark:border-border bg-background dark:bg-background focus:bg-background dark:focus:bg-background transition-colors shadow-sm ring-1 ring-border/10"
-						placeholder="https://www.acme.com"
-						type="url"
-					/>
-				</div>
-
-				<div>
-					<label className="block text-sm font-semibold text-foreground mb-3 tracking-wide">
-						Company Logo (Optional)
-					</label>
-					<div className="flex items-center gap-4">
-						<label className="flex items-center gap-2 px-6 py-3 border border-border dark:border-border rounded-xl cursor-pointer hover:bg-muted/50 transition-all duration-200 bg-background dark:bg-background backdrop-blur-sm shadow-sm hover:shadow-md ring-1 ring-border/10">
-							<Upload className="w-5 h-5 text-primary" />
-							<span className="text-sm font-medium">
-								{formData.companyLogo
-									? formData.companyLogo.name
-									: "Choose file"}
-							</span>
-							<input
-								type="file"
-								accept="image/*"
-								onChange={handleFileChange}
-								className="hidden"
-							/>
-						</label>
-						{formData.companyLogo && (
-							<div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950 px-3 py-2 rounded-lg ring-1 ring-green-200 dark:ring-green-800 shadow-sm">
-								<Check className="w-4 h-4" />
-								File selected
-							</div>
-						)}
-					</div>
-					<p className="text-xs text-muted-foreground mt-2 ml-1">
-						Upload a PNG, JPG, or SVG file (max 5MB)
+					<p className="text-muted-foreground">
+						Please wait while we load your workspace.
 					</p>
 				</div>
 			</div>
-
-			<div className="flex justify-between pt-6">
-				<Button
-					intent="secondary"
-					onClick={handlePrevious}
-					className="px-6 py-2.5 shadow-md hover:shadow-lg transition-shadow"
-				>
-					Previous
-				</Button>
-				<Button
-					onClick={handleNext}
-					className="px-8 py-2.5 shadow-lg hover:shadow-xl transition-shadow"
-				>
-					Next Step
-				</Button>
-			</div>
-		</div>
-	);
-
-	const renderStep3 = () => (
-		<div className="space-y-8">
-			<div>
-				<div className="flex items-center gap-3 mb-3">
-					<div className="w-1.5 h-6 bg-gradient-to-b from-primary to-primary/60 rounded-full" />
-					<h2 className="text-2xl font-semibold text-foreground tracking-tight">
-						Company Size
-					</h2>
-				</div>
-				<p className="text-muted-foreground ml-5 leading-relaxed">
-					Help us understand your team size to provide the best experience.
-				</p>
-			</div>
-
-			<div>
-				<label className="block text-sm font-semibold text-foreground mb-6 tracking-wide">
-					How many people work at your company? *
-				</label>
-				<SelectService
-					options={companySizeOptions}
-					selected={formData.companySize}
-					onChange={(value) => setFormData({ ...formData, companySize: value })}
-				/>
-			</div>
-
-			<div className="flex justify-between pt-6">
-				<Button
-					intent="secondary"
-					onClick={handlePrevious}
-					className="px-6 py-2.5 shadow-md hover:shadow-lg transition-shadow"
-				>
-					Previous
-				</Button>
-				<Button
-					onClick={handleCreateOrganization}
-					className="px-8 py-2.5 shadow-lg hover:shadow-xl transition-shadow bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary"
-				>
-					Create Organization
-				</Button>
-			</div>
-		</div>
-	);
-
-	const renderCurrentStep = () => {
-		switch (currentStep) {
-			case 1:
-				return renderStep1();
-			case 2:
-				return renderStep2();
-			case 3:
-				return renderStep3();
-			default:
-				return renderStep1();
-		}
-	};
+		);
+	}
 
 	return (
 		<div className="min-h-screen flex-1">
@@ -333,29 +41,138 @@ export default function OrganizationOnboarding() {
 				{/* Subtle Pattern Overlay */}
 				<div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(120,119,198,0.1),transparent_50%)] rounded-xl" />
 
-				<div className="relative p-8 min-h-screen flex flex-col">
-					<div className="max-w-4xl mx-auto flex-1 flex flex-col py-8">
+				<div className="relative p-4 sm:p-6 lg:p-8 min-h-screen flex flex-col items-center justify-center">
+					<div className="w-full max-w-lg mx-auto">
 						{/* Enhanced Header */}
-						<div className="mb-10">
-							<div className="flex items-center gap-3 mb-3">
+						<div className="mb-10 text-center">
+							<div className="flex items-center justify-center gap-3 mb-3">
 								<div className="w-2 h-8 bg-gradient-to-b from-primary to-primary/60 rounded-full" />
 								<h1 className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent tracking-tight">
 									Create Your Organization
 								</h1>
+								<div className="w-2 h-8 bg-gradient-to-b from-primary to-primary/60 rounded-full" />
 							</div>
-							<p className="text-muted-foreground ml-5 leading-relaxed">
-								Set up your organization profile to get started with OneTool.
+							<p className="text-muted-foreground leading-relaxed">
+								Set up your organization to get started with OneTool.
 							</p>
 						</div>
 
-						{/* Enhanced Progress Bar */}
-						<div className="mb-10">
-							<ProgressBar steps={progressSteps} />
+						{/* Clerk Create Organization Component */}
+						<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-2xl p-8 shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50">
+							<CreateOrganization
+								appearance={{
+									elements: {
+										rootBox: "mx-auto w-full",
+										card: "bg-transparent border-0 shadow-none p-0 w-full",
+										headerTitle:
+											"text-2xl font-bold text-foreground mb-2 tracking-tight",
+										headerSubtitle:
+											"text-sm text-muted-foreground mb-8 leading-relaxed",
+
+										// Form styling
+										form: "space-y-6",
+										formFieldRow: "space-y-3",
+										formFieldLabel:
+											"text-sm font-semibold text-foreground tracking-wide",
+										formFieldInput:
+											"w-full bg-background dark:bg-card border-border dark:border-border focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-lg px-3 py-2.5 text-foreground dark:text-foreground placeholder:text-muted-foreground dark:placeholder:text-muted-foreground transition-all duration-200 shadow-sm dark:shadow-none",
+										formFieldInputShowPasswordButton:
+											"text-muted-foreground hover:text-foreground dark:text-muted-foreground dark:hover:text-foreground",
+
+										// File upload styling
+										fileDropAreaBox:
+											"border-2 border-dashed border-border dark:border-border hover:border-primary/50 dark:hover:border-primary/50 rounded-lg p-6 text-center transition-colors bg-muted/20 dark:bg-muted/10",
+										fileDropAreaButtonPrimary:
+											"text-primary hover:text-primary/80 dark:text-primary dark:hover:text-primary/80 font-medium",
+										fileDropAreaIcon:
+											"text-muted-foreground dark:text-muted-foreground mb-2",
+										fileDropAreaText: "text-foreground dark:text-foreground",
+
+										// Button styling
+										formButtonPrimary:
+											"w-full bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-primary-foreground font-medium py-2.5 px-6 rounded-lg shadow-lg hover:shadow-xl dark:shadow-lg dark:hover:shadow-xl transition-all duration-200 border-0",
+
+										// Footer styling
+										footer:
+											"mt-8 pt-6 border-t border-border dark:border-border",
+										footerActionText:
+											"text-xs text-muted-foreground dark:text-muted-foreground",
+										footerActionLink:
+											"text-primary hover:text-primary/80 dark:text-primary dark:hover:text-primary/80 font-medium text-xs",
+
+										// Error and success styling
+										formFieldSuccessText:
+											"text-green-600 dark:text-green-400 text-sm",
+										formFieldErrorText:
+											"text-red-600 dark:text-red-400 text-sm",
+										formFieldWarningText:
+											"text-yellow-600 dark:text-yellow-400 text-sm",
+
+										// Loading states
+										formFieldInputPlaceholder:
+											"text-muted-foreground dark:text-muted-foreground",
+										spinner: "text-primary dark:text-primary",
+
+										// Modal/popover styling (if any)
+										modalContent:
+											"bg-card dark:bg-card border-border dark:border-border shadow-xl dark:shadow-xl",
+										modalCloseButton:
+											"text-muted-foreground hover:text-foreground dark:text-muted-foreground dark:hover:text-foreground",
+
+										// Additional dark mode elements
+										identityPreview:
+											"bg-background dark:bg-card border-border dark:border-border",
+										identityPreviewText: "text-foreground dark:text-foreground",
+										identityPreviewEditButton:
+											"text-primary hover:text-primary/80 dark:text-primary dark:hover:text-primary/80",
+									},
+									variables: {
+										// Color system that works in both light and dark mode
+										colorPrimary: "hsl(var(--primary))",
+										colorDanger: "hsl(var(--destructive))",
+										colorSuccess: "hsl(var(--green-600))",
+										colorWarning: "hsl(var(--yellow-600))",
+										colorNeutral: "hsl(var(--muted-foreground))",
+
+										// Background colors
+										colorBackground: "hsl(var(--background))",
+										colorInputBackground: "hsl(var(--background))",
+
+										// Text colors
+										colorText: "hsl(var(--foreground))",
+										colorTextSecondary: "hsl(var(--muted-foreground))",
+										colorInputText: "hsl(var(--foreground))",
+										colorTextOnPrimaryBackground:
+											"hsl(var(--primary-foreground))",
+
+										// Typography
+										fontFamily: "inherit",
+										fontFamilyButtons: "inherit",
+										fontSize: "0.875rem",
+										fontWeight: {
+											normal: "400",
+											medium: "500",
+											semibold: "600",
+											bold: "700",
+										},
+
+										// Spacing and shapes
+										borderRadius: "0.5rem",
+										spacingUnit: "1rem",
+									},
+								}}
+								afterCreateOrganizationUrl="/organization/complete"
+								skipInvitationScreen={true}
+								hideSlug={true}
+							/>
 						</div>
 
-						{/* Enhanced Form Content with improved contrast */}
-						<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-2xl p-10 shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50 flex-shrink-0">
-							{renderCurrentStep()}
+						{/* Help Text */}
+						<div className="mt-6 text-center">
+							<p className="text-xs text-muted-foreground">
+								After creating your organization, you&apos;ll be able to add
+								team members and customize settings.
+							</p>
 						</div>
 					</div>
 				</div>

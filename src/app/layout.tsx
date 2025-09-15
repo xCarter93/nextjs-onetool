@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import ConvexClientProvider from "@/providers/ConvexClientProvider";
 import { ThemeProvider } from "@/providers/ThemeProvider";
+import { ToastProvider } from "@/hooks/use-toast";
 import "./globals.css";
 import { env } from "@/env";
 
@@ -34,9 +35,16 @@ export default function RootLayout({
 				<ClerkProvider
 					publishableKey={env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
 					afterSignOutUrl="/"
+					appearance={{
+						cssLayerName: "clerk",
+					}}
 				>
 					<ConvexClientProvider>
-						<ThemeProvider>{children}</ThemeProvider>
+						<ThemeProvider>
+							<ToastProvider position="top-right" maxToasts={5}>
+								{children}
+							</ToastProvider>
+						</ThemeProvider>
 					</ConvexClientProvider>
 				</ClerkProvider>
 			</body>

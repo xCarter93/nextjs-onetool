@@ -110,7 +110,7 @@ export function NavMain({
 									</DropdownMenuItem>
 									<DropdownMenuItem asChild className="p-0">
 										<Link
-											href="/project/new"
+											href="/projects/new"
 											className="group flex w-full md:w-40 items-center gap-3 rounded-lg border bg-card p-3 shadow-sm hover:bg-accent hover:text-accent-foreground"
 										>
 											<FolderPlus className="size-5 text-muted-foreground group-hover:text-accent-foreground" />
@@ -119,7 +119,7 @@ export function NavMain({
 									</DropdownMenuItem>
 									<DropdownMenuItem asChild className="p-0">
 										<Link
-											href="/quote/new"
+											href="/quotes/new"
 											className="group flex w-full md:w-40 items-center gap-3 rounded-lg border bg-card p-3 shadow-sm hover:bg-accent hover:text-accent-foreground"
 										>
 											<FilePlus className="size-5 text-muted-foreground group-hover:text-accent-foreground" />

@@ -1,6 +1,8 @@
 "use client";
 
 import React from "react";
+import { useQuery } from "convex/react";
+import { api } from "../../../../convex/_generated/api";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,7 +32,9 @@ import {
 	getSortedRowModel,
 	useReactTable,
 } from "@tanstack/react-table";
-import { ChevronLeft, ChevronRight, Users } from "lucide-react";
+import { ChevronLeft, ChevronRight, Users, ExternalLink } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
 
 type Client = {
 	id: string;
@@ -41,54 +45,6 @@ type Client = {
 	lastActivity: string; // ISO date or friendly string
 	status: "Active" | "Prospect" | "Paused";
 };
-
-const sampleClients: Client[] = [
-	{
-		id: "c_001",
-		name: "Acme Corporation",
-		industry: "Manufacturing",
-		location: "Denver, CO",
-		activeProjects: 4,
-		lastActivity: "2025-09-10",
-		status: "Active",
-	},
-	{
-		id: "c_002",
-		name: "Globex Ltd",
-		industry: "FinTech",
-		location: "Austin, TX",
-		activeProjects: 2,
-		lastActivity: "2025-09-12",
-		status: "Prospect",
-	},
-	{
-		id: "c_003",
-		name: "Initech",
-		industry: "Software",
-		location: "San Jose, CA",
-		activeProjects: 6,
-		lastActivity: "2025-09-09",
-		status: "Active",
-	},
-	{
-		id: "c_004",
-		name: "Umbrella Health",
-		industry: "Healthcare",
-		location: "Boston, MA",
-		activeProjects: 1,
-		lastActivity: "2025-09-01",
-		status: "Paused",
-	},
-	{
-		id: "c_005",
-		name: "Wayne Enterprises",
-		industry: "Defense",
-		location: "Gotham, NJ",
-		activeProjects: 3,
-		lastActivity: "2025-09-11",
-		status: "Active",
-	},
-];
 
 const statusToBadgeVariant = (status: Client["status"]) => {
 	switch (status) {
@@ -103,7 +59,10 @@ const statusToBadgeVariant = (status: Client["status"]) => {
 	}
 };
 
-const columns: ColumnDef<Client>[] = [
+const createColumns = (
+	router: ReturnType<typeof useRouter>,
+	toast: ReturnType<typeof useToast>
+): ColumnDef<Client>[] => [
 	{
 		accessorKey: "name",
 		header: () => <div className="flex items-center gap-1">Name</div>,
@@ -153,10 +112,41 @@ const columns: ColumnDef<Client>[] = [
 			</Badge>
 		),
 	},
+	{
+		id: "actions",
+		header: "",
+		cell: ({ row }) => (
+			<Button
+				intent="outline"
+				size="sq-sm"
+				onPress={() => {
+					router.push(`/clients/${row.original.id}`);
+					toast.info(
+						"Opening Client",
+						`Viewing details for ${row.original.name}`
+					);
+				}}
+				aria-label={`View client ${row.original.name}`}
+			>
+				<ExternalLink className="size-4" />
+			</Button>
+		),
+	},
 ];
 
 export default function ClientsPage() {
-	const [data] = React.useState<Client[]>(sampleClients);
+	const router = useRouter();
+	const toast = useToast();
+
+	// Fetch clients with project counts from Convex
+	const convexClients = useQuery(api.clients.listWithProjectCounts, {});
+	const clientsStats = useQuery(api.clients.getStats, {});
+
+	// Transform the data to match our Client type
+	const data = React.useMemo(() => {
+		if (!convexClients) return [];
+		return convexClients;
+	}, [convexClients]);
 	const [sorting, setSorting] = React.useState<SortingState>([]);
 	const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
 		[]
@@ -166,7 +156,7 @@ export default function ClientsPage() {
 
 	const table = useReactTable({
 		data,
-		columns,
+		columns: createColumns(router, toast),
 		state: {
 			sorting,
 			columnFilters,
@@ -194,10 +184,42 @@ export default function ClientsPage() {
 		industryCol?.setFilterValue(globalQuery);
 	}, [globalQuery, table]);
 
-	const totalActive = React.useMemo(
-		() => data.filter((d) => d.status === "Active").length,
-		[data]
-	);
+	// Loading state
+	if (convexClients === undefined || clientsStats === undefined) {
+		return (
+			<div className="min-h-[100vh] flex-1 md:min-h-min">
+				<div className="relative bg-gradient-to-br from-background via-muted/30 to-muted/60 dark:from-background dark:via-muted/20 dark:to-muted/40 min-h-[100vh] md:min-h-min rounded-xl">
+					<div className="relative p-6 space-y-6">
+						<div className="flex items-center justify-between">
+							<div className="flex items-center gap-3">
+								<div className="w-1.5 h-6 bg-gradient-to-b from-primary to-primary/60 rounded-full" />
+								<div>
+									<h1 className="text-2xl font-bold text-foreground">
+										Clients
+									</h1>
+									<p className="text-muted-foreground text-sm">
+										Loading clients...
+									</p>
+								</div>
+							</div>
+						</div>
+						<div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+							{[1, 2, 3].map((i) => (
+								<Card key={i}>
+									<CardHeader>
+										<div className="h-4 bg-muted rounded animate-pulse" />
+									</CardHeader>
+									<CardContent>
+										<div className="h-8 bg-muted rounded animate-pulse" />
+									</CardContent>
+								</Card>
+							))}
+						</div>
+					</div>
+				</div>
+			</div>
+		);
+	}
 
 	return (
 		<div className="min-h-[100vh] flex-1 md:min-h-min">
@@ -225,7 +247,9 @@ export default function ClientsPage() {
 								<CardDescription>All clients in your workspace</CardDescription>
 							</CardHeader>
 							<CardContent>
-								<div className="text-3xl font-semibold">{data.length}</div>
+								<div className="text-3xl font-semibold">
+									{clientsStats.total}
+								</div>
 							</CardContent>
 						</Card>
 						<Card>
@@ -234,7 +258,9 @@ export default function ClientsPage() {
 								<CardDescription>Currently engaged clients</CardDescription>
 							</CardHeader>
 							<CardContent>
-								<div className="text-3xl font-semibold">{totalActive}</div>
+								<div className="text-3xl font-semibold">
+									{clientsStats.byStatus.active}
+								</div>
 							</CardContent>
 						</Card>
 						<Card>
@@ -244,7 +270,7 @@ export default function ClientsPage() {
 							</CardHeader>
 							<CardContent>
 								<div className="text-3xl font-semibold">
-									{data.filter((d) => d.status === "Prospect").length}
+									{clientsStats.byStatus.prospect}
 								</div>
 							</CardContent>
 						</Card>
@@ -309,7 +335,7 @@ export default function ClientsPage() {
 											) : (
 												<TableRow>
 													<TableCell
-														colSpan={columns.length}
+														colSpan={createColumns(router, toast).length}
 														className="h-24 text-center"
 													>
 														No results.

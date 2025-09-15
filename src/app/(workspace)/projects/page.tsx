@@ -30,90 +30,78 @@ import {
 	getSortedRowModel,
 	useReactTable,
 } from "@tanstack/react-table";
-import { ChevronLeft, ChevronRight, FolderKanban } from "lucide-react";
+import {
+	ChevronLeft,
+	ChevronRight,
+	FolderKanban,
+	ExternalLink,
+	Plus,
+	FolderOpen,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useQuery } from "convex/react";
+import { api } from "../../../../convex/_generated/api";
+import type { Doc } from "../../../../convex/_generated/dataModel";
 
-type Project = {
-	id: string;
-	name: string;
-	client: string;
-	owner: string;
-	status: "Planned" | "In Progress" | "Blocked" | "Completed";
-	budget: string; // display only for now
-	updatedAt: string; // ISO
+// Enhanced project type that includes client information for display
+type ProjectWithClient = Doc<"projects"> & {
+	client?: Doc<"clients">;
 };
 
-const sampleProjects: Project[] = [
-	{
-		id: "p_1001",
-		name: "Website Redesign",
-		client: "Acme Corporation",
-		owner: "Pat Carter",
-		status: "In Progress",
-		budget: "$120,000",
-		updatedAt: "2025-09-11",
-	},
-	{
-		id: "p_1002",
-		name: "Payment Gateway Migration",
-		client: "Globex Ltd",
-		owner: "Ada Lovelace",
-		status: "Planned",
-		budget: "$80,000",
-		updatedAt: "2025-09-08",
-	},
-	{
-		id: "p_1003",
-		name: "Mobile App MVP",
-		client: "Initech",
-		owner: "Grace Hopper",
-		status: "Blocked",
-		budget: "$60,000",
-		updatedAt: "2025-09-07",
-	},
-	{
-		id: "p_1004",
-		name: "Data Warehouse Setup",
-		client: "Umbrella Health",
-		owner: "Linus Torvalds",
-		status: "Completed",
-		budget: "$200,000",
-		updatedAt: "2025-09-01",
-	},
-];
-
-const statusVariant = (status: Project["status"]) => {
+const statusVariant = (status: Doc<"projects">["status"]) => {
 	switch (status) {
-		case "Completed":
+		case "completed":
 			return "default" as const;
-		case "In Progress":
+		case "in-progress":
 			return "secondary" as const;
-		case "Blocked":
+		case "cancelled":
 			return "destructive" as const;
-		case "Planned":
+		case "planned":
 			return "outline" as const;
 		default:
 			return "outline" as const;
 	}
 };
 
-const columns: ColumnDef<Project>[] = [
+const formatStatus = (status: Doc<"projects">["status"]) => {
+	switch (status) {
+		case "in-progress":
+			return "In Progress";
+		case "completed":
+			return "Completed";
+		case "cancelled":
+			return "Cancelled";
+		case "planned":
+			return "Planned";
+		default:
+			return status;
+	}
+};
+
+const createColumns = (
+	router: ReturnType<typeof useRouter>
+): ColumnDef<ProjectWithClient>[] => [
 	{
-		accessorKey: "name",
+		accessorKey: "title",
 		header: "Project",
 		cell: ({ row }) => (
 			<div className="flex flex-col">
-				<span className="font-medium text-foreground">{row.original.name}</span>
+				<span className="font-medium text-foreground">
+					{row.original.title}
+				</span>
 				<span className="text-muted-foreground text-xs">
-					Client: {row.original.client}
+					Client: {row.original.client?.companyName || "Unknown Client"}
 				</span>
 			</div>
 		),
 	},
 	{
-		accessorKey: "owner",
-		header: "Owner",
+		accessorKey: "projectType",
+		header: "Type",
 		cell: ({ row }) => (
-			<span className="text-foreground">{row.original.owner}</span>
+			<span className="text-foreground capitalize">
+				{row.original.projectType}
+			</span>
 		),
 	},
 	{
@@ -121,33 +109,47 @@ const columns: ColumnDef<Project>[] = [
 		header: "Status",
 		cell: ({ row }) => (
 			<Badge variant={statusVariant(row.original.status)}>
-				{row.original.status}
+				{formatStatus(row.original.status)}
 			</Badge>
 		),
 	},
 	{
-		accessorKey: "budget",
-		header: "Budget",
-		cell: ({ row }) => (
-			<span className="text-foreground">{row.original.budget}</span>
-		),
+		accessorKey: "startDate",
+		header: "Start Date",
+		cell: ({ row }) => {
+			const startDate = row.original.startDate;
+			if (!startDate)
+				return <span className="text-muted-foreground">Not set</span>;
+			const d = new Date(startDate);
+			return <span className="text-foreground">{d.toLocaleDateString()}</span>;
+		},
 	},
 	{
-		accessorKey: "updatedAt",
-		header: "Updated",
+		accessorKey: "_creationTime",
+		header: "Created",
 		cell: ({ row }) => {
-			const d = new Date(row.original.updatedAt);
-			return (
-				<span className="text-foreground">
-					{isNaN(d.getTime()) ? row.original.updatedAt : d.toLocaleDateString()}
-				</span>
-			);
+			const d = new Date(row.original._creationTime);
+			return <span className="text-foreground">{d.toLocaleDateString()}</span>;
 		},
+	},
+	{
+		id: "actions",
+		header: "",
+		cell: ({ row }) => (
+			<Button
+				intent="outline"
+				size="sq-sm"
+				onPress={() => router.push(`/projects/${row.original._id}`)}
+				aria-label={`View project ${row.original.title}`}
+			>
+				<ExternalLink className="size-4" />
+			</Button>
+		),
 	},
 ];
 
 export default function ProjectsPage() {
-	const [data] = React.useState<Project[]>(sampleProjects);
+	const router = useRouter();
 	const [sorting, setSorting] = React.useState<SortingState>([]);
 	const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
 		[]
@@ -155,9 +157,30 @@ export default function ProjectsPage() {
 	const [query, setQuery] = React.useState("");
 	const pageSize = 10;
 
+	// Fetch projects and clients from Convex
+	const projects = useQuery(api.projects.list, {});
+	const clients = useQuery(api.clients.list, {});
+	const projectStats = useQuery(api.projects.getStats, {});
+
+	// Enhanced projects with client information
+	const data = React.useMemo((): ProjectWithClient[] => {
+		if (!projects || !clients) return [];
+
+		return projects.map((project) => ({
+			...project,
+			client: clients.find((client) => client._id === project.clientId),
+		}));
+	}, [projects, clients]);
+
+	// Loading state
+	const isLoading = projects === undefined || clients === undefined;
+
+	// Empty state
+	const isEmpty = !isLoading && data.length === 0;
+
 	const table = useReactTable({
 		data,
-		columns,
+		columns: createColumns(router),
 		state: {
 			sorting,
 			columnFilters,
@@ -177,16 +200,10 @@ export default function ProjectsPage() {
 	}, [pageSize, table]);
 
 	React.useEffect(() => {
-		table.getColumn("name")?.setFilterValue(query);
-		table.getColumn("owner")?.setFilterValue(query);
+		table.getColumn("title")?.setFilterValue(query);
+		table.getColumn("projectType")?.setFilterValue(query);
 		table.getColumn("status")?.setFilterValue(query);
-		table.getColumn("budget")?.setFilterValue(query);
 	}, [query, table]);
-
-	const totalInProgress = React.useMemo(
-		() => data.filter((p) => p.status === "In Progress").length,
-		[data]
-	);
 
 	return (
 		<div className="min-h-[100vh] flex-1 md:min-h-min">
@@ -203,43 +220,73 @@ export default function ProjectsPage() {
 								</p>
 							</div>
 						</div>
+						<Button
+							intent="primary"
+							onPress={() => router.push("/projects/new")}
+							className="flex items-center gap-2"
+						>
+							<Plus className="h-4 w-4" />
+							Create Project
+						</Button>
 					</div>
 
-					<div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-						<Card>
-							<CardHeader>
-								<CardTitle className="flex items-center gap-2 text-base">
-									<FolderKanban className="size-4" /> Total Projects
-								</CardTitle>
-								<CardDescription>
-									All projects in your workspace
-								</CardDescription>
-							</CardHeader>
-							<CardContent>
-								<div className="text-3xl font-semibold">{data.length}</div>
-							</CardContent>
-						</Card>
-						<Card>
-							<CardHeader>
-								<CardTitle className="text-base">In Progress</CardTitle>
-								<CardDescription>Currently active projects</CardDescription>
-							</CardHeader>
-							<CardContent>
-								<div className="text-3xl font-semibold">{totalInProgress}</div>
-							</CardContent>
-						</Card>
-						<Card>
-							<CardHeader>
-								<CardTitle className="text-base">Completed</CardTitle>
-								<CardDescription>Finished projects</CardDescription>
-							</CardHeader>
-							<CardContent>
-								<div className="text-3xl font-semibold">
-									{data.filter((p) => p.status === "Completed").length}
-								</div>
-							</CardContent>
-						</Card>
-					</div>
+					{isLoading ? (
+						<div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+							{[...Array(3)].map((_, i) => (
+								<Card key={i}>
+									<CardHeader>
+										<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-24"></div>
+										<div className="h-3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-32"></div>
+									</CardHeader>
+									<CardContent>
+										<div className="h-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-16"></div>
+									</CardContent>
+								</Card>
+							))}
+						</div>
+					) : (
+						<div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+							<Card>
+								<CardHeader>
+									<CardTitle className="flex items-center gap-2 text-base">
+										<FolderKanban className="size-4" /> Total Projects
+									</CardTitle>
+									<CardDescription>
+										All projects in your workspace
+									</CardDescription>
+								</CardHeader>
+								<CardContent>
+									<div className="text-3xl font-semibold">
+										{projectStats?.total || data.length}
+									</div>
+								</CardContent>
+							</Card>
+							<Card>
+								<CardHeader>
+									<CardTitle className="text-base">In Progress</CardTitle>
+									<CardDescription>Currently active projects</CardDescription>
+								</CardHeader>
+								<CardContent>
+									<div className="text-3xl font-semibold">
+										{projectStats?.byStatus["in-progress"] ||
+											data.filter((p) => p.status === "in-progress").length}
+									</div>
+								</CardContent>
+							</Card>
+							<Card>
+								<CardHeader>
+									<CardTitle className="text-base">Completed</CardTitle>
+									<CardDescription>Finished projects</CardDescription>
+								</CardHeader>
+								<CardContent>
+									<div className="text-3xl font-semibold">
+										{projectStats?.byStatus.completed ||
+											data.filter((p) => p.status === "completed").length}
+									</div>
+								</CardContent>
+							</Card>
+						</div>
+					)}
 
 					<Card>
 						<CardHeader className="flex flex-col gap-2 border-b">
@@ -261,86 +308,126 @@ export default function ProjectsPage() {
 							</div>
 						</CardHeader>
 						<CardContent className="px-0">
-							<div className="px-6">
-								<div className="overflow-hidden rounded-lg border">
-									<Table>
-										<TableHeader className="bg-muted sticky top-0 z-10">
-											{table.getHeaderGroups().map((headerGroup) => (
-												<TableRow key={headerGroup.id}>
-													{headerGroup.headers.map((header) => (
-														<TableHead key={header.id}>
-															{header.isPlaceholder
-																? null
-																: flexRender(
-																		header.column.columnDef.header,
-																		header.getContext()
-																	)}
-														</TableHead>
-													))}
-												</TableRow>
-											))}
-										</TableHeader>
-										<TableBody>
-											{table.getRowModel().rows?.length ? (
-												table.getRowModel().rows.map((row) => (
-													<TableRow
-														key={row.id}
-														data-state={row.getIsSelected() && "selected"}
-													>
-														{row.getVisibleCells().map((cell) => (
-															<TableCell key={cell.id}>
-																{flexRender(
-																	cell.column.columnDef.cell,
-																	cell.getContext()
-																)}
-															</TableCell>
+							{isLoading ? (
+								<div className="px-6">
+									<div className="space-y-4">
+										{[...Array(5)].map((_, i) => (
+											<div key={i} className="flex items-center space-x-4 p-4">
+												<div className="flex-1 space-y-2">
+													<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-2/3"></div>
+													<div className="h-3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-1/2"></div>
+												</div>
+												<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-16"></div>
+												<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-20"></div>
+												<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-24"></div>
+												<div className="h-8 w-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+											</div>
+										))}
+									</div>
+								</div>
+							) : isEmpty ? (
+								<div className="px-6 py-12 text-center">
+									<div className="mx-auto w-24 h-24 mb-4 flex items-center justify-center rounded-full bg-muted">
+										<FolderOpen className="h-12 w-12 text-muted-foreground" />
+									</div>
+									<h3 className="text-lg font-semibold text-foreground mb-2">
+										No projects yet
+									</h3>
+									<p className="text-muted-foreground mb-6 max-w-sm mx-auto">
+										Get started by creating your first project. Projects help
+										you organize work and track progress.
+									</p>
+									<Button
+										intent="primary"
+										onPress={() => router.push("/projects/new")}
+										className="inline-flex items-center gap-2"
+									>
+										<Plus className="h-4 w-4" />
+										Create Your First Project
+									</Button>
+								</div>
+							) : (
+								<div className="px-6">
+									<div className="overflow-hidden rounded-lg border">
+										<Table>
+											<TableHeader className="bg-muted sticky top-0 z-10">
+												{table.getHeaderGroups().map((headerGroup) => (
+													<TableRow key={headerGroup.id}>
+														{headerGroup.headers.map((header) => (
+															<TableHead key={header.id}>
+																{header.isPlaceholder
+																	? null
+																	: flexRender(
+																			header.column.columnDef.header,
+																			header.getContext()
+																		)}
+															</TableHead>
 														))}
 													</TableRow>
-												))
-											) : (
-												<TableRow>
-													<TableCell
-														colSpan={columns.length}
-														className="h-24 text-center"
-													>
-														No results.
-													</TableCell>
-												</TableRow>
-											)}
-										</TableBody>
-									</Table>
-								</div>
-								<div className="flex items-center justify-between py-4">
-									<div className="text-muted-foreground text-sm">
-										{table.getFilteredRowModel().rows.length} of {data.length}{" "}
-										projects
+												))}
+											</TableHeader>
+											<TableBody>
+												{table.getRowModel().rows?.length ? (
+													table.getRowModel().rows.map((row) => (
+														<TableRow
+															key={row.id}
+															data-state={row.getIsSelected() && "selected"}
+														>
+															{row.getVisibleCells().map((cell) => (
+																<TableCell key={cell.id}>
+																	{flexRender(
+																		cell.column.columnDef.cell,
+																		cell.getContext()
+																	)}
+																</TableCell>
+															))}
+														</TableRow>
+													))
+												) : (
+													<TableRow>
+														<TableCell
+															colSpan={createColumns(router).length}
+															className="h-24 text-center"
+														>
+															No projects match your search.
+														</TableCell>
+													</TableRow>
+												)}
+											</TableBody>
+										</Table>
 									</div>
-									<div className="flex items-center gap-2">
-										<Button
-											intent="outline"
-											size="sq-sm"
-											onPress={() => table.previousPage()}
-											isDisabled={!table.getCanPreviousPage()}
-											aria-label="Previous page"
-										>
-											<ChevronLeft className="size-4" />
-										</Button>
-										<div className="text-sm font-medium">
-											Page {table.getState().pagination?.pageIndex + 1} of{" "}
-											{table.getPageCount()}
+									<div className="flex items-center justify-between py-4">
+										<div className="text-muted-foreground text-sm">
+											{table.getFilteredRowModel().rows.length} of {data.length}{" "}
+											projects
 										</div>
-										<Button
-											intent="outline"
-											size="sq-sm"
-											onPress={() => table.nextPage()}
-											isDisabled={!table.getCanNextPage()}
-											aria-label="Next page"
-										>
-											<ChevronRight className="size-4" />
-										</Button>
+										<div className="flex items-center gap-2">
+											<Button
+												intent="outline"
+												size="sq-sm"
+												onPress={() => table.previousPage()}
+												isDisabled={!table.getCanPreviousPage()}
+												aria-label="Previous page"
+											>
+												<ChevronLeft className="size-4" />
+											</Button>
+											<div className="text-sm font-medium">
+												Page {table.getState().pagination?.pageIndex + 1} of{" "}
+												{table.getPageCount()}
+											</div>
+											<Button
+												intent="outline"
+												size="sq-sm"
+												onPress={() => table.nextPage()}
+												isDisabled={!table.getCanNextPage()}
+												aria-label="Next page"
+											>
+												<ChevronRight className="size-4" />
+											</Button>
+										</div>
 									</div>
 								</div>
-							</div>
+							)}
 						</CardContent>
 					</Card>
 				</div>

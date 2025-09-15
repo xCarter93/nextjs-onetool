@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import {
 	UserGroupIcon,
@@ -9,6 +11,7 @@ import {
 	ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
 import { Alert, AlertTitle, AlertDescription } from "./ui/alert";
+import { useOrganization } from "@clerk/nextjs";
 
 const items = [
 	{
@@ -16,42 +19,42 @@ const items = [
 		description:
 			"Start by adding a client to manage their projects and services.",
 		icon: UserGroupIcon,
-		background: "bg-blue-500",
+		background: "bg-primary",
 		href: "/clients/new",
 	},
 	{
 		title: "Create Your First Project",
 		description: "Set up a project to organize tasks and track progress.",
 		icon: WrenchScrewdriverIcon,
-		background: "bg-green-500",
+		background: "bg-primary",
 		href: "/projects/new",
 	},
 	{
 		title: "Send Your First Quote",
 		description: "Create and send professional quotes with PDF generation.",
 		icon: DocumentTextIcon,
-		background: "bg-purple-500",
+		background: "bg-primary",
 		href: "/quotes/new",
 	},
 	{
 		title: "Schedule Your First Task",
 		description: "Add tasks and schedule appointments for your projects.",
 		icon: CalendarDaysIcon,
-		background: "bg-orange-500",
+		background: "bg-primary",
 		href: "/tasks/new",
 	},
 	{
 		title: "Create Your First Invoice",
 		description: "Generate invoices and track payments from your clients.",
 		icon: CurrencyDollarIcon,
-		background: "bg-emerald-500",
+		background: "bg-primary",
 		href: "/invoices/new",
 	},
 	{
 		title: "View Your Dashboard",
 		description: "Check your business metrics and upcoming tasks.",
 		icon: ChartBarIcon,
-		background: "bg-indigo-500",
+		background: "bg-primary",
 		href: "/dashboard",
 	},
 ];
@@ -63,6 +66,8 @@ function classNames(
 }
 
 export default function GettingStarted() {
+	const { organization, isLoaded } = useOrganization();
+
 	return (
 		<div>
 			<div className="flex items-center gap-3 mb-4">
@@ -76,23 +81,25 @@ export default function GettingStarted() {
 				managing your field service business.
 			</p>
 
-			{/* Enhanced Organization Setup Alert */}
-			<Alert className="mt-6 border-amber-300 dark:border-amber-700 bg-gradient-to-r from-amber-50 to-amber-100 text-amber-900 dark:bg-gradient-to-r dark:from-amber-950 dark:to-amber-900 dark:text-amber-100 shadow-md ring-1 ring-amber-200 dark:ring-amber-800 backdrop-blur-sm">
-				<ExclamationTriangleIcon className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-				<AlertTitle className="text-amber-900 dark:text-amber-100 font-semibold">
-					Set Up Your Organization
-				</AlertTitle>
-				<AlertDescription className="text-amber-800 dark:text-amber-200 leading-relaxed">
-					Complete your organization setup to unlock all features and customize
-					OneTool for your business.
-					<Link
-						href="/organization/new"
-						className="inline-flex items-center gap-1 text-amber-900 hover:text-amber-950 dark:text-amber-200 dark:hover:text-amber-50 font-semibold underline underline-offset-2 transition-colors ml-1"
-					>
-						Click here to set up organization →
-					</Link>
-				</AlertDescription>
-			</Alert>
+			{/* Enhanced Organization Setup Alert - Only show if no organization exists */}
+			{isLoaded && !organization && (
+				<Alert className="mt-6 border-amber-300 dark:border-amber-700 bg-gradient-to-r from-amber-50 to-amber-100 text-amber-900 dark:bg-gradient-to-r dark:from-amber-950 dark:to-amber-900 dark:text-amber-100 shadow-md ring-1 ring-amber-200 dark:ring-amber-800 backdrop-blur-sm">
+					<ExclamationTriangleIcon className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+					<AlertTitle className="text-amber-900 dark:text-amber-100 font-semibold">
+						Set Up Your Organization
+					</AlertTitle>
+					<AlertDescription className="text-amber-800 dark:text-amber-200 leading-relaxed">
+						Complete your organization setup to unlock all features and
+						customize OneTool for your business.
+						<Link
+							href="/organization/new"
+							className="inline-flex items-center gap-1 text-amber-900 hover:text-amber-950 dark:text-amber-200 dark:hover:text-amber-50 font-semibold underline underline-offset-2 transition-colors ml-1"
+						>
+							Click here to set up organization →
+						</Link>
+					</AlertDescription>
+				</Alert>
+			)}
 			<ul
 				role="list"
 				className="mt-8 grid grid-cols-1 gap-5 border-y border-border dark:border-border py-8 sm:grid-cols-2"

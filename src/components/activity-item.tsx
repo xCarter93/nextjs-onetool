@@ -5,7 +5,20 @@ import {
 	BriefcaseIcon,
 	DocumentTextIcon,
 	CurrencyDollarIcon,
+	ClipboardDocumentListIcon,
+	BuildingOfficeIcon,
+	UserGroupIcon,
 } from "@heroicons/react/24/solid";
+import { Doc } from "../../convex/_generated/dataModel";
+
+// Real activity data from Convex
+export interface ActivityWithUser extends Doc<"activities"> {
+	user: {
+		name: string;
+		email: string;
+		image: string;
+	};
+}
 
 interface Person {
 	name: string;
@@ -124,7 +137,7 @@ interface InvoicePaidActivity {
 	date: string;
 }
 
-type ActivityItemType =
+type LegacyActivityItemType =
 	| CommentActivity
 	| AssignmentActivity
 	| TagsActivity
@@ -137,6 +150,8 @@ type ActivityItemType =
 	| QuoteSentActivity
 	| InvoiceSentActivity
 	| InvoicePaidActivity;
+
+type ActivityItemType = LegacyActivityItemType | ActivityWithUser;
 
 interface ActivityItemProps {
 	activity: ActivityItemType;
@@ -158,27 +173,84 @@ function getInitials(name: string): string {
 		.slice(0, 2);
 }
 
+// Helper function to check if activity is from Convex
+function isConvexActivity(
+	activity: ActivityItemType
+): activity is ActivityWithUser {
+	return "activityType" in activity && "user" in activity;
+}
+
+// Helper function to get formatted date
+function formatDate(timestamp: number): string {
+	const now = Date.now();
+	const diff = now - timestamp;
+
+	const minutes = Math.floor(diff / (1000 * 60));
+	const hours = Math.floor(diff / (1000 * 60 * 60));
+	const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+	if (minutes < 60) {
+		return `${minutes}m ago`;
+	} else if (hours < 24) {
+		return `${hours}h ago`;
+	} else {
+		return `${days}d ago`;
+	}
+}
+
+// Helper function to get activity amount from metadata
+function getActivityAmount(activity: ActivityWithUser): string | null {
+	if (activity.metadata && typeof activity.metadata === "object") {
+		const metadata = activity.metadata as any;
+		if (metadata.total) {
+			return `$${metadata.total.toLocaleString()}`;
+		}
+	}
+	return null;
+}
+
 function iconForActivity(activity: ActivityItemType) {
-	switch (activity.type) {
+	const activityType = isConvexActivity(activity)
+		? activity.activityType
+		: activity.type;
+
+	switch (activityType) {
 		case "client_created":
 		case "client_updated":
 			return UserIcon;
 		case "project_created":
 		case "project_updated":
+		case "project_completed":
 			return BriefcaseIcon;
 		case "quote_created":
 		case "quote_sent":
 		case "quote_approved":
+		case "quote_declined":
 			return DocumentTextIcon;
+		case "invoice_created":
 		case "invoice_sent":
 		case "invoice_paid":
 			return CurrencyDollarIcon;
+		case "task_created":
+		case "task_completed":
+			return ClipboardDocumentListIcon;
+		case "user_invited":
+		case "user_removed":
+			return UserGroupIcon;
+		case "organization_updated":
+			return BuildingOfficeIcon;
 		default:
 			return null;
 	}
 }
 
 function describeEvent(activity: ActivityItemType): string {
+	if (isConvexActivity(activity)) {
+		// For Convex activities, use the description directly
+		return activity.description;
+	}
+
+	// Legacy activity handling
 	switch (activity.type) {
 		case "client_created":
 			return "created the client.";
@@ -209,6 +281,20 @@ function describeEvent(activity: ActivityItemType): string {
 
 export default function ActivityItem({ activity, isLast }: ActivityItemProps) {
 	const Icon = iconForActivity(activity);
+	const isConvex = isConvexActivity(activity);
+
+	// Extract common data based on activity type
+	const userName = isConvex ? activity.user.name : activity.person.name;
+	const userImage = isConvex
+		? activity.user.image
+		: "imageUrl" in activity
+			? activity.imageUrl
+			: "";
+	const activityDate = isConvex
+		? formatDate(activity.timestamp)
+		: activity.date;
+	const activityType = isConvex ? activity.activityType : activity.type;
+
 	return (
 		<li className="relative flex gap-x-4 items-center">
 			<div
@@ -220,7 +306,7 @@ export default function ActivityItem({ activity, isLast }: ActivityItemProps) {
 				<div className="w-px bg-border/70 dark:bg-border/60" />
 			</div>
 
-			{activity.type === "comment" ? (
+			{activityType === "comment" && !isConvex ? (
 				<>
 					<Avatar className="relative size-6 flex-none">
 						<AvatarImage
@@ -251,10 +337,11 @@ export default function ActivityItem({ activity, isLast }: ActivityItemProps) {
 			) : (
 				<>
 					<div className="relative flex size-6 flex-none items-center justify-center">
-						{activity.type === "invoice_paid" ? (
+						{activityType === "invoice_paid" ||
+						activityType === "project_completed" ? (
 							<CheckCircleIcon
 								aria-hidden="true"
-								className="size-5 text-indigo-500"
+								className="size-5 text-green-500"
 							/>
 						) : Icon ? (
 							<Icon
@@ -265,14 +352,29 @@ export default function ActivityItem({ activity, isLast }: ActivityItemProps) {
 							<div className="size-1.5 rounded-full bg-foreground/10 ring ring-border/40" />
 						)}
 					</div>
-					<p className="flex-auto py-0.5 text-xs text-muted-foreground">
-						<span className="font-medium text-foreground">
-							{activity.person.name}
-						</span>{" "}
-						{describeEvent(activity)}
-					</p>
+					<div className="flex-auto py-0.5">
+						<p className="text-xs text-muted-foreground">
+							<span className="font-medium text-foreground">{userName}</span>{" "}
+							{describeEvent(activity)}
+						</p>
+						{/* Show amount for financial activities */}
+						{isConvex &&
+							(activityType.includes("quote") ||
+								activityType.includes("invoice")) &&
+							(() => {
+								const amount = getActivityAmount(activity);
+								return amount ? (
+									<p className="text-xs text-muted-foreground mt-1">
+										Amount:{" "}
+										<span className="font-medium text-foreground">
+											{amount}
+										</span>
+									</p>
+								) : null;
+							})()}
+					</div>
 					<span className="flex-none py-0.5 text-xs text-muted-foreground">
-						{activity.date}
+						{activityDate}
 					</span>
 				</>
 			)}
