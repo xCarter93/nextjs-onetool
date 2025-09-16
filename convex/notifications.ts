@@ -160,7 +160,7 @@ export const listByUser = query({
 			notifications = await ctx.db
 				.query("notifications")
 				.withIndex("by_user_read", (q) =>
-					q.eq("userId", args.userId).eq("isRead", args.isRead)
+					q.eq("userId", args.userId).eq("isRead", args.isRead as boolean)
 				)
 				.collect();
 		} else {
@@ -223,7 +223,10 @@ export const list = query({
 			notifications = await ctx.db
 				.query("notifications")
 				.withIndex("by_type", (q) =>
-					q.eq("notificationType", args.notificationType)
+					q.eq(
+						"notificationType",
+						args.notificationType as NonNullable<typeof args.notificationType>
+					)
 				)
 				.collect();
 

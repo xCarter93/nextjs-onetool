@@ -65,6 +65,10 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({
 		return Math.random().toString(36).substring(2) + Date.now().toString(36);
 	}, []);
 
+	const removeToast = useCallback((id: string) => {
+		setToasts((prevToasts) => prevToasts.filter((toast) => toast.id !== id));
+	}, []);
+
 	const addToast = useCallback(
 		(toast: Omit<Toast, "id">) => {
 			const id = generateId();
@@ -85,12 +89,8 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({
 
 			return id;
 		},
-		[generateId, maxToasts]
+		[generateId, maxToasts, removeToast]
 	);
-
-	const removeToast = useCallback((id: string) => {
-		setToasts((prevToasts) => prevToasts.filter((toast) => toast.id !== id));
-	}, []);
 
 	const updateToast = useCallback((id: string, updates: Partial<Toast>) => {
 		setToasts((prevToasts) =>
@@ -226,11 +226,11 @@ export const useToastOperations = () => {
 	const toast = useToast();
 
 	const showLoadingWithSuccess = useCallback(
-		async (
+		async <T,>(
 			loadingMessage: string,
 			successMessage: string,
-			operation: () => Promise<any>
-		) => {
+			operation: () => Promise<T>
+		): Promise<T> => {
 			const loadingId = toast.loading("Loading", loadingMessage);
 
 			try {

@@ -201,8 +201,8 @@ function formatDate(timestamp: number): string {
 // Helper function to get activity amount from metadata
 function getActivityAmount(activity: ActivityWithUser): string | null {
 	if (activity.metadata && typeof activity.metadata === "object") {
-		const metadata = activity.metadata as any;
-		if (metadata.total) {
+		const metadata = activity.metadata as Record<string, unknown>;
+		if (typeof metadata.total === "number") {
 			return `$${metadata.total.toLocaleString()}`;
 		}
 	}
@@ -285,11 +285,6 @@ export default function ActivityItem({ activity, isLast }: ActivityItemProps) {
 
 	// Extract common data based on activity type
 	const userName = isConvex ? activity.user.name : activity.person.name;
-	const userImage = isConvex
-		? activity.user.image
-		: "imageUrl" in activity
-			? activity.imageUrl
-			: "";
 	const activityDate = isConvex
 		? formatDate(activity.timestamp)
 		: activity.date;

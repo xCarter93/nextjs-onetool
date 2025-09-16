@@ -40,10 +40,9 @@ import {
 	Clock,
 	ExternalLink,
 	Plus,
-	FolderOpen,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import type { Id, Doc } from "../../../../convex/_generated/dataModel";
+import type { Doc } from "../../../../convex/_generated/dataModel";
 
 type QuoteWithClient = Doc<"quotes"> & {
 	clientName: string;
@@ -179,15 +178,20 @@ export default function QuotesPage() {
 	const router = useRouter();
 
 	// Fetch data from Convex
-	const quotes = useQuery(api.quotes.list, {}) || [];
-	const clients = useQuery(api.clients.list, {}) || [];
-	const projects = useQuery(api.projects.list, {}) || [];
+	const quotes = useQuery(api.quotes.list, {});
+	const clients = useQuery(api.clients.list, {});
+	const projects = useQuery(api.projects.list, {});
+
+	// Memoize the arrays to avoid dependency changes on every render
+	const quotesArray = React.useMemo(() => quotes || [], [quotes]);
+	const clientsArray = React.useMemo(() => clients || [], [clients]);
+	const projectsArray = React.useMemo(() => projects || [], [projects]);
 
 	// Combine quotes with client and project data
 	const data = React.useMemo((): QuoteWithClient[] => {
-		return quotes.map((quote) => {
-			const client = clients.find((c) => c._id === quote.clientId);
-			const project = projects.find((p) => p._id === quote.projectId);
+		return quotesArray.map((quote) => {
+			const client = clientsArray.find((c) => c._id === quote.clientId);
+			const project = projectsArray.find((p) => p._id === quote.projectId);
 
 			return {
 				...quote,
@@ -195,7 +199,7 @@ export default function QuotesPage() {
 				projectName: project?.title,
 			};
 		});
-	}, [quotes, clients, projects]);
+	}, [quotesArray, clientsArray, projectsArray]);
 
 	const [sorting, setSorting] = React.useState<SortingState>([]);
 	const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(

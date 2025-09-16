@@ -167,7 +167,7 @@ export default function ClientDetailPage() {
 		try {
 			await updateClient({
 				id: clientId as Id<"clients">,
-				...(updates as any),
+				...updates,
 			});
 			toast.success("Client Updated", "Your changes have been saved.");
 			setIsEditing(false);

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import ActivityItem, { ActivityWithUser } from "./activity-item";
+import ActivityItem from "./activity-item";
 import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group";
 import { ScrollArea } from "./ui/scroll-area";
 
