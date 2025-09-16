@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import { Id, Doc } from "../../../../../convex/_generated/dataModel";
 import { useToast } from "@/hooks/use-toast";
@@ -25,6 +25,9 @@ import {
 	ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
 import { StarIcon as StarSolidIcon } from "@heroicons/react/24/solid";
+import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useEffect, useMemo, useState } from "react";
 
 // Helper function to format lead source for display
 function formatLeadSource(leadSource?: string): string {
@@ -57,6 +60,20 @@ export default function ClientDetailPage() {
 	const params = useParams();
 	const clientId = params.clientId as string;
 	const toast = useToast();
+	const updateClient = useMutation(api.clients.update);
+	const [isEditing, setIsEditing] = useState(false);
+	const [form, setForm] = useState({
+		industry: "",
+		status: "lead",
+		category: "",
+		clientSize: "",
+		clientType: "",
+		emailOptIn: false,
+		smsOptIn: false,
+		priorityLevel: "",
+		tags: "",
+		notes: "",
+	});
 
 	// Fetch client data
 	const client = useQuery(api.clients.get, { id: clientId as Id<"clients"> });
@@ -83,6 +100,83 @@ export default function ClientDetailPage() {
 	const clientTasks = useQuery(api.tasks.list, {
 		clientId: clientId as Id<"clients">,
 	});
+
+	useEffect(() => {
+		if (client) {
+			setForm({
+				industry: client.industry || "",
+				status: client.status,
+				category: client.category || "",
+				clientSize: client.clientSize || "",
+				clientType: client.clientType || "",
+				emailOptIn: client.emailOptIn,
+				smsOptIn: client.smsOptIn,
+				priorityLevel: client.priorityLevel || "",
+				tags: (client.tags || []).join(", "),
+				notes: client.notes || "",
+			});
+		}
+	}, [client]);
+
+	const isDirty = useMemo(() => {
+		if (!client) return false;
+		return (
+			(form.industry || "") !== (client.industry || "") ||
+			form.status !== client.status ||
+			(form.category || "") !== (client.category || "") ||
+			(form.clientSize || "") !== (client.clientSize || "") ||
+			(form.clientType || "") !== (client.clientType || "") ||
+			form.emailOptIn !== client.emailOptIn ||
+			form.smsOptIn !== client.smsOptIn ||
+			(form.priorityLevel || "") !== (client.priorityLevel || "") ||
+			(form.tags || "") !== (client.tags || []).join(", ") ||
+			(form.notes || "") !== (client.notes || "")
+		);
+	}, [form, client]);
+
+	const handleSave = async () => {
+		if (!client) return;
+		const updates: Record<string, unknown> = {};
+		if ((form.industry || "") !== (client.industry || ""))
+			updates.industry = form.industry || undefined;
+		if (form.status !== client.status)
+			updates.status = form.status as typeof client.status;
+		if ((form.category || "") !== (client.category || ""))
+			updates.category = form.category || undefined;
+		if ((form.clientSize || "") !== (client.clientSize || ""))
+			updates.clientSize = form.clientSize || undefined;
+		if ((form.clientType || "") !== (client.clientType || ""))
+			updates.clientType = form.clientType || undefined;
+		if (form.emailOptIn !== client.emailOptIn)
+			updates.emailOptIn = form.emailOptIn;
+		if (form.smsOptIn !== client.smsOptIn) updates.smsOptIn = form.smsOptIn;
+		if ((form.priorityLevel || "") !== (client.priorityLevel || ""))
+			updates.priorityLevel = form.priorityLevel || undefined;
+		if ((form.tags || "") !== (client.tags || []).join(", "))
+			updates.tags = form.tags
+				? form.tags.split(/,\s*/).filter(Boolean)
+				: undefined;
+		if ((form.notes || "") !== (client.notes || ""))
+			updates.notes = form.notes || undefined;
+
+		if (Object.keys(updates).length === 0) {
+			setIsEditing(false);
+			return;
+		}
+
+		try {
+			await updateClient({
+				id: clientId as Id<"clients">,
+				...(updates as any),
+			});
+			toast.success("Client Updated", "Your changes have been saved.");
+			setIsEditing(false);
+		} catch (err) {
+			const message =
+				err instanceof Error ? err.message : "Failed to save changes";
+			toast.error("Error", message);
+		}
+	};
 
 	// Loading state
 	if (
@@ -201,18 +295,17 @@ export default function ClientDetailPage() {
 										Email
 									</Button>
 								)}
-								<Button
-									intent="outline"
-									size="sm"
-									onClick={() => {
-										toast.info(
-											"Edit Client",
-											"Edit functionality coming soon!"
-										);
-									}}
-								>
-									Edit
-								</Button>
+								{isEditing ? (
+									<div />
+								) : (
+									<Button
+										intent="outline"
+										size="sm"
+										onClick={() => setIsEditing(true)}
+									>
+										Edit
+									</Button>
+								)}
 								<Button
 									intent="outline"
 									size="sm"
@@ -237,19 +330,18 @@ export default function ClientDetailPage() {
 									<Card className="bg-transparent border-none shadow-none ring-0">
 										<CardHeader className="flex flex-row items-center justify-between">
 											<CardTitle className="text-xl">Properties</CardTitle>
-											<Button
-												intent="outline"
-												size="sm"
-												onClick={() => {
-													toast.info(
-														"Add Property",
-														"Property creation functionality coming soon!"
-													);
-												}}
-											>
-												<PlusIcon className="h-4 w-4 mr-2" />
-												New Property
-											</Button>
+											{isEditing ? (
+												<div />
+											) : (
+												<Button
+													intent="outline"
+													size="sm"
+													onClick={() => setIsEditing(true)}
+												>
+													<PlusIcon className="h-4 w-4 mr-2" />
+													New Property
+												</Button>
+											)}
 										</CardHeader>
 										<CardContent>
 											{clientProperties && clientProperties.length > 0 ? (
@@ -332,19 +424,18 @@ export default function ClientDetailPage() {
 									<Card className="bg-transparent border-none shadow-none ring-0">
 										<CardHeader className="flex flex-row items-center justify-between">
 											<CardTitle className="text-xl">Contacts</CardTitle>
-											<Button
-												intent="outline"
-												size="sm"
-												onClick={() => {
-													toast.info(
-														"Add Contact",
-														"Contact creation functionality coming soon!"
-													);
-												}}
-											>
-												<PlusIcon className="h-4 w-4 mr-2" />
-												New Contact
-											</Button>
+											{isEditing ? (
+												<div />
+											) : (
+												<Button
+													intent="outline"
+													size="sm"
+													onClick={() => setIsEditing(true)}
+												>
+													<PlusIcon className="h-4 w-4 mr-2" />
+													New Contact
+												</Button>
+											)}
 										</CardHeader>
 										<CardContent>
 											{clientContacts && clientContacts.length > 0 ? (
@@ -419,21 +510,57 @@ export default function ClientDetailPage() {
 									<Card className="bg-transparent border-none shadow-none ring-0">
 										<CardHeader className="flex flex-row items-center justify-between">
 											<CardTitle className="text-xl">Overview</CardTitle>
-											<Button
-												intent="outline"
-												size="sm"
-												className="bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800"
-												onClick={() => {
-													toast.info(
-														"Create New",
-														"Project, quote, or task creation coming soon!"
-													);
-												}}
-											>
-												New
-											</Button>
+											{isEditing ? (
+												<div className="flex items-center gap-2">
+													<Button
+														size="sm"
+														onClick={handleSave}
+														isDisabled={!isDirty}
+													>
+														Save
+													</Button>
+													<Button
+														size="sm"
+														intent="outline"
+														onClick={() => {
+															setIsEditing(false);
+															setForm({
+																industry: client?.industry || "",
+																status: client?.status || "lead",
+																category: client?.category || "",
+																clientSize: client?.clientSize || "",
+																clientType: client?.clientType || "",
+																emailOptIn: client?.emailOptIn || false,
+																smsOptIn: client?.smsOptIn || false,
+																priorityLevel: client?.priorityLevel || "",
+																tags: (client?.tags || []).join(", "),
+																notes: client?.notes || "",
+															});
+														}}
+													>
+														Cancel
+													</Button>
+												</div>
+											) : (
+												<Button
+													className="bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800"
+													intent="outline"
+													size="sm"
+													onClick={() => setIsEditing(true)}
+												>
+													Edit
+												</Button>
+											)}
 										</CardHeader>
 										<CardContent>
+											{isEditing && isDirty && (
+												<Alert className="mb-4">
+													<AlertTitle>Unsaved changes</AlertTitle>
+													<AlertDescription>
+														Save or cancel your changes.
+													</AlertDescription>
+												</Alert>
+											)}
 											<Tabs defaultValue="projects" className="w-full">
 												<TabsList className="grid w-full grid-cols-4">
 													<TabsTrigger value="projects">
@@ -470,13 +597,7 @@ export default function ClientDetailPage() {
 																		</div>
 																		<Badge
 																			variant="outline"
-																			className={`${
-																				project.status === "completed"
-																					? "bg-green-50 text-green-700 border-green-200"
-																					: project.status === "in-progress"
-																						? "bg-blue-50 text-blue-700 border-blue-200"
-																						: "bg-gray-50 text-gray-700 border-gray-200"
-																			}`}
+																			className={`${project.status === "completed" ? "bg-green-50 text-green-700 border-green-200" : project.status === "in-progress" ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-gray-50 text-gray-700 border-gray-200"}`}
 																		>
 																			{formatStatus(project.status)}
 																		</Badge>
@@ -564,13 +685,7 @@ export default function ClientDetailPage() {
 																		<div className="text-right">
 																			<Badge
 																				variant="outline"
-																				className={`${
-																					invoice.status === "paid"
-																						? "bg-green-50 text-green-700 border-green-200"
-																						: invoice.status === "sent"
-																							? "bg-yellow-50 text-yellow-700 border-yellow-200"
-																							: "bg-red-50 text-red-700 border-red-200"
-																				}`}
+																				className={`${invoice.status === "paid" ? "bg-green-50 text-green-700 border-green-200" : invoice.status === "sent" ? "bg-yellow-50 text-yellow-700 border-yellow-200" : "bg-red-50 text-red-700 border-red-200"}`}
 																			>
 																				{formatStatus(invoice.status)}
 																			</Badge>
@@ -783,7 +898,15 @@ export default function ClientDetailPage() {
 												</Button>
 											</CardHeader>
 											<CardContent>
-												{client.tags && client.tags.length > 0 ? (
+												{isEditing ? (
+													<Input
+														value={form.tags}
+														onChange={(e) =>
+															setForm((f) => ({ ...f, tags: e.target.value }))
+														}
+														placeholder="tag1, tag2"
+													/>
+												) : client.tags && client.tags.length > 0 ? (
 													<div className="flex flex-wrap gap-2">
 														{client.tags.map((tag, index) => (
 															<Badge
@@ -916,7 +1039,15 @@ export default function ClientDetailPage() {
 												</p>
 											</CardHeader>
 											<CardContent>
-												{client.notes ? (
+												{isEditing ? (
+													<textarea
+														className="w-full min-h-[100px] px-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-md text-gray-900 dark:text-white"
+														value={form.notes}
+														onChange={(e) =>
+															setForm((f) => ({ ...f, notes: e.target.value }))
+														}
+													/>
+												) : client.notes ? (
 													<div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
 														<p className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">
 															{client.notes}

@@ -26,12 +26,15 @@ import {
 	Settings,
 	Edit,
 	FolderOpen,
+	Check,
 } from "lucide-react";
 import { StickyFormFooter } from "@/components/sticky-form-footer";
 import { pdf } from "@react-pdf/renderer";
 import QuotePDF from "@/components/QuotePDF";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import type { Id as StorageId } from "../../../../../convex/_generated/dataModel";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useEffect, useState, useMemo } from "react";
 
 type QuoteStatus = "draft" | "sent" | "approved" | "declined" | "expired";
 
@@ -113,9 +116,159 @@ export default function QuoteDetailPage() {
 	);
 
 	// Mutations
-	// const updateQuote = useMutation(api.quotes.update);
+	const updateQuote = useMutation(api.quotes.update);
 	const generateUploadUrl = useMutation(api.documents.generateUploadUrl);
 	const createDocument = useMutation(api.documents.create);
+
+	// Inline edit state
+	const [isEditing, setIsEditing] = useState(false);
+	const [form, setForm] = useState({
+		terms: "",
+		clientMessage: "",
+		validUntil: undefined as number | undefined,
+	});
+
+	useEffect(() => {
+		if (quote) {
+			setForm({
+				terms: quote.terms || "",
+				clientMessage: quote.clientMessage || "",
+				validUntil: quote.validUntil,
+			});
+		}
+	}, [quote]);
+
+	const isDirty = useMemo(() => {
+		if (!quote) return false;
+		return (
+			(form.terms || "") !== (quote.terms || "") ||
+			(form.clientMessage || "") !== (quote.clientMessage || "") ||
+			(form.validUntil || undefined) !== (quote.validUntil || undefined)
+		);
+	}, [form, quote]);
+
+	const resetForm = () => {
+		if (!quote) return;
+		setForm({
+			terms: quote.terms || "",
+			clientMessage: quote.clientMessage || "",
+			validUntil: quote.validUntil,
+		});
+	};
+
+	const handleSave = async () => {
+		if (!quote) return;
+		const updates: Partial<{
+			terms?: string;
+			clientMessage?: string;
+			validUntil?: number;
+		}> = {};
+		if ((form.terms || "") !== (quote.terms || ""))
+			updates.terms = form.terms || undefined;
+		if ((form.clientMessage || "") !== (quote.clientMessage || ""))
+			updates.clientMessage = form.clientMessage || undefined;
+		if ((form.validUntil || undefined) !== (quote.validUntil || undefined))
+			updates.validUntil = form.validUntil;
+
+		if (Object.keys(updates).length === 0) {
+			setIsEditing(false);
+			return;
+		}
+
+		try {
+			await updateQuote({ id: quoteId, ...updates });
+			toast.success("Quote Updated", "Your changes have been saved.");
+			setIsEditing(false);
+		} catch (err) {
+			const message =
+				err instanceof Error ? err.message : "Failed to save changes";
+			toast.error("Error", message);
+		}
+	};
+
+	const handleStatusChange = async (status: QuoteStatus) => {
+		try {
+			await updateQuote({ id: quoteId, status });
+			toast.success(
+				"Quote Updated",
+				`Status changed to ${formatStatus(status)}`
+			);
+		} catch (err) {
+			const message =
+				err instanceof Error ? err.message : "Failed to update status";
+			toast.error("Error", message);
+		}
+	};
+
+	const getStatusActions = () => {
+		if (!quote) return null;
+		switch (quote.status) {
+			case "draft":
+				return (
+					<div className="flex items-center gap-2">
+						<Button size="sm" onClick={() => handleStatusChange("sent")}>
+							Send Quote
+						</Button>
+						<Button
+							size="sm"
+							className="bg-green-600 hover:bg-green-700"
+							onClick={() => handleStatusChange("approved")}
+						>
+							<Check className="h-4 w-4 mr-1" /> Mark Approved
+						</Button>
+					</div>
+				);
+			case "sent":
+				return (
+					<div className="flex items-center gap-2">
+						<Button
+							size="sm"
+							className="bg-green-600 hover:bg-green-700"
+							onClick={() => handleStatusChange("approved")}
+						>
+							<Check className="h-4 w-4 mr-1" /> Approve
+						</Button>
+						<Button
+							size="sm"
+							intent="outline"
+							onClick={() => handleStatusChange("declined")}
+						>
+							Decline
+						</Button>
+						<Button
+							size="sm"
+							intent="outline"
+							onClick={() => handleStatusChange("draft")}
+						>
+							Revert to Draft
+						</Button>
+					</div>
+				);
+			case "approved":
+			case "declined":
+				return (
+					<Button
+						size="sm"
+						intent="outline"
+						onClick={() => handleStatusChange("sent")}
+					>
+						Reopen (Sent)
+					</Button>
+				);
+			case "expired":
+				return (
+					<Button
+						size="sm"
+						intent="outline"
+						onClick={() => handleStatusChange("draft")}
+					>
+						Reopen (Draft)
+					</Button>
+				);
+			default:
+				return null;
+		}
+	};
 
 	// Loading state
 	if (quote === undefined) {
@@ -249,6 +402,45 @@ export default function QuoteDetailPage() {
 								</div>
 							</div>
 						</div>
+
+						{/* Action Buttons */}
+						<div className="flex items-center gap-2 mb-6">
+							{getStatusActions()}
+							{isEditing ? (
+								<>
+									<Button size="sm" onClick={handleSave} isDisabled={!isDirty}>
+										<Check className="h-4 w-4 mr-1" /> Save
+									</Button>
+									<Button
+										size="sm"
+										intent="outline"
+										onClick={() => {
+											resetForm();
+											setIsEditing(false);
+										}}
+									>
+										Cancel
+									</Button>
+								</>
+							) : (
+								<Button
+									size="sm"
+									intent="outline"
+									onClick={() => setIsEditing(true)}
+								>
+									<Edit className="h-4 w-4 mr-1" /> Edit
+								</Button>
+							)}
+						</div>
+
+						{isEditing && isDirty && (
+							<Alert className="mb-6">
+								<AlertTitle>Unsaved changes</AlertTitle>
+								<AlertDescription>
+									You have modified this quote. Save or cancel your changes.
+								</AlertDescription>
+							</Alert>
+						)}
 
 						{/* Two Column Layout */}
 						<div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
@@ -471,18 +663,44 @@ export default function QuoteDetailPage() {
 											</CardTitle>
 										</CardHeader>
 										<CardContent>
-											<p className="text-gray-600 dark:text-gray-400">
-												{quote.terms || "No terms specified"}
-											</p>
-											{quote.clientMessage && (
-												<div className="mt-4 pt-4 border-t border-gray-200 dark:border-white/10">
-													<h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
-														Message to Client:
-													</h4>
-													<p className="text-gray-600 dark:text-gray-400">
-														{quote.clientMessage}
-													</p>
+											{isEditing ? (
+												<div className="space-y-4">
+													<textarea
+														className="w-full min-h-[100px] px-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-md text-gray-900 dark:text-white"
+														placeholder="Enter terms"
+														value={form.terms}
+														onChange={(e) =>
+															setForm((f) => ({ ...f, terms: e.target.value }))
+														}
+													/>
+													<textarea
+														className="w-full min-h-[80px] px-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-md text-gray-900 dark:text-white"
+														placeholder="Message to client (optional)"
+														value={form.clientMessage}
+														onChange={(e) =>
+															setForm((f) => ({
+																...f,
+																clientMessage: e.target.value,
+															}))
+														}
+													/>
 												</div>
+											) : (
+												<>
+													<p className="text-gray-600 dark:text-gray-400">
+														{quote.terms || "No terms specified"}
+													</p>
+													{quote.clientMessage && (
+														<div className="mt-4 pt-4 border-t border-gray-200 dark:border-white/10">
+															<h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+																Message to Client:
+															</h4>
+															<p className="text-gray-600 dark:text-gray-400">
+																{quote.clientMessage}
+															</p>
+														</div>
+													)}
+												</>
 											)}
 										</CardContent>
 									</Card>
@@ -515,16 +733,40 @@ export default function QuoteDetailPage() {
 														{formatStatus(currentStatus)}
 													</Badge>
 												</div>
-												{quote.validUntil && (
-													<div className="flex justify-between">
-														<span className="text-sm text-gray-600 dark:text-gray-400">
-															Valid Until:
-														</span>
+												<div className="flex justify-between items-center">
+													<span className="text-sm text-gray-600 dark:text-gray-400">
+														Valid Until:
+													</span>
+													{isEditing ? (
+														<input
+															type="date"
+															className="w-40 h-9 px-2 py-1 bg-gray-50 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-md text-gray-900 dark:text-white"
+															value={
+																form.validUntil
+																	? new Date(form.validUntil)
+																			.toISOString()
+																			.slice(0, 10)
+																	: ""
+															}
+															onChange={(e) =>
+																setForm((f) => ({
+																	...f,
+																	validUntil: e.target.value
+																		? new Date(e.target.value).getTime()
+																		: undefined,
+																}))
+															}
+														/>
+													) : (
 														<span className="text-sm text-gray-900 dark:text-white">
-															{new Date(quote.validUntil).toLocaleDateString()}
+															{quote.validUntil
+																? new Date(
+																		quote.validUntil
+																	).toLocaleDateString()
+																: "—"}
 														</span>
-													</div>
-												)}
+													)}
+												</div>
 												{quote.sentAt && (
 													<div className="flex justify-between">
 														<span className="text-sm text-gray-600 dark:text-gray-400">

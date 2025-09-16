@@ -5,6 +5,8 @@ import { api } from "../../../../../convex/_generated/api";
 import { useParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
@@ -20,7 +22,7 @@ import {
 	PlayIcon,
 	CheckIcon,
 } from "@heroicons/react/24/outline";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 
 export default function ProjectDetailPage() {
@@ -33,6 +35,7 @@ export default function ProjectDetailPage() {
 
 	// Fetch project data
 	const project = useQuery(api.projects.get, { id: projectId });
+	const allClients = useQuery(api.clients.list, {});
 
 	// Fetch related data - hooks must be called unconditionally
 	const client = useQuery(
@@ -54,6 +57,129 @@ export default function ProjectDetailPage() {
 	const updateProject = useMutation(api.projects.update);
 	const deleteProject = useMutation(api.projects.remove);
 
+	// Inline edit state
+	const [isEditing, setIsEditing] = useState(false);
+	const [form, setForm] = useState({
+		clientId: undefined as Id<"clients"> | undefined,
+		title: "",
+		description: "",
+		instructions: "",
+		projectType: "one-off" as "one-off" | "recurring",
+		startDate: undefined as number | undefined,
+		endDate: undefined as number | undefined,
+		dueDate: undefined as number | undefined,
+		invoiceReminderEnabled: false as boolean | undefined,
+		scheduleForLater: false as boolean | undefined,
+	});
+
+	useEffect(() => {
+		if (project) {
+			setForm({
+				clientId: project.clientId,
+				title: project.title,
+				description: project.description || "",
+				instructions: project.instructions || "",
+				projectType: project.projectType,
+				startDate: project.startDate,
+				endDate: project.endDate,
+				dueDate: project.dueDate,
+				invoiceReminderEnabled: project.invoiceReminderEnabled,
+				scheduleForLater: project.scheduleForLater,
+			});
+		}
+	}, [project]);
+
+	const isDirty = useMemo(() => {
+		if (!project) return false;
+		return (
+			(form.clientId || undefined) !== (project.clientId || undefined) ||
+			form.title !== project.title ||
+			(form.description || "") !== (project.description || "") ||
+			(form.instructions || "") !== (project.instructions || "") ||
+			form.projectType !== project.projectType ||
+			(form.startDate || undefined) !== (project.startDate || undefined) ||
+			(form.endDate || undefined) !== (project.endDate || undefined) ||
+			(form.dueDate || undefined) !== (project.dueDate || undefined) ||
+			(form.invoiceReminderEnabled || false) !==
+				(project.invoiceReminderEnabled || false) ||
+			(form.scheduleForLater || false) !== (project.scheduleForLater || false)
+		);
+	}, [form, project]);
+
+	const resetForm = () => {
+		if (!project) return;
+		setForm({
+			clientId: project.clientId,
+			title: project.title,
+			description: project.description || "",
+			instructions: project.instructions || "",
+			projectType: project.projectType,
+			startDate: project.startDate,
+			endDate: project.endDate,
+			dueDate: project.dueDate,
+			invoiceReminderEnabled: project.invoiceReminderEnabled,
+			scheduleForLater: project.scheduleForLater,
+		});
+	};
+
+	const handleSave = async () => {
+		if (!project) return;
+		const updates: Partial<{
+			clientId?: Id<"clients">;
+			title: string;
+			description?: string;
+			instructions?: string;
+			projectType: "one-off" | "recurring";
+			startDate?: number;
+			endDate?: number;
+			dueDate?: number;
+			invoiceReminderEnabled?: boolean;
+			scheduleForLater?: boolean;
+		}> = {};
+		if ((form.clientId || undefined) !== (project.clientId || undefined))
+			updates.clientId = form.clientId;
+		if (form.title !== project.title) updates.title = form.title.trim();
+		if ((form.description || "") !== (project.description || ""))
+			updates.description = form.description || undefined;
+		if ((form.instructions || "") !== (project.instructions || ""))
+			updates.instructions = form.instructions || undefined;
+		if (form.projectType !== project.projectType)
+			updates.projectType = form.projectType;
+		if ((form.startDate || undefined) !== (project.startDate || undefined))
+			updates.startDate = form.startDate;
+		if ((form.endDate || undefined) !== (project.endDate || undefined))
+			updates.endDate = form.endDate;
+		if ((form.dueDate || undefined) !== (project.dueDate || undefined))
+			updates.dueDate = form.dueDate;
+		if (
+			(form.invoiceReminderEnabled || false) !==
+			(project.invoiceReminderEnabled || false)
+		)
+			updates.invoiceReminderEnabled = !!form.invoiceReminderEnabled;
+		if (
+			(form.scheduleForLater || false) !== (project.scheduleForLater || false)
+		)
+			updates.scheduleForLater = !!form.scheduleForLater;
+
+		if (Object.keys(updates).length === 0) {
+			setIsEditing(false);
+			return;
+		}
+
+		setIsUpdating(true);
+		try {
+			await updateProject({ id: projectId, ...updates });
+			toast.success("Project Updated", "Your changes have been saved.");
+			setIsEditing(false);
+		} catch (err) {
+			const message =
+				err instanceof Error ? err.message : "Failed to save changes";
+			toast.error("Error", message);
+		} finally {
+			setIsUpdating(false);
+		}
+	};
+
 	// Loading state
 	if (project === undefined) {
 		return (
@@ -64,7 +190,7 @@ export default function ProjectDetailPage() {
 							<div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-3"></div>
 							<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
 						</div>
-						<div className="space-y-8 max-w-7xl">
+						<div className="space-y-8">
 							<div className="h-32 bg-gray-200 dark:bg-gray-700 rounded"></div>
 							<div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
 								<div className="lg:col-span-2 h-64 bg-gray-200 dark:bg-gray-700 rounded"></div>
@@ -87,8 +213,8 @@ export default function ProjectDetailPage() {
 						Project Not Found
 					</h1>
 					<p className="text-gray-600 dark:text-gray-400 text-center">
-						The project you're looking for doesn't exist or you don't have
-						permission to view it.
+						The project you&apos;re looking for doesn&apos;t exist or you
+						don&apos;t have permission to view it.
 					</p>
 					<Button onClick={() => router.push("/projects")}>
 						Back to Projects
@@ -109,7 +235,7 @@ export default function ProjectDetailPage() {
 				"Project Updated",
 				`Project status changed to ${newStatus}`
 			);
-		} catch (error) {
+		} catch {
 			toast.error("Error", "Failed to update project status");
 		} finally {
 			setIsUpdating(false);
@@ -129,8 +255,10 @@ export default function ProjectDetailPage() {
 			await deleteProject({ id: projectId });
 			toast.success("Project Deleted", "Project has been successfully deleted");
 			router.push("/projects");
-		} catch (error: any) {
-			toast.error("Error", error.message || "Failed to delete project");
+		} catch (err) {
+			const message =
+				err instanceof Error ? err.message : "Failed to delete project";
+			toast.error("Error", message);
 		}
 	};
 
@@ -262,14 +390,37 @@ export default function ProjectDetailPage() {
 						{/* Action Buttons */}
 						<div className="flex items-center gap-2 mt-4">
 							{getStatusActions()}
-							<Button
-								size="sm"
-								intent="outline"
-								onClick={() => router.push(`/projects/${projectId}/edit`)}
-							>
-								<PencilIcon className="h-4 w-4 mr-1" />
-								Edit
-							</Button>
+							{isEditing ? (
+								<>
+									<Button
+										size="sm"
+										onClick={handleSave}
+										isDisabled={isUpdating || !isDirty}
+									>
+										<CheckIcon className="h-4 w-4 mr-1" />
+										Save
+									</Button>
+									<Button
+										size="sm"
+										intent="outline"
+										onClick={() => {
+											resetForm();
+											setIsEditing(false);
+										}}
+									>
+										Cancel
+									</Button>
+								</>
+							) : (
+								<Button
+									size="sm"
+									intent="outline"
+									onClick={() => setIsEditing(true)}
+								>
+									<PencilIcon className="h-4 w-4 mr-1" />
+									Edit
+								</Button>
+							)}
 							<Button
 								size="sm"
 								intent="outline"
@@ -280,9 +431,18 @@ export default function ProjectDetailPage() {
 								Delete
 							</Button>
 						</div>
+
+						{isEditing && isDirty && (
+							<Alert className="mt-3">
+								<AlertTitle>Unsaved changes</AlertTitle>
+								<AlertDescription>
+									You have modified this project. Save or cancel your changes.
+								</AlertDescription>
+							</Alert>
+						)}
 					</div>
 
-					<div className="space-y-8 max-w-7xl">
+					<div className="space-y-8">
 						{/* Client Information */}
 						<Card className="shadow-sm border-gray-200/60 dark:border-white/10">
 							<CardHeader className="pb-4">
@@ -292,8 +452,8 @@ export default function ProjectDetailPage() {
 								</CardTitle>
 							</CardHeader>
 							<CardContent>
-								{client ? (
-									<div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-white/5 rounded-lg">
+								{client && !isEditing ? (
+									<div className="flex items-center justify-between p-4 bg-gray-50 dark:bg:white/5 rounded-lg">
 										<span className="flex items-center gap-3">
 											<div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-sm text-white font-medium">
 												{client.companyName
@@ -302,7 +462,7 @@ export default function ProjectDetailPage() {
 													.join("")}
 											</div>
 											<div>
-												<div className="font-medium text-gray-900 dark:text-white">
+												<div className="font-medium text-gray-900 dark:text-gray-400">
 													{client.companyName}
 												</div>
 												<div className="text-sm text-gray-500 dark:text-gray-400">
@@ -320,9 +480,37 @@ export default function ProjectDetailPage() {
 									</div>
 								) : (
 									<div className="p-4 border-2 border-dashed border-gray-300 dark:border-white/20 rounded-lg text-center">
-										<p className="text-sm text-gray-500 dark:text-gray-400">
-											No client information available
-										</p>
+										{isEditing ? (
+											<div className="grid gap-2">
+												<label className="text-sm text-gray-600 dark:text-gray-400 text-left">
+													Select Client
+												</label>
+												<select
+													className="w-full h-11 px-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-md text-gray-900 dark:text-white"
+													value={form.clientId || ""}
+													onChange={(e) =>
+														setForm((f) => ({
+															...f,
+															clientId: (e.target.value || undefined) as
+																| Id<"clients">
+																| undefined,
+														}))
+													}
+												>
+													<option value="">-- Select --</option>
+													{Array.isArray(allClients) &&
+														allClients.map((c) => (
+															<option key={c._id} value={c._id}>
+																{c.companyName}
+															</option>
+														))}
+												</select>
+											</div>
+										) : (
+											<p className="text-sm text-gray-500 dark:text-gray-400">
+												No client information available
+											</p>
+										)}
 									</div>
 								)}
 							</CardContent>
@@ -343,21 +531,41 @@ export default function ProjectDetailPage() {
 											<label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
 												Project Title
 											</label>
-											<div className="w-full h-11 px-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-md text-gray-900 dark:text-white">
-												{project.title}
-											</div>
+											{isEditing ? (
+												<Input
+													value={form.title}
+													onChange={(e) =>
+														setForm((f) => ({ ...f, title: e.target.value }))
+													}
+												/>
+											) : (
+												<div className="w-full h-11 px-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-md text-gray-900 dark:text-white">
+													{project.title}
+												</div>
+											)}
 										</div>
 
-										{project.instructions && (
-											<div>
-												<label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
-													Instructions
-												</label>
+										<div>
+											<label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
+												Instructions
+											</label>
+											{isEditing ? (
+												<textarea
+													className="w-full min-h-[100px] px-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-md text-gray-900 dark:text-white"
+													value={form.instructions}
+													onChange={(e) =>
+														setForm((f) => ({
+															...f,
+															instructions: e.target.value,
+														}))
+													}
+												/>
+											) : project.instructions ? (
 												<div className="w-full min-h-[100px] px-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-md text-gray-900 dark:text-white whitespace-pre-wrap">
 													{project.instructions}
 												</div>
-											</div>
-										)}
+											) : null}
+										</div>
 
 										<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
 											<div>
@@ -375,9 +583,27 @@ export default function ProjectDetailPage() {
 												<label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
 													Project Type
 												</label>
-												<div className="w-full h-11 px-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-md text-gray-900 dark:text-white capitalize flex items-center">
-													{project.projectType}
-												</div>
+												{isEditing ? (
+													<select
+														className="w-full h-11 px-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-md text-gray-900 dark:text-white capitalize"
+														value={form.projectType}
+														onChange={(e) =>
+															setForm((f) => ({
+																...f,
+																projectType: e.target.value as
+																	| "one-off"
+																	| "recurring",
+															}))
+														}
+													>
+														<option value="one-off">One-off</option>
+														<option value="recurring">Recurring</option>
+													</select>
+												) : (
+													<div className="w-full h-11 px-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-md text-gray-900 dark:text-white capitalize flex items-center">
+														{project.projectType}
+													</div>
+												)}
 											</div>
 										</div>
 									</div>
@@ -436,12 +662,22 @@ export default function ProjectDetailPage() {
 										<div className="flex items-center gap-3">
 											<input
 												type="checkbox"
-												checked={true}
-												readOnly
+												checked={
+													!!(isEditing
+														? form.invoiceReminderEnabled
+														: project.invoiceReminderEnabled)
+												}
+												onChange={(e) =>
+													setForm((f) => ({
+														...f,
+														invoiceReminderEnabled: e.target.checked,
+													}))
+												}
+												readOnly={!isEditing}
 												className="h-4 w-4 rounded border-gray-300 dark:border-white/10 text-blue-600 dark:text-indigo-500"
 											/>
 											<label className="text-sm text-gray-900 dark:text-white">
-												Email team about assignment
+												Remind me to invoice when I close the project
 											</label>
 										</div>
 									)}
@@ -573,18 +809,62 @@ export default function ProjectDetailPage() {
 												<label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
 													Start Date
 												</label>
-												<div className="w-full h-11 px-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-md text-gray-900 dark:text-white flex items-center">
-													{formatDate(project.startDate)}
-												</div>
+												{isEditing ? (
+													<input
+														type="date"
+														className="w-full h-11 px-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-md text-gray-900 dark:text-white"
+														value={
+															form.startDate
+																? new Date(form.startDate)
+																		.toISOString()
+																		.slice(0, 10)
+																: ""
+														}
+														onChange={(e) =>
+															setForm((f) => ({
+																...f,
+																startDate: e.target.value
+																	? new Date(e.target.value).getTime()
+																	: undefined,
+															}))
+														}
+													/>
+												) : (
+													<div className="w-full h-11 px-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-md text-gray-900 dark:text-white flex items-center">
+														{formatDate(project.startDate)}
+													</div>
+												)}
 											</div>
 
 											<div>
 												<label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
 													End Date
 												</label>
-												<div className="w-full h-11 px-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-md text-gray-900 dark:text-white flex items-center">
-													{formatDate(project.endDate)}
-												</div>
+												{isEditing ? (
+													<input
+														type="date"
+														className="w-full h-11 px-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-md text-gray-900 dark:text-white"
+														value={
+															form.endDate
+																? new Date(form.endDate)
+																		.toISOString()
+																		.slice(0, 10)
+																: ""
+														}
+														onChange={(e) =>
+															setForm((f) => ({
+																...f,
+																endDate: e.target.value
+																	? new Date(e.target.value).getTime()
+																	: undefined,
+															}))
+														}
+													/>
+												) : (
+													<div className="w-full h-11 px-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-md text-gray-900 dark:text-white flex items-center">
+														{formatDate(project.endDate)}
+													</div>
+												)}
 											</div>
 										</div>
 
@@ -592,24 +872,54 @@ export default function ProjectDetailPage() {
 											<label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
 												Due Date
 											</label>
-											<div className="w-full h-11 px-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-md text-gray-900 dark:text-white flex items-center">
-												{formatDate(project.dueDate)}
-											</div>
+											{isEditing ? (
+												<input
+													type="date"
+													className="w-full h-11 px-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-md text-gray-900 dark:text-white"
+													value={
+														form.dueDate
+															? new Date(form.dueDate)
+																	.toISOString()
+																	.slice(0, 10)
+															: ""
+													}
+													onChange={(e) =>
+														setForm((f) => ({
+															...f,
+															dueDate: e.target.value
+																? new Date(e.target.value).getTime()
+																: undefined,
+														}))
+													}
+												/>
+											) : (
+												<div className="w-full h-11 px-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-md text-gray-900 dark:text-white flex items-center">
+													{formatDate(project.dueDate)}
+												</div>
+											)}
 										</div>
 
-										{project.scheduleForLater && (
-											<div className="flex items-center gap-3">
-												<input
-													type="checkbox"
-													checked={true}
-													readOnly
-													className="h-4 w-4 rounded border-gray-300 dark:border-white/10 text-blue-600 dark:text-indigo-500"
-												/>
-												<label className="text-sm text-gray-900 dark:text-white">
-													Scheduled for later
-												</label>
-											</div>
-										)}
+										<div className="flex items-center gap-3">
+											<input
+												type="checkbox"
+												checked={
+													!!(isEditing
+														? form.scheduleForLater
+														: project.scheduleForLater)
+												}
+												onChange={(e) =>
+													setForm((f) => ({
+														...f,
+														scheduleForLater: e.target.checked,
+													}))
+												}
+												readOnly={!isEditing}
+												className="h-4 w-4 rounded border-gray-300 dark:border-white/10 text-blue-600 dark:text-indigo-500"
+											/>
+											<label className="text-sm text-gray-900 dark:text-white">
+												Scheduled for later
+											</label>
+										</div>
 
 										{/* Invoicing */}
 										<div className="pt-4 border-t border-gray-200 dark:border-white/10">
@@ -619,8 +929,18 @@ export default function ProjectDetailPage() {
 											<div className="flex items-center gap-3">
 												<input
 													type="checkbox"
-													checked={project.invoiceReminderEnabled || false}
-													readOnly
+													checked={
+														!!(isEditing
+															? form.invoiceReminderEnabled
+															: project.invoiceReminderEnabled)
+													}
+													onChange={(e) =>
+														setForm((f) => ({
+															...f,
+															invoiceReminderEnabled: e.target.checked,
+														}))
+													}
+													readOnly={!isEditing}
 													className="h-4 w-4 rounded border-gray-300 dark:border-white/10 text-blue-600 dark:text-indigo-500"
 												/>
 												<label className="text-sm text-gray-900 dark:text-white">
