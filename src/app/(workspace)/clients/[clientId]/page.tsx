@@ -27,6 +27,7 @@ import {
 import { StarIcon as StarSolidIcon } from "@heroicons/react/24/solid";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { StickyFormFooter } from "@/components/sticky-form-footer";
 import { useEffect, useMemo, useState } from "react";
 
 // Helper function to format lead source for display
@@ -178,6 +179,47 @@ export default function ClientDetailPage() {
 		}
 	};
 
+	// Create sticky footer buttons based on current state
+	const getFooterButtons = () => {
+		const buttons = [];
+
+		if (isEditing) {
+			buttons.push({
+				label: "Save",
+				onClick: handleSave,
+				intent: "primary" as const,
+				disabled: !isDirty,
+			});
+			buttons.push({
+				label: "Cancel",
+				onClick: () => {
+					setIsEditing(false);
+					setForm({
+						industry: client?.industry || "",
+						status: client?.status || "lead",
+						category: client?.category || "",
+						clientSize: client?.clientSize || "",
+						clientType: client?.clientType || "",
+						emailOptIn: client?.emailOptIn || false,
+						smsOptIn: client?.smsOptIn || false,
+						priorityLevel: client?.priorityLevel || "",
+						tags: (client?.tags || []).join(", "),
+						notes: client?.notes || "",
+					});
+				},
+				intent: "outline" as const,
+			});
+		} else {
+			buttons.push({
+				label: "Edit",
+				onClick: () => setIsEditing(true),
+				intent: "outline" as const,
+			});
+		}
+
+		return buttons;
+	};
+
 	// Loading state
 	if (
 		client === undefined ||
@@ -226,9 +268,10 @@ export default function ClientDetailPage() {
 	}
 
 	return (
-		<div className="relative px-6 pt-8 pb-20">
-			<div className="mx-auto">
-				{/* Client Header */}
+		<>
+			<div className="relative px-6 pt-8 pb-20">
+				<div className="mx-auto">
+					{/* Client Header */}
 				<div className="flex items-center justify-between mb-8">
 					<div className="flex items-center gap-4">
 						<div className="flex items-center justify-center w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-900/30">
@@ -491,49 +534,8 @@ export default function ClientDetailPage() {
 						{/* Overview Section with Tabs */}
 						<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-xl shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50">
 							<Card className="bg-transparent border-none shadow-none ring-0">
-								<CardHeader className="flex flex-row items-center justify-between">
+								<CardHeader>
 									<CardTitle className="text-xl">Overview</CardTitle>
-									{isEditing ? (
-										<div className="flex items-center gap-2">
-											<Button
-												size="sm"
-												onClick={handleSave}
-												isDisabled={!isDirty}
-											>
-												Save
-											</Button>
-											<Button
-												size="sm"
-												intent="outline"
-												onClick={() => {
-													setIsEditing(false);
-													setForm({
-														industry: client?.industry || "",
-														status: client?.status || "lead",
-														category: client?.category || "",
-														clientSize: client?.clientSize || "",
-														clientType: client?.clientType || "",
-														emailOptIn: client?.emailOptIn || false,
-														smsOptIn: client?.smsOptIn || false,
-														priorityLevel: client?.priorityLevel || "",
-														tags: (client?.tags || []).join(", "),
-														notes: client?.notes || "",
-													});
-												}}
-											>
-												Cancel
-											</Button>
-										</div>
-									) : (
-										<Button
-											className="bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800"
-											intent="outline"
-											size="sm"
-											onClick={() => setIsEditing(true)}
-										>
-											Edit
-										</Button>
-									)}
 								</CardHeader>
 								<CardContent>
 									{isEditing && isDirty && (
@@ -716,7 +718,7 @@ export default function ClientDetailPage() {
 																	className={`${
 																		task.status === "completed"
 																			? "bg-green-50 text-green-700 border-green-200"
-																			: task.status === "scheduled"
+																			: task.status === "in-progress"
 																				? "bg-blue-50 text-blue-700 border-blue-200"
 																				: "bg-gray-50 text-gray-700 border-gray-200"
 																	}`}
@@ -1069,5 +1071,7 @@ export default function ClientDetailPage() {
 				</div>
 			</div>
 		</div>
+		<StickyFormFooter buttons={getFooterButtons()} />
+	</>
 	);
 }

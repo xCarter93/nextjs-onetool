@@ -18,6 +18,7 @@ import type * as clientContacts from "../clientContacts.js";
 import type * as clientProperties from "../clientProperties.js";
 import type * as clients from "../clients.js";
 import type * as documents from "../documents.js";
+import type * as homeStats from "../homeStats.js";
 import type * as http from "../http.js";
 import type * as invoiceLineItems from "../invoiceLineItems.js";
 import type * as invoices from "../invoices.js";
@@ -46,6 +47,7 @@ declare const fullApi: ApiFromModules<{
   clientProperties: typeof clientProperties;
   clients: typeof clients;
   documents: typeof documents;
+  homeStats: typeof homeStats;
   http: typeof http;
   invoiceLineItems: typeof invoiceLineItems;
   invoices: typeof invoices;

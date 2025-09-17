@@ -22,6 +22,7 @@ import {
 	PlayIcon,
 	CheckIcon,
 } from "@heroicons/react/24/outline";
+import { StickyFormFooter } from "@/components/sticky-form-footer";
 import { useEffect, useMemo, useState } from "react";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 
@@ -71,6 +72,9 @@ export default function ProjectDetailPage() {
 		invoiceReminderEnabled: false as boolean | undefined,
 		scheduleForLater: false as boolean | undefined,
 	});
+	
+	// Calendar state
+	const [calendarDate, setCalendarDate] = useState(new Date());
 
 	useEffect(() => {
 		if (project) {
@@ -301,6 +305,71 @@ export default function ProjectDetailPage() {
 		}
 	};
 
+	// Calendar helper functions
+	const getCalendarDays = (date: Date) => {
+		const year = date.getFullYear();
+		const month = date.getMonth();
+		
+		// First day of the month
+		const firstDay = new Date(year, month, 1);
+		// Last day of the month
+		const lastDay = new Date(year, month + 1, 0);
+		// Day of week for first day (0 = Sunday)
+		const startingDayOfWeek = firstDay.getDay();
+		// Number of days in month
+		const daysInMonth = lastDay.getDate();
+		
+		const calendarDays = [];
+		
+		// Add empty cells for days before the first day of the month
+		for (let i = 0; i < startingDayOfWeek; i++) {
+			calendarDays.push(null);
+		}
+		
+		// Add all days of the month
+		for (let day = 1; day <= daysInMonth; day++) {
+			calendarDays.push(day);
+		}
+		
+		// Fill remaining cells to make 42 (6 rows × 7 days)
+		while (calendarDays.length < 42) {
+			calendarDays.push(null);
+		}
+		
+		return calendarDays;
+	};
+
+	const handleCalendarNavigation = (direction: 'prev' | 'next') => {
+		setCalendarDate(prevDate => {
+			const newDate = new Date(prevDate);
+			if (direction === 'prev') {
+				newDate.setMonth(newDate.getMonth() - 1);
+			} else {
+				newDate.setMonth(newDate.getMonth() + 1);
+			}
+			return newDate;
+		});
+	};
+
+	const handleDateClick = (day: number | null) => {
+		if (!day || !isEditing) return;
+		
+		const clickedDate = new Date(calendarDate.getFullYear(), calendarDate.getMonth(), day);
+		const timestamp = clickedDate.getTime();
+		
+		// Set as start date if none exists, otherwise set as end date
+		if (!form.startDate) {
+			setForm(f => ({ ...f, startDate: timestamp }));
+		} else if (!form.endDate) {
+			setForm(f => ({ ...f, endDate: timestamp }));
+		} else if (!form.dueDate) {
+			setForm(f => ({ ...f, dueDate: timestamp }));
+		} else {
+			// Cycle through: reset and set as start date
+			setForm(f => ({ ...f, startDate: timestamp, endDate: undefined, dueDate: undefined }));
+		}
+	};
+
 	const getStatusActions = () => {
 		switch (project.status) {
 			case "planned":
@@ -360,6 +429,45 @@ export default function ProjectDetailPage() {
 		clientProperties?.find((property) => property.isPrimary) ||
 		clientProperties?.[0];
 
+	// Create sticky footer buttons based on current state
+	const getFooterButtons = () => {
+		const buttons = [];
+
+		if (isEditing) {
+			buttons.push({
+				label: isUpdating ? "Saving..." : "Save",
+				onClick: handleSave,
+				intent: "primary" as const,
+				disabled: isUpdating || !isDirty,
+				icon: <CheckIcon className="h-4 w-4" />,
+			});
+			buttons.push({
+				label: "Cancel",
+				onClick: () => {
+					resetForm();
+					setIsEditing(false);
+				},
+				intent: "outline" as const,
+			});
+		} else {
+			buttons.push({
+				label: "Edit",
+				onClick: () => setIsEditing(true),
+				intent: "outline" as const,
+				icon: <PencilIcon className="h-4 w-4" />,
+			});
+		}
+
+		buttons.push({
+			label: "Delete",
+			onClick: handleDeleteProject,
+			intent: "danger" as const,
+			icon: <TrashIcon className="h-4 w-4" />,
+		});
+
+		return buttons;
+	};
+
 	return (
 		<>
 			<div className="w-full px-6">
@@ -387,49 +495,9 @@ export default function ProjectDetailPage() {
 							</div>
 						</div>
 
-						{/* Action Buttons */}
+						{/* Status Actions */}
 						<div className="flex items-center gap-2 mt-4">
 							{getStatusActions()}
-							{isEditing ? (
-								<>
-									<Button
-										size="sm"
-										onClick={handleSave}
-										isDisabled={isUpdating || !isDirty}
-									>
-										<CheckIcon className="h-4 w-4 mr-1" />
-										Save
-									</Button>
-									<Button
-										size="sm"
-										intent="outline"
-										onClick={() => {
-											resetForm();
-											setIsEditing(false);
-										}}
-									>
-										Cancel
-									</Button>
-								</>
-							) : (
-								<Button
-									size="sm"
-									intent="outline"
-									onClick={() => setIsEditing(true)}
-								>
-									<PencilIcon className="h-4 w-4 mr-1" />
-									Edit
-								</Button>
-							)}
-							<Button
-								size="sm"
-								intent="outline"
-								onClick={handleDeleteProject}
-								className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-							>
-								<TrashIcon className="h-4 w-4 mr-1" />
-								Delete
-							</Button>
 						</div>
 
 						{isEditing && isDirty && (
@@ -453,7 +521,7 @@ export default function ProjectDetailPage() {
 							</CardHeader>
 							<CardContent>
 								{client && !isEditing ? (
-									<div className="flex items-center justify-between p-4 bg-gray-50 dark:bg:white/5 rounded-lg">
+									<div className="flex items-center justify-between p-4 rounded-lg">
 										<span className="flex items-center gap-3">
 											<div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-sm text-white font-medium">
 												{client.companyName
@@ -1186,13 +1254,17 @@ export default function ProjectDetailPage() {
 								<div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/10 rounded-xl p-6 shadow-sm">
 									<div className="flex items-center justify-between mb-6">
 										<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-											{new Date().toLocaleDateString("en-US", {
+											{calendarDate.toLocaleDateString("en-US", {
 												month: "long",
 												year: "numeric",
 											})}
 										</h3>
 										<div className="flex gap-2">
-											<Button intent="outline" size="sm">
+											<Button 
+												intent="outline" 
+												size="sm"
+												onClick={() => handleCalendarNavigation('prev')}
+											>
 												<svg
 													className="w-4 h-4 mr-1"
 													fill="none"
@@ -1207,7 +1279,11 @@ export default function ProjectDetailPage() {
 													/>
 												</svg>
 											</Button>
-											<Button intent="outline" size="sm">
+											<Button 
+												intent="outline" 
+												size="sm"
+												onClick={() => handleCalendarNavigation('next')}
+											>
 												<svg
 													className="w-4 h-4 ml-1"
 													fill="none"
@@ -1237,38 +1313,59 @@ export default function ProjectDetailPage() {
 										)}
 
 										{/* Calendar Days */}
-										{Array.from({ length: 35 }, (_, i) => {
-											const day = i - 5;
-											const isCurrentMonth = day > 0 && day <= 31;
-											const today = new Date().getDate();
-											const isToday = day === today;
+										{getCalendarDays(calendarDate).map((day, i) => {
+											const isCurrentMonth = day !== null;
+											const today = new Date();
+											const isToday = isCurrentMonth && 
+												day === today.getDate() &&
+												calendarDate.getMonth() === today.getMonth() &&
+												calendarDate.getFullYear() === today.getFullYear();
 
 											// Check if this day has project dates
-											const startDay = project.startDate
-												? new Date(project.startDate).getDate()
-												: null;
-											const endDay = project.endDate
-												? new Date(project.endDate).getDate()
-												: null;
-											const dueDay = project.dueDate
-												? new Date(project.dueDate).getDate()
-												: null;
+											let isStartDate = false;
+											let isEndDate = false;
+											let isDueDate = false;
+											
+											if (day && project.startDate) {
+												const startDateObj = new Date(project.startDate);
+												isStartDate = day === startDateObj.getDate() &&
+													calendarDate.getMonth() === startDateObj.getMonth() &&
+													calendarDate.getFullYear() === startDateObj.getFullYear();
+											}
+											
+											if (day && project.endDate) {
+												const endDateObj = new Date(project.endDate);
+												isEndDate = day === endDateObj.getDate() &&
+													calendarDate.getMonth() === endDateObj.getMonth() &&
+													calendarDate.getFullYear() === endDateObj.getFullYear();
+											}
+											
+											if (day && project.dueDate) {
+												const dueDateObj = new Date(project.dueDate);
+												isDueDate = day === dueDateObj.getDate() &&
+													calendarDate.getMonth() === dueDateObj.getMonth() &&
+													calendarDate.getFullYear() === dueDateObj.getFullYear();
+											}
 
-											const isStartDate = day === startDay;
-											const isEndDate = day === endDay;
-											const isDueDate = day === dueDay;
-											const hasProjectEvent =
-												isStartDate || isEndDate || isDueDate;
+											const hasProjectEvent = isStartDate || isEndDate || isDueDate;
+											const isClickable = isEditing && isCurrentMonth;
 
 											return (
 												<div
 													key={i}
+													onClick={() => handleDateClick(day)}
 													className={`
-														relative h-10 flex items-center justify-center text-sm cursor-pointer transition-all duration-200
+														relative h-10 flex items-center justify-center text-sm transition-all duration-200
+														${isClickable ? "cursor-pointer" : "cursor-default"}
 														${
 															isCurrentMonth
-																? "text-gray-900 dark:text-white hover:bg-blue-50 dark:hover:bg-blue-900/30"
+																? "text-gray-900 dark:text-white"
 																: "text-gray-300 dark:text-gray-600"
+														}
+														${
+															isClickable && !hasProjectEvent
+																? "hover:bg-blue-50 dark:hover:bg-blue-900/30"
+																: ""
 														}
 														${hasProjectEvent ? "bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 font-medium" : ""}
 														${
@@ -1284,10 +1381,12 @@ export default function ProjectDetailPage() {
 																? "Project End"
 																: isDueDate
 																	? "Due Date"
-																	: ""
+																	: isClickable
+																		? "Click to set date"
+																		: ""
 													}
 												>
-													{isCurrentMonth ? day : ""}
+													{day || ""}
 													{hasProjectEvent && (
 														<div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-white rounded-full"></div>
 													)}
@@ -1329,6 +1428,7 @@ export default function ProjectDetailPage() {
 					</div>
 				</div>
 			</div>
+			<StickyFormFooter buttons={getFooterButtons()} />
 		</>
 	);
 }

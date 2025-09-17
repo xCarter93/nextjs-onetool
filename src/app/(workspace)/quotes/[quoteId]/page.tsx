@@ -186,6 +186,7 @@ export default function QuoteDetailPage() {
 		}
 	};
 
+
 	const handleStatusChange = async (status: QuoteStatus) => {
 		try {
 			await updateQuote({ id: quoteId, status });
@@ -403,34 +404,9 @@ export default function QuoteDetailPage() {
 							</div>
 						</div>
 
-						{/* Action Buttons */}
+						{/* Status Actions */}
 						<div className="flex items-center gap-2 mb-6">
 							{getStatusActions()}
-							{isEditing ? (
-								<>
-									<Button size="sm" onClick={handleSave} isDisabled={!isDirty}>
-										<Check className="h-4 w-4 mr-1" /> Save
-									</Button>
-									<Button
-										size="sm"
-										intent="outline"
-										onClick={() => {
-											resetForm();
-											setIsEditing(false);
-										}}
-									>
-										Cancel
-									</Button>
-								</>
-							) : (
-								<Button
-									size="sm"
-									intent="outline"
-									onClick={() => setIsEditing(true)}
-								>
-									<Edit className="h-4 w-4 mr-1" /> Edit
-								</Button>
-							)}
 						</div>
 
 						{isEditing && isDirty && (

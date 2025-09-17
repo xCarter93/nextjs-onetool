@@ -169,5 +169,6 @@ export default function CreateOrganizationPage() {
 							</p>
 						</div>
 					</div>
+		</div>
 	);
 }

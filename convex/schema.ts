@@ -249,12 +249,19 @@ export default defineSchema({
 		// Assignment
 		assigneeUserId: v.optional(v.id("users")),
 
-		// Status
+		// Status and Priority
 		status: v.union(
-			v.literal("scheduled"),
+			v.literal("pending"),
+			v.literal("in-progress"),
 			v.literal("completed"),
 			v.literal("cancelled")
 		),
+		priority: v.optional(v.union(
+			v.literal("low"),
+			v.literal("medium"),
+			v.literal("high"),
+			v.literal("urgent")
+		)),
 		completedAt: v.optional(v.number()),
 
 		// Recurrence
