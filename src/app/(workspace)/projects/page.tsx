@@ -206,232 +206,225 @@ export default function ProjectsPage() {
 	}, [query, table]);
 
 	return (
-		<div className="min-h-[100vh] flex-1 md:min-h-min">
-			<div className="relative bg-gradient-to-br from-background via-muted/30 to-muted/60 dark:from-background dark:via-muted/20 dark:to-muted/40 min-h-[100vh] md:min-h-min rounded-xl">
-				<div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(120,119,198,0.08),transparent_50%)] rounded-xl" />
-				<div className="relative p-6 space-y-6">
-					<div className="flex items-center justify-between">
-						<div className="flex items-center gap-3">
-							<div className="w-1.5 h-6 bg-gradient-to-b from-primary to-primary/60 rounded-full" />
-							<div>
-								<h1 className="text-2xl font-bold text-foreground">Projects</h1>
-								<p className="text-muted-foreground text-sm">
-									Overview of your projects
-								</p>
-							</div>
-						</div>
-						<Button
-							intent="primary"
-							onPress={() => router.push("/projects/new")}
-							className="flex items-center gap-2"
-						>
-							<Plus className="h-4 w-4" />
-							Create Project
-						</Button>
+		<div className="relative p-6 space-y-6">
+			<div className="flex items-center justify-between">
+				<div className="flex items-center gap-3">
+					<div className="w-1.5 h-6 bg-gradient-to-b from-primary to-primary/60 rounded-full" />
+					<div>
+						<h1 className="text-2xl font-bold text-foreground">Projects</h1>
+						<p className="text-muted-foreground text-sm">
+							Overview of your projects
+						</p>
 					</div>
+				</div>
+				<Button
+					intent="primary"
+					onPress={() => router.push("/projects/new")}
+					className="flex items-center gap-2"
+				>
+					<Plus className="h-4 w-4" />
+					Create Project
+				</Button>
+			</div>
 
-					{isLoading ? (
-						<div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-							{[...Array(3)].map((_, i) => (
-								<Card key={i}>
-									<CardHeader>
-										<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-24"></div>
-										<div className="h-3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-32"></div>
-									</CardHeader>
-									<CardContent>
-										<div className="h-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-16"></div>
-									</CardContent>
-								</Card>
-							))}
-						</div>
-					) : (
-						<div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-							<Card>
-								<CardHeader>
-									<CardTitle className="flex items-center gap-2 text-base">
-										<FolderKanban className="size-4" /> Total Projects
-									</CardTitle>
-									<CardDescription>
-										All projects in your workspace
-									</CardDescription>
-								</CardHeader>
-								<CardContent>
-									<div className="text-3xl font-semibold">
-										{projectStats?.total || data.length}
-									</div>
-								</CardContent>
-							</Card>
-							<Card>
-								<CardHeader>
-									<CardTitle className="text-base">In Progress</CardTitle>
-									<CardDescription>Currently active projects</CardDescription>
-								</CardHeader>
-								<CardContent>
-									<div className="text-3xl font-semibold">
-										{projectStats?.byStatus["in-progress"] ||
-											data.filter((p) => p.status === "in-progress").length}
-									</div>
-								</CardContent>
-							</Card>
-							<Card>
-								<CardHeader>
-									<CardTitle className="text-base">Completed</CardTitle>
-									<CardDescription>Finished projects</CardDescription>
-								</CardHeader>
-								<CardContent>
-									<div className="text-3xl font-semibold">
-										{projectStats?.byStatus.completed ||
-											data.filter((p) => p.status === "completed").length}
-									</div>
-								</CardContent>
-							</Card>
-						</div>
-					)}
-
+			{isLoading ? (
+				<div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+					{[...Array(3)].map((_, i) => (
+						<Card key={i}>
+							<CardHeader>
+								<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-24"></div>
+								<div className="h-3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-32"></div>
+							</CardHeader>
+							<CardContent>
+								<div className="h-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-16"></div>
+							</CardContent>
+						</Card>
+					))}
+				</div>
+			) : (
+				<div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 					<Card>
-						<CardHeader className="flex flex-col gap-2 border-b">
-							<div className="flex items-center justify-between gap-3">
-								<div>
-									<CardTitle>Projects</CardTitle>
-									<CardDescription>
-										Search, sort, and browse your projects
-									</CardDescription>
-								</div>
-								<div className="flex items-center gap-2">
-									<Input
-										placeholder="Search projects..."
-										value={query}
-										onChange={(e) => setQuery(e.target.value)}
-										className="w-56"
-									/>
-								</div>
-							</div>
+						<CardHeader>
+							<CardTitle className="flex items-center gap-2 text-base">
+								<FolderKanban className="size-4" /> Total Projects
+							</CardTitle>
+							<CardDescription>All projects in your workspace</CardDescription>
 						</CardHeader>
-						<CardContent className="px-0">
-							{isLoading ? (
-								<div className="px-6">
-									<div className="space-y-4">
-										{[...Array(5)].map((_, i) => (
-											<div key={i} className="flex items-center space-x-4 p-4">
-												<div className="flex-1 space-y-2">
-													<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-2/3"></div>
-													<div className="h-3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-1/2"></div>
-												</div>
-												<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-16"></div>
-												<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-20"></div>
-												<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-24"></div>
-												<div className="h-8 w-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-											</div>
-										))}
-									</div>
-								</div>
-							) : isEmpty ? (
-								<div className="px-6 py-12 text-center">
-									<div className="mx-auto w-24 h-24 mb-4 flex items-center justify-center rounded-full bg-muted">
-										<FolderOpen className="h-12 w-12 text-muted-foreground" />
-									</div>
-									<h3 className="text-lg font-semibold text-foreground mb-2">
-										No projects yet
-									</h3>
-									<p className="text-muted-foreground mb-6 max-w-sm mx-auto">
-										Get started by creating your first project. Projects help
-										you organize work and track progress.
-									</p>
-									<Button
-										intent="primary"
-										onPress={() => router.push("/projects/new")}
-										className="inline-flex items-center gap-2"
-									>
-										<Plus className="h-4 w-4" />
-										Create Your First Project
-									</Button>
-								</div>
-							) : (
-								<div className="px-6">
-									<div className="overflow-hidden rounded-lg border">
-										<Table>
-											<TableHeader className="bg-muted sticky top-0 z-10">
-												{table.getHeaderGroups().map((headerGroup) => (
-													<TableRow key={headerGroup.id}>
-														{headerGroup.headers.map((header) => (
-															<TableHead key={header.id}>
-																{header.isPlaceholder
-																	? null
-																	: flexRender(
-																			header.column.columnDef.header,
-																			header.getContext()
-																		)}
-															</TableHead>
-														))}
-													</TableRow>
-												))}
-											</TableHeader>
-											<TableBody>
-												{table.getRowModel().rows?.length ? (
-													table.getRowModel().rows.map((row) => (
-														<TableRow
-															key={row.id}
-															data-state={row.getIsSelected() && "selected"}
-														>
-															{row.getVisibleCells().map((cell) => (
-																<TableCell key={cell.id}>
-																	{flexRender(
-																		cell.column.columnDef.cell,
-																		cell.getContext()
-																	)}
-																</TableCell>
-															))}
-														</TableRow>
-													))
-												) : (
-													<TableRow>
-														<TableCell
-															colSpan={createColumns(router).length}
-															className="h-24 text-center"
-														>
-															No projects match your search.
-														</TableCell>
-													</TableRow>
-												)}
-											</TableBody>
-										</Table>
-									</div>
-									<div className="flex items-center justify-between py-4">
-										<div className="text-muted-foreground text-sm">
-											{table.getFilteredRowModel().rows.length} of {data.length}{" "}
-											projects
-										</div>
-										<div className="flex items-center gap-2">
-											<Button
-												intent="outline"
-												size="sq-sm"
-												onPress={() => table.previousPage()}
-												isDisabled={!table.getCanPreviousPage()}
-												aria-label="Previous page"
-											>
-												<ChevronLeft className="size-4" />
-											</Button>
-											<div className="text-sm font-medium">
-												Page {table.getState().pagination?.pageIndex + 1} of{" "}
-												{table.getPageCount()}
-											</div>
-											<Button
-												intent="outline"
-												size="sq-sm"
-												onPress={() => table.nextPage()}
-												isDisabled={!table.getCanNextPage()}
-												aria-label="Next page"
-											>
-												<ChevronRight className="size-4" />
-											</Button>
-										</div>
-									</div>
-								</div>
-							)}
+						<CardContent>
+							<div className="text-3xl font-semibold">
+								{projectStats?.total || data.length}
+							</div>
+						</CardContent>
+					</Card>
+					<Card>
+						<CardHeader>
+							<CardTitle className="text-base">In Progress</CardTitle>
+							<CardDescription>Currently active projects</CardDescription>
+						</CardHeader>
+						<CardContent>
+							<div className="text-3xl font-semibold">
+								{projectStats?.byStatus["in-progress"] ||
+									data.filter((p) => p.status === "in-progress").length}
+							</div>
+						</CardContent>
+					</Card>
+					<Card>
+						<CardHeader>
+							<CardTitle className="text-base">Completed</CardTitle>
+							<CardDescription>Finished projects</CardDescription>
+						</CardHeader>
+						<CardContent>
+							<div className="text-3xl font-semibold">
+								{projectStats?.byStatus.completed ||
+									data.filter((p) => p.status === "completed").length}
+							</div>
 						</CardContent>
 					</Card>
 				</div>
-			</div>
+			)}
+
+			<Card>
+				<CardHeader className="flex flex-col gap-2 border-b">
+					<div className="flex items-center justify-between gap-3">
+						<div>
+							<CardTitle>Projects</CardTitle>
+							<CardDescription>
+								Search, sort, and browse your projects
+							</CardDescription>
+						</div>
+						<div className="flex items-center gap-2">
+							<Input
+								placeholder="Search projects..."
+								value={query}
+								onChange={(e) => setQuery(e.target.value)}
+								className="w-56"
+							/>
+						</div>
+					</div>
+				</CardHeader>
+				<CardContent className="px-0">
+					{isLoading ? (
+						<div className="px-6">
+							<div className="space-y-4">
+								{[...Array(5)].map((_, i) => (
+									<div key={i} className="flex items-center space-x-4 p-4">
+										<div className="flex-1 space-y-2">
+											<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-2/3"></div>
+											<div className="h-3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-1/2"></div>
+										</div>
+										<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-16"></div>
+										<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-20"></div>
+										<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-24"></div>
+										<div className="h-8 w-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+									</div>
+								))}
+							</div>
+						</div>
+					) : isEmpty ? (
+						<div className="px-6 py-12 text-center">
+							<div className="mx-auto w-24 h-24 mb-4 flex items-center justify-center rounded-full bg-muted">
+								<FolderOpen className="h-12 w-12 text-muted-foreground" />
+							</div>
+							<h3 className="text-lg font-semibold text-foreground mb-2">
+								No projects yet
+							</h3>
+							<p className="text-muted-foreground mb-6 max-w-sm mx-auto">
+								Get started by creating your first project. Projects help you
+								organize work and track progress.
+							</p>
+							<Button
+								intent="primary"
+								onPress={() => router.push("/projects/new")}
+								className="inline-flex items-center gap-2"
+							>
+								<Plus className="h-4 w-4" />
+								Create Your First Project
+							</Button>
+						</div>
+					) : (
+						<div className="px-6">
+							<div className="overflow-hidden rounded-lg border">
+								<Table>
+									<TableHeader className="bg-muted sticky top-0 z-10">
+										{table.getHeaderGroups().map((headerGroup) => (
+											<TableRow key={headerGroup.id}>
+												{headerGroup.headers.map((header) => (
+													<TableHead key={header.id}>
+														{header.isPlaceholder
+															? null
+															: flexRender(
+																	header.column.columnDef.header,
+																	header.getContext()
+																)}
+													</TableHead>
+												))}
+											</TableRow>
+										))}
+									</TableHeader>
+									<TableBody>
+										{table.getRowModel().rows?.length ? (
+											table.getRowModel().rows.map((row) => (
+												<TableRow
+													key={row.id}
+													data-state={row.getIsSelected() && "selected"}
+												>
+													{row.getVisibleCells().map((cell) => (
+														<TableCell key={cell.id}>
+															{flexRender(
+																cell.column.columnDef.cell,
+																cell.getContext()
+															)}
+														</TableCell>
+													))}
+												</TableRow>
+											))
+										) : (
+											<TableRow>
+												<TableCell
+													colSpan={createColumns(router).length}
+													className="h-24 text-center"
+												>
+													No projects match your search.
+												</TableCell>
+											</TableRow>
+										)}
+									</TableBody>
+								</Table>
+							</div>
+							<div className="flex items-center justify-between py-4">
+								<div className="text-muted-foreground text-sm">
+									{table.getFilteredRowModel().rows.length} of {data.length}{" "}
+									projects
+								</div>
+								<div className="flex items-center gap-2">
+									<Button
+										intent="outline"
+										size="sq-sm"
+										onPress={() => table.previousPage()}
+										isDisabled={!table.getCanPreviousPage()}
+										aria-label="Previous page"
+									>
+										<ChevronLeft className="size-4" />
+									</Button>
+									<div className="text-sm font-medium">
+										Page {table.getState().pagination?.pageIndex + 1} of{" "}
+										{table.getPageCount()}
+									</div>
+									<Button
+										intent="outline"
+										size="sq-sm"
+										onPress={() => table.nextPage()}
+										isDisabled={!table.getCanNextPage()}
+										aria-label="Next page"
+									>
+										<ChevronRight className="size-4" />
+									</Button>
+								</div>
+							</div>
+						</div>
+					)}
+				</CardContent>
+			</Card>
 		</div>
 	);
 }

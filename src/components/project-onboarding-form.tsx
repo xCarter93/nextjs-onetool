@@ -172,7 +172,7 @@ export function ProjectOnboardingForm({
 						</p>
 					</div>
 
-					<form className="space-y-8 max-w-7xl">
+					<form className="space-y-8">
 						{/* Client Lookup */}
 						<Card className="shadow-sm border-gray-200/60 dark:border-white/10">
 							<CardHeader className="pb-4">

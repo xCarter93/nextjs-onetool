@@ -376,8 +376,8 @@ export default function QuoteDetailPage() {
 
 	return (
 		<div className="min-h-[100vh] flex-1 md:min-h-min">
-			<div className="relative bg-gradient-to-br from-background via-muted/30 to-muted/60 dark:from-background dark:via-muted/20 dark:to-muted/40 min-h-[100vh] rounded-xl">
-				<div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(120,119,198,0.08),transparent_50%)] rounded-xl" />
+			<div className="relative min-h-[100vh] rounded-xl">
+				<div className="rounded-xl" />
 
 				<div className="relative px-6 pt-8 pb-20">
 					<div className="mx-auto">

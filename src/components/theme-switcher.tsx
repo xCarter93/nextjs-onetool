@@ -22,7 +22,7 @@ export function ThemeSwitcher({
 	return (
 		<Button
 			intent="outline"
-			size="sq-sm"
+			size="sq-lg"
 			aria-label="Switch theme"
 			onPress={toggleTheme}
 			onClick={toggleTheme}

@@ -209,15 +209,10 @@ export default function QuoteLineEditorPage() {
 	// Loading state
 	if (quote === undefined) {
 		return (
-			<div className="min-h-[100vh] flex-1 md:min-h-min">
-				<div className="relative bg-gradient-to-br from-background via-muted/30 to-muted/60 dark:from-background dark:via-muted/20 dark:to-muted/40 min-h-[100vh] md:min-h-min rounded-xl">
-					<div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(120,119,198,0.08),transparent_50%)] rounded-xl" />
-					<div className="relative px-6 pt-8 pb-20">
-						<div className="animate-pulse space-y-8">
-							<div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/3"></div>
-							<div className="h-96 bg-gray-200 dark:bg-gray-700 rounded"></div>
-						</div>
-					</div>
+			<div className="relative px-6 pt-8 pb-20">
+				<div className="animate-pulse space-y-8">
+					<div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/3"></div>
+					<div className="h-96 bg-gray-200 dark:bg-gray-700 rounded"></div>
 				</div>
 			</div>
 		);
@@ -226,23 +221,16 @@ export default function QuoteLineEditorPage() {
 	// Quote not found
 	if (quote === null) {
 		return (
-			<div className="min-h-[100vh] flex-1 md:min-h-min">
-				<div className="relative bg-gradient-to-br from-background via-muted/30 to-muted/60 dark:from-background dark:via-muted/20 dark:to-muted/40 min-h-[100vh] md:min-h-min rounded-xl">
-					<div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(120,119,198,0.08),transparent_50%)] rounded-xl" />
-					<div className="relative px-6 pt-8 pb-20 flex flex-col items-center justify-center h-96 space-y-4">
-						<div className="text-6xl">📄</div>
-						<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-							Quote Not Found
-						</h1>
-						<p className="text-gray-600 dark:text-gray-400 text-center">
-							The quote you&apos;re looking for doesn&apos;t exist or you
-							don&apos;t have permission to view it.
-						</p>
-						<Button onClick={() => router.push("/quotes")}>
-							Back to Quotes
-						</Button>
-					</div>
-				</div>
+			<div className="relative px-6 pt-8 pb-20 flex flex-col items-center justify-center h-96 space-y-4">
+				<div className="text-6xl">📄</div>
+				<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+					Quote Not Found
+				</h1>
+				<p className="text-gray-600 dark:text-gray-400 text-center">
+					The quote you&apos;re looking for doesn&apos;t exist or you don&apos;t
+					have permission to view it.
+				</p>
+				<Button onClick={() => router.push("/quotes")}>Back to Quotes</Button>
 			</div>
 		);
 	}
@@ -417,440 +405,423 @@ export default function QuoteLineEditorPage() {
 	};
 
 	return (
-		<div className="min-h-[100vh] flex-1 md:min-h-min">
-			<div className="relative bg-gradient-to-br from-background via-muted/30 to-muted/60 dark:from-background dark:via-muted/20 dark:to-muted/40 min-h-[100vh] md:min-h-min rounded-xl">
-				<div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(120,119,198,0.08),transparent_50%)] rounded-xl" />
-
-				<div className="relative px-6 pt-8 pb-20">
-					<div className="mx-auto">
-						{/* Header */}
-						<div className="flex items-center justify-between mb-8">
-							<div className="flex items-center gap-4">
-								<Button
-									intent="outline"
-									size="sq-sm"
-									onPress={handleCancel}
-									aria-label="Go back"
-								>
-									<ArrowLeft className="h-4 w-4" />
-								</Button>
-								<div className="flex items-center gap-4">
-									<div className="flex items-center justify-center w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-900/30">
-										<FileText className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-									</div>
-									<div>
-										<div className="flex items-center gap-3">
-											<h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-												Quote Line Editor
-											</h1>
-											<Badge variant={statusVariant(quote.status)}>
-												{formatStatus(quote.status)}
-											</Badge>
-										</div>
-										<p className="text-muted-foreground text-sm mt-1">
-											{quote.quoteNumber || `#${quote._id.slice(-6)}`} •{" "}
-											{client?.companyName || "Unknown Client"} •{" "}
-											{project?.title || "No Project"}
-										</p>
-									</div>
-								</div>
+		<div className="relative px-6 pt-8 pb-20">
+			<div className="mx-auto">
+				{/* Header */}
+				<div className="flex items-center justify-between mb-8">
+					<div className="flex items-center gap-4">
+						<Button
+							intent="outline"
+							size="sq-sm"
+							onPress={handleCancel}
+							aria-label="Go back"
+						>
+							<ArrowLeft className="h-4 w-4" />
+						</Button>
+						<div className="flex items-center gap-4">
+							<div className="flex items-center justify-center w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-900/30">
+								<FileText className="h-6 w-6 text-blue-600 dark:text-blue-400" />
 							</div>
-							<div className="flex items-center gap-3">
-								<Button
-									intent="primary"
-									size="sm"
-									onPress={handleSaveQuote}
-									isDisabled={!hasChanges}
-								>
-									<Save className="h-4 w-4 mr-2" />
-									Save Changes
-								</Button>
-							</div>
-						</div>
-
-						{/* Main Content */}
-						<div className="space-y-8">
-							{/* Line Items Editor */}
 							<div>
-								<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-xl shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50">
-									<Card className="bg-transparent border-none shadow-none ring-0">
-										<CardHeader>
-											<CardTitle className="flex items-center gap-2 text-xl">
-												<Edit className="h-5 w-5" />
-												Line Items Configuration
-											</CardTitle>
-										</CardHeader>
-										<CardContent>
-											<div className="overflow-hidden rounded-lg border">
-												<Table>
-													<TableHeader className="bg-muted sticky top-0 z-10">
-														<TableRow>
-															<TableHead className="w-[30%]">
-																Description
-															</TableHead>
-															<TableHead className="w-[10%] text-center">
-																Qty
-															</TableHead>
-															<TableHead className="w-[10%] text-center">
-																Unit
-															</TableHead>
-															<TableHead className="w-[12%] text-right">
-																Rate
-															</TableHead>
-															<TableHead className="w-[12%] text-right">
-																<div className="flex flex-col items-end">
-																	<span>Cost</span>
-																	<span className="text-xs text-muted-foreground font-normal">
-																		per unit
-																	</span>
-																</div>
-															</TableHead>
-															<TableHead className="w-[12%] text-right">
-																Amount
-															</TableHead>
-															<TableHead className="w-[10%] text-center">
-																Margin
-															</TableHead>
-															<TableHead className="w-[4%]">Actions</TableHead>
-														</TableRow>
-													</TableHeader>
-													<TableBody>
-														{allLineItems.map((item) => (
-															<LineItemRow
-																key={item._id}
-																item={item}
-																isEditing={editingId === item._id}
-																onEdit={() => handleEditLineItem(item._id)}
-																onSave={handleSaveLineItem}
-																onCancel={() => setEditingId(null)}
-																onDelete={() => handleDeleteLineItem(item._id)}
-															/>
-														))}
-													</TableBody>
-												</Table>
-											</div>
-
-											{/* Add Line Item Button */}
-											<div className="mt-6 pt-4 border-t border-border">
-												<div className="flex items-center justify-between">
-													<div className="text-sm text-muted-foreground">
-														{allLineItems.length === 0
-															? "No line items yet. Add your first item to get started."
-															: `${allLineItems.length} line item${allLineItems.length !== 1 ? "s" : ""} configured`}
-													</div>
-													<Button
-														intent="outline"
-														size="sm"
-														onPress={handleAddLineItem}
-													>
-														<Plus className="h-4 w-4 mr-2" />
-														Add Line Item
-													</Button>
-												</div>
-											</div>
-										</CardContent>
-									</Card>
+								<div className="flex items-center gap-3">
+									<h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+										Quote Line Editor
+									</h1>
+									<Badge variant={statusVariant(quote.status)}>
+										{formatStatus(quote.status)}
+									</Badge>
 								</div>
+								<p className="text-muted-foreground text-sm mt-1">
+									{quote.quoteNumber || `#${quote._id.slice(-6)}`} •{" "}
+									{client?.companyName || "Unknown Client"} •{" "}
+									{project?.title || "No Project"}
+								</p>
 							</div>
-
-							{/* Quote Summary - New Layout */}
-							<div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-								{/* Client View Settings */}
-								<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-xl shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50">
-									<Card className="bg-transparent border-none shadow-none ring-0">
-										<CardHeader>
-											<CardTitle className="flex items-center gap-2 text-lg">
-												<Eye className="h-5 w-5" />
-												Client view
-											</CardTitle>
-											<p className="text-sm text-muted-foreground mt-1">
-												Adjust what your client will see on this quote. To
-												change the default for all future quotes, visit the PDF
-												Style.
-											</p>
-										</CardHeader>
-										<CardContent className="space-y-4">
-											<div className="grid grid-cols-2 gap-4">
-												<div className="flex items-center space-x-2">
-													<Checkbox
-														id="quantities"
-														checked={pdfSettings.showQuantities}
-														onCheckedChange={(checked) =>
-															handlePdfSettingChange(
-																"showQuantities",
-																!!checked
-															)
-														}
-													/>
-													<label
-														htmlFor="quantities"
-														className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-													>
-														Quantities
-													</label>
-												</div>
-												<div className="flex items-center space-x-2">
-													<Checkbox
-														id="unitPrices"
-														checked={pdfSettings.showUnitPrices}
-														onCheckedChange={(checked) =>
-															handlePdfSettingChange(
-																"showUnitPrices",
-																!!checked
-															)
-														}
-													/>
-													<label
-														htmlFor="unitPrices"
-														className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-													>
-														Unit prices
-													</label>
-												</div>
-												<div className="flex items-center space-x-2">
-													<Checkbox
-														id="lineItemTotals"
-														checked={pdfSettings.showLineItemTotals}
-														onCheckedChange={(checked) =>
-															handlePdfSettingChange(
-																"showLineItemTotals",
-																!!checked
-															)
-														}
-													/>
-													<label
-														htmlFor="lineItemTotals"
-														className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-													>
-														Line item totals
-													</label>
-												</div>
-												<div className="flex items-center space-x-2">
-													<Checkbox
-														id="totals"
-														checked={pdfSettings.showTotals}
-														onCheckedChange={(checked) =>
-															handlePdfSettingChange("showTotals", !!checked)
-														}
-													/>
-													<label
-														htmlFor="totals"
-														className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-													>
-														Totals
-													</label>
-												</div>
-											</div>
-										</CardContent>
-									</Card>
-								</div>
-
-								{/* Financial Summary */}
-								<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-xl shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50">
-									<Card className="bg-transparent border-none shadow-none ring-0">
-										<CardHeader>
-											<CardTitle className="flex items-center gap-2 text-lg">
-												<Calculator className="h-5 w-5" />
-												Quote Summary
-											</CardTitle>
-										</CardHeader>
-										<CardContent className="space-y-4">
-											<div className="space-y-3">
-												<div className="flex justify-between">
-													<span className="text-sm text-gray-600 dark:text-gray-400">
-														Subtotal:
-													</span>
-													<span className="text-sm font-medium">
-														{formatCurrency(totals.subtotal)}
-													</span>
-												</div>
-
-												{/* Discount */}
-												{discount.enabled ? (
-													<div className="space-y-2">
-														<div className="flex justify-between items-center">
-															<span className="text-sm text-gray-600 dark:text-gray-400">
-																Discount:
-															</span>
-															<div className="flex items-center gap-2">
-																<span className="text-sm font-medium text-red-600 dark:text-red-400">
-																	-{formatCurrency(totals.discountAmount)}
-																</span>
-																<Button
-																	intent="outline"
-																	size="sq-sm"
-																	onPress={handleRemoveDiscount}
-																	aria-label="Remove discount"
-																>
-																	<X className="h-3 w-3" />
-																</Button>
-															</div>
-														</div>
-														<div className="flex items-center gap-2">
-															<Input
-																type="number"
-																value={discount.amount}
-																onChange={(e) => {
-																	setDiscount((prev) => ({
-																		...prev,
-																		amount: parseFloat(e.target.value) || 0,
-																	}));
-																	setHasChanges(true);
-																}}
-																className="w-20 text-right"
-																min="0"
-																step="0.01"
-															/>
-															<select
-																value={discount.type}
-																onChange={(e) => {
-																	setDiscount((prev) => ({
-																		...prev,
-																		type: e.target.value as
-																			| "percentage"
-																			| "fixed",
-																	}));
-																	setHasChanges(true);
-																}}
-																className="text-sm border border-input bg-background px-2 py-1 rounded"
-															>
-																<option value="percentage">%</option>
-																<option value="fixed">$</option>
-															</select>
-														</div>
-													</div>
-												) : (
-													<div className="flex justify-between items-center">
-														<span className="text-sm text-gray-600 dark:text-gray-400">
-															Discount:
-														</span>
-														<Button
-															intent="outline"
-															size="sm"
-															onPress={handleAddDiscount}
-															className="text-green-600 dark:text-green-400 border-green-200 dark:border-green-800 hover:bg-green-50 dark:hover:bg-green-900/20"
-														>
-															Add Discount
-														</Button>
-													</div>
-												)}
-
-												{/* Tax */}
-												{tax.enabled ? (
-													<div className="space-y-2">
-														<div className="flex justify-between items-center">
-															<span className="text-sm text-gray-600 dark:text-gray-400">
-																Tax:
-															</span>
-															<div className="flex items-center gap-2">
-																<span className="text-sm font-medium">
-																	{formatCurrency(totals.taxAmount)}
-																</span>
-																<Button
-																	intent="outline"
-																	size="sq-sm"
-																	onPress={handleRemoveTax}
-																	aria-label="Remove tax"
-																>
-																	<X className="h-3 w-3" />
-																</Button>
-															</div>
-														</div>
-														<div className="flex items-center gap-2">
-															<Input
-																type="number"
-																value={tax.rate}
-																onChange={(e) => {
-																	setTax((prev) => ({
-																		...prev,
-																		rate: parseFloat(e.target.value) || 0,
-																	}));
-																	setHasChanges(true);
-																}}
-																className="w-20 text-right"
-																min="0"
-																step="0.01"
-																max="100"
-															/>
-															<span className="text-sm text-gray-600 dark:text-gray-400">
-																%
-															</span>
-														</div>
-													</div>
-												) : (
-													<div className="flex justify-between items-center">
-														<span className="text-sm text-gray-600 dark:text-gray-400">
-															Tax:
-														</span>
-														<Button
-															intent="outline"
-															size="sm"
-															onPress={handleAddTax}
-															className="text-green-600 dark:text-green-400 border-green-200 dark:border-green-800 hover:bg-green-50 dark:hover:bg-green-900/20"
-														>
-															Add Tax
-														</Button>
-													</div>
-												)}
-
-												<div className="border-t pt-3">
-													<div className="flex justify-between">
-														<span className="text-lg font-bold">Total:</span>
-														<span className="text-lg font-bold text-primary">
-															{formatCurrency(totals.total)}
-														</span>
-													</div>
-												</div>
-
-												<div className="border-t pt-3 space-y-2">
-													<div className="flex justify-between">
-														<span className="text-sm text-gray-600 dark:text-gray-400">
-															Costs:
-														</span>
-														<span className="text-sm font-medium text-red-600 dark:text-red-400">
-															{formatCurrency(totals.totalCosts)}
-														</span>
-													</div>
-													<div className="flex justify-between">
-														<span className="text-sm text-gray-600 dark:text-gray-400">
-															Estimated margin:
-														</span>
-														<span
-															className={`text-sm font-medium ${
-																totals.margin >= 0
-																	? "text-green-600 dark:text-green-400"
-																	: "text-red-600 dark:text-red-400"
-															}`}
-														>
-															{formatCurrency(totals.margin)} (
-															{totals.marginPercentage.toFixed(1)}%)
-														</span>
-													</div>
-												</div>
-											</div>
-										</CardContent>
-									</Card>
-								</div>
-							</div>
-
-							{/* Change Indicator */}
-							{hasChanges && (
-								<div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4">
-									<div className="flex items-start gap-3">
-										<div className="w-2 h-2 bg-yellow-400 rounded-full mt-2 flex-shrink-0" />
-										<div>
-											<p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
-												Unsaved Changes
-											</p>
-											<p className="text-xs text-yellow-700 dark:text-yellow-300 mt-1">
-												Remember to save your changes before leaving this page.
-											</p>
-										</div>
-									</div>
-								</div>
-							)}
 						</div>
 					</div>
+					<div className="flex items-center gap-3">
+						<Button
+							intent="primary"
+							size="sm"
+							onPress={handleSaveQuote}
+							isDisabled={!hasChanges}
+						>
+							<Save className="h-4 w-4 mr-2" />
+							Save Changes
+						</Button>
+					</div>
+				</div>
+
+				{/* Main Content */}
+				<div className="space-y-8">
+					{/* Line Items Editor */}
+					<div>
+						<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-xl shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50">
+							<Card className="bg-transparent border-none shadow-none ring-0">
+								<CardHeader>
+									<CardTitle className="flex items-center gap-2 text-xl">
+										<Edit className="h-5 w-5" />
+										Line Items Configuration
+									</CardTitle>
+								</CardHeader>
+								<CardContent>
+									<div className="overflow-hidden rounded-lg border">
+										<Table>
+											<TableHeader className="bg-muted sticky top-0 z-10">
+												<TableRow>
+													<TableHead className="w-[30%]">Description</TableHead>
+													<TableHead className="w-[10%] text-center">
+														Qty
+													</TableHead>
+													<TableHead className="w-[10%] text-center">
+														Unit
+													</TableHead>
+													<TableHead className="w-[12%] text-right">
+														Rate
+													</TableHead>
+													<TableHead className="w-[12%] text-right">
+														<div className="flex flex-col items-end">
+															<span>Cost</span>
+															<span className="text-xs text-muted-foreground font-normal">
+																per unit
+															</span>
+														</div>
+													</TableHead>
+													<TableHead className="w-[12%] text-right">
+														Amount
+													</TableHead>
+													<TableHead className="w-[10%] text-center">
+														Margin
+													</TableHead>
+													<TableHead className="w-[4%]">Actions</TableHead>
+												</TableRow>
+											</TableHeader>
+											<TableBody>
+												{allLineItems.map((item) => (
+													<LineItemRow
+														key={item._id}
+														item={item}
+														isEditing={editingId === item._id}
+														onEdit={() => handleEditLineItem(item._id)}
+														onSave={handleSaveLineItem}
+														onCancel={() => setEditingId(null)}
+														onDelete={() => handleDeleteLineItem(item._id)}
+													/>
+												))}
+											</TableBody>
+										</Table>
+									</div>
+
+									{/* Add Line Item Button */}
+									<div className="mt-6 pt-4 border-t border-border">
+										<div className="flex items-center justify-between">
+											<div className="text-sm text-muted-foreground">
+												{allLineItems.length === 0
+													? "No line items yet. Add your first item to get started."
+													: `${allLineItems.length} line item${allLineItems.length !== 1 ? "s" : ""} configured`}
+											</div>
+											<Button
+												intent="outline"
+												size="sm"
+												onPress={handleAddLineItem}
+											>
+												<Plus className="h-4 w-4 mr-2" />
+												Add Line Item
+											</Button>
+										</div>
+									</div>
+								</CardContent>
+							</Card>
+						</div>
+					</div>
+
+					{/* Quote Summary - New Layout */}
+					<div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+						{/* Client View Settings */}
+						<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-xl shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50">
+							<Card className="bg-transparent border-none shadow-none ring-0">
+								<CardHeader>
+									<CardTitle className="flex items-center gap-2 text-lg">
+										<Eye className="h-5 w-5" />
+										Client view
+									</CardTitle>
+									<p className="text-sm text-muted-foreground mt-1">
+										Adjust what your client will see on this quote. To change
+										the default for all future quotes, visit the PDF Style.
+									</p>
+								</CardHeader>
+								<CardContent className="space-y-4">
+									<div className="grid grid-cols-2 gap-4">
+										<div className="flex items-center space-x-2">
+											<Checkbox
+												id="quantities"
+												checked={pdfSettings.showQuantities}
+												onCheckedChange={(checked) =>
+													handlePdfSettingChange("showQuantities", !!checked)
+												}
+											/>
+											<label
+												htmlFor="quantities"
+												className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+											>
+												Quantities
+											</label>
+										</div>
+										<div className="flex items-center space-x-2">
+											<Checkbox
+												id="unitPrices"
+												checked={pdfSettings.showUnitPrices}
+												onCheckedChange={(checked) =>
+													handlePdfSettingChange("showUnitPrices", !!checked)
+												}
+											/>
+											<label
+												htmlFor="unitPrices"
+												className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+											>
+												Unit prices
+											</label>
+										</div>
+										<div className="flex items-center space-x-2">
+											<Checkbox
+												id="lineItemTotals"
+												checked={pdfSettings.showLineItemTotals}
+												onCheckedChange={(checked) =>
+													handlePdfSettingChange(
+														"showLineItemTotals",
+														!!checked
+													)
+												}
+											/>
+											<label
+												htmlFor="lineItemTotals"
+												className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+											>
+												Line item totals
+											</label>
+										</div>
+										<div className="flex items-center space-x-2">
+											<Checkbox
+												id="totals"
+												checked={pdfSettings.showTotals}
+												onCheckedChange={(checked) =>
+													handlePdfSettingChange("showTotals", !!checked)
+												}
+											/>
+											<label
+												htmlFor="totals"
+												className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+											>
+												Totals
+											</label>
+										</div>
+									</div>
+								</CardContent>
+							</Card>
+						</div>
+
+						{/* Financial Summary */}
+						<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-xl shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50">
+							<Card className="bg-transparent border-none shadow-none ring-0">
+								<CardHeader>
+									<CardTitle className="flex items-center gap-2 text-lg">
+										<Calculator className="h-5 w-5" />
+										Quote Summary
+									</CardTitle>
+								</CardHeader>
+								<CardContent className="space-y-4">
+									<div className="space-y-3">
+										<div className="flex justify-between">
+											<span className="text-sm text-gray-600 dark:text-gray-400">
+												Subtotal:
+											</span>
+											<span className="text-sm font-medium">
+												{formatCurrency(totals.subtotal)}
+											</span>
+										</div>
+
+										{/* Discount */}
+										{discount.enabled ? (
+											<div className="space-y-2">
+												<div className="flex justify-between items-center">
+													<span className="text-sm text-gray-600 dark:text-gray-400">
+														Discount:
+													</span>
+													<div className="flex items-center gap-2">
+														<span className="text-sm font-medium text-red-600 dark:text-red-400">
+															-{formatCurrency(totals.discountAmount)}
+														</span>
+														<Button
+															intent="outline"
+															size="sq-sm"
+															onPress={handleRemoveDiscount}
+															aria-label="Remove discount"
+														>
+															<X className="h-3 w-3" />
+														</Button>
+													</div>
+												</div>
+												<div className="flex items-center gap-2">
+													<Input
+														type="number"
+														value={discount.amount}
+														onChange={(e) => {
+															setDiscount((prev) => ({
+																...prev,
+																amount: parseFloat(e.target.value) || 0,
+															}));
+															setHasChanges(true);
+														}}
+														className="w-20 text-right"
+														min="0"
+														step="0.01"
+													/>
+													<select
+														value={discount.type}
+														onChange={(e) => {
+															setDiscount((prev) => ({
+																...prev,
+																type: e.target.value as "percentage" | "fixed",
+															}));
+															setHasChanges(true);
+														}}
+														className="text-sm border border-input bg-background px-2 py-1 rounded"
+													>
+														<option value="percentage">%</option>
+														<option value="fixed">$</option>
+													</select>
+												</div>
+											</div>
+										) : (
+											<div className="flex justify-between items-center">
+												<span className="text-sm text-gray-600 dark:text-gray-400">
+													Discount:
+												</span>
+												<Button
+													intent="outline"
+													size="sm"
+													onPress={handleAddDiscount}
+													className="text-green-600 dark:text-green-400 border-green-200 dark:border-green-800 hover:bg-green-50 dark:hover:bg-green-900/20"
+												>
+													Add Discount
+												</Button>
+											</div>
+										)}
+
+										{/* Tax */}
+										{tax.enabled ? (
+											<div className="space-y-2">
+												<div className="flex justify-between items-center">
+													<span className="text-sm text-gray-600 dark:text-gray-400">
+														Tax:
+													</span>
+													<div className="flex items-center gap-2">
+														<span className="text-sm font-medium">
+															{formatCurrency(totals.taxAmount)}
+														</span>
+														<Button
+															intent="outline"
+															size="sq-sm"
+															onPress={handleRemoveTax}
+															aria-label="Remove tax"
+														>
+															<X className="h-3 w-3" />
+														</Button>
+													</div>
+												</div>
+												<div className="flex items-center gap-2">
+													<Input
+														type="number"
+														value={tax.rate}
+														onChange={(e) => {
+															setTax((prev) => ({
+																...prev,
+																rate: parseFloat(e.target.value) || 0,
+															}));
+															setHasChanges(true);
+														}}
+														className="w-20 text-right"
+														min="0"
+														step="0.01"
+														max="100"
+													/>
+													<span className="text-sm text-gray-600 dark:text-gray-400">
+														%
+													</span>
+												</div>
+											</div>
+										) : (
+											<div className="flex justify-between items-center">
+												<span className="text-sm text-gray-600 dark:text-gray-400">
+													Tax:
+												</span>
+												<Button
+													intent="outline"
+													size="sm"
+													onPress={handleAddTax}
+													className="text-green-600 dark:text-green-400 border-green-200 dark:border-green-800 hover:bg-green-50 dark:hover:bg-green-900/20"
+												>
+													Add Tax
+												</Button>
+											</div>
+										)}
+
+										<div className="border-t pt-3">
+											<div className="flex justify-between">
+												<span className="text-lg font-bold">Total:</span>
+												<span className="text-lg font-bold text-primary">
+													{formatCurrency(totals.total)}
+												</span>
+											</div>
+										</div>
+
+										<div className="border-t pt-3 space-y-2">
+											<div className="flex justify-between">
+												<span className="text-sm text-gray-600 dark:text-gray-400">
+													Costs:
+												</span>
+												<span className="text-sm font-medium text-red-600 dark:text-red-400">
+													{formatCurrency(totals.totalCosts)}
+												</span>
+											</div>
+											<div className="flex justify-between">
+												<span className="text-sm text-gray-600 dark:text-gray-400">
+													Estimated margin:
+												</span>
+												<span
+													className={`text-sm font-medium ${
+														totals.margin >= 0
+															? "text-green-600 dark:text-green-400"
+															: "text-red-600 dark:text-red-400"
+													}`}
+												>
+													{formatCurrency(totals.margin)} (
+													{totals.marginPercentage.toFixed(1)}%)
+												</span>
+											</div>
+										</div>
+									</div>
+								</CardContent>
+							</Card>
+						</div>
+					</div>
+
+					{/* Change Indicator */}
+					{hasChanges && (
+						<div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4">
+							<div className="flex items-start gap-3">
+								<div className="w-2 h-2 bg-yellow-400 rounded-full mt-2 flex-shrink-0" />
+								<div>
+									<p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+										Unsaved Changes
+									</p>
+									<p className="text-xs text-yellow-700 dark:text-yellow-300 mt-1">
+										Remember to save your changes before leaving this page.
+									</p>
+								</div>
+							</div>
+						</div>
+					)}
 				</div>
 			</div>
 		</div>

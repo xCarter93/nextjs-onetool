@@ -53,7 +53,9 @@ export default function RevenueGoalSetter() {
 
 	return (
 		<Card className="group relative backdrop-blur-md overflow-hidden ring-1 ring-border/20 dark:ring-border/40">
-			<CardContent>
+			{/* Glass morphism overlay */}
+			<div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
+			<CardContent className="relative z-10">
 				<div className="flex items-center justify-between mb-4">
 					<div className="flex items-center space-x-3">
 						<div className="flex items-center justify-center w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 ring-1 ring-emerald-200 dark:ring-emerald-800">
