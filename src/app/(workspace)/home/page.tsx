@@ -6,6 +6,7 @@ import HomeStats from "@/components/home-stats";
 import RevenueGoalSetter from "@/components/revenue-goal-setter";
 import { useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
+import { motion } from "motion/react";
 
 export default function Page() {
 	const user = useQuery(api.users.current);
@@ -37,46 +38,108 @@ export default function Page() {
 	};
 	return (
 		<div className="min-h-[100vh] flex-1 md:min-h-min">
-			{/* Enhanced Background with Gradient */}
-			<div className="relative bg-gradient-to-br from-background via-muted/30 to-muted/60 dark:from-background dark:via-muted/20 dark:to-muted/40 min-h-[100vh] md:min-h-min rounded-xl">
-				{/* Subtle Pattern Overlay */}
-				<div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(120,119,198,0.1),transparent_50%)] rounded-xl" />
-
-				<div className="relative p-6">
-					{/* Compact Date Header */}
-					<div className="mb-6">
-						<h1 className="text-lg font-medium text-muted-foreground mb-1">
-							{formatDate()}
-						</h1>
-						<h2 className="text-2xl font-bold text-foreground">
-							{getWelcomeMessage()}
-						</h2>
-					</div>
-
-					<HomeStats />
-
-					{/* Dashboard Layout */}
-					<div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
-						{/* Main Content Area - 3 columns */}
-						<div className="xl:col-span-3 space-y-6">
-							{/* Getting Started Section */}
-							<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-xl p-6 shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50">
-								<GettingStarted />
-							</div>
-						</div>
-
-						{/* Sidebar - 2 columns for more breathing room */}
-						<div className="xl:col-span-2 space-y-6">
-							{/* Revenue Goal Setter */}
-							<RevenueGoalSetter />
-
-							{/* Activity Feed Section */}
-							<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-xl p-6 shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50">
-								<ActivityFeed />
-							</div>
-						</div>
+			{/* Modern Background with Subtle Texture */}
+			<div className="relative bg-background min-h-[100vh] md:min-h-min">
+				{/* Ambient Light Effects */}
+				<div className="absolute inset-0 overflow-hidden">
+					<div className="absolute -inset-10 opacity-50">
+						<div className="absolute top-0 -left-4 w-72 h-72 bg-primary/10 rounded-full mix-blend-multiply filter blur-xl animate-blob" />
+						<div className="absolute top-0 -right-4 w-72 h-72 bg-primary/10 rounded-full mix-blend-multiply filter blur-xl animate-blob animation-delay-2000" />
+						<div className="absolute -bottom-8 left-20 w-72 h-72 bg-primary/5 rounded-full mix-blend-multiply filter blur-xl animate-blob animation-delay-4000" />
 					</div>
 				</div>
+
+				{/* Subtle Grid Pattern */}
+				<div
+					className="absolute inset-0 bg-[linear-gradient(to_right,theme(colors.border)_1px,transparent_1px),linear-gradient(to_bottom,theme(colors.border)_1px,transparent_1px)] bg-[size:4rem_4rem] opacity-[0.03] dark:opacity-[0.05]"
+					style={{
+						maskImage:
+							"radial-gradient(ellipse at center, transparent 20%, black)",
+						WebkitMaskImage:
+							"radial-gradient(ellipse at center, transparent 20%, black)",
+					}}
+				/>
+
+				<motion.div
+					className="relative p-4 sm:p-6 lg:p-8"
+					initial={{ opacity: 0, y: 20 }}
+					animate={{ opacity: 1, y: 0 }}
+					transition={{ duration: 0.5 }}
+				>
+					{/* Modern Header */}
+					<motion.div
+						className="mb-8 sm:mb-10"
+						initial={{ opacity: 0, y: -10 }}
+						animate={{ opacity: 1, y: 0 }}
+						transition={{ duration: 0.5, delay: 0.1 }}
+					>
+						<div className="flex items-center gap-3 mb-2">
+							<div className="w-1 h-8 bg-gradient-to-b from-primary via-primary/80 to-primary/60 rounded-full" />
+							<time className="text-sm font-medium text-muted-foreground tracking-wide uppercase">
+								{formatDate()}
+							</time>
+						</div>
+						<h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground leading-tight tracking-tight">
+							{getWelcomeMessage()}
+						</h1>
+					</motion.div>
+
+					<motion.div
+						initial={{ opacity: 0, y: 20 }}
+						animate={{ opacity: 1, y: 0 }}
+						transition={{ duration: 0.5, delay: 0.2 }}
+					>
+						<HomeStats />
+					</motion.div>
+
+					{/* Enhanced Dashboard Layout */}
+					<motion.div
+						className="grid grid-cols-1 xl:grid-cols-12 gap-6 lg:gap-8"
+						initial={{ opacity: 0, y: 20 }}
+						animate={{ opacity: 1, y: 0 }}
+						transition={{ duration: 0.5, delay: 0.3 }}
+					>
+						{/* Main Content Area */}
+						<div className="xl:col-span-7 space-y-6">
+							<motion.div
+								className="group relative bg-card/40 dark:bg-card/20 backdrop-blur-xl border border-border/40 dark:border-border/20 rounded-2xl p-6 lg:p-8 shadow-xl dark:shadow-2xl dark:shadow-black/20 ring-1 ring-white/5 dark:ring-white/5 hover:ring-white/10 dark:hover:ring-white/10 transition-all duration-300"
+								whileHover={{ y: -2, scale: 1.005 }}
+								transition={{ type: "spring", stiffness: 300, damping: 30 }}
+							>
+								{/* Glass morphism overlay */}
+								<div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
+								<div className="relative z-10">
+									<GettingStarted />
+								</div>
+							</motion.div>
+						</div>
+
+						{/* Enhanced Sidebar */}
+						<div className="xl:col-span-5 space-y-6">
+							<motion.div
+								initial={{ opacity: 0, x: 20 }}
+								animate={{ opacity: 1, x: 0 }}
+								transition={{ duration: 0.5, delay: 0.4 }}
+							>
+								<RevenueGoalSetter />
+							</motion.div>
+
+							<motion.div
+								className="group relative bg-card/40 dark:bg-card/20 backdrop-blur-xl border border-border/40 dark:border-border/20 rounded-2xl p-6 lg:p-8 shadow-xl dark:shadow-2xl dark:shadow-black/20 ring-1 ring-white/5 dark:ring-white/5 hover:ring-white/10 dark:hover:ring-white/10 transition-all duration-300"
+								whileHover={{ y: -2, scale: 1.005 }}
+								initial={{ opacity: 0, x: 20 }}
+								animate={{ opacity: 1, x: 0 }}
+								transition={{ type: "spring", stiffness: 300, damping: 30, delay: 0.5 }}
+							>
+								{/* Glass morphism overlay */}
+								<div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
+								<div className="relative z-10">
+									<ActivityFeed />
+								</div>
+							</motion.div>
+						</div>
+					</motion.div>
+				</motion.div>
 			</div>
 		</div>
 	);

@@ -1,3 +1,5 @@
+"use client";
+
 import { ReactNode } from "react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeSwitcher } from "@/components/theme-switcher";
@@ -6,6 +8,7 @@ import {
 	SidebarProvider,
 	SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { motion } from "motion/react";
 
 interface SidebarWithHeaderProps {
 	children: ReactNode;
@@ -16,62 +19,65 @@ export function SidebarWithHeader({ children }: SidebarWithHeaderProps) {
 		<SidebarProvider>
 			<AppSidebar />
 			<SidebarInset>
-				{/* Header with banner and controls integrated */}
-				<header className="sticky top-0 z-50 isolate overflow-hidden transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
-					{/* Decorative background elements */}
-					<div
-						aria-hidden="true"
-						className="absolute top-1/2 left-[max(-7rem,calc(50%-52rem))] -z-10 -translate-y-1/2 transform-gpu blur-2xl"
-					>
-						<div
-							style={{
-								clipPath:
-									"polygon(74.8% 41.9%, 97.2% 73.2%, 100% 34.9%, 92.5% 0.4%, 87.5% 0%, 75% 28.6%, 58.5% 54.6%, 50.1% 56.8%, 46.9% 44%, 48.3% 17.4%, 24.7% 53.9%, 0% 27.9%, 11.9% 74.2%, 24.9% 54.1%, 68.6% 100%, 74.8% 41.9%)",
-							}}
-							className="aspect-577/310 w-144.25 bg-gradient-to-r from-primary to-primary/80 opacity-40"
-						/>
-					</div>
-					<div
-						aria-hidden="true"
-						className="absolute top-1/2 left-[max(45rem,calc(50%+8rem))] -z-10 -translate-y-1/2 transform-gpu blur-2xl"
-					>
-						<div
-							style={{
-								clipPath:
-									"polygon(74.8% 41.9%, 97.2% 73.2%, 100% 34.9%, 92.5% 0.4%, 87.5% 0%, 75% 28.6%, 58.5% 54.6%, 50.1% 56.8%, 46.9% 44%, 48.3% 17.4%, 24.7% 53.9%, 0% 27.9%, 11.9% 74.2%, 24.9% 54.1%, 68.6% 100%, 74.8% 41.9%)",
-							}}
-							className="aspect-577/310 w-144.25 bg-gradient-to-r from-primary to-primary/80 opacity-40"
-						/>
-					</div>
+				{/* Modern Header with Enhanced Design */}
+				<motion.header
+					className="sticky top-0 z-50 isolate overflow-hidden backdrop-blur-xl bg-background/80 dark:bg-background/80 border-b border-border/40 dark:border-border/20 transition-all duration-200"
+					initial={{ opacity: 0, y: -10 }}
+					animate={{ opacity: 1, y: 0 }}
+					transition={{ duration: 0.3 }}
+				>
+					{/* Subtle ambient lighting */}
+					<div className="absolute inset-0 bg-gradient-to-r from-primary/2 via-transparent to-primary/2" />
 
-					{/* Banner background with controls overlay */}
-					<div className="relative isolate flex items-center gap-x-6 bg-slate-200 dark:bg-slate-700 px-6 py-2.5 after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-gray-300/20 dark:after:bg-white/10">
-						{/* Gradient overlay to maintain exact same look */}
-						<div className="absolute inset-0 bg-gradient-conic from-blue-300 to-slate-300 dark:from-primary dark:to-slate-600"></div>
-						{/* Sidebar trigger positioned within banner */}
-						<div className="relative z-10">
-							<SidebarTrigger className="text-gray-900 dark:text-gray-100 hover:text-gray-800 dark:hover:text-white bg-white/80 dark:bg-white/10 hover:bg-white/90 dark:hover:bg-white/15 rounded-lg p-2 transition-all duration-200 border border-gray-300 dark:border-white/20 hover:border-gray-400 dark:hover:border-white/30 shadow-sm" />
+					{/* Header Content */}
+					<div className="relative flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4">
+						{/* Left Section - Sidebar Trigger */}
+						<div className="flex items-center gap-4">
+							<motion.div
+								whileHover={{ scale: 1.05 }}
+								whileTap={{ scale: 0.95 }}
+								transition={{ type: "spring", stiffness: 400, damping: 17 }}
+							>
+								<SidebarTrigger className="group relative bg-card/50 hover:bg-card/80 dark:bg-card/20 dark:hover:bg-card/40 border border-border/40 dark:border-border/20 hover:border-border/60 dark:hover:border-border/40 rounded-xl p-2.5 shadow-sm hover:shadow-md transition-all duration-200 ring-0 hover:ring-2 hover:ring-primary/20 dark:hover:ring-primary/30" />
+							</motion.div>
 						</div>
 
-						{/* Banner content centered */}
-						<div className="flex-1 flex items-center justify-center relative z-10">
-							<p className="text-sm/6 text-gray-900 dark:text-gray-100">
-								GeneriCon 2023 is on June 7 – 9 in Denver.{" "}
-								<a
-									href="#"
-									className="font-semibold whitespace-nowrap text-gray-800 dark:text-white hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
-								>
-									Get your ticket&nbsp;<span aria-hidden="true">&rarr;</span>
-								</a>
-							</p>
-						</div>
+						{/* Center Section - Brand/Status */}
+						<motion.div
+							className="flex-1 flex items-center justify-center"
+							initial={{ opacity: 0, scale: 0.9 }}
+							animate={{ opacity: 1, scale: 1 }}
+							transition={{ duration: 0.3, delay: 0.1 }}
+						>
+							<div className="relative group">
+								{/* Status Indicator */}
+								<div className="flex items-center gap-3 bg-card/30 dark:bg-card/10 backdrop-blur-sm border border-border/30 dark:border-border/20 rounded-full px-4 py-2 shadow-sm">
+									<div className="flex items-center gap-2">
+										<div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+										<span className="text-sm font-medium text-foreground/80">
+											All systems operational
+										</span>
+									</div>
+								</div>
+							</div>
+						</motion.div>
 
-						{/* Theme switcher positioned within banner */}
-						<div className="relative z-10">
-							<ThemeSwitcher className="border-gray-300 dark:border-white/20 text-gray-900 dark:text-gray-100 hover:bg-white/90 dark:hover:bg-white/15 hover:border-gray-400 dark:hover:border-white/30 bg-white/80 dark:bg-white/10 rounded-lg shadow-sm transition-all duration-200" />
+						{/* Right Section - Theme Switcher */}
+						<div className="flex items-center gap-4">
+							<motion.div
+								whileHover={{ scale: 1.05 }}
+								whileTap={{ scale: 0.95 }}
+								transition={{ type: "spring", stiffness: 400, damping: 17 }}
+							>
+								<ThemeSwitcher className="group relative bg-card/50 hover:bg-card/80 dark:bg-card/20 dark:hover:bg-card/40 border border-border/40 dark:border-border/20 hover:border-border/60 dark:hover:border-border/40 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 ring-0 hover:ring-2 hover:ring-primary/20 dark:hover:ring-primary/30" />
+							</motion.div>
 						</div>
 					</div>
-				</header>
+
+					{/* Bottom Border Gradient */}
+					<div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-border/60 to-transparent" />
+				</motion.header>
+
 				<div className="flex flex-1 flex-col gap-4 pt-0">{children}</div>
 			</SidebarInset>
 		</SidebarProvider>
