@@ -135,20 +135,6 @@ export default function GettingStarted() {
 					</li>
 				))}
 			</ul>
-			<div className="mt-6 flex">
-				<Link
-					href="/dashboard"
-					className="group inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-all duration-200 px-4 py-2 rounded-lg bg-primary/10 hover:bg-primary/15 ring-1 ring-primary/30 hover:ring-primary/40 shadow-sm hover:shadow-md backdrop-blur-sm"
-				>
-					View Dashboard
-					<span
-						aria-hidden="true"
-						className="group-hover:translate-x-1 transition-transform duration-200"
-					>
-						→
-					</span>
-				</Link>
-			</div>
 		</div>
 	);
 }

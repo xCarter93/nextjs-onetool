@@ -43,7 +43,7 @@ const generateCompoundVariants = (sides: Array<Sides>) => {
 
 const sheetContentStyles = tv({
 	base: [
-		"fixed z-50 grid gap-4 border-muted-fg/20 bg-overlay text-overlay-fg shadow-lg dark:border-border",
+		"fixed z-50 grid gap-4 border-muted-fg/20 bg-white text-foreground shadow-lg dark:bg-gray-900 dark:border-border",
 		"transform-gpu transition ease-in-out will-change-transform",
 	],
 	variants: {
@@ -105,7 +105,7 @@ const SheetContent = ({
 		<ModalOverlay
 			isDismissable={isDismissable}
 			className={twJoin(
-				"fixed inset-0 z-50 h-(--visual-viewport-height,100vh) w-screen overflow-hidden bg-black/15",
+				"fixed inset-0 z-50 h-(--visual-viewport-height,100vh) w-screen overflow-hidden bg-black/50",
 				"entering:fade-in-0 entering:animate-in entering:duration-500",
 				"exiting:fade-out-0 exiting:animate-out exiting:duration-300",
 				isBlurred && "backdrop-blur-sm backdrop-filter"

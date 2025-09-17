@@ -7,7 +7,7 @@ import { Id } from "../../convex/_generated/dataModel";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { 
+import {
 	Sheet,
 	SheetContent,
 	SheetHeader,
@@ -16,10 +16,17 @@ import {
 	SheetBody,
 	SheetFooter,
 	SheetClose,
-	SheetTrigger
+	SheetTrigger,
 } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, Clock, User, Flag, Building2, FolderOpen } from "lucide-react";
+import {
+	Calendar,
+	Clock,
+	User,
+	Flag,
+	Building2,
+	FolderOpen,
+} from "lucide-react";
 
 interface Task {
 	_id: Id<"tasks">;
@@ -39,7 +46,6 @@ interface Task {
 
 interface TaskSheetProps {
 	task?: Task | null;
-	open?: boolean;
 	onOpenChange?: (open: boolean) => void;
 	trigger?: React.ReactNode;
 	mode?: "create" | "edit";
@@ -66,9 +72,13 @@ const repeatOptions = [
 	{ value: "monthly", label: "Monthly" },
 ];
 
-export function TaskSheet({ task, open, onOpenChange, trigger, mode }: TaskSheetProps) {
+export function TaskSheet({
+	task,
+	onOpenChange,
+	trigger,
+	mode,
+}: TaskSheetProps) {
 	const { error: toastError, success: toastSuccess } = useToast();
-	const [isOpen, setIsOpen] = useState(open || false);
 	const [formData, setFormData] = useState({
 		title: "",
 		description: "",
@@ -87,7 +97,8 @@ export function TaskSheet({ task, open, onOpenChange, trigger, mode }: TaskSheet
 
 	// Queries for form data
 	const clients = useQuery(api.clients.list, {});
-	const projects = useQuery(api.projects.list, 
+	const projects = useQuery(
+		api.projects.list,
 		formData.clientId ? { clientId: formData.clientId as Id<"clients"> } : {}
 	);
 	const users = useQuery(api.users.listByOrg);
@@ -109,18 +120,20 @@ export function TaskSheet({ task, open, onOpenChange, trigger, mode }: TaskSheet
 				description: task.description || "",
 				clientId: task.clientId,
 				projectId: task.projectId || "",
-				date: taskDate.toISOString().split('T')[0], // Convert to YYYY-MM-DD format
+				date: taskDate.toISOString().split("T")[0], // Convert to YYYY-MM-DD format
 				startTime: task.startTime || "",
 				endTime: task.endTime || "",
 				assigneeUserId: task.assigneeUserId || "",
 				status: task.status,
 				priority: task.priority || "medium",
 				repeat: task.repeat || "none",
-				repeatUntil: task.repeatUntil ? new Date(task.repeatUntil).toISOString().split('T')[0] : "",
+				repeatUntil: task.repeatUntil
+					? new Date(task.repeatUntil).toISOString().split("T")[0]
+					: "",
 			});
 		} else if (isCreateMode) {
 			// Reset form for create mode
-			const today = new Date().toISOString().split('T')[0];
+			const today = new Date().toISOString().split("T")[0];
 			setFormData({
 				title: "",
 				description: "",
@@ -138,25 +151,18 @@ export function TaskSheet({ task, open, onOpenChange, trigger, mode }: TaskSheet
 		}
 	}, [task, isEditMode, isCreateMode]);
 
-	// Handle controlled/uncontrolled state
-	useEffect(() => {
-		if (open !== undefined) {
-			setIsOpen(open);
-		}
-	}, [open]);
-
 	const handleInputChange = (field: string, value: string) => {
-		setFormData(prev => ({ ...prev, [field]: value }));
+		setFormData((prev) => ({ ...prev, [field]: value }));
 
 		// Clear project when client changes
 		if (field === "clientId") {
-			setFormData(prev => ({ ...prev, projectId: "" }));
+			setFormData((prev) => ({ ...prev, projectId: "" }));
 		}
 	};
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
-		
+
 		if (!formData.title.trim()) {
 			toastError("Task title is required");
 			return;
@@ -176,17 +182,23 @@ export function TaskSheet({ task, open, onOpenChange, trigger, mode }: TaskSheet
 
 		try {
 			const taskDate = new Date(formData.date).getTime();
-			const repeatUntil = formData.repeatUntil ? new Date(formData.repeatUntil).getTime() : undefined;
+			const repeatUntil = formData.repeatUntil
+				? new Date(formData.repeatUntil).getTime()
+				: undefined;
 
 			const taskData = {
 				title: formData.title.trim(),
 				description: formData.description.trim() || undefined,
 				clientId: formData.clientId as Id<"clients">,
-				projectId: formData.projectId ? formData.projectId as Id<"projects"> : undefined,
+				projectId: formData.projectId
+					? (formData.projectId as Id<"projects">)
+					: undefined,
 				date: taskDate,
 				startTime: formData.startTime || undefined,
 				endTime: formData.endTime || undefined,
-				assigneeUserId: formData.assigneeUserId ? formData.assigneeUserId as Id<"users"> : undefined,
+				assigneeUserId: formData.assigneeUserId
+					? (formData.assigneeUserId as Id<"users">)
+					: undefined,
 				status: formData.status,
 				priority: formData.priority,
 				repeat: formData.repeat,
@@ -204,27 +216,27 @@ export function TaskSheet({ task, open, onOpenChange, trigger, mode }: TaskSheet
 				toastSuccess("Task created successfully!");
 			}
 
-			setIsOpen(false);
 			if (onOpenChange) onOpenChange(false);
 		} catch (error) {
 			console.error("Error saving task:", error);
-			toastError(error instanceof Error ? error.message : "Failed to save task");
+			toastError(
+				error instanceof Error ? error.message : "Failed to save task"
+			);
 		} finally {
 			setIsSubmitting(false);
 		}
 	};
 
 	const sheetContent = (
-		<SheetContent className="w-full sm:max-w-md">
+		<SheetContent className="w-full sm:max-w-md bg-white dark:bg-gray-900">
 			<SheetHeader>
 				<SheetTitle className="flex items-center gap-2">
 					{isEditMode ? "Edit Task" : "Create New Task"}
 				</SheetTitle>
 				<SheetDescription>
-					{isEditMode 
+					{isEditMode
 						? "Update the task details below."
-						: "Add a new task to your schedule. Fill in the details below."
-					}
+						: "Add a new task to your schedule. Fill in the details below."}
 				</SheetDescription>
 			</SheetHeader>
 
@@ -402,7 +414,9 @@ export function TaskSheet({ task, open, onOpenChange, trigger, mode }: TaskSheet
 						</label>
 						<select
 							value={formData.assigneeUserId}
-							onChange={(e) => handleInputChange("assigneeUserId", e.target.value)}
+							onChange={(e) =>
+								handleInputChange("assigneeUserId", e.target.value)
+							}
 							className={cn(
 								"flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm",
 								"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
@@ -447,7 +461,9 @@ export function TaskSheet({ task, open, onOpenChange, trigger, mode }: TaskSheet
 								<Input
 									type="date"
 									value={formData.repeatUntil}
-									onChange={(e) => handleInputChange("repeatUntil", e.target.value)}
+									onChange={(e) =>
+										handleInputChange("repeatUntil", e.target.value)
+									}
 									className="w-full"
 								/>
 							</div>
@@ -457,20 +473,23 @@ export function TaskSheet({ task, open, onOpenChange, trigger, mode }: TaskSheet
 			</SheetBody>
 
 			<SheetFooter className="flex flex-row justify-end gap-2">
-				<SheetClose>
-					<Button intent="outline" isDisabled={isSubmitting}>
-						Cancel
-					</Button>
+				<SheetClose intent="outline" isDisabled={isSubmitting}>
+					Cancel
 				</SheetClose>
 				<Button
 					onClick={handleSubmit}
 					isPending={isSubmitting}
-					isDisabled={isSubmitting || !formData.title.trim() || !formData.clientId}
-				>
-					{isSubmitting 
-						? (isEditMode ? "Updating..." : "Creating...")
-						: (isEditMode ? "Update Task" : "Create Task")
+					isDisabled={
+						isSubmitting || !formData.title.trim() || !formData.clientId
 					}
+				>
+					{isSubmitting
+						? isEditMode
+							? "Updating..."
+							: "Creating..."
+						: isEditMode
+							? "Update Task"
+							: "Create Task"}
 				</Button>
 			</SheetFooter>
 		</SheetContent>
@@ -480,7 +499,7 @@ export function TaskSheet({ task, open, onOpenChange, trigger, mode }: TaskSheet
 	if (trigger) {
 		return (
 			<Sheet>
-				<SheetTrigger>
+				<SheetTrigger className="group inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-all duration-200 px-4 py-2 rounded-lg bg-primary/10 hover:bg-primary/15 ring-1 ring-primary/30 hover:ring-primary/40 shadow-sm hover:shadow-md backdrop-blur-sm">
 					{trigger}
 				</SheetTrigger>
 				{sheetContent}
@@ -489,11 +508,7 @@ export function TaskSheet({ task, open, onOpenChange, trigger, mode }: TaskSheet
 	}
 
 	// If controlled from parent, just return content
-	return (
-		<Sheet>
-			{sheetContent}
-		</Sheet>
-	);
+	return <Sheet>{sheetContent}</Sheet>;
 }
 
 // Export default for easier importing

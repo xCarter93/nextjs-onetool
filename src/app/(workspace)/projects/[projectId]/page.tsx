@@ -72,7 +72,7 @@ export default function ProjectDetailPage() {
 		invoiceReminderEnabled: false as boolean | undefined,
 		scheduleForLater: false as boolean | undefined,
 	});
-	
+
 	// Calendar state
 	const [calendarDate, setCalendarDate] = useState(new Date());
 
@@ -309,7 +309,7 @@ export default function ProjectDetailPage() {
 	const getCalendarDays = (date: Date) => {
 		const year = date.getFullYear();
 		const month = date.getMonth();
-		
+
 		// First day of the month
 		const firstDay = new Date(year, month, 1);
 		// Last day of the month
@@ -318,31 +318,31 @@ export default function ProjectDetailPage() {
 		const startingDayOfWeek = firstDay.getDay();
 		// Number of days in month
 		const daysInMonth = lastDay.getDate();
-		
+
 		const calendarDays = [];
-		
+
 		// Add empty cells for days before the first day of the month
 		for (let i = 0; i < startingDayOfWeek; i++) {
 			calendarDays.push(null);
 		}
-		
+
 		// Add all days of the month
 		for (let day = 1; day <= daysInMonth; day++) {
 			calendarDays.push(day);
 		}
-		
+
 		// Fill remaining cells to make 42 (6 rows × 7 days)
 		while (calendarDays.length < 42) {
 			calendarDays.push(null);
 		}
-		
+
 		return calendarDays;
 	};
 
-	const handleCalendarNavigation = (direction: 'prev' | 'next') => {
-		setCalendarDate(prevDate => {
+	const handleCalendarNavigation = (direction: "prev" | "next") => {
+		setCalendarDate((prevDate) => {
 			const newDate = new Date(prevDate);
-			if (direction === 'prev') {
+			if (direction === "prev") {
 				newDate.setMonth(newDate.getMonth() - 1);
 			} else {
 				newDate.setMonth(newDate.getMonth() + 1);
@@ -353,20 +353,29 @@ export default function ProjectDetailPage() {
 
 	const handleDateClick = (day: number | null) => {
 		if (!day || !isEditing) return;
-		
-		const clickedDate = new Date(calendarDate.getFullYear(), calendarDate.getMonth(), day);
+
+		const clickedDate = new Date(
+			calendarDate.getFullYear(),
+			calendarDate.getMonth(),
+			day
+		);
 		const timestamp = clickedDate.getTime();
-		
+
 		// Set as start date if none exists, otherwise set as end date
 		if (!form.startDate) {
-			setForm(f => ({ ...f, startDate: timestamp }));
+			setForm((f) => ({ ...f, startDate: timestamp }));
 		} else if (!form.endDate) {
-			setForm(f => ({ ...f, endDate: timestamp }));
+			setForm((f) => ({ ...f, endDate: timestamp }));
 		} else if (!form.dueDate) {
-			setForm(f => ({ ...f, dueDate: timestamp }));
+			setForm((f) => ({ ...f, dueDate: timestamp }));
 		} else {
 			// Cycle through: reset and set as start date
-			setForm(f => ({ ...f, startDate: timestamp, endDate: undefined, dueDate: undefined }));
+			setForm((f) => ({
+				...f,
+				startDate: timestamp,
+				endDate: undefined,
+				dueDate: undefined,
+			}));
 		}
 	};
 
@@ -433,6 +442,7 @@ export default function ProjectDetailPage() {
 	const getFooterButtons = () => {
 		const buttons = [];
 
+		// Left side buttons - Primary actions
 		if (isEditing) {
 			buttons.push({
 				label: isUpdating ? "Saving..." : "Save",
@@ -458,11 +468,56 @@ export default function ProjectDetailPage() {
 			});
 		}
 
+		// Right side buttons - Status actions and secondary actions
+		if (project) {
+			switch (project.status) {
+				case "planned":
+					buttons.push({
+						label: "Start Project",
+						onClick: () => handleStatusUpdate("in-progress"),
+						intent: "success" as const,
+						disabled: isUpdating,
+						icon: <PlayIcon className="h-4 w-4" />,
+						position: "right" as const,
+					});
+					break;
+				case "in-progress":
+					buttons.push({
+						label: "Complete",
+						onClick: () => handleStatusUpdate("completed"),
+						intent: "success" as const,
+						disabled: isUpdating,
+						icon: <CheckIcon className="h-4 w-4" />,
+						position: "right" as const,
+					});
+					break;
+				case "completed":
+					buttons.push({
+						label: "Reopen Project",
+						onClick: () => handleStatusUpdate("in-progress"),
+						intent: "outline" as const,
+						disabled: isUpdating,
+						position: "right" as const,
+					});
+					break;
+				case "cancelled":
+					buttons.push({
+						label: "Restore Project",
+						onClick: () => handleStatusUpdate("planned"),
+						intent: "outline" as const,
+						disabled: isUpdating,
+						position: "right" as const,
+					});
+					break;
+			}
+		}
+
 		buttons.push({
 			label: "Delete",
 			onClick: handleDeleteProject,
-			intent: "danger" as const,
+			intent: "destructive" as const,
 			icon: <TrashIcon className="h-4 w-4" />,
+			position: "right" as const,
 		});
 
 		return buttons;
@@ -493,11 +548,6 @@ export default function ProjectDetailPage() {
 										project.projectType.slice(1)}
 								</Badge>
 							</div>
-						</div>
-
-						{/* Status Actions */}
-						<div className="flex items-center gap-2 mt-4">
-							{getStatusActions()}
 						</div>
 
 						{isEditing && isDirty && (
@@ -1260,10 +1310,10 @@ export default function ProjectDetailPage() {
 											})}
 										</h3>
 										<div className="flex gap-2">
-											<Button 
-												intent="outline" 
+											<Button
+												intent="outline"
 												size="sm"
-												onClick={() => handleCalendarNavigation('prev')}
+												onClick={() => handleCalendarNavigation("prev")}
 											>
 												<svg
 													className="w-4 h-4 mr-1"
@@ -1279,10 +1329,10 @@ export default function ProjectDetailPage() {
 													/>
 												</svg>
 											</Button>
-											<Button 
-												intent="outline" 
+											<Button
+												intent="outline"
 												size="sm"
-												onClick={() => handleCalendarNavigation('next')}
+												onClick={() => handleCalendarNavigation("next")}
 											>
 												<svg
 													className="w-4 h-4 ml-1"
@@ -1316,7 +1366,8 @@ export default function ProjectDetailPage() {
 										{getCalendarDays(calendarDate).map((day, i) => {
 											const isCurrentMonth = day !== null;
 											const today = new Date();
-											const isToday = isCurrentMonth && 
+											const isToday =
+												isCurrentMonth &&
 												day === today.getDate() &&
 												calendarDate.getMonth() === today.getMonth() &&
 												calendarDate.getFullYear() === today.getFullYear();
@@ -1325,29 +1376,36 @@ export default function ProjectDetailPage() {
 											let isStartDate = false;
 											let isEndDate = false;
 											let isDueDate = false;
-											
+
 											if (day && project.startDate) {
 												const startDateObj = new Date(project.startDate);
-												isStartDate = day === startDateObj.getDate() &&
+												isStartDate =
+													day === startDateObj.getDate() &&
 													calendarDate.getMonth() === startDateObj.getMonth() &&
-													calendarDate.getFullYear() === startDateObj.getFullYear();
-											}
-											
-											if (day && project.endDate) {
-												const endDateObj = new Date(project.endDate);
-												isEndDate = day === endDateObj.getDate() &&
-													calendarDate.getMonth() === endDateObj.getMonth() &&
-													calendarDate.getFullYear() === endDateObj.getFullYear();
-											}
-											
-											if (day && project.dueDate) {
-												const dueDateObj = new Date(project.dueDate);
-												isDueDate = day === dueDateObj.getDate() &&
-													calendarDate.getMonth() === dueDateObj.getMonth() &&
-													calendarDate.getFullYear() === dueDateObj.getFullYear();
+													calendarDate.getFullYear() ===
+														startDateObj.getFullYear();
 											}
 
-											const hasProjectEvent = isStartDate || isEndDate || isDueDate;
+											if (day && project.endDate) {
+												const endDateObj = new Date(project.endDate);
+												isEndDate =
+													day === endDateObj.getDate() &&
+													calendarDate.getMonth() === endDateObj.getMonth() &&
+													calendarDate.getFullYear() ===
+														endDateObj.getFullYear();
+											}
+
+											if (day && project.dueDate) {
+												const dueDateObj = new Date(project.dueDate);
+												isDueDate =
+													day === dueDateObj.getDate() &&
+													calendarDate.getMonth() === dueDateObj.getMonth() &&
+													calendarDate.getFullYear() ===
+														dueDateObj.getFullYear();
+											}
+
+											const hasProjectEvent =
+												isStartDate || isEndDate || isDueDate;
 											const isClickable = isEditing && isCurrentMonth;
 
 											return (

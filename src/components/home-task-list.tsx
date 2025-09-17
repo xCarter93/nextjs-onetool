@@ -5,7 +5,6 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TaskSheet } from "@/components/task-sheet";
@@ -21,7 +20,7 @@ import {
 	Circle,
 	AlertTriangle,
 	ChevronRight,
-	Building2
+	Building2,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -42,10 +41,22 @@ interface Task {
 }
 
 const priorityConfig = {
-	low: { color: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300", icon: Flag },
-	medium: { color: "bg-blue-100 text-blue-700 dark:bg-blue-800 dark:text-blue-300", icon: Flag },
-	high: { color: "bg-amber-100 text-amber-700 dark:bg-amber-800 dark:text-amber-300", icon: Flag },
-	urgent: { color: "bg-red-100 text-red-700 dark:bg-red-800 dark:text-red-300", icon: AlertTriangle },
+	low: {
+		color: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
+		icon: Flag,
+	},
+	medium: {
+		color: "bg-blue-100 text-blue-700 dark:bg-blue-800 dark:text-blue-300",
+		icon: Flag,
+	},
+	high: {
+		color: "bg-amber-100 text-amber-700 dark:bg-amber-800 dark:text-amber-300",
+		icon: Flag,
+	},
+	urgent: {
+		color: "bg-red-100 text-red-700 dark:bg-red-800 dark:text-red-300",
+		icon: AlertTriangle,
+	},
 };
 
 // Status configuration removed - not currently used
@@ -61,14 +72,18 @@ function TaskItem({ task, onStatusChange, isUpdating }: TaskItemProps) {
 	const projects = useQuery(api.projects.list, {});
 	const users = useQuery(api.users.listByOrg, {});
 
-	const client = clients?.find(c => c._id === task.clientId);
-	const project = projects?.find(p => p._id === task.projectId);
-	const assignee = users?.find((u: { _id: Id<"users">; name?: string; email: string }) => u._id === task.assigneeUserId);
+	const client = clients?.find((c) => c._id === task.clientId);
+	const project = projects?.find((p) => p._id === task.projectId);
+	const assignee = users?.find(
+		(u: { _id: Id<"users">; name?: string; email: string }) =>
+			u._id === task.assigneeUserId
+	);
 
 	const isOverdue = task.date < Date.now() && task.status !== "completed";
-	const isToday = new Date(task.date).toDateString() === new Date().toDateString();
+	const isToday =
+		new Date(task.date).toDateString() === new Date().toDateString();
 	const taskDate = new Date(task.date);
-	
+
 	const PriorityIcon = priorityConfig[task.priority || "medium"].icon;
 
 	const formatTime = (time?: string) => {
@@ -82,11 +97,11 @@ function TaskItem({ task, onStatusChange, isUpdating }: TaskItemProps) {
 
 	const formatDate = (date: Date) => {
 		if (isToday) return "Today";
-		
+
 		const tomorrow = new Date();
 		tomorrow.setDate(tomorrow.getDate() + 1);
 		if (date.toDateString() === tomorrow.toDateString()) return "Tomorrow";
-		
+
 		const dayOfWeek = date.toLocaleDateString("en-US", { weekday: "short" });
 		const month = date.toLocaleDateString("en-US", { month: "short" });
 		const day = date.getDate();
@@ -95,7 +110,7 @@ function TaskItem({ task, onStatusChange, isUpdating }: TaskItemProps) {
 
 	const handleToggleComplete = () => {
 		if (isUpdating) return;
-		
+
 		const newStatus = task.status === "completed" ? "pending" : "completed";
 		onStatusChange(task._id, newStatus);
 	};
@@ -108,7 +123,8 @@ function TaskItem({ task, onStatusChange, isUpdating }: TaskItemProps) {
 			className={cn(
 				"group relative bg-card rounded-lg border p-4 transition-all duration-200",
 				"hover:shadow-md hover:border-border/60",
-				isOverdue && "border-red-200 bg-red-50/30 dark:border-red-800 dark:bg-red-900/10",
+				isOverdue &&
+					"border-red-200 bg-red-50/30 dark:border-red-800 dark:bg-red-900/10",
 				task.status === "completed" && "opacity-60 bg-muted/30"
 			)}
 		>
@@ -134,10 +150,13 @@ function TaskItem({ task, onStatusChange, isUpdating }: TaskItemProps) {
 				<div className="flex-1 min-w-0">
 					<div className="flex items-start justify-between gap-2 mb-2">
 						<div className="flex-1 min-w-0">
-							<h3 className={cn(
-								"font-medium text-foreground leading-snug",
-								task.status === "completed" && "line-through text-muted-foreground"
-							)}>
+							<h3
+								className={cn(
+									"font-medium text-foreground leading-snug",
+									task.status === "completed" &&
+										"line-through text-muted-foreground"
+								)}
+							>
 								{task.title}
 							</h3>
 							{task.description && (
@@ -146,13 +165,13 @@ function TaskItem({ task, onStatusChange, isUpdating }: TaskItemProps) {
 								</p>
 							)}
 						</div>
-						
+
 						{/* Priority Badge */}
 						{task.priority && (
-							<Badge variant="secondary" className={cn(
-								"text-xs",
-								priorityConfig[task.priority].color
-							)}>
+							<Badge
+								variant="secondary"
+								className={cn("text-xs", priorityConfig[task.priority].color)}
+							>
 								<PriorityIcon className="h-3 w-3 mr-1" />
 								{task.priority}
 							</Badge>
@@ -177,10 +196,12 @@ function TaskItem({ task, onStatusChange, isUpdating }: TaskItemProps) {
 
 						{/* Date and Time */}
 						<div className="flex items-center gap-4 text-sm">
-							<div className={cn(
-								"flex items-center gap-1",
-								isOverdue ? "text-red-600" : "text-muted-foreground"
-							)}>
+							<div
+								className={cn(
+									"flex items-center gap-1",
+									isOverdue ? "text-red-600" : "text-muted-foreground"
+								)}
+							>
 								<Calendar className="h-3 w-3" />
 								<span>{formatDate(taskDate)}</span>
 								{isOverdue && <AlertTriangle className="h-3 w-3" />}
@@ -212,7 +233,9 @@ function TaskItem({ task, onStatusChange, isUpdating }: TaskItemProps) {
 }
 
 export function HomeTaskList() {
-		const [updatingTasks, setUpdatingTasks] = useState<Set<Id<"tasks">>>(new Set());
+	const [updatingTasks, setUpdatingTasks] = useState<Set<Id<"tasks">>>(
+		new Set()
+	);
 
 	// Get upcoming tasks (next 7 days)
 	const upcomingTasks = useQuery(api.tasks.getUpcoming, { daysAhead: 7 });
@@ -223,19 +246,22 @@ export function HomeTaskList() {
 	const completeTaskMutation = useMutation(api.tasks.complete);
 
 	// Combine overdue and upcoming tasks
-	const allTasks = [
-		...(overdueTasks || []),
-		...(upcomingTasks || [])
-	].filter((task, index, self) => 
-		// Remove duplicates (in case a task appears in both overdue and upcoming)
-		self.findIndex(t => t._id === task._id) === index
-	).slice(0, 8); // Limit to 8 tasks for home page
+	const allTasks = [...(overdueTasks || []), ...(upcomingTasks || [])]
+		.filter(
+			(task, index, self) =>
+				// Remove duplicates (in case a task appears in both overdue and upcoming)
+				self.findIndex((t) => t._id === task._id) === index
+		)
+		.slice(0, 8); // Limit to 8 tasks for home page
 
 	const isLoading = upcomingTasks === undefined || overdueTasks === undefined;
 
-	const handleStatusChange = async (taskId: Id<"tasks">, newStatus: Task["status"]) => {
-		setUpdatingTasks(prev => new Set(prev).add(taskId));
-		
+	const handleStatusChange = async (
+		taskId: Id<"tasks">,
+		newStatus: Task["status"]
+	) => {
+		setUpdatingTasks((prev) => new Set(prev).add(taskId));
+
 		try {
 			if (newStatus === "completed") {
 				await completeTaskMutation({ id: taskId });
@@ -248,7 +274,7 @@ export function HomeTaskList() {
 			console.error("Error updating task:", error);
 			console.log("Failed to update task");
 		} finally {
-			setUpdatingTasks(prev => {
+			setUpdatingTasks((prev) => {
 				const newSet = new Set(prev);
 				newSet.delete(taskId);
 				return newSet;
@@ -285,14 +311,14 @@ export function HomeTaskList() {
 	}
 
 	const overdueTasksCount = (overdueTasks || []).length;
-	const todayTasksCount = allTasks.filter(task => {
+	const todayTasksCount = allTasks.filter((task) => {
 		const taskDate = new Date(task.date).toDateString();
 		const today = new Date().toDateString();
 		return taskDate === today;
 	}).length;
 
 	return (
-		<motion.div 
+		<motion.div
 			className="space-y-6"
 			initial={{ opacity: 0, y: 20 }}
 			animate={{ opacity: 1, y: 0 }}
@@ -309,9 +335,7 @@ export function HomeTaskList() {
 							</span>
 						)}
 						{overdueTasksCount > 0 && todayTasksCount > 0 && <span> • </span>}
-						{todayTasksCount > 0 && (
-							<span>{todayTasksCount} due today</span>
-						)}
+						{todayTasksCount > 0 && <span>{todayTasksCount} due today</span>}
 						{overdueTasksCount === 0 && todayTasksCount === 0 && (
 							<span>Stay on top of your schedule</span>
 						)}
@@ -321,10 +345,16 @@ export function HomeTaskList() {
 					<TaskSheet
 						mode="create"
 						trigger={
-							<Button size="sm" className="gap-2">
+							<div className="group inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-all duration-200 px-4 py-2 rounded-lg bg-primary/10 hover:bg-primary/15 ring-1 ring-primary/30 hover:ring-primary/40 shadow-sm hover:shadow-md backdrop-blur-sm">
 								<Plus className="h-4 w-4" />
 								Add Task
-							</Button>
+								<span
+									aria-hidden="true"
+									className="group-hover:translate-x-1 transition-transform duration-200"
+								>
+									→
+								</span>
+							</div>
 						}
 					/>
 				</div>
@@ -344,7 +374,7 @@ export function HomeTaskList() {
 								/>
 							))}
 						</AnimatePresence>
-						
+
 						{/* View All Tasks Link */}
 						<motion.div
 							initial={{ opacity: 0 }}
@@ -377,16 +407,23 @@ export function HomeTaskList() {
 							<div className="space-y-2">
 								<h3 className="text-lg font-medium">No upcoming tasks</h3>
 								<p className="text-muted-foreground max-w-md mx-auto">
-									Great job staying on top of things! Create a new task to get started.
+									Great job staying on top of things! Create a new task to get
+									started.
 								</p>
 							</div>
 							<TaskSheet
 								mode="create"
 								trigger={
-									<Button className="gap-2">
+									<div className="group inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-all duration-200 px-4 py-2 rounded-lg bg-primary/10 hover:bg-primary/15 ring-1 ring-primary/30 hover:ring-primary/40 shadow-sm hover:shadow-md backdrop-blur-sm">
 										<Plus className="h-4 w-4" />
 										Create Your First Task
-									</Button>
+										<span
+											aria-hidden="true"
+											className="group-hover:translate-x-1 transition-transform duration-200"
+										>
+											→
+										</span>
+									</div>
 								}
 							/>
 						</div>

@@ -186,7 +186,6 @@ export default function QuoteDetailPage() {
 		}
 	};
 
-
 	const handleStatusChange = async (status: QuoteStatus) => {
 		try {
 			await updateQuote({ id: quoteId, status });
@@ -402,11 +401,6 @@ export default function QuoteDetailPage() {
 									</p>
 								</div>
 							</div>
-						</div>
-
-						{/* Status Actions */}
-						<div className="flex items-center gap-2 mb-6">
-							{getStatusActions()}
 						</div>
 
 						{isEditing && isDirty && (
@@ -848,6 +842,50 @@ export default function QuoteDetailPage() {
 			{/* Sticky Footer with Action Buttons */}
 			<StickyFormFooter
 				buttons={[
+					// Left side buttons - Status actions
+					...(getStatusActions()
+						? [
+								{
+									label:
+										quote?.status === "draft"
+											? "Send Quote"
+											: quote?.status === "sent"
+												? "Approve"
+												: quote?.status === "approved"
+													? "Reopen (Sent)"
+													: quote?.status === "expired"
+														? "Reopen (Draft)"
+														: "Update Status",
+									intent:
+										quote?.status === "draft"
+											? ("primary" as const)
+											: quote?.status === "sent"
+												? ("success" as const)
+												: ("outline" as const),
+									icon:
+										quote?.status === "draft" ? (
+											<Mail className="h-4 w-4" />
+										) : quote?.status === "sent" ? (
+											<Check className="h-4 w-4" />
+										) : (
+											<Edit className="h-4 w-4" />
+										),
+									onClick: () => {
+										if (quote?.status === "draft") {
+											handleStatusChange("sent");
+										} else if (quote?.status === "sent") {
+											handleStatusChange("approved");
+										} else if (quote?.status === "approved") {
+											handleStatusChange("sent");
+										} else if (quote?.status === "expired") {
+											handleStatusChange("draft");
+										}
+									},
+									position: "left" as const,
+								},
+							]
+						: []),
+					// Right side buttons - Actions
 					{
 						label: "Send to Client",
 						intent: "outline",
@@ -856,12 +894,14 @@ export default function QuoteDetailPage() {
 							// Handle send to client
 							console.log("Send to client");
 						},
+						position: "right" as const,
 					},
 					{
 						label: "Generate PDF",
 						intent: "outline",
 						icon: <FileText className="h-4 w-4" />,
 						onClick: handleGeneratePdf,
+						position: "right" as const,
 					},
 					{
 						label: "Convert to Invoice",
@@ -870,6 +910,7 @@ export default function QuoteDetailPage() {
 							// Handle conversion to invoice
 							console.log("Convert to invoice");
 						},
+						position: "right" as const,
 					},
 					{
 						label: "More",
@@ -879,6 +920,7 @@ export default function QuoteDetailPage() {
 							// Handle more options
 							console.log("More options");
 						},
+						position: "right" as const,
 					},
 				]}
 			/>

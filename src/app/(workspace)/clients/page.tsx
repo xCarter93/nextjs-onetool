@@ -32,7 +32,13 @@ import {
 	getSortedRowModel,
 	useReactTable,
 } from "@tanstack/react-table";
-import { ChevronLeft, ChevronRight, Users, ExternalLink } from "lucide-react";
+import {
+	ChevronLeft,
+	ChevronRight,
+	Users,
+	ExternalLink,
+	Plus,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 
@@ -227,6 +233,19 @@ export default function ClientsPage() {
 						</p>
 					</div>
 				</div>
+				<button
+					onClick={() => router.push("/clients/new")}
+					className="group inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-all duration-200 px-4 py-2 rounded-lg bg-primary/10 hover:bg-primary/15 ring-1 ring-primary/30 hover:ring-primary/40 shadow-sm hover:shadow-md backdrop-blur-sm"
+				>
+					<Plus className="h-4 w-4" />
+					Add Client
+					<span
+						aria-hidden="true"
+						className="group-hover:translate-x-1 transition-transform duration-200"
+					>
+						→
+					</span>
+				</button>
 			</div>
 
 			<div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

@@ -217,14 +217,19 @@ export default function ProjectsPage() {
 						</p>
 					</div>
 				</div>
-				<Button
-					intent="primary"
-					onPress={() => router.push("/projects/new")}
-					className="flex items-center gap-2"
+				<button
+					onClick={() => router.push("/projects/new")}
+					className="group inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-all duration-200 px-4 py-2 rounded-lg bg-primary/10 hover:bg-primary/15 ring-1 ring-primary/30 hover:ring-primary/40 shadow-sm hover:shadow-md backdrop-blur-sm"
 				>
 					<Plus className="h-4 w-4" />
 					Create Project
-				</Button>
+					<span
+						aria-hidden="true"
+						className="group-hover:translate-x-1 transition-transform duration-200"
+					>
+						→
+					</span>
+				</button>
 			</div>
 
 			{isLoading ? (
@@ -332,14 +337,19 @@ export default function ProjectsPage() {
 								Get started by creating your first project. Projects help you
 								organize work and track progress.
 							</p>
-							<Button
-								intent="primary"
-								onPress={() => router.push("/projects/new")}
-								className="inline-flex items-center gap-2"
+							<button
+								onClick={() => router.push("/projects/new")}
+								className="group inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-all duration-200 px-4 py-2 rounded-lg bg-primary/10 hover:bg-primary/15 ring-1 ring-primary/30 hover:ring-primary/40 shadow-sm hover:shadow-md backdrop-blur-sm"
 							>
 								<Plus className="h-4 w-4" />
 								Create Your First Project
-							</Button>
+								<span
+									aria-hidden="true"
+									className="group-hover:translate-x-1 transition-transform duration-200"
+								>
+									→
+								</span>
+							</button>
 						</div>
 					) : (
 						<div className="px-6">
