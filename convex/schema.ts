@@ -131,6 +131,9 @@ export default defineSchema({
 		// Metadata
 		tags: v.optional(v.array(v.string())),
 		notes: v.optional(v.string()),
+
+		// Archive functionality
+		archivedAt: v.optional(v.number()), // Timestamp when client was archived
 	})
 		.index("by_org", ["orgId"])
 		.index("by_status", ["orgId", "status"]),
@@ -256,12 +259,14 @@ export default defineSchema({
 			v.literal("completed"),
 			v.literal("cancelled")
 		),
-		priority: v.optional(v.union(
-			v.literal("low"),
-			v.literal("medium"),
-			v.literal("high"),
-			v.literal("urgent")
-		)),
+		priority: v.optional(
+			v.union(
+				v.literal("low"),
+				v.literal("medium"),
+				v.literal("high"),
+				v.literal("urgent")
+			)
+		),
 		completedAt: v.optional(v.number()),
 
 		// Recurrence

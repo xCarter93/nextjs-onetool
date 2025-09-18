@@ -80,14 +80,9 @@ export default function Page() {
 				{/* Main Content Area */}
 				<div className="xl:col-span-7 space-y-6">
 					<motion.div
-						className="group relative bg-card/40 dark:bg-card/20 backdrop-blur-xl border border-border/40 dark:border-border/20 rounded-2xl p-6 lg:p-8 shadow-xl dark:shadow-2xl dark:shadow-black/20 ring-1 ring-white/5 dark:ring-white/5 hover:ring-white/10 dark:hover:ring-white/10 transition-all duration-300"
 						transition={{ type: "spring", stiffness: 300, damping: 30 }}
 					>
-						{/* Glass morphism overlay */}
-						<div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
-						<div className="relative z-10">
-							<GettingStarted />
-						</div>
+						<GettingStarted />
 					</motion.div>
 				</div>
 
@@ -102,7 +97,6 @@ export default function Page() {
 					</motion.div>
 
 					<motion.div
-						className="group relative bg-card/40 dark:bg-card/20 backdrop-blur-xl border border-border/40 dark:border-border/20 rounded-2xl p-6 lg:p-8 shadow-xl dark:shadow-2xl dark:shadow-black/20 ring-1 ring-white/5 dark:ring-white/5 hover:ring-white/10 dark:hover:ring-white/10 transition-all duration-300"
 						initial={{ opacity: 0, x: 20 }}
 						animate={{ opacity: 1, x: 0 }}
 						transition={{
@@ -112,11 +106,7 @@ export default function Page() {
 							delay: 0.5,
 						}}
 					>
-						{/* Glass morphism overlay */}
-						<div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
-						<div className="relative z-10">
-							<ActivityFeed />
-						</div>
+						<ActivityFeed />
 					</motion.div>
 				</div>
 			</motion.div>
@@ -128,13 +118,7 @@ export default function Page() {
 				animate={{ opacity: 1, y: 0 }}
 				transition={{ duration: 0.5, delay: 0.6 }}
 			>
-				<div className="group relative bg-card/40 dark:bg-card/20 backdrop-blur-xl border border-border/40 dark:border-border/20 rounded-2xl p-6 lg:p-8 shadow-xl dark:shadow-2xl dark:shadow-black/20 ring-1 ring-white/5 dark:ring-white/5 hover:ring-white/10 dark:hover:ring-white/10 transition-all duration-300">
-					{/* Glass morphism overlay */}
-					<div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
-					<div className="relative z-10">
-						<HomeTaskList />
-					</div>
-				</div>
+				<HomeTaskList />
 			</motion.div>
 		</motion.div>
 	);

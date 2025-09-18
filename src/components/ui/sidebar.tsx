@@ -266,7 +266,7 @@ function SidebarTrigger({
 			data-slot="sidebar-trigger"
 			intent="plain"
 			size="sq-sm"
-			className={cn("size-7", className)}
+			className={cn("size-10", className)}
 			onClick={(event) => {
 				onClick?.(event);
 				toggleSidebar();

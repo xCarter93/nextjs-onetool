@@ -8,14 +8,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -30,6 +22,8 @@ import { Check } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { StickyFormFooter } from "@/components/sticky-form-footer";
+import { PropertyTable } from "@/components/property-table";
+import { ContactTable } from "@/components/contact-table";
 import { useEffect, useMemo, useState } from "react";
 
 // Helper function to format lead source for display
@@ -186,14 +180,16 @@ export default function ClientDetailPage() {
 		const buttons = [];
 
 		// Left side buttons - Primary actions
+		// Always show save button, but disable when no changes
+		buttons.push({
+			label: "Save",
+			onClick: handleSave,
+			intent: "primary" as const,
+			disabled: !isDirty,
+			icon: <Check className="h-4 w-4" />,
+		});
+
 		if (isEditing) {
-			buttons.push({
-				label: "Save",
-				onClick: handleSave,
-				intent: "primary" as const,
-				disabled: !isDirty,
-				icon: <Check className="h-4 w-4" />,
-			});
 			buttons.push({
 				label: "Cancel",
 				onClick: () => {
@@ -344,184 +340,22 @@ export default function ClientDetailPage() {
 						{/* Main Content - Left Column */}
 						<div className="xl:col-span-3 space-y-8">
 							{/* Properties Section */}
-							<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-xl shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50">
-								<Card className="bg-transparent border-none shadow-none ring-0">
-									<CardHeader className="flex flex-row items-center justify-between">
-										<CardTitle className="text-xl">Properties</CardTitle>
-										{isEditing ? (
-											<div />
-										) : (
-											<Button
-												intent="outline"
-												size="sm"
-												onClick={() => setIsEditing(true)}
-											>
-												<PlusIcon className="h-4 w-4 mr-2" />
-												New Property
-											</Button>
-										)}
-									</CardHeader>
-									<CardContent>
-										{clientProperties && clientProperties.length > 0 ? (
-											<div className="space-y-4">
-												{clientProperties.map((property) => (
-													<div
-														key={property._id}
-														className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg"
-													>
-														<div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
-															<div>
-																<div className="flex items-center gap-2">
-																	{property.propertyName && (
-																		<p className="font-medium text-gray-900 dark:text-white">
-																			{property.propertyName}
-																		</p>
-																	)}
-																	{property.isPrimary && (
-																		<StarSolidIcon className="h-4 w-4 text-yellow-400" />
-																	)}
-																</div>
-																<p className="text-gray-600 dark:text-gray-400">
-																	{property.streetAddress}
-																</p>
-																{property.propertyType && (
-																	<Badge
-																		variant="outline"
-																		className="mt-1 text-xs"
-																	>
-																		{formatCategory(property.propertyType)}
-																	</Badge>
-																)}
-															</div>
-															<div>
-																<p className="text-gray-900 dark:text-white">
-																	{property.city}
-																</p>
-															</div>
-															<div>
-																<p className="text-gray-900 dark:text-white">
-																	{property.state}
-																</p>
-															</div>
-															<div>
-																<div>
-																	<p className="text-gray-900 dark:text-white">
-																		{property.zipCode}
-																	</p>
-																	{property.squareFootage && (
-																		<p className="text-xs text-gray-500 dark:text-gray-400">
-																			{property.squareFootage.toLocaleString()}{" "}
-																			sq ft
-																		</p>
-																	)}
-																</div>
-															</div>
-														</div>
-													</div>
-												))}
-											</div>
-										) : (
-											<div className="flex flex-col items-center justify-center py-12 text-center">
-												<div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center mb-4">
-													<BuildingOffice2Icon className="h-8 w-8 text-gray-400" />
-												</div>
-												<h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-													No properties
-												</h3>
-												<p className="text-gray-600 dark:text-gray-400">
-													No properties have been added for this client yet.
-												</p>
-											</div>
-										)}
-									</CardContent>
-								</Card>
-							</div>
+							<PropertyTable
+								clientId={clientId as Id<"clients">}
+								properties={clientProperties || []}
+								onChange={() => {
+									// Data will automatically refresh via Convex reactivity
+								}}
+							/>
 
 							{/* Contacts Section */}
-							<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-xl shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50">
-								<Card className="bg-transparent border-none shadow-none ring-0">
-									<CardHeader className="flex flex-row items-center justify-between">
-										<CardTitle className="text-xl">Contacts</CardTitle>
-										{isEditing ? (
-											<div />
-										) : (
-											<Button
-												intent="outline"
-												size="sm"
-												onClick={() => setIsEditing(true)}
-											>
-												<PlusIcon className="h-4 w-4 mr-2" />
-												New Contact
-											</Button>
-										)}
-									</CardHeader>
-									<CardContent>
-										{clientContacts && clientContacts.length > 0 ? (
-											<Table>
-												<TableHeader>
-													<TableRow>
-														<TableHead>Name</TableHead>
-														<TableHead>Role</TableHead>
-														<TableHead>Phone</TableHead>
-														<TableHead>Email</TableHead>
-													</TableRow>
-												</TableHeader>
-												<TableBody>
-													{clientContacts.map((contact) => (
-														<TableRow key={contact._id}>
-															<TableCell className="font-medium">
-																<div className="flex items-center gap-2">
-																	<span>
-																		{contact.firstName} {contact.lastName}
-																	</span>
-																	{contact.isPrimary && (
-																		<StarSolidIcon className="h-4 w-4 text-yellow-400" />
-																	)}
-																</div>
-															</TableCell>
-															<TableCell>
-																<div>
-																	{contact.jobTitle && (
-																		<p className="font-medium">
-																			{contact.jobTitle}
-																		</p>
-																	)}
-																	{contact.role && (
-																		<p className="text-sm text-gray-500 dark:text-gray-400">
-																			{contact.role}
-																		</p>
-																	)}
-																	{contact.department && (
-																		<p className="text-sm text-gray-500 dark:text-gray-400">
-																			{contact.department}
-																		</p>
-																	)}
-																</div>
-															</TableCell>
-															<TableCell>
-																{formatPhoneNumber(contact.phone)}
-															</TableCell>
-															<TableCell>{contact.email || "—"}</TableCell>
-														</TableRow>
-													))}
-												</TableBody>
-											</Table>
-										) : (
-											<div className="flex flex-col items-center justify-center py-12 text-center">
-												<div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center mb-4">
-													<EnvelopeIcon className="h-8 w-8 text-gray-400" />
-												</div>
-												<h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-													No contacts
-												</h3>
-												<p className="text-gray-600 dark:text-gray-400">
-													No contacts have been added for this client yet.
-												</p>
-											</div>
-										)}
-									</CardContent>
-								</Card>
-							</div>
+							<ContactTable
+								clientId={clientId as Id<"clients">}
+								contacts={clientContacts || []}
+								onChange={() => {
+									// Data will automatically refresh via Convex reactivity
+								}}
+							/>
 
 							{/* Overview Section with Tabs */}
 							<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-xl shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50">

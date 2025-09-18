@@ -37,11 +37,15 @@ import {
 	ExternalLink,
 	Plus,
 	FolderOpen,
+	Trash2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import type { Doc } from "../../../../convex/_generated/dataModel";
+import { useState } from "react";
+import type { Id } from "../../../../convex/_generated/dataModel";
+import DeleteConfirmationModal from "@/components/ui/delete-confirmation-modal";
 
 // Enhanced project type that includes client information for display
 type ProjectWithClient = Doc<"projects"> & {
@@ -79,7 +83,8 @@ const formatStatus = (status: Doc<"projects">["status"]) => {
 };
 
 const createColumns = (
-	router: ReturnType<typeof useRouter>
+	router: ReturnType<typeof useRouter>,
+	onDelete: (id: string, name: string) => void
 ): ColumnDef<ProjectWithClient>[] => [
 	{
 		accessorKey: "title",
@@ -136,14 +141,25 @@ const createColumns = (
 		id: "actions",
 		header: "",
 		cell: ({ row }) => (
-			<Button
-				intent="outline"
-				size="sq-sm"
-				onPress={() => router.push(`/projects/${row.original._id}`)}
-				aria-label={`View project ${row.original.title}`}
-			>
-				<ExternalLink className="size-4" />
-			</Button>
+			<div className="flex items-center gap-2">
+				<Button
+					intent="outline"
+					size="sq-sm"
+					onPress={() => router.push(`/projects/${row.original._id}`)}
+					aria-label={`View project ${row.original.title}`}
+				>
+					<ExternalLink className="size-4" />
+				</Button>
+				<Button
+					intent="outline"
+					size="sq-sm"
+					onPress={() => onDelete(row.original._id, row.original.title)}
+					className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+					aria-label={`Delete project ${row.original.title}`}
+				>
+					<Trash2 className="size-4" />
+				</Button>
+			</div>
 		),
 	},
 ];
@@ -156,6 +172,12 @@ export default function ProjectsPage() {
 	);
 	const [query, setQuery] = React.useState("");
 	const pageSize = 10;
+	const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+	const [projectToDelete, setProjectToDelete] = useState<{
+		id: string;
+		name: string;
+	} | null>(null);
+	const deleteProject = useMutation(api.projects.remove);
 
 	// Fetch projects and clients from Convex
 	const projects = useQuery(api.projects.list, {});
@@ -178,9 +200,26 @@ export default function ProjectsPage() {
 	// Empty state
 	const isEmpty = !isLoading && data.length === 0;
 
+	const handleDelete = (id: string, name: string) => {
+		setProjectToDelete({ id, name });
+		setDeleteModalOpen(true);
+	};
+
+	const confirmDelete = async () => {
+		if (projectToDelete) {
+			try {
+				await deleteProject({ id: projectToDelete.id as Id<"projects"> });
+				setDeleteModalOpen(false);
+				setProjectToDelete(null);
+			} catch (error) {
+				console.error("Failed to delete project:", error);
+			}
+		}
+	};
+
 	const table = useReactTable({
 		data,
-		columns: createColumns(router),
+		columns: createColumns(router, handleDelete),
 		state: {
 			sorting,
 			columnFilters,
@@ -248,37 +287,40 @@ export default function ProjectsPage() {
 				</div>
 			) : (
 				<div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-					<Card>
-						<CardHeader>
+					<Card className="group relative backdrop-blur-md overflow-hidden ring-1 ring-border/20 dark:ring-border/40">
+						<div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
+						<CardHeader className="relative z-10">
 							<CardTitle className="flex items-center gap-2 text-base">
 								<FolderKanban className="size-4" /> Total Projects
 							</CardTitle>
 							<CardDescription>All projects in your workspace</CardDescription>
 						</CardHeader>
-						<CardContent>
+						<CardContent className="relative z-10">
 							<div className="text-3xl font-semibold">
 								{projectStats?.total || data.length}
 							</div>
 						</CardContent>
 					</Card>
-					<Card>
-						<CardHeader>
+					<Card className="group relative backdrop-blur-md overflow-hidden ring-1 ring-border/20 dark:ring-border/40">
+						<div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
+						<CardHeader className="relative z-10">
 							<CardTitle className="text-base">In Progress</CardTitle>
 							<CardDescription>Currently active projects</CardDescription>
 						</CardHeader>
-						<CardContent>
+						<CardContent className="relative z-10">
 							<div className="text-3xl font-semibold">
 								{projectStats?.byStatus["in-progress"] ||
 									data.filter((p) => p.status === "in-progress").length}
 							</div>
 						</CardContent>
 					</Card>
-					<Card>
-						<CardHeader>
+					<Card className="group relative backdrop-blur-md overflow-hidden ring-1 ring-border/20 dark:ring-border/40">
+						<div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
+						<CardHeader className="relative z-10">
 							<CardTitle className="text-base">Completed</CardTitle>
 							<CardDescription>Finished projects</CardDescription>
 						</CardHeader>
-						<CardContent>
+						<CardContent className="relative z-10">
 							<div className="text-3xl font-semibold">
 								{projectStats?.byStatus.completed ||
 									data.filter((p) => p.status === "completed").length}
@@ -288,8 +330,9 @@ export default function ProjectsPage() {
 				</div>
 			)}
 
-			<Card>
-				<CardHeader className="flex flex-col gap-2 border-b">
+			<Card className="group relative backdrop-blur-md overflow-hidden ring-1 ring-border/20 dark:ring-border/40">
+				<div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
+				<CardHeader className="relative z-10 flex flex-col gap-2 border-b">
 					<div className="flex items-center justify-between gap-3">
 						<div>
 							<CardTitle>Projects</CardTitle>
@@ -307,7 +350,7 @@ export default function ProjectsPage() {
 						</div>
 					</div>
 				</CardHeader>
-				<CardContent className="px-0">
+				<CardContent className="relative z-10 px-0">
 					{isLoading ? (
 						<div className="px-6">
 							<div className="space-y-4">
@@ -391,7 +434,7 @@ export default function ProjectsPage() {
 										) : (
 											<TableRow>
 												<TableCell
-													colSpan={createColumns(router).length}
+													colSpan={createColumns(router, handleDelete).length}
 													className="h-24 text-center"
 												>
 													No projects match your search.
@@ -435,6 +478,18 @@ export default function ProjectsPage() {
 					)}
 				</CardContent>
 			</Card>
+
+			{/* Delete Confirmation Modal */}
+			{projectToDelete && (
+				<DeleteConfirmationModal
+					isOpen={deleteModalOpen}
+					onClose={() => setDeleteModalOpen(false)}
+					onConfirm={confirmDelete}
+					title="Delete Project"
+					itemName={projectToDelete.name}
+					itemType="Project"
+				/>
+			)}
 		</div>
 	);
 }

@@ -6,6 +6,7 @@ import { api } from "../../convex/_generated/api";
 import ActivityItem from "./activity-item";
 import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group";
 import { ScrollArea } from "./ui/scroll-area";
+import { Card, CardContent } from "./ui/card";
 
 // Sample activity data - this would typically come from props or a data source
 const activity = [
@@ -124,53 +125,61 @@ export default function ActivityFeed({
 	const isLoading = convexActivities === undefined;
 
 	return (
-		<div className="space-y-3">
-			{/* Compact Activity Feed Header */}
-			<div className="flex items-start justify-between mb-8">
-				<h3 className="text-base font-semibold text-foreground">
-					Recent Activity
-				</h3>
-				<ToggleGroup
-					size="sm"
-					selectedKeys={new Set([selectedFilter])}
-					onSelectionChange={(keys) => {
-						const selectedKey = Array.from(keys)[0];
-						if (selectedKey) setSelectedFilter(selectedKey as TimeFilter);
-					}}
-					className="bg-muted/60 dark:bg-muted/60 backdrop-blur-sm rounded-md p-0.5 border border-border/60 shadow-xs ring-1 ring-border/20"
-				>
-					<ToggleGroupItem id="1d">1d</ToggleGroupItem>
-					<ToggleGroupItem id="3d">3d</ToggleGroupItem>
-					<ToggleGroupItem id="7d">7d</ToggleGroupItem>
-					<ToggleGroupItem id="2w">2w</ToggleGroupItem>
-				</ToggleGroup>
-			</div>
+		<Card className="group relative backdrop-blur-md overflow-hidden ring-1 ring-border/20 dark:ring-border/40">
+			{/* Glass morphism overlay */}
+			<div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
+			<CardContent className="relative z-10">
+				<div className="space-y-3">
+					{/* Compact Activity Feed Header */}
+					<div className="flex items-start justify-between mb-8">
+						<h3 className="text-base font-semibold text-foreground">
+							Recent Activity
+						</h3>
+						<ToggleGroup
+							size="sm"
+							selectedKeys={new Set([selectedFilter])}
+							onSelectionChange={(keys) => {
+								const selectedKey = Array.from(keys)[0];
+								if (selectedKey) setSelectedFilter(selectedKey as TimeFilter);
+							}}
+							className="bg-muted/60 dark:bg-muted/60 backdrop-blur-sm rounded-md p-0.5 border border-border/60 ring-1 ring-border/20"
+						>
+							<ToggleGroupItem id="1d">1d</ToggleGroupItem>
+							<ToggleGroupItem id="3d">3d</ToggleGroupItem>
+							<ToggleGroupItem id="7d">7d</ToggleGroupItem>
+							<ToggleGroupItem id="2w">2w</ToggleGroupItem>
+						</ToggleGroup>
+					</div>
 
-			{/* Compact List */}
-			<ScrollArea className="h-96">
-				{isLoading ? (
-					<div className="flex items-center justify-center h-32">
-						<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-					</div>
-				) : activities.length === 0 ? (
-					<div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
-						<p className="text-sm">No recent activity found</p>
-						<p className="text-xs mt-1">
-							Activity will appear here as you work
-						</p>
-					</div>
-				) : (
-					<ul role="list" className="space-y-3 pr-4">
-						{activities.map((activityItem, activityItemIdx) => (
-							<ActivityItem
-								key={"id" in activityItem ? activityItem.id : activityItem._id}
-								activity={activityItem}
-								isLast={activityItemIdx === activities.length - 1}
-							/>
-						))}
-					</ul>
-				)}
-			</ScrollArea>
-		</div>
+					{/* Compact List */}
+					<ScrollArea className="h-96">
+						{isLoading ? (
+							<div className="flex items-center justify-center h-32">
+								<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+							</div>
+						) : activities.length === 0 ? (
+							<div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
+								<p className="text-sm">No recent activity found</p>
+								<p className="text-xs mt-1">
+									Activity will appear here as you work
+								</p>
+							</div>
+						) : (
+							<ul role="list" className="space-y-3 pr-4">
+								{activities.map((activityItem, activityItemIdx) => (
+									<ActivityItem
+										key={
+											"id" in activityItem ? activityItem.id : activityItem._id
+										}
+										activity={activityItem}
+										isLast={activityItemIdx === activities.length - 1}
+									/>
+								))}
+							</ul>
+						)}
+					</ScrollArea>
+				</div>
+			</CardContent>
+		</Card>
 	);
 }

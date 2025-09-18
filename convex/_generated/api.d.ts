@@ -17,6 +17,7 @@ import type * as activities from "../activities.js";
 import type * as clientContacts from "../clientContacts.js";
 import type * as clientProperties from "../clientProperties.js";
 import type * as clients from "../clients.js";
+import type * as crons from "../crons.js";
 import type * as documents from "../documents.js";
 import type * as homeStats from "../homeStats.js";
 import type * as http from "../http.js";
@@ -46,6 +47,7 @@ declare const fullApi: ApiFromModules<{
   clientContacts: typeof clientContacts;
   clientProperties: typeof clientProperties;
   clients: typeof clients;
+  crons: typeof crons;
   documents: typeof documents;
   homeStats: typeof homeStats;
   http: typeof http;

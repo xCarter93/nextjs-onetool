@@ -68,11 +68,12 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({
 	useEffect(() => {
 		// Clear success and info toasts on navigation, but keep error and warning toasts
 		// Also keep loading toasts as they might be in progress
-		setToasts(prevToasts => 
-			prevToasts.filter(toast => 
-				toast.type === 'error' || 
-				toast.type === 'warning' || 
-				toast.type === 'loading'
+		setToasts((prevToasts) =>
+			prevToasts.filter(
+				(toast) =>
+					toast.type === "error" ||
+					toast.type === "warning" ||
+					toast.type === "loading"
 			)
 		);
 	}, [pathname]); // This will run whenever the route changes

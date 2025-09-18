@@ -357,6 +357,97 @@ export const search = query({
 });
 
 /**
+ * Bulk create contacts for a client
+ */
+export const bulkCreate = mutation({
+	args: {
+		clientId: v.id("clients"),
+		contacts: v.array(
+			v.object({
+				firstName: v.string(),
+				lastName: v.string(),
+				email: v.optional(v.string()),
+				phone: v.optional(v.string()),
+				jobTitle: v.optional(v.string()),
+				role: v.optional(v.string()),
+				department: v.optional(v.string()),
+				isPrimary: v.boolean(),
+				photoUrl: v.optional(v.string()),
+				photoStorageId: v.optional(v.id("_storage")),
+			})
+		),
+	},
+	handler: async (ctx, args): Promise<ClientContactId[]> => {
+		const userOrgId = await getCurrentUserOrgId(ctx);
+
+		// Validate client access
+		await validateClientAccess(ctx, args.clientId);
+
+		const contactIds: ClientContactId[] = [];
+		let hasPrimary = false;
+
+		// Check if any contact is marked as primary
+		for (const contact of args.contacts) {
+			if (contact.isPrimary) {
+				if (hasPrimary) {
+					throw new Error("Only one contact can be marked as primary");
+				}
+				hasPrimary = true;
+			}
+		}
+
+		// If setting a primary contact, unset existing primary
+		if (hasPrimary) {
+			const existingPrimary = await ctx.db
+				.query("clientContacts")
+				.withIndex("by_primary", (q) =>
+					q.eq("clientId", args.clientId).eq("isPrimary", true)
+				)
+				.unique();
+
+			if (existingPrimary) {
+				await ctx.db.patch(existingPrimary._id, { isPrimary: false });
+			}
+		}
+
+		// Create all contacts
+		for (const contactData of args.contacts) {
+			// Validate email format if provided
+			if (
+				contactData.email &&
+				!ValidationPatterns.isValidEmail(contactData.email)
+			) {
+				throw new Error("Invalid email format");
+			}
+
+			// Validate phone format if provided
+			if (
+				contactData.phone &&
+				!ValidationPatterns.isValidPhone(contactData.phone)
+			) {
+				throw new Error("Invalid phone format");
+			}
+
+			const contactId = await ctx.db.insert("clientContacts", {
+				...contactData,
+				clientId: args.clientId,
+				orgId: userOrgId,
+			});
+
+			contactIds.push(contactId);
+		}
+
+		// Log activity on the client
+		const client = await ctx.db.get(args.clientId);
+		if (client) {
+			await ActivityHelpers.clientUpdated(ctx, client);
+		}
+
+		return contactIds;
+	},
+});
+
+/**
  * Set a contact as primary (and unset others)
  */
 export const setPrimary = mutation({
