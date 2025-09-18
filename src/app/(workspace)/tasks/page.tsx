@@ -26,7 +26,7 @@ import {
 	Building2,
 	FolderOpen,
 	Edit,
-	Trash2
+	Trash2,
 } from "lucide-react";
 
 interface Task {
@@ -46,17 +46,41 @@ interface Task {
 }
 
 const priorityConfig = {
-	low: { color: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300", icon: Flag },
-	medium: { color: "bg-blue-100 text-blue-700 dark:bg-blue-800 dark:text-blue-300", icon: Flag },
-	high: { color: "bg-amber-100 text-amber-700 dark:bg-amber-800 dark:text-amber-300", icon: Flag },
-	urgent: { color: "bg-red-100 text-red-700 dark:bg-red-800 dark:text-red-300", icon: AlertTriangle },
+	low: {
+		color: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
+		icon: Flag,
+	},
+	medium: {
+		color: "bg-blue-100 text-blue-700 dark:bg-blue-800 dark:text-blue-300",
+		icon: Flag,
+	},
+	high: {
+		color: "bg-amber-100 text-amber-700 dark:bg-amber-800 dark:text-amber-300",
+		icon: Flag,
+	},
+	urgent: {
+		color: "bg-red-100 text-red-700 dark:bg-red-800 dark:text-red-300",
+		icon: AlertTriangle,
+	},
 };
 
 const statusConfig = {
-	pending: { color: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300", label: "Pending" },
-	"in-progress": { color: "bg-blue-100 text-blue-700 dark:bg-blue-800 dark:text-blue-300", label: "In Progress" },
-	completed: { color: "bg-green-100 text-green-700 dark:bg-green-800 dark:text-green-300", label: "Completed" },
-	cancelled: { color: "bg-red-100 text-red-700 dark:bg-red-800 dark:text-red-300", label: "Cancelled" },
+	pending: {
+		color: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
+		label: "Pending",
+	},
+	"in-progress": {
+		color: "bg-blue-100 text-blue-700 dark:bg-blue-800 dark:text-blue-300",
+		label: "In Progress",
+	},
+	completed: {
+		color: "bg-green-100 text-green-700 dark:bg-green-800 dark:text-green-300",
+		label: "Completed",
+	},
+	cancelled: {
+		color: "bg-red-100 text-red-700 dark:bg-red-800 dark:text-red-300",
+		label: "Cancelled",
+	},
 };
 
 interface TaskRowProps {
@@ -67,21 +91,31 @@ interface TaskRowProps {
 	isUpdating: boolean;
 }
 
-function TaskRow({ task, onStatusChange, onEdit, onDelete, isUpdating }: TaskRowProps) {
+function TaskRow({
+	task,
+	onStatusChange,
+	onEdit,
+	onDelete,
+	isUpdating,
+}: TaskRowProps) {
 	const [showActions, setShowActions] = useState(false);
-	
+
 	const clients = useQuery(api.clients.list, {});
 	const projects = useQuery(api.projects.list, {});
 	const users = useQuery(api.users.listByOrg, {});
 
-	const client = clients?.find(c => c._id === task.clientId);
-	const project = projects?.find(p => p._id === task.projectId);
-	const assignee = users?.find((u: { _id: Id<"users">; name?: string; email: string }) => u._id === task.assigneeUserId);
+	const client = clients?.find((c) => c._id === task.clientId);
+	const project = projects?.find((p) => p._id === task.projectId);
+	const assignee = users?.find(
+		(u: { _id: Id<"users">; name?: string; email: string }) =>
+			u._id === task.assigneeUserId
+	);
 
 	const isOverdue = task.date < Date.now() && task.status !== "completed";
-	const isToday = new Date(task.date).toDateString() === new Date().toDateString();
+	const isToday =
+		new Date(task.date).toDateString() === new Date().toDateString();
 	const taskDate = new Date(task.date);
-	
+
 	const PriorityIcon = priorityConfig[task.priority || "medium"].icon;
 
 	const formatTime = (time?: string) => {
@@ -95,22 +129,25 @@ function TaskRow({ task, onStatusChange, onEdit, onDelete, isUpdating }: TaskRow
 
 	const formatDate = (date: Date) => {
 		if (isToday) return "Today";
-		
+
 		const tomorrow = new Date();
 		tomorrow.setDate(tomorrow.getDate() + 1);
 		if (date.toDateString() === tomorrow.toDateString()) return "Tomorrow";
-		
-		return date.toLocaleDateString("en-US", { 
-			weekday: "short", 
-			month: "short", 
+
+		return date.toLocaleDateString("en-US", {
+			weekday: "short",
+			month: "short",
 			day: "numeric",
-			year: taskDate.getFullYear() !== new Date().getFullYear() ? "numeric" : undefined
+			year:
+				taskDate.getFullYear() !== new Date().getFullYear()
+					? "numeric"
+					: undefined,
 		});
 	};
 
 	const handleToggleComplete = () => {
 		if (isUpdating) return;
-		
+
 		const newStatus = task.status === "completed" ? "pending" : "completed";
 		onStatusChange(task._id, newStatus);
 	};
@@ -151,13 +188,18 @@ function TaskRow({ task, onStatusChange, onEdit, onDelete, isUpdating }: TaskRow
 			<td className="px-4 py-3">
 				<div className="min-w-0">
 					<div className="flex items-center gap-2 mb-1">
-						<h3 className={cn(
-							"font-medium text-foreground truncate",
-							task.status === "completed" && "line-through text-muted-foreground"
-						)}>
+						<h3
+							className={cn(
+								"font-medium text-foreground truncate",
+								task.status === "completed" &&
+									"line-through text-muted-foreground"
+							)}
+						>
 							{task.title}
 						</h3>
-						{isOverdue && <AlertTriangle className="h-4 w-4 text-red-500 flex-shrink-0" />}
+						{isOverdue && (
+							<AlertTriangle className="h-4 w-4 text-red-500 flex-shrink-0" />
+						)}
 					</div>
 					{task.description && (
 						<p className="text-sm text-muted-foreground truncate">
@@ -189,10 +231,12 @@ function TaskRow({ task, onStatusChange, onEdit, onDelete, isUpdating }: TaskRow
 
 			{/* Date */}
 			<td className="px-4 py-3">
-				<div className={cn(
-					"flex items-center gap-1 text-sm",
-					isOverdue ? "text-red-600" : "text-muted-foreground"
-				)}>
+				<div
+					className={cn(
+						"flex items-center gap-1 text-sm",
+						isOverdue ? "text-red-600" : "text-muted-foreground"
+					)}
+				>
 					<Calendar className="h-3 w-3 flex-shrink-0" />
 					<span>{formatDate(taskDate)}</span>
 				</div>
@@ -200,7 +244,7 @@ function TaskRow({ task, onStatusChange, onEdit, onDelete, isUpdating }: TaskRow
 
 			{/* Time */}
 			<td className="px-4 py-3">
-				{(task.startTime || task.endTime) ? (
+				{task.startTime || task.endTime ? (
 					<div className="flex items-center gap-1 text-sm text-muted-foreground">
 						<Clock className="h-3 w-3 flex-shrink-0" />
 						<span>
@@ -235,10 +279,13 @@ function TaskRow({ task, onStatusChange, onEdit, onDelete, isUpdating }: TaskRow
 
 			{/* Priority */}
 			<td className="px-4 py-3">
-				<Badge variant="secondary" className={cn(
-					"text-xs",
-					priorityConfig[task.priority || "medium"].color
-				)}>
+				<Badge
+					variant="secondary"
+					className={cn(
+						"text-xs",
+						priorityConfig[task.priority || "medium"].color
+					)}
+				>
 					<PriorityIcon className="h-3 w-3 mr-1" />
 					{task.priority || "medium"}
 				</Badge>
@@ -280,12 +327,18 @@ function TaskRow({ task, onStatusChange, onEdit, onDelete, isUpdating }: TaskRow
 
 export default function TasksPage() {
 	const [searchQuery, setSearchQuery] = useState("");
-	const [statusFilter, setStatusFilter] = useState<Task["status"] | "all">("all");
-	const [priorityFilter, setPriorityFilter] = useState<Task["priority"] | "all">("all");
+	const [statusFilter, setStatusFilter] = useState<Task["status"] | "all">(
+		"all"
+	);
+	const [priorityFilter, setPriorityFilter] = useState<
+		Task["priority"] | "all"
+	>("all");
 	const [sortBy, setSortBy] = useState<"date" | "priority" | "status">("date");
 	const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 	const [editingTask, setEditingTask] = useState<Task | null>(null);
-	const [updatingTasks, setUpdatingTasks] = useState<Set<Id<"tasks">>>(new Set());
+	const [updatingTasks, setUpdatingTasks] = useState<Set<Id<"tasks">>>(
+		new Set()
+	);
 
 	// Queries
 	const allTasks = useQuery(api.tasks.list, {});
@@ -306,26 +359,29 @@ export default function TasksPage() {
 		// Search filter
 		if (searchQuery.trim()) {
 			const query = searchQuery.toLowerCase();
-			filtered = filtered.filter(task =>
-				task.title.toLowerCase().includes(query) ||
-				task.description?.toLowerCase().includes(query)
+			filtered = filtered.filter(
+				(task) =>
+					task.title.toLowerCase().includes(query) ||
+					task.description?.toLowerCase().includes(query)
 			);
 		}
 
 		// Status filter
 		if (statusFilter !== "all") {
-			filtered = filtered.filter(task => task.status === statusFilter);
+			filtered = filtered.filter((task) => task.status === statusFilter);
 		}
 
 		// Priority filter
 		if (priorityFilter !== "all") {
-			filtered = filtered.filter(task => (task.priority || "medium") === priorityFilter);
+			filtered = filtered.filter(
+				(task) => (task.priority || "medium") === priorityFilter
+			);
 		}
 
 		// Sort
 		filtered.sort((a, b) => {
 			let comparison = 0;
-			
+
 			switch (sortBy) {
 				case "date":
 					comparison = a.date - b.date;
@@ -347,9 +403,12 @@ export default function TasksPage() {
 		return filtered;
 	}, [allTasks, searchQuery, statusFilter, priorityFilter, sortBy, sortOrder]);
 
-	const handleStatusChange = async (taskId: Id<"tasks">, newStatus: Task["status"]) => {
-		setUpdatingTasks(prev => new Set(prev).add(taskId));
-		
+	const handleStatusChange = async (
+		taskId: Id<"tasks">,
+		newStatus: Task["status"]
+	) => {
+		setUpdatingTasks((prev) => new Set(prev).add(taskId));
+
 		try {
 			if (newStatus === "completed") {
 				await completeTaskMutation({ id: taskId });
@@ -361,7 +420,7 @@ export default function TasksPage() {
 		} catch (error) {
 			console.error("Error updating task:", error);
 		} finally {
-			setUpdatingTasks(prev => {
+			setUpdatingTasks((prev) => {
 				const newSet = new Set(prev);
 				newSet.delete(taskId);
 				return newSet;
@@ -376,15 +435,15 @@ export default function TasksPage() {
 	const handleDelete = async (taskId: Id<"tasks">) => {
 		if (!window.confirm("Are you sure you want to delete this task?")) return;
 
-		setUpdatingTasks(prev => new Set(prev).add(taskId));
-		
+		setUpdatingTasks((prev) => new Set(prev).add(taskId));
+
 		try {
 			await deleteTaskMutation({ id: taskId });
 			console.log("Task deleted successfully!");
 		} catch (error) {
 			console.error("Error deleting task:", error);
 		} finally {
-			setUpdatingTasks(prev => {
+			setUpdatingTasks((prev) => {
 				const newSet = new Set(prev);
 				newSet.delete(taskId);
 				return newSet;
@@ -403,11 +462,14 @@ export default function TasksPage() {
 
 	// Stats
 	const totalTasks = allTasks?.length || 0;
-	const completedTasks = allTasks?.filter(t => t.status === "completed").length || 0;
-	const overdueTasks = allTasks?.filter(t => t.date < Date.now() && t.status !== "completed").length || 0;
+	const completedTasks =
+		allTasks?.filter((t) => t.status === "completed").length || 0;
+	const overdueTasks =
+		allTasks?.filter((t) => t.date < Date.now() && t.status !== "completed")
+			.length || 0;
 
 	return (
-		<motion.div 
+		<motion.div
 			className="p-4 sm:p-6 lg:p-8 space-y-6"
 			initial={{ opacity: 0, y: 20 }}
 			animate={{ opacity: 1, y: 0 }}
@@ -416,13 +478,13 @@ export default function TasksPage() {
 			{/* Header */}
 			<div className="flex items-start justify-between gap-4">
 				<div className="space-y-1">
-					<h1 className="text-2xl sm:text-3xl font-bold text-foreground">Tasks</h1>
+					<h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+						Tasks
+					</h1>
 					<p className="text-muted-foreground">
-						{isLoading ? (
-							"Loading tasks..."
-						) : (
-							`${totalTasks} total • ${completedTasks} completed • ${overdueTasks} overdue`
-						)}
+						{isLoading
+							? "Loading tasks..."
+							: `${totalTasks} total • ${completedTasks} completed • ${overdueTasks} overdue`}
 					</p>
 				</div>
 				<TaskSheet
@@ -453,7 +515,9 @@ export default function TasksPage() {
 				<div className="flex gap-2">
 					<select
 						value={statusFilter}
-						onChange={(e) => setStatusFilter(e.target.value as Task["status"] | "all")}
+						onChange={(e) =>
+							setStatusFilter(e.target.value as Task["status"] | "all")
+						}
 						className={cn(
 							"flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm",
 							"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -468,7 +532,9 @@ export default function TasksPage() {
 
 					<select
 						value={priorityFilter}
-						onChange={(e) => setPriorityFilter(e.target.value as Task["priority"] | "all")}
+						onChange={(e) =>
+							setPriorityFilter(e.target.value as Task["priority"] | "all")
+						}
 						className={cn(
 							"flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm",
 							"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -505,35 +571,47 @@ export default function TasksPage() {
 							<thead className="bg-muted/30">
 								<tr className="text-left">
 									<th className="w-12 px-4 py-3"></th>
-									<th className="px-4 py-3 font-medium text-muted-foreground">Task</th>
-									<th className="px-4 py-3 font-medium text-muted-foreground">Client</th>
-									<th className="px-4 py-3 font-medium text-muted-foreground">Project</th>
+									<th className="px-4 py-3 font-medium text-muted-foreground">
+										Task
+									</th>
+									<th className="px-4 py-3 font-medium text-muted-foreground">
+										Client
+									</th>
+									<th className="px-4 py-3 font-medium text-muted-foreground">
+										Project
+									</th>
 									<th className="px-4 py-3 font-medium text-muted-foreground">
 										<button
 											onClick={() => toggleSort("date")}
 											className="flex items-center gap-1 hover:text-foreground"
 										>
 											Date
-											{sortBy === "date" && (
-												sortOrder === "asc" ? 
-													<SortAsc className="h-3 w-3" /> : 
+											{sortBy === "date" &&
+												(sortOrder === "asc" ? (
+													<SortAsc className="h-3 w-3" />
+												) : (
 													<SortDesc className="h-3 w-3" />
-											)}
+												))}
 										</button>
 									</th>
-									<th className="px-4 py-3 font-medium text-muted-foreground">Time</th>
-									<th className="px-4 py-3 font-medium text-muted-foreground">Assignee</th>
+									<th className="px-4 py-3 font-medium text-muted-foreground">
+										Time
+									</th>
+									<th className="px-4 py-3 font-medium text-muted-foreground">
+										Assignee
+									</th>
 									<th className="px-4 py-3 font-medium text-muted-foreground">
 										<button
 											onClick={() => toggleSort("status")}
 											className="flex items-center gap-1 hover:text-foreground"
 										>
 											Status
-											{sortBy === "status" && (
-												sortOrder === "asc" ? 
-													<SortAsc className="h-3 w-3" /> : 
+											{sortBy === "status" &&
+												(sortOrder === "asc" ? (
+													<SortAsc className="h-3 w-3" />
+												) : (
 													<SortDesc className="h-3 w-3" />
-											)}
+												))}
 										</button>
 									</th>
 									<th className="px-4 py-3 font-medium text-muted-foreground">
@@ -542,11 +620,12 @@ export default function TasksPage() {
 											className="flex items-center gap-1 hover:text-foreground"
 										>
 											Priority
-											{sortBy === "priority" && (
-												sortOrder === "asc" ? 
-													<SortAsc className="h-3 w-3" /> : 
+											{sortBy === "priority" &&
+												(sortOrder === "asc" ? (
+													<SortAsc className="h-3 w-3" />
+												) : (
 													<SortDesc className="h-3 w-3" />
-											)}
+												))}
 										</button>
 									</th>
 									<th className="w-16 px-4 py-3"></th>
@@ -577,23 +656,26 @@ export default function TasksPage() {
 							<div className="space-y-2">
 								<h3 className="text-lg font-medium">No tasks found</h3>
 								<p className="text-muted-foreground max-w-md mx-auto">
-									{searchQuery || statusFilter !== "all" || priorityFilter !== "all"
+									{searchQuery ||
+									statusFilter !== "all" ||
+									priorityFilter !== "all"
 										? "No tasks match your current filters. Try adjusting your search or filters."
-										: "You haven't created any tasks yet. Create your first task to get started."
-									}
+										: "You haven't created any tasks yet. Create your first task to get started."}
 								</p>
 							</div>
-							{(!searchQuery && statusFilter === "all" && priorityFilter === "all") && (
-								<TaskSheet
-									mode="create"
-									trigger={
-										<Button className="gap-2">
-											<Plus className="h-4 w-4" />
-											Create Your First Task
-										</Button>
-									}
-								/>
-							)}
+							{!searchQuery &&
+								statusFilter === "all" &&
+								priorityFilter === "all" && (
+									<TaskSheet
+										mode="create"
+										trigger={
+											<Button className="gap-2">
+												<Plus className="h-4 w-4" />
+												Create Your First Task
+											</Button>
+										}
+									/>
+								)}
 						</div>
 					</div>
 				)}
@@ -604,7 +686,6 @@ export default function TasksPage() {
 				<TaskSheet
 					task={editingTask}
 					mode="edit"
-					open={!!editingTask}
 					onOpenChange={(open) => !open && setEditingTask(null)}
 				/>
 			)}

@@ -579,7 +579,10 @@ export default function QuoteDetailPage() {
 																	Discount:
 																</span>
 																<span className="font-medium text-red-600 dark:text-red-400">
-																	-{formatCurrency(quote.discountAmount)}
+																	-
+																	{quote.discountType === "percentage"
+																		? `${quote.discountAmount}%`
+																		: formatCurrency(quote.discountAmount)}
 																</span>
 															</div>
 														)}
@@ -627,9 +630,32 @@ export default function QuoteDetailPage() {
 										<CardHeader>
 											<CardTitle className="flex items-center justify-between text-xl">
 												<span>Terms & Conditions</span>
-												<Button intent="outline" size="sm">
-													<Edit className="h-4 w-4" />
-												</Button>
+												{!isEditing ? (
+													<Button
+														intent="outline"
+														size="sm"
+														onClick={() => setIsEditing(true)}
+													>
+														<Edit className="h-4 w-4" />
+													</Button>
+												) : (
+													<div className="flex gap-2">
+														<Button
+															intent="outline"
+															size="sm"
+															onClick={resetForm}
+														>
+															Cancel
+														</Button>
+														<Button
+															size="sm"
+															onClick={handleSave}
+															isDisabled={!isDirty}
+														>
+															Save
+														</Button>
+													</div>
+												)}
 											</CardTitle>
 										</CardHeader>
 										<CardContent>
