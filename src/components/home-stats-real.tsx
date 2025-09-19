@@ -98,7 +98,7 @@ function getChartConfig(cardName: string) {
 			config: {
 				projects: {
 					label: "Projects",
-					color: "var(--chart-2)",
+					color: "var(--chart-1)",
 				},
 			},
 			chartId: "projects-monthly",
@@ -108,7 +108,7 @@ function getChartConfig(cardName: string) {
 			config: {
 				quotes: {
 					label: "Quotes",
-					color: "var(--chart-3)",
+					color: "var(--chart-1)",
 				},
 			},
 			chartId: "quotes-monthly",
@@ -118,7 +118,7 @@ function getChartConfig(cardName: string) {
 			config: {
 				invoices: {
 					label: "Invoices",
-					color: "var(--chart-4)",
+					color: "var(--chart-1)",
 				},
 			},
 			chartId: "invoices-monthly",
@@ -128,7 +128,7 @@ function getChartConfig(cardName: string) {
 			config: {
 				revenue: {
 					label: "Revenue",
-					color: "var(--chart-5)",
+					color: "var(--chart-1)",
 				},
 			},
 			chartId: "revenue-monthly",
