@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import ActivityItem from "./activity-item";
 import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group";
 import { ScrollArea } from "./ui/scroll-area";
 import { Card, CardContent } from "./ui/card";
+import { PaginationControls } from "./ui/pagination";
 
 // Sample activity data - this would typically come from props or a data source
 const activity = [
@@ -105,24 +106,60 @@ const TIME_FILTER_TO_DAYS: Record<TimeFilter, number> = {
 
 interface ActivityFeedProps {
 	fallbackActivities?: typeof activity; // For backward compatibility
-	limit?: number;
+	itemsPerPage?: number;
 }
 
 export default function ActivityFeed({
 	fallbackActivities = activity,
-	limit = 50,
+	itemsPerPage = 10,
 }: ActivityFeedProps) {
 	const [selectedFilter, setSelectedFilter] = useState<TimeFilter>("7d");
+	const [currentPage, setCurrentPage] = useState(1);
 
-	// Fetch real activities from Convex
-	const convexActivities = useQuery(api.activities.getRecent, {
-		limit,
-		dayRange: TIME_FILTER_TO_DAYS[selectedFilter],
+	// Fetch all recent activities from Convex (no backend filtering)
+	const allActivities = useQuery(api.activities.getRecent, {
+		limit: 1000, // Fetch last 1000 activities
 	});
 
-	// Use real activities if available, otherwise fall back to sample data
-	const activities = convexActivities || fallbackActivities;
-	const isLoading = convexActivities === undefined;
+	// Frontend filtering and pagination using useMemo for performance
+	const { filteredActivities, totalPages } = useMemo(() => {
+		const activitiesToFilter = allActivities || fallbackActivities;
+
+		// Filter activities by time range
+		const dayRange = TIME_FILTER_TO_DAYS[selectedFilter];
+		const cutoffTime = Date.now() - dayRange * 24 * 60 * 60 * 1000;
+
+		const filtered = activitiesToFilter.filter((activityItem) => {
+			// Handle both sample data (with date strings) and real data (with timestamps)
+			const timestamp =
+				"timestamp" in activityItem ? activityItem.timestamp : Date.now(); // Fallback for sample data
+
+			return timestamp >= cutoffTime;
+		});
+
+		// Calculate pagination
+		const pages = Math.ceil(filtered.length / itemsPerPage);
+
+		return {
+			filteredActivities: filtered,
+			totalPages: pages,
+		};
+	}, [allActivities, fallbackActivities, selectedFilter, itemsPerPage]);
+
+	// Get current page activities
+	const currentPageActivities = useMemo(() => {
+		const startIndex = (currentPage - 1) * itemsPerPage;
+		const endIndex = startIndex + itemsPerPage;
+		return filteredActivities.slice(startIndex, endIndex);
+	}, [filteredActivities, currentPage, itemsPerPage]);
+
+	const isLoading = allActivities === undefined;
+
+	// Reset to page 1 when filter changes
+	const handleFilterChange = (newFilter: TimeFilter) => {
+		setSelectedFilter(newFilter);
+		setCurrentPage(1);
+	};
 
 	return (
 		<Card className="group relative backdrop-blur-md overflow-hidden ring-1 ring-border/20 dark:ring-border/40">
@@ -140,7 +177,7 @@ export default function ActivityFeed({
 							selectedKeys={new Set([selectedFilter])}
 							onSelectionChange={(keys) => {
 								const selectedKey = Array.from(keys)[0];
-								if (selectedKey) setSelectedFilter(selectedKey as TimeFilter);
+								if (selectedKey) handleFilterChange(selectedKey as TimeFilter);
 							}}
 							className="bg-muted/60 dark:bg-muted/60 backdrop-blur-sm rounded-md p-0.5 border border-border/60 ring-1 ring-border/20"
 						>
@@ -157,7 +194,7 @@ export default function ActivityFeed({
 							<div className="flex items-center justify-center h-32">
 								<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
 							</div>
-						) : activities.length === 0 ? (
+						) : currentPageActivities.length === 0 ? (
 							<div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
 								<p className="text-sm">No recent activity found</p>
 								<p className="text-xs mt-1">
@@ -166,18 +203,32 @@ export default function ActivityFeed({
 							</div>
 						) : (
 							<ul role="list" className="space-y-3 pr-4">
-								{activities.map((activityItem, activityItemIdx) => (
+								{currentPageActivities.map((activityItem, activityItemIdx) => (
 									<ActivityItem
 										key={
 											"id" in activityItem ? activityItem.id : activityItem._id
 										}
 										activity={activityItem}
-										isLast={activityItemIdx === activities.length - 1}
+										isLast={
+											activityItemIdx === currentPageActivities.length - 1
+										}
 									/>
 								))}
 							</ul>
 						)}
 					</ScrollArea>
+
+					{/* Pagination Controls */}
+					{!isLoading && filteredActivities.length > 0 && totalPages > 1 && (
+						<div className="mt-4 flex justify-center">
+							<PaginationControls
+								currentPage={currentPage}
+								totalPages={totalPages}
+								onPageChange={setCurrentPage}
+								className="w-fit"
+							/>
+						</div>
+					)}
 				</div>
 			</CardContent>
 		</Card>
