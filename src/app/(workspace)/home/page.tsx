@@ -2,7 +2,7 @@
 
 import ActivityFeed from "@/components/activity-feed";
 import GettingStarted from "@/components/getting-started";
-import HomeStats from "@/components/home-stats";
+import HomeStats from "@/components/home-stats-real";
 import HomeTaskList from "@/components/home-task-list";
 import RevenueGoalSetter from "@/components/revenue-goal-setter";
 import { useQuery } from "convex/react";
