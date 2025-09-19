@@ -228,6 +228,38 @@ export default function ProjectsPage() {
 		},
 		onSortingChange: setSorting,
 		onColumnFiltersChange: setColumnFilters,
+		onGlobalFilterChange: setQuery,
+		globalFilterFn: (row, columnId, value) => {
+			// If no search value, show all rows
+			if (!value || value.trim() === "") return true;
+
+			const search = value.toLowerCase().trim();
+			const project = row.original;
+
+			// Search in project title
+			if (project.title && project.title.toLowerCase().includes(search))
+				return true;
+
+			// Search in project type
+			if (
+				project.projectType &&
+				project.projectType.toLowerCase().includes(search)
+			)
+				return true;
+
+			// Search in project status
+			if (project.status && project.status.toLowerCase().includes(search))
+				return true;
+
+			// Search in client company name
+			if (
+				project.client?.companyName &&
+				project.client.companyName.toLowerCase().includes(search)
+			)
+				return true;
+
+			return false;
+		},
 		getCoreRowModel: getCoreRowModel(),
 		getSortedRowModel: getSortedRowModel(),
 		getFilteredRowModel: getFilteredRowModel(),
@@ -237,12 +269,6 @@ export default function ProjectsPage() {
 	React.useEffect(() => {
 		table.setPageSize(pageSize);
 	}, [pageSize, table]);
-
-	React.useEffect(() => {
-		table.getColumn("title")?.setFilterValue(query);
-		table.getColumn("projectType")?.setFilterValue(query);
-		table.getColumn("status")?.setFilterValue(query);
-	}, [query, table]);
 
 	return (
 		<div className="relative p-6 space-y-6">
@@ -342,10 +368,10 @@ export default function ProjectsPage() {
 						</div>
 						<div className="flex items-center gap-2">
 							<Input
-								placeholder="Search projects..."
+								placeholder="Search projects, clients, or status..."
 								value={query}
 								onChange={(e) => setQuery(e.target.value)}
-								className="w-56"
+								className="w-96"
 							/>
 						</div>
 					</div>
