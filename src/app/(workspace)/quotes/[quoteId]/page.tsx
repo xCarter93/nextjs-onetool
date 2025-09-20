@@ -403,36 +403,6 @@ export default function QuoteDetailPage() {
 							</div>
 						</div>
 
-						{/* Action Buttons */}
-						<div className="flex items-center gap-2 mb-6">
-							{getStatusActions()}
-							{isEditing ? (
-								<>
-									<Button size="sm" onClick={handleSave} isDisabled={!isDirty}>
-										<Check className="h-4 w-4 mr-1" /> Save
-									</Button>
-									<Button
-										size="sm"
-										intent="outline"
-										onClick={() => {
-											resetForm();
-											setIsEditing(false);
-										}}
-									>
-										Cancel
-									</Button>
-								</>
-							) : (
-								<Button
-									size="sm"
-									intent="outline"
-									onClick={() => setIsEditing(true)}
-								>
-									<Edit className="h-4 w-4 mr-1" /> Edit
-								</Button>
-							)}
-						</div>
-
 						{isEditing && isDirty && (
 							<Alert className="mb-6">
 								<AlertTitle>Unsaved changes</AlertTitle>
@@ -609,7 +579,10 @@ export default function QuoteDetailPage() {
 																	Discount:
 																</span>
 																<span className="font-medium text-red-600 dark:text-red-400">
-																	-{formatCurrency(quote.discountAmount)}
+																	-
+																	{quote.discountType === "percentage"
+																		? `${quote.discountAmount}%`
+																		: formatCurrency(quote.discountAmount)}
 																</span>
 															</div>
 														)}
@@ -657,9 +630,32 @@ export default function QuoteDetailPage() {
 										<CardHeader>
 											<CardTitle className="flex items-center justify-between text-xl">
 												<span>Terms & Conditions</span>
-												<Button intent="outline" size="sm">
-													<Edit className="h-4 w-4" />
-												</Button>
+												{!isEditing ? (
+													<Button
+														intent="outline"
+														size="sm"
+														onClick={() => setIsEditing(true)}
+													>
+														<Edit className="h-4 w-4" />
+													</Button>
+												) : (
+													<div className="flex gap-2">
+														<Button
+															intent="outline"
+															size="sm"
+															onClick={resetForm}
+														>
+															Cancel
+														</Button>
+														<Button
+															size="sm"
+															onClick={handleSave}
+															isDisabled={!isDirty}
+														>
+															Save
+														</Button>
+													</div>
+												)}
 											</CardTitle>
 										</CardHeader>
 										<CardContent>
@@ -872,6 +868,50 @@ export default function QuoteDetailPage() {
 			{/* Sticky Footer with Action Buttons */}
 			<StickyFormFooter
 				buttons={[
+					// Left side buttons - Status actions
+					...(getStatusActions()
+						? [
+								{
+									label:
+										quote?.status === "draft"
+											? "Send Quote"
+											: quote?.status === "sent"
+												? "Approve"
+												: quote?.status === "approved"
+													? "Reopen (Sent)"
+													: quote?.status === "expired"
+														? "Reopen (Draft)"
+														: "Update Status",
+									intent:
+										quote?.status === "draft"
+											? ("primary" as const)
+											: quote?.status === "sent"
+												? ("success" as const)
+												: ("outline" as const),
+									icon:
+										quote?.status === "draft" ? (
+											<Mail className="h-4 w-4" />
+										) : quote?.status === "sent" ? (
+											<Check className="h-4 w-4" />
+										) : (
+											<Edit className="h-4 w-4" />
+										),
+									onClick: () => {
+										if (quote?.status === "draft") {
+											handleStatusChange("sent");
+										} else if (quote?.status === "sent") {
+											handleStatusChange("approved");
+										} else if (quote?.status === "approved") {
+											handleStatusChange("sent");
+										} else if (quote?.status === "expired") {
+											handleStatusChange("draft");
+										}
+									},
+									position: "left" as const,
+								},
+							]
+						: []),
+					// Right side buttons - Actions
 					{
 						label: "Send to Client",
 						intent: "outline",
@@ -880,12 +920,14 @@ export default function QuoteDetailPage() {
 							// Handle send to client
 							console.log("Send to client");
 						},
+						position: "right" as const,
 					},
 					{
 						label: "Generate PDF",
 						intent: "outline",
 						icon: <FileText className="h-4 w-4" />,
 						onClick: handleGeneratePdf,
+						position: "right" as const,
 					},
 					{
 						label: "Convert to Invoice",
@@ -894,6 +936,7 @@ export default function QuoteDetailPage() {
 							// Handle conversion to invoice
 							console.log("Convert to invoice");
 						},
+						position: "right" as const,
 					},
 					{
 						label: "More",
@@ -903,6 +946,7 @@ export default function QuoteDetailPage() {
 							// Handle more options
 							console.log("More options");
 						},
+						position: "right" as const,
 					},
 				]}
 			/>

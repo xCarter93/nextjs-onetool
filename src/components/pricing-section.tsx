@@ -1,9 +1,10 @@
 "use client";
 
-import { Sparkles, ArrowRight, Check, Star, Zap, Shield } from "lucide-react";
+import { Briefcase, CheckCheck, Database, Server } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { motion } from "motion/react";
 import { useTheme } from "next-themes";
+import { TimelineContent } from "@/components/timeline-animation";
 
 // Utility function for conditional class names
 function cn(...classes: (string | undefined | null | false)[]): string {
@@ -33,29 +34,8 @@ const CardHeader: React.FC<CardProps> = ({ className, children }) => (
 	</div>
 );
 
-const CardTitle: React.FC<CardProps> = ({ className, children }) => (
-	<h3
-		className={cn(
-			"text-2xl font-semibold leading-none tracking-tight",
-			className
-		)}
-	>
-		{children}
-	</h3>
-);
-
-const CardDescription: React.FC<CardProps> = ({ className, children }) => (
-	<div className={cn("text-sm text-muted-foreground", className)}>
-		{children}
-	</div>
-);
-
 const CardContent: React.FC<CardProps> = ({ className, children }) => (
 	<div className={cn("p-6 pt-0", className)}>{children}</div>
-);
-
-const CardFooter: React.FC<CardProps> = ({ className, children }) => (
-	<div className={cn("flex items-center p-6 pt-0", className)}>{children}</div>
 );
 
 // Custom AnimatedNumber component to replace NumberFlow
@@ -123,94 +103,134 @@ const AnimatedNumber: React.FC<AnimatedNumberProps> = ({
 	return <span className={className}>{formatter.format(currentValue)}</span>;
 };
 
-// Define the structure for a plan for better type safety and readability
-interface Plan {
-	id: string;
-	name: string;
-	icon: React.ElementType; // Using React.ElementType for component props
-	price: {
-		monthly: number | string;
-		yearly: number | string;
-	};
-	description: string;
-	features: string[];
-	cta: string;
-	popular?: boolean; // Optional property
-}
-
-// Data for the pricing plans
-const plans: Plan[] = [
+const plans = [
 	{
-		id: "starter",
 		name: "Starter",
-		icon: Star,
-		price: {
-			monthly: "Free forever",
-			yearly: "Free forever",
-		},
 		description:
-			"Perfect for small field service businesses just getting started.",
+			"Great for small businesses and startups looking to get started with field service management",
+		price: 12,
+		yearlyPrice: 99,
+		buttonText: "Get started",
+		buttonVariant: "outline" as const,
 		features: [
-			"Up to 5 clients",
-			"Up to 10 projects/month",
-			"Basic quote creation",
-			"Email support",
-			"Mobile app access",
+			{ text: "Up to 10 clients", icon: <Briefcase size={20} /> },
+			{ text: "Up to 10GB storage", icon: <Database size={20} /> },
+			{ text: "Limited analytics", icon: <Server size={20} /> },
 		],
-		cta: "Start for Free",
+		includes: [
+			"Free includes:",
+			"Unlimited projects",
+			"Custom templates & quotes",
+			"2-factor authentication",
+		],
 	},
 	{
-		id: "pro",
-		name: "Professional",
-		icon: Zap,
-		price: {
-			monthly: 49,
-			yearly: 39,
-		},
+		name: "Business",
 		description:
-			"Everything you need to manage and grow your field service business.",
-		features: [
-			"Unlimited clients & projects",
-			"Advanced quote & invoice templates",
-			"Automated scheduling & reminders",
-			"Payment processing integration",
-			"Priority support",
-			"Advanced reporting",
-		],
-		cta: "Start Free Trial",
+			"Best value for growing businesses that need more advanced features",
+		price: 48,
+		yearlyPrice: 399,
+		buttonText: "Get started",
+		buttonVariant: "default" as const,
 		popular: true,
+		features: [
+			{ text: "Unlimited clients", icon: <Briefcase size={20} /> },
+			{ text: "Storage (250MB/file)", icon: <Database size={20} /> },
+			{ text: "100 workspace command runs", icon: <Server size={20} /> },
+		],
+		includes: [
+			"Everything in Starter, plus:",
+			"Advanced scheduling",
+			"Payment processing",
+			"Priority support",
+		],
 	},
 	{
-		id: "enterprise",
 		name: "Enterprise",
-		icon: Shield,
-		price: {
-			monthly: "Contact for pricing",
-			yearly: "Contact for pricing",
-		},
 		description:
-			"Custom solutions for large organizations with advanced needs.",
+			"Advanced plan with enhanced security and unlimited access for large teams",
+		price: 96,
+		yearlyPrice: 899,
+		buttonText: "Get started",
+		buttonVariant: "outline" as const,
 		features: [
+			{ text: "Unlimited clients", icon: <Briefcase size={20} /> },
+			{ text: "Unlimited storage", icon: <Database size={20} /> },
+			{ text: "Unlimited workspaces", icon: <Server size={20} /> },
+		],
+		includes: [
+			"Everything in Business, plus:",
 			"Custom integrations",
 			"Dedicated account manager",
-			"On-premise deployment",
-			"Advanced security features",
 			"24/7 priority support",
-			"Custom training & onboarding",
 		],
-		cta: "Contact Sales",
 	},
 ];
 
+const PricingSwitch = ({ onSwitch }: { onSwitch: (value: string) => void }) => {
+	const [selected, setSelected] = useState("0");
+
+	const handleSwitch = (value: string) => {
+		setSelected(value);
+		onSwitch(value);
+	};
+
+	return (
+		<div className="flex justify-center">
+			<div className="relative z-50 mx-auto flex w-fit rounded-full bg-muted/30 border border-border p-1">
+				<button
+					onClick={() => handleSwitch("0")}
+					className={cn(
+						"relative z-10 w-fit sm:h-12 h-10 rounded-full sm:px-6 px-3 sm:py-2 py-1 font-medium transition-colors",
+						selected === "0"
+							? "text-white"
+							: "text-muted-foreground hover:text-foreground"
+					)}
+				>
+					{selected === "0" && (
+						<motion.span
+							layoutId={"switch"}
+							className="absolute top-0 left-0 sm:h-12 h-10 w-full rounded-full border-4 shadow-sm shadow-blue-600 border-blue-600 bg-gradient-to-t from-blue-500 via-blue-400 to-blue-600"
+							transition={{ type: "spring", stiffness: 500, damping: 30 }}
+						/>
+					)}
+					<span className="relative">Monthly</span>
+				</button>
+
+				<button
+					onClick={() => handleSwitch("1")}
+					className={cn(
+						"relative z-10 w-fit sm:h-12 h-10 flex-shrink-0 rounded-full sm:px-6 px-3 sm:py-2 py-1 font-medium transition-colors",
+						selected === "1"
+							? "text-white"
+							: "text-muted-foreground hover:text-foreground"
+					)}
+				>
+					{selected === "1" && (
+						<motion.span
+							layoutId={"switch"}
+							className="absolute top-0 left-0 sm:h-12 h-10 w-full rounded-full border-4 shadow-sm shadow-blue-600 border-blue-600 bg-gradient-to-t from-blue-500 via-blue-400 to-blue-600"
+							transition={{ type: "spring", stiffness: 500, damping: 30 }}
+						/>
+					)}
+					<span className="relative flex items-center gap-2">
+						Yearly
+						<span className="rounded-full bg-blue-50 dark:bg-blue-950 px-2 py-0.5 text-xs font-medium text-blue-600 dark:text-blue-400">
+							Save 20%
+						</span>
+					</span>
+				</button>
+			</div>
+		</div>
+	);
+};
+
 export default function PricingSection() {
-	// State to manage the selected frequency (monthly or yearly)
-	const [frequency, setFrequency] = useState<"monthly" | "yearly">("monthly");
-	// State to track if the component has mounted to prevent hydration errors
+	const [isYearly, setIsYearly] = useState(false);
 	const [mounted, setMounted] = useState(false);
-	// Theme detection
+	const pricingRef = useRef<HTMLDivElement>(null);
 	const { resolvedTheme } = useTheme();
 
-	// Set mounted to true after the component has been rendered on the client side
 	useEffect(() => {
 		setMounted(true);
 	}, []);
@@ -220,8 +240,31 @@ export default function PricingSection() {
 		return null;
 	}
 
+	const revealVariants = {
+		visible: (i: number) => ({
+			y: 0,
+			opacity: 1,
+			filter: "blur(0px)",
+			transition: {
+				delay: i * 0.4,
+				duration: 0.5,
+			},
+		}),
+		hidden: {
+			filter: "blur(10px)",
+			y: -20,
+			opacity: 0,
+		},
+	};
+
+	const togglePricingPeriod = (value: string) =>
+		setIsYearly(Number.parseInt(value) === 1);
+
 	return (
-		<div className="not-prose relative flex w-full flex-col gap-16 overflow-hidden px-4 py-24 text-center sm:px-8">
+		<div
+			className="not-prose relative flex w-full flex-col gap-16 overflow-hidden px-4 py-24 text-center sm:px-8 min-h-screen mx-auto"
+			ref={pricingRef}
+		>
 			{/* Background gradient effects for visual appeal */}
 			<div className="absolute inset-0 -z-10 overflow-hidden">
 				<div className="absolute -top-[10%] left-[50%] h-[40%] w-[60%] -translate-x-1/2 rounded-full bg-blue-600/10 blur-3xl" />
@@ -229,224 +272,143 @@ export default function PricingSection() {
 				<div className="absolute -bottom-[10%] -left-[10%] h-[40%] w-[40%] rounded-full bg-blue-600/5 blur-3xl" />
 			</div>
 
-			<div className="flex flex-col items-center justify-center gap-8">
-				{/* Section for title and description */}
-				<div className="flex flex-col items-center space-y-2">
-					{/* Pricing Plans Badge - Replaced with span */}
-					<span className="mb-4 inline-flex items-center rounded-full border border-blue-600/20 bg-blue-600/5 px-4 py-1 text-sm font-medium text-foreground">
-						<Sparkles className="mr-1 h-3.5 w-3.5 animate-pulse text-blue-600" />
-						Simple, Transparent Pricing
-					</span>
-					{/* Main Title with animation */}
-					<motion.h1
-						initial={{ opacity: 0, y: 10 }}
-						animate={{ opacity: 1, y: 0 }}
-						transition={{ duration: 0.5 }}
-						className="text-4xl font-bold text-foreground sm:text-5xl pb-10"
-					>
-						Choose the perfect plan for your field service business
-					</motion.h1>
-					{/* Description with animation */}
-					<motion.p
-						initial={{ opacity: 0, y: 10 }}
-						animate={{ opacity: 1, y: 0 }}
-						transition={{ duration: 0.5, delay: 0.1 }}
-						className="max-w-md pt-2 text-lg text-muted-foreground"
-					>
-						Flexible pricing designed to grow with your field service business,
-						from startups to enterprise organizations.
-					</motion.p>
-				</div>
-
-				{/* Frequency Tabs with animation - Replaced with div and buttons */}
-				<motion.div
-					initial={{ opacity: 0, scale: 0.95 }}
-					animate={{ opacity: 1, scale: 1 }}
-					transition={{ duration: 0.4, delay: 0.2 }}
+			<div className="text-center mb-6 max-w-3xl mx-auto">
+				<TimelineContent
+					as="h2"
+					animationNum={0}
+					timelineRef={pricingRef}
+					customVariants={revealVariants}
+					className="md:text-6xl sm:text-4xl text-3xl font-medium text-foreground mb-4"
 				>
-					<div className="inline-block rounded-full bg-muted/30 p-1 shadow-sm">
-						<div className="flex bg-transparent">
-							<button
-								onClick={() => setFrequency("monthly")}
-								className={cn(
-									"inline-flex items-center justify-center whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium ring-offset-background transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
-									frequency === "monthly"
-										? "bg-background shadow-sm"
-										: "bg-transparent hover:bg-muted/50"
-								)}
-							>
-								Monthly
-							</button>
-							<button
-								onClick={() => setFrequency("yearly")}
-								className={cn(
-									"inline-flex items-center justify-center whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium ring-offset-background transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
-									frequency === "yearly"
-										? "bg-background shadow-sm"
-										: "bg-transparent hover:bg-muted/50"
-								)}
-							>
-								Yearly
-								<span className="ml-2 inline-flex items-center rounded-full border border-transparent bg-blue-600/10 px-2.5 py-0.5 text-xs font-semibold text-blue-600 transition-colors hover:bg-blue-600/15">
-									20% off
-								</span>
-							</button>
-						</div>
-					</div>
-				</motion.div>
+					Plans that work best for your{" "}
+					<TimelineContent
+						as="span"
+						animationNum={1}
+						timelineRef={pricingRef}
+						customVariants={revealVariants}
+						className="border border-dashed border-blue-500 px-2 py-1 rounded-xl bg-blue-100 dark:bg-blue-950 capitalize inline-block"
+					>
+						business
+					</TimelineContent>
+				</TimelineContent>
 
-				{/* Pricing Cards Grid */}
-				<div className="mt-8 grid w-full max-w-6xl grid-cols-1 gap-6 md:grid-cols-3">
-					{plans.map((plan, index) => (
-						<motion.div
-							key={plan.id}
-							initial={{ opacity: 0, y: 20 }}
-							animate={{ opacity: 1, y: 0 }}
-							transition={{ duration: 0.5, delay: 0.1 + index * 0.1 }}
-							whileHover={{ y: -5 }} // Hover effect for cards
-							className="flex" // Use flex to make cards fill available height
+				<TimelineContent
+					as="p"
+					animationNum={2}
+					timelineRef={pricingRef}
+					customVariants={revealVariants}
+					className="sm:text-base text-sm text-muted-foreground sm:w-[70%] w-[80%] mx-auto"
+				>
+					Trusted by millions, We help teams all around the world. Explore which
+					option is right for you.
+				</TimelineContent>
+			</div>
+
+			<TimelineContent
+				as="div"
+				animationNum={3}
+				timelineRef={pricingRef}
+				customVariants={revealVariants}
+			>
+				<PricingSwitch onSwitch={togglePricingPeriod} />
+			</TimelineContent>
+
+			<div className="grid md:grid-cols-3 max-w-7xl gap-4 py-6 mx-auto">
+				{plans.map((plan, index) => (
+					<TimelineContent
+						key={plan.name}
+						as="div"
+						animationNum={4 + index}
+						timelineRef={pricingRef}
+						customVariants={revealVariants}
+					>
+						<Card
+							className={cn(
+								"relative border-border h-full",
+								plan.popular
+									? "ring-2 ring-blue-500 bg-blue-50/50 dark:bg-blue-950/30"
+									: "bg-card"
+							)}
 						>
-							<Card
-								className={cn(
-									"relative h-full w-full bg-secondary/20 text-left transition-all duration-300 hover:shadow-lg",
-									plan.popular
-										? "shadow-md ring-2 ring-blue-600/50 dark:shadow-blue-600/10"
-										: "hover:border-blue-600/30",
-									plan.popular &&
-										"bg-gradient-to-b from-blue-600/[0.03] to-transparent"
-								)}
-							>
-								{/* "Popular" Badge for the popular plan - Replaced with span */}
-								{plan.popular && (
-									<div className="absolute -top-3 left-0 right-0 mx-auto w-fit">
-										<span className="inline-flex items-center rounded-full bg-blue-600 px-4 py-1 text-sm font-medium text-white shadow-sm">
-											<Sparkles className="mr-1 h-3.5 w-3.5" />
-											Most Popular
-										</span>
-									</div>
-								)}
-								<CardHeader className={cn("pb-4", plan.popular && "pt-8")}>
-									<div className="flex items-center gap-2">
-										{/* Plan Icon */}
-										<div
-											className={cn(
-												"flex h-8 w-8 items-center justify-center rounded-full",
-												plan.popular
-													? "bg-blue-600/10 text-blue-600"
-													: "bg-secondary text-foreground"
-											)}
-										>
-											<plan.icon className="h-4 w-4" />
-										</div>
-										{/* Plan Name */}
-										<CardTitle
-											className={cn(
-												"text-xl font-bold",
-												plan.popular && "text-blue-600"
-											)}
-										>
-											{plan.name}
-										</CardTitle>
-									</div>
-									<CardDescription className="mt-3 space-y-2">
-										{/* Plan Description */}
-										<p className="text-sm">{plan.description}</p>
-										{/* Price Display */}
-										<div className="pt-2">
-											{typeof plan.price[frequency] === "number" ? (
-												<div className="flex items-baseline">
-													<AnimatedNumber // Using custom AnimatedNumber component
-														className={cn(
-															"text-3xl font-bold",
-															plan.popular ? "text-blue-600" : "text-foreground"
-														)}
-														format={{
-															style: "currency",
-															currency: "USD",
-															maximumFractionDigits: 0,
-														}}
-														value={plan.price[frequency] as number}
-													/>
-													<span className="ml-1 text-sm text-muted-foreground">
-														/month, billed {frequency}
-													</span>
-												</div>
-											) : (
-												<span
-													className={cn(
-														"text-2xl font-bold",
-														plan.popular ? "text-blue-600" : "text-foreground"
-													)}
-												>
-													{plan.price[frequency]}
-												</span>
-											)}
-										</div>
-									</CardDescription>
-								</CardHeader>
-								<CardContent className="grid gap-3 pb-6">
-									{/* Features List */}
-									{plan.features.map((feature, featureIndex) => (
-										<motion.div
-											key={featureIndex}
-											initial={{ opacity: 0, x: -5 }}
-											animate={{ opacity: 1, x: 0 }}
-											transition={{
-												duration: 0.3,
-												delay: 0.5 + featureIndex * 0.05,
-											}}
-											className="flex items-center gap-2 text-sm"
-										>
-											<div
-												className={cn(
-													"flex h-5 w-5 items-center justify-center rounded-full",
-													plan.popular
-														? "bg-blue-600/10 text-blue-600"
-														: "bg-secondary text-secondary-foreground"
-												)}
-											>
-												<Check className="h-3.5 w-3.5" />
-											</div>
-											<span
-												className={
-													plan.popular
-														? "text-foreground"
-														: "text-muted-foreground"
-												}
-											>
-												{feature}
+							<CardHeader className="text-left">
+								<div className="flex justify-between">
+									<h3 className="text-3xl font-semibold text-foreground mb-2">
+										{plan.name}
+									</h3>
+									{plan.popular && (
+										<div className="">
+											<span className="bg-blue-500 text-white px-3 py-1 rounded-full text-sm font-medium">
+												Popular
 											</span>
-										</motion.div>
-									))}
-								</CardContent>
-								<CardFooter>
-									{/* Call to Action Button - Replaced with button */}
-									<button
-										className={cn(
-											"inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-10 px-4 py-2 w-full group",
-											plan.popular
-												? "bg-blue-600 text-white hover:bg-blue-700 hover:shadow-md hover:shadow-blue-600/20"
-												: "border border-input bg-background hover:border-blue-600/30 hover:bg-blue-600/5 hover:text-blue-600"
-										)}
-									>
-										{plan.cta}
-										<ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
-									</button>
-								</CardFooter>
+										</div>
+									)}
+								</div>
+								<p className="text-sm text-muted-foreground mb-4">
+									{plan.description}
+								</p>
+								<div className="flex items-baseline">
+									<span className="text-4xl font-semibold text-foreground">
+										$
+										<AnimatedNumber
+											value={isYearly ? plan.yearlyPrice : plan.price}
+											className="text-4xl font-semibold"
+											format={{
+												style: "decimal",
+												maximumFractionDigits: 0,
+											}}
+										/>
+									</span>
+									<span className="text-muted-foreground ml-1">
+										/{isYearly ? "year" : "month"}
+									</span>
+								</div>
+							</CardHeader>
 
-								{/* Subtle gradient effects and border for popular plan */}
-								{plan.popular ? (
-									<>
-										<div className="pointer-events-none absolute bottom-0 left-0 right-0 h-1/2 rounded-b-lg bg-gradient-to-t from-blue-600/[0.05] to-transparent" />
-										<div className="pointer-events-none absolute inset-0 rounded-lg border border-blue-600/20" />
-									</>
-								) : (
-									<div className="pointer-events-none absolute inset-0 rounded-lg border border-transparent opacity-0 transition-opacity duration-300 hover:border-blue-600/10 hover:opacity-100" />
-								)}
-							</Card>
-						</motion.div>
-					))}
-				</div>
+							<CardContent className="pt-0">
+								<button
+									className={cn(
+										"w-full mb-6 p-4 text-xl rounded-xl transition-all duration-300",
+										plan.popular
+											? "bg-gradient-to-t from-blue-500 to-blue-600 shadow-lg shadow-blue-500 border border-blue-400 text-white hover:shadow-xl"
+											: "bg-gradient-to-t from-gray-800 to-gray-900 shadow-lg shadow-gray-800/20 border border-gray-700 text-white hover:shadow-xl"
+									)}
+								>
+									{plan.buttonText}
+								</button>
+								<ul className="space-y-2 font-semibold py-5">
+									{plan.features.map((feature, featureIndex) => (
+										<li key={featureIndex} className="flex items-center">
+											<span className="text-foreground grid place-content-center mt-0.5 mr-3">
+												{feature.icon}
+											</span>
+											<span className="text-sm text-muted-foreground">
+												{feature.text}
+											</span>
+										</li>
+									))}
+								</ul>
+
+								<div className="space-y-3 pt-4 border-t border-border">
+									<h4 className="font-medium text-base text-foreground mb-3">
+										{plan.includes[0]}
+									</h4>
+									<ul className="space-y-2 font-semibold">
+										{plan.includes.slice(1).map((feature, featureIndex) => (
+											<li key={featureIndex} className="flex items-center">
+												<span className="h-6 w-6 bg-green-50 dark:bg-green-950 border border-blue-500 rounded-full grid place-content-center mt-0.5 mr-3">
+													<CheckCheck className="h-4 w-4 text-blue-500" />
+												</span>
+												<span className="text-sm text-muted-foreground">
+													{feature}
+												</span>
+											</li>
+										))}
+									</ul>
+								</div>
+							</CardContent>
+						</Card>
+					</TimelineContent>
+				))}
 			</div>
 		</div>
 	);

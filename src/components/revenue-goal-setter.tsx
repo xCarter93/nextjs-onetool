@@ -10,23 +10,42 @@ import {
 	CheckIcon,
 	XMarkIcon,
 } from "@heroicons/react/24/outline";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../convex/_generated/api";
 
 export default function RevenueGoalSetter() {
 	const [isEditing, setIsEditing] = useState(false);
-	const [goalValue, setGoalValue] = useState("50000"); // Default goal
 	const [tempValue, setTempValue] = useState("");
+	const [isSaving, setIsSaving] = useState(false);
+
+	// Get organization data and revenue goal progress
+	const organization = useQuery(api.organizations.get);
+	const revenueGoalProgress = useQuery(api.homeStats.getRevenueGoalProgress);
+	const updateOrganization = useMutation(api.organizations.update);
+
+	// Get current goal value from organization data
+	const goalValue = organization?.monthlyRevenueTarget?.toString() || "0";
 
 	const handleEdit = () => {
 		setTempValue(goalValue);
 		setIsEditing(true);
 	};
 
-	const handleSave = () => {
+	const handleSave = async () => {
 		if (tempValue && !isNaN(parseFloat(tempValue.replace(/,/g, "")))) {
-			setGoalValue(tempValue);
-			setIsEditing(false);
-			// TODO: Save to backend when ready
-			console.log("Saving revenue goal:", tempValue);
+			setIsSaving(true);
+			try {
+				const numericValue = parseFloat(tempValue.replace(/,/g, ""));
+				await updateOrganization({
+					monthlyRevenueTarget: numericValue,
+				});
+				setIsEditing(false);
+			} catch (error) {
+				console.error("Failed to save revenue goal:", error);
+				// You could add a toast notification here
+			} finally {
+				setIsSaving(false);
+			}
 		}
 	};
 
@@ -50,6 +69,20 @@ export default function RevenueGoalSetter() {
 		const value = e.target.value.replace(/[^0-9]/g, "");
 		setTempValue(value);
 	};
+
+	// Show loading state while data is being fetched
+	if (organization === undefined || revenueGoalProgress === undefined) {
+		return (
+			<Card className="group relative backdrop-blur-md overflow-hidden ring-1 ring-border/20 dark:ring-border/40">
+				<div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
+				<CardContent className="relative z-10">
+					<div className="flex items-center justify-center h-32">
+						<div className="text-muted-foreground">Loading revenue goal...</div>
+					</div>
+				</CardContent>
+			</Card>
+		);
+	}
 
 	return (
 		<Card className="group relative backdrop-blur-md overflow-hidden ring-1 ring-border/20 dark:ring-border/40">
@@ -108,11 +141,13 @@ export default function RevenueGoalSetter() {
 								intent="primary"
 								className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
 								isDisabled={
-									!tempValue || isNaN(parseFloat(tempValue.replace(/,/g, "")))
+									!tempValue ||
+									isNaN(parseFloat(tempValue.replace(/,/g, ""))) ||
+									isSaving
 								}
 							>
 								<CheckIcon className="w-4 h-4 mr-1" />
-								Save Goal
+								{isSaving ? "Saving..." : "Save Goal"}
 							</Button>
 							<Button
 								onClick={handleCancel}
@@ -139,24 +174,29 @@ export default function RevenueGoalSetter() {
 						</div>
 
 						{/* Progress indicator */}
-						<div className="space-y-2">
-							<div className="flex justify-between text-sm">
-								<span className="text-muted-foreground">Progress</span>
-								<span className="font-medium text-emerald-600 dark:text-emerald-400">
-									78% completed
-								</span>
+						{revenueGoalProgress && (
+							<div className="space-y-2">
+								<div className="flex justify-between text-sm">
+									<span className="text-muted-foreground">Progress</span>
+									<span className="font-medium text-emerald-600 dark:text-emerald-400">
+										{revenueGoalProgress.percentage}% completed
+									</span>
+								</div>
+								<div className="w-full bg-muted rounded-full h-2">
+									<div
+										className="bg-gradient-to-r from-emerald-500 to-emerald-600 h-2 rounded-full transition-all duration-500 ease-out"
+										style={{
+											width: `${Math.min(revenueGoalProgress.percentage, 100)}%`,
+										}}
+									/>
+								</div>
+								<div className="text-xs text-muted-foreground">
+									{formatCurrency(revenueGoalProgress.current.toString())} of{" "}
+									{formatCurrency(revenueGoalProgress.target.toString())}{" "}
+									achieved
+								</div>
 							</div>
-							<div className="w-full bg-muted rounded-full h-2">
-								<div
-									className="bg-gradient-to-r from-emerald-500 to-emerald-600 h-2 rounded-full transition-all duration-500 ease-out"
-									style={{ width: "78%" }}
-								/>
-							</div>
-							<div className="text-xs text-muted-foreground">
-								{formatCurrency((parseFloat(goalValue) * 0.78).toString())} of{" "}
-								{formatCurrency(goalValue)} achieved
-							</div>
-						</div>
+						)}
 					</div>
 				)}
 			</CardContent>

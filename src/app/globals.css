@@ -50,7 +50,7 @@
 	--fg: oklch(0.141 0.005 285.823);
 	--foreground: var(--fg);
 
-	--primary: oklch(0.685 0.169 237.323);
+	--primary: rgb(0, 166, 244);
 	--primary-fg: oklch(1 0 0);
 
 	--secondary: oklch(0.92 0.004 286.32);
@@ -183,7 +183,7 @@
 	.animation-delay-4000 {
 		animation-delay: 4s;
 	}
-	
+
 	@keyframes blob {
 		0% {
 			transform: translate(0px, 0px) scale(1);

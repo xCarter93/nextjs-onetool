@@ -21,6 +21,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
 	ColumnDef,
 	ColumnFiltersState,
@@ -32,9 +33,21 @@ import {
 	getSortedRowModel,
 	useReactTable,
 } from "@tanstack/react-table";
-import { ChevronLeft, ChevronRight, Users, ExternalLink } from "lucide-react";
+import {
+	ChevronLeft,
+	ChevronRight,
+	Users,
+	ExternalLink,
+	Plus,
+	Trash2,
+	RotateCcw,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
+import { useMutation } from "convex/react";
+import { useState } from "react";
+import type { Id } from "../../../../convex/_generated/dataModel";
+import DeleteConfirmationModal from "@/components/ui/delete-confirmation-modal";
 
 type Client = {
 	id: string;
@@ -43,7 +56,12 @@ type Client = {
 	location: string;
 	activeProjects: number;
 	lastActivity: string; // ISO date or friendly string
-	status: "Active" | "Prospect" | "Paused";
+	status: "Active" | "Prospect" | "Paused" | "Archived";
+	primaryContact: {
+		name: string;
+		email: string;
+		jobTitle: string;
+	} | null;
 };
 
 const statusToBadgeVariant = (status: Client["status"]) => {
@@ -54,6 +72,8 @@ const statusToBadgeVariant = (status: Client["status"]) => {
 			return "secondary" as const;
 		case "Paused":
 			return "outline" as const;
+		case "Archived":
+			return "outline" as const;
 		default:
 			return "outline" as const;
 	}
@@ -61,7 +81,10 @@ const statusToBadgeVariant = (status: Client["status"]) => {
 
 const createColumns = (
 	router: ReturnType<typeof useRouter>,
-	toast: ReturnType<typeof useToast>
+	toast: ReturnType<typeof useToast>,
+	onDelete: (id: string, name: string) => void,
+	onRestore?: (id: string, name: string) => void,
+	isArchivedTab?: boolean
 ): ColumnDef<Client>[] => [
 	{
 		accessorKey: "name",
@@ -80,6 +103,26 @@ const createColumns = (
 		header: "Industry",
 		cell: ({ row }) => (
 			<span className="text-foreground">{row.original.industry}</span>
+		),
+	},
+	{
+		accessorKey: "primaryContact",
+		header: "Primary Contact",
+		cell: ({ row }) => (
+			<div className="flex flex-col">
+				{row.original.primaryContact ? (
+					<>
+						<span className="font-medium text-foreground">
+							{row.original.primaryContact.name}
+						</span>
+						<span className="text-muted-foreground text-xs">
+							{row.original.primaryContact.email}
+						</span>
+					</>
+				) : (
+					<span className="text-muted-foreground text-sm">No contact</span>
+				)}
+			</div>
 		),
 	},
 	{
@@ -116,20 +159,40 @@ const createColumns = (
 		id: "actions",
 		header: "",
 		cell: ({ row }) => (
-			<Button
-				intent="outline"
-				size="sq-sm"
-				onPress={() => {
-					router.push(`/clients/${row.original.id}`);
-					toast.info(
-						"Opening Client",
-						`Viewing details for ${row.original.name}`
-					);
-				}}
-				aria-label={`View client ${row.original.name}`}
-			>
-				<ExternalLink className="size-4" />
-			</Button>
+			<div className="flex items-center gap-2">
+				<Button
+					intent="outline"
+					size="sq-sm"
+					onPress={() => {
+						router.push(`/clients/${row.original.id}`);
+					}}
+					aria-label={`View client ${row.original.name}`}
+				>
+					<ExternalLink className="size-4" />
+				</Button>
+
+				{isArchivedTab && onRestore ? (
+					<Button
+						intent="outline"
+						size="sq-sm"
+						onPress={() => onRestore(row.original.id, row.original.name)}
+						className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950"
+						aria-label={`Restore client ${row.original.name}`}
+					>
+						<RotateCcw className="size-4" />
+					</Button>
+				) : (
+					<Button
+						intent="outline"
+						size="sq-sm"
+						onPress={() => onDelete(row.original.id, row.original.name)}
+						className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+						aria-label={`Archive client ${row.original.name}`}
+					>
+						<Trash2 className="size-4" />
+					</Button>
+				)}
+			</div>
 		),
 	},
 ];
@@ -137,16 +200,36 @@ const createColumns = (
 export default function ClientsPage() {
 	const router = useRouter();
 	const toast = useToast();
+	const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+	const [clientToDelete, setClientToDelete] = useState<{
+		id: string;
+		name: string;
+	} | null>(null);
+	const [activeTab, setActiveTab] = useState("active");
+
+	const archiveClient = useMutation(api.clients.archive);
+	const restoreClient = useMutation(api.clients.restore);
 
 	// Fetch clients with project counts from Convex
 	const convexClients = useQuery(api.clients.listWithProjectCounts, {});
+	const archivedClients = useQuery(api.clients.listWithProjectCounts, {
+		status: "archived" as const,
+		includeArchived: true,
+	});
 	const clientsStats = useQuery(api.clients.getStats, {});
 
 	// Transform the data to match our Client type
-	const data = React.useMemo(() => {
+	const activeData = React.useMemo(() => {
 		if (!convexClients) return [];
 		return convexClients;
 	}, [convexClients]);
+
+	const archivedData = React.useMemo(() => {
+		if (!archivedClients) return [];
+		return archivedClients;
+	}, [archivedClients]);
+
+	const currentData = activeTab === "active" ? activeData : archivedData;
 	const [sorting, setSorting] = React.useState<SortingState>([]);
 	const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
 		[]
@@ -154,9 +237,59 @@ export default function ClientsPage() {
 	const [globalQuery, setGlobalQuery] = React.useState("");
 	const pageSize = 10;
 
+	const handleDelete = (id: string, name: string) => {
+		setClientToDelete({ id, name });
+		setDeleteModalOpen(true);
+	};
+
+	const handleRestore = async (id: string, name: string) => {
+		try {
+			await restoreClient({ id: id as Id<"clients"> });
+			toast.success(
+				"Client Restored",
+				`${name} has been restored and is now active.`
+			);
+		} catch (error) {
+			console.error("Failed to restore client:", error);
+			toast.error(
+				"Restore Failed",
+				"Failed to restore the client. Please try again."
+			);
+		}
+	};
+
+	const confirmDelete = async () => {
+		if (clientToDelete) {
+			try {
+				await archiveClient({ id: clientToDelete.id as Id<"clients"> });
+				setDeleteModalOpen(false);
+				setClientToDelete(null);
+				toast.success(
+					"Client Archived",
+					`${clientToDelete.name} has been archived. It will be permanently deleted in 7 days.`
+				);
+			} catch (error) {
+				console.error("Failed to archive client:", error);
+				toast.error(
+					"Archive Failed",
+					"Failed to archive the client. Please try again."
+				);
+			}
+		}
+	};
+
+	const isArchivedTab = activeTab === "archived";
+	const columns = createColumns(
+		router,
+		toast,
+		handleDelete,
+		handleRestore,
+		isArchivedTab
+	);
+
 	const table = useReactTable({
-		data,
-		columns: createColumns(router, toast),
+		data: currentData,
+		columns,
 		state: {
 			sorting,
 			columnFilters,
@@ -165,6 +298,38 @@ export default function ClientsPage() {
 		},
 		onSortingChange: setSorting,
 		onColumnFiltersChange: setColumnFilters,
+		onGlobalFilterChange: setGlobalQuery,
+		globalFilterFn: (row, columnId, value) => {
+			// If no search value, show all rows
+			if (!value || value.trim() === "") return true;
+
+			const search = value.toLowerCase().trim();
+			const client = row.original;
+
+			// Search in client name
+			if (client.name && client.name.toLowerCase().includes(search))
+				return true;
+
+			// Search in industry
+			if (client.industry && client.industry.toLowerCase().includes(search))
+				return true;
+
+			// Search in primary contact name and email
+			if (client.primaryContact) {
+				if (
+					client.primaryContact.name &&
+					client.primaryContact.name.toLowerCase().includes(search)
+				)
+					return true;
+				if (
+					client.primaryContact.email &&
+					client.primaryContact.email.toLowerCase().includes(search)
+				)
+					return true;
+			}
+
+			return false;
+		},
 		getCoreRowModel: getCoreRowModel(),
 		getSortedRowModel: getSortedRowModel(),
 		getFilteredRowModel: getFilteredRowModel(),
@@ -175,17 +340,12 @@ export default function ClientsPage() {
 		table.setPageSize(pageSize);
 	}, [pageSize, table]);
 
-	React.useEffect(() => {
-		// Basic global filtering across name, industry, location
-		const nameCol = table.getColumn("name");
-		const industryCol = table.getColumn("industry");
-		// Apply simple text filter to name and industry columns; location is displayed under name.
-		nameCol?.setFilterValue(globalQuery);
-		industryCol?.setFilterValue(globalQuery);
-	}, [globalQuery, table]);
-
 	// Loading state
-	if (convexClients === undefined || clientsStats === undefined) {
+	if (
+		convexClients === undefined ||
+		archivedClients === undefined ||
+		clientsStats === undefined
+	) {
 		return (
 			<div className="relative p-6 space-y-6">
 				<div className="flex items-center justify-between">
@@ -227,46 +387,77 @@ export default function ClientsPage() {
 						</p>
 					</div>
 				</div>
+				<button
+					onClick={() => router.push("/clients/new")}
+					className="group inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-all duration-200 px-4 py-2 rounded-lg bg-primary/10 hover:bg-primary/15 ring-1 ring-primary/30 hover:ring-primary/40 shadow-sm hover:shadow-md backdrop-blur-sm"
+				>
+					<Plus className="h-4 w-4" />
+					Add Client
+					<span
+						aria-hidden="true"
+						className="group-hover:translate-x-1 transition-transform duration-200"
+					>
+						→
+					</span>
+				</button>
 			</div>
 
-			<div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-				<Card>
-					<CardHeader>
+			<div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+				<Card className="group relative backdrop-blur-md overflow-hidden ring-1 ring-border/20 dark:ring-border/40">
+					<div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
+					<CardHeader className="relative z-10">
 						<CardTitle className="flex items-center gap-2 text-base">
-							<Users className="size-4" /> Total Clients
+							<Users className="size-4" /> Total Active
 						</CardTitle>
-						<CardDescription>All clients in your workspace</CardDescription>
+						<CardDescription>Active clients in your workspace</CardDescription>
 					</CardHeader>
-					<CardContent>
-						<div className="text-3xl font-semibold">{clientsStats.total}</div>
+					<CardContent className="relative z-10">
+						<div className="text-3xl font-semibold">
+							{clientsStats.total - clientsStats.byStatus.archived}
+						</div>
 					</CardContent>
 				</Card>
-				<Card>
-					<CardHeader>
+				<Card className="group relative backdrop-blur-md overflow-hidden ring-1 ring-border/20 dark:ring-border/40">
+					<div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
+					<CardHeader className="relative z-10">
 						<CardTitle className="text-base">Active</CardTitle>
 						<CardDescription>Currently engaged clients</CardDescription>
 					</CardHeader>
-					<CardContent>
+					<CardContent className="relative z-10">
 						<div className="text-3xl font-semibold">
 							{clientsStats.byStatus.active}
 						</div>
 					</CardContent>
 				</Card>
-				<Card>
-					<CardHeader>
+				<Card className="group relative backdrop-blur-md overflow-hidden ring-1 ring-border/20 dark:ring-border/40">
+					<div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
+					<CardHeader className="relative z-10">
 						<CardTitle className="text-base">Prospects</CardTitle>
 						<CardDescription>Potential clients</CardDescription>
 					</CardHeader>
-					<CardContent>
+					<CardContent className="relative z-10">
 						<div className="text-3xl font-semibold">
 							{clientsStats.byStatus.prospect}
 						</div>
 					</CardContent>
 				</Card>
+				<Card className="group relative backdrop-blur-md overflow-hidden ring-1 ring-border/20 dark:ring-border/40">
+					<div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
+					<CardHeader className="relative z-10">
+						<CardTitle className="text-base">Archived</CardTitle>
+						<CardDescription>Archived clients</CardDescription>
+					</CardHeader>
+					<CardContent className="relative z-10">
+						<div className="text-3xl font-semibold">
+							{clientsStats.byStatus.archived}
+						</div>
+					</CardContent>
+				</Card>
 			</div>
 
-			<Card>
-				<CardHeader className="flex flex-col gap-2 border-b">
+			<Card className="group relative backdrop-blur-md overflow-hidden ring-1 ring-border/20 dark:ring-border/40">
+				<div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
+				<CardHeader className="relative z-10 flex flex-col gap-2 border-b">
 					<div className="flex items-center justify-between gap-3">
 						<div>
 							<CardTitle>Clients</CardTitle>
@@ -276,97 +467,206 @@ export default function ClientsPage() {
 						</div>
 						<div className="flex items-center gap-2">
 							<Input
-								placeholder="Search clients..."
+								placeholder="Search clients, contacts, or industry..."
 								value={globalQuery}
 								onChange={(e) => setGlobalQuery(e.target.value)}
-								className="w-56"
+								className="w-96"
 							/>
 						</div>
 					</div>
 				</CardHeader>
-				<CardContent className="px-0">
-					<div className="px-6">
-						<div className="overflow-hidden rounded-lg border">
-							<Table>
-								<TableHeader className="bg-muted sticky top-0 z-10">
-									{table.getHeaderGroups().map((headerGroup) => (
-										<TableRow key={headerGroup.id}>
-											{headerGroup.headers.map((header) => (
-												<TableHead key={header.id}>
-													{header.isPlaceholder
-														? null
-														: flexRender(
-																header.column.columnDef.header,
-																header.getContext()
-															)}
-												</TableHead>
+				<CardContent className="relative z-10 px-0">
+					<Tabs
+						value={activeTab}
+						onValueChange={setActiveTab}
+						className="w-full"
+					>
+						<div className="px-6 pt-4">
+							<TabsList className="grid w-full grid-cols-2">
+								<TabsTrigger value="active">Active Clients</TabsTrigger>
+								<TabsTrigger value="archived">Archived Clients</TabsTrigger>
+							</TabsList>
+						</div>
+						<TabsContent value="active" className="mt-0">
+							<div className="px-6">
+								<div className="overflow-hidden rounded-lg border">
+									<Table>
+										<TableHeader className="bg-muted sticky top-0 z-10">
+											{table.getHeaderGroups().map((headerGroup) => (
+												<TableRow key={headerGroup.id}>
+													{headerGroup.headers.map((header) => (
+														<TableHead key={header.id}>
+															{header.isPlaceholder
+																? null
+																: flexRender(
+																		header.column.columnDef.header,
+																		header.getContext()
+																	)}
+														</TableHead>
+													))}
+												</TableRow>
 											))}
-										</TableRow>
-									))}
-								</TableHeader>
-								<TableBody>
-									{table.getRowModel().rows?.length ? (
-										table.getRowModel().rows.map((row) => (
-											<TableRow
-												key={row.id}
-												data-state={row.getIsSelected() && "selected"}
-											>
-												{row.getVisibleCells().map((cell) => (
-													<TableCell key={cell.id}>
-														{flexRender(
-															cell.column.columnDef.cell,
-															cell.getContext()
-														)}
+										</TableHeader>
+										<TableBody>
+											{table.getRowModel().rows?.length ? (
+												table.getRowModel().rows.map((row) => (
+													<TableRow
+														key={row.id}
+														data-state={row.getIsSelected() && "selected"}
+													>
+														{row.getVisibleCells().map((cell) => (
+															<TableCell key={cell.id}>
+																{flexRender(
+																	cell.column.columnDef.cell,
+																	cell.getContext()
+																)}
+															</TableCell>
+														))}
+													</TableRow>
+												))
+											) : (
+												<TableRow>
+													<TableCell
+														colSpan={columns.length}
+														className="h-24 text-center"
+													>
+														No active clients found.
 													</TableCell>
-												))}
-											</TableRow>
-										))
-									) : (
-										<TableRow>
-											<TableCell
-												colSpan={createColumns(router, toast).length}
-												className="h-24 text-center"
-											>
-												No results.
-											</TableCell>
-										</TableRow>
-									)}
-								</TableBody>
-							</Table>
-						</div>
-						<div className="flex items-center justify-between py-4">
-							<div className="text-muted-foreground text-sm">
-								{table.getFilteredRowModel().rows.length} of {data.length}{" "}
-								clients
-							</div>
-							<div className="flex items-center gap-2">
-								<Button
-									intent="outline"
-									size="sq-sm"
-									onPress={() => table.previousPage()}
-									isDisabled={!table.getCanPreviousPage()}
-									aria-label="Previous page"
-								>
-									<ChevronLeft className="size-4" />
-								</Button>
-								<div className="text-sm font-medium">
-									Page {table.getState().pagination?.pageIndex + 1} of{" "}
-									{table.getPageCount()}
+												</TableRow>
+											)}
+										</TableBody>
+									</Table>
 								</div>
-								<Button
-									intent="outline"
-									size="sq-sm"
-									onPress={() => table.nextPage()}
-									isDisabled={!table.getCanNextPage()}
-									aria-label="Next page"
-								>
-									<ChevronRight className="size-4" />
-								</Button>
+								<div className="flex items-center justify-between py-4">
+									<div className="text-muted-foreground text-sm">
+										{table.getFilteredRowModel().rows.length} of{" "}
+										{currentData.length} active clients
+									</div>
+									<div className="flex items-center gap-2">
+										<Button
+											intent="outline"
+											size="sq-sm"
+											onPress={() => table.previousPage()}
+											isDisabled={!table.getCanPreviousPage()}
+											aria-label="Previous page"
+										>
+											<ChevronLeft className="size-4" />
+										</Button>
+										<div className="text-sm font-medium">
+											Page {table.getState().pagination?.pageIndex + 1} of{" "}
+											{table.getPageCount()}
+										</div>
+										<Button
+											intent="outline"
+											size="sq-sm"
+											onPress={() => table.nextPage()}
+											isDisabled={!table.getCanNextPage()}
+											aria-label="Next page"
+										>
+											<ChevronRight className="size-4" />
+										</Button>
+									</div>
+								</div>
 							</div>
-						</div>
-					</div>
+						</TabsContent>
+						<TabsContent value="archived" className="mt-0">
+							<div className="px-6">
+								<div className="overflow-hidden rounded-lg border">
+									<Table>
+										<TableHeader className="bg-muted sticky top-0 z-10">
+											{table.getHeaderGroups().map((headerGroup) => (
+												<TableRow key={headerGroup.id}>
+													{headerGroup.headers.map((header) => (
+														<TableHead key={header.id}>
+															{header.isPlaceholder
+																? null
+																: flexRender(
+																		header.column.columnDef.header,
+																		header.getContext()
+																	)}
+														</TableHead>
+													))}
+												</TableRow>
+											))}
+										</TableHeader>
+										<TableBody>
+											{table.getRowModel().rows?.length ? (
+												table.getRowModel().rows.map((row) => (
+													<TableRow
+														key={row.id}
+														data-state={row.getIsSelected() && "selected"}
+													>
+														{row.getVisibleCells().map((cell) => (
+															<TableCell key={cell.id}>
+																{flexRender(
+																	cell.column.columnDef.cell,
+																	cell.getContext()
+																)}
+															</TableCell>
+														))}
+													</TableRow>
+												))
+											) : (
+												<TableRow>
+													<TableCell
+														colSpan={columns.length}
+														className="h-24 text-center"
+													>
+														No archived clients found.
+													</TableCell>
+												</TableRow>
+											)}
+										</TableBody>
+									</Table>
+								</div>
+								<div className="flex items-center justify-between py-4">
+									<div className="text-muted-foreground text-sm">
+										{table.getFilteredRowModel().rows.length} of{" "}
+										{currentData.length} archived clients
+									</div>
+									<div className="flex items-center gap-2">
+										<Button
+											intent="outline"
+											size="sq-sm"
+											onPress={() => table.previousPage()}
+											isDisabled={!table.getCanPreviousPage()}
+											aria-label="Previous page"
+										>
+											<ChevronLeft className="size-4" />
+										</Button>
+										<div className="text-sm font-medium">
+											Page {table.getState().pagination?.pageIndex + 1} of{" "}
+											{table.getPageCount()}
+										</div>
+										<Button
+											intent="outline"
+											size="sq-sm"
+											onPress={() => table.nextPage()}
+											isDisabled={!table.getCanNextPage()}
+											aria-label="Next page"
+										>
+											<ChevronRight className="size-4" />
+										</Button>
+									</div>
+								</div>
+							</div>
+						</TabsContent>
+					</Tabs>
 				</CardContent>
 			</Card>
+
+			{/* Archive Confirmation Modal */}
+			{clientToDelete && (
+				<DeleteConfirmationModal
+					isOpen={deleteModalOpen}
+					onClose={() => setDeleteModalOpen(false)}
+					onConfirm={confirmDelete}
+					title="Archive Client"
+					itemName={clientToDelete.name}
+					itemType="Client"
+					isArchive={true}
+				/>
+			)}
 		</div>
 	);
 }

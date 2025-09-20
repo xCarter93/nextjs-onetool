@@ -40,9 +40,14 @@ import {
 	Clock,
 	ExternalLink,
 	Plus,
+	Trash2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { Doc } from "../../../../convex/_generated/dataModel";
+import { useMutation } from "convex/react";
+import { useState } from "react";
+import type { Id } from "../../../../convex/_generated/dataModel";
+import DeleteConfirmationModal from "@/components/ui/delete-confirmation-modal";
 
 type QuoteWithClient = Doc<"quotes"> & {
 	clientName: string;
@@ -91,7 +96,8 @@ const formatCurrency = (amount: number) => {
 };
 
 const createColumns = (
-	router: ReturnType<typeof useRouter>
+	router: ReturnType<typeof useRouter>,
+	onDelete: (id: string, name: string) => void
 ): ColumnDef<QuoteWithClient>[] => [
 	{
 		accessorKey: "quoteNumber",
@@ -162,20 +168,42 @@ const createColumns = (
 		id: "actions",
 		header: "",
 		cell: ({ row }) => (
-			<Button
-				intent="outline"
-				size="sq-sm"
-				onPress={() => router.push(`/quotes/${row.original._id}`)}
-				aria-label={`View quote ${row.original.quoteNumber || row.original._id.slice(-6)}`}
-			>
-				<ExternalLink className="size-4" />
-			</Button>
+			<div className="flex items-center gap-2">
+				<Button
+					intent="outline"
+					size="sq-sm"
+					onPress={() => router.push(`/quotes/${row.original._id}`)}
+					aria-label={`View quote ${row.original.quoteNumber || row.original._id.slice(-6)}`}
+				>
+					<ExternalLink className="size-4" />
+				</Button>
+				<Button
+					intent="outline"
+					size="sq-sm"
+					onPress={() =>
+						onDelete(
+							row.original._id,
+							row.original.quoteNumber || row.original._id.slice(-6)
+						)
+					}
+					className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+					aria-label={`Delete quote ${row.original.quoteNumber || row.original._id.slice(-6)}`}
+				>
+					<Trash2 className="size-4" />
+				</Button>
+			</div>
 		),
 	},
 ];
 
 export default function QuotesPage() {
 	const router = useRouter();
+	const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+	const [quoteToDelete, setQuoteToDelete] = useState<{
+		id: string;
+		name: string;
+	} | null>(null);
+	const deleteQuote = useMutation(api.quotes.remove);
 
 	// Fetch data from Convex
 	const quotes = useQuery(api.quotes.list, {});
@@ -208,9 +236,26 @@ export default function QuotesPage() {
 	const [query, setQuery] = React.useState("");
 	const pageSize = 10;
 
+	const handleDelete = (id: string, name: string) => {
+		setQuoteToDelete({ id, name });
+		setDeleteModalOpen(true);
+	};
+
+	const confirmDelete = async () => {
+		if (quoteToDelete) {
+			try {
+				await deleteQuote({ id: quoteToDelete.id as Id<"quotes"> });
+				setDeleteModalOpen(false);
+				setQuoteToDelete(null);
+			} catch (error) {
+				console.error("Failed to delete quote:", error);
+			}
+		}
+	};
+
 	const table = useReactTable({
 		data,
-		columns: createColumns(router),
+		columns: createColumns(router, handleDelete),
 		state: {
 			sorting,
 			columnFilters,
@@ -265,24 +310,31 @@ export default function QuotesPage() {
 						</p>
 					</div>
 				</div>
-				<Button
-					onPress={() => router.push("/quotes/new")}
-					className="flex items-center gap-2"
+				<button
+					onClick={() => router.push("/quotes/new")}
+					className="group inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-all duration-200 px-4 py-2 rounded-lg bg-primary/10 hover:bg-primary/15 ring-1 ring-primary/30 hover:ring-primary/40 shadow-sm hover:shadow-md backdrop-blur-sm"
 				>
 					<Plus className="h-4 w-4" />
 					Create Quote
-				</Button>
+					<span
+						aria-hidden="true"
+						className="group-hover:translate-x-1 transition-transform duration-200"
+					>
+						→
+					</span>
+				</button>
 			</div>
 
 			<div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-				<Card>
-					<CardHeader>
+				<Card className="group relative backdrop-blur-md overflow-hidden ring-1 ring-border/20 dark:ring-border/40">
+					<div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
+					<CardHeader className="relative z-10">
 						<CardTitle className="flex items-center gap-2 text-base">
 							<FileText className="size-4" /> Total Quotes
 						</CardTitle>
 						<CardDescription>All quotes in your workspace</CardDescription>
 					</CardHeader>
-					<CardContent>
+					<CardContent className="relative z-10">
 						<div className="text-3xl font-semibold">
 							{isLoading ? (
 								<div className="h-9 w-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
@@ -292,14 +344,15 @@ export default function QuotesPage() {
 						</div>
 					</CardContent>
 				</Card>
-				<Card>
-					<CardHeader>
+				<Card className="group relative backdrop-blur-md overflow-hidden ring-1 ring-border/20 dark:ring-border/40">
+					<div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
+					<CardHeader className="relative z-10">
 						<CardTitle className="flex items-center gap-2 text-base">
 							<Clock className="size-4" /> Pending Approval
 						</CardTitle>
 						<CardDescription>Quotes awaiting client response</CardDescription>
 					</CardHeader>
-					<CardContent>
+					<CardContent className="relative z-10">
 						<div className="text-3xl font-semibold">
 							{isLoading ? (
 								<div className="h-9 w-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
@@ -309,14 +362,15 @@ export default function QuotesPage() {
 						</div>
 					</CardContent>
 				</Card>
-				<Card>
-					<CardHeader>
+				<Card className="group relative backdrop-blur-md overflow-hidden ring-1 ring-border/20 dark:ring-border/40">
+					<div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
+					<CardHeader className="relative z-10">
 						<CardTitle className="flex items-center gap-2 text-base">
 							<DollarSign className="size-4" /> Approved Value
 						</CardTitle>
 						<CardDescription>Total value of approved quotes</CardDescription>
 					</CardHeader>
-					<CardContent>
+					<CardContent className="relative z-10">
 						<div className="text-3xl font-semibold">
 							{isLoading ? (
 								<div className="h-9 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
@@ -328,8 +382,9 @@ export default function QuotesPage() {
 				</Card>
 			</div>
 
-			<Card>
-				<CardHeader className="flex flex-col gap-2 border-b">
+			<Card className="group relative backdrop-blur-md overflow-hidden ring-1 ring-border/20 dark:ring-border/40">
+				<div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
+				<CardHeader className="relative z-10 flex flex-col gap-2 border-b">
 					<div className="flex items-center justify-between gap-3">
 						<div>
 							<CardTitle>Quotes</CardTitle>
@@ -347,7 +402,7 @@ export default function QuotesPage() {
 						</div>
 					</div>
 				</CardHeader>
-				<CardContent className="px-0">
+				<CardContent className="relative z-10 px-0">
 					<div className="px-6">
 						<div className="overflow-hidden rounded-lg border">
 							<Table>
@@ -373,7 +428,7 @@ export default function QuotesPage() {
 										Array.from({ length: 5 }).map((_, i) => (
 											<TableRow key={i}>
 												{Array.from({
-													length: createColumns(router).length,
+													length: createColumns(router, handleDelete).length,
 												}).map((_, j) => (
 													<TableCell key={j}>
 														<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
@@ -400,7 +455,7 @@ export default function QuotesPage() {
 									) : isEmpty ? (
 										<TableRow>
 											<TableCell
-												colSpan={createColumns(router).length}
+												colSpan={createColumns(router, handleDelete).length}
 												className="h-96 text-center"
 											>
 												<div className="flex flex-col items-center justify-center space-y-4">
@@ -413,20 +468,26 @@ export default function QuotesPage() {
 															Create your first quote to get started
 														</p>
 													</div>
-													<Button
-														onPress={() => router.push("/quotes/new")}
-														className="flex items-center gap-2"
+													<button
+														onClick={() => router.push("/quotes/new")}
+														className="group inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-all duration-200 px-4 py-2 rounded-lg bg-primary/10 hover:bg-primary/15 ring-1 ring-primary/30 hover:ring-primary/40 shadow-sm hover:shadow-md backdrop-blur-sm"
 													>
 														<Plus className="h-4 w-4" />
 														Create Your First Quote
-													</Button>
+														<span
+															aria-hidden="true"
+															className="group-hover:translate-x-1 transition-transform duration-200"
+														>
+															→
+														</span>
+													</button>
 												</div>
 											</TableCell>
 										</TableRow>
 									) : (
 										<TableRow>
 											<TableCell
-												colSpan={createColumns(router).length}
+												colSpan={createColumns(router, handleDelete).length}
 												className="h-24 text-center"
 											>
 												No results found.
@@ -469,6 +530,18 @@ export default function QuotesPage() {
 					</div>
 				</CardContent>
 			</Card>
+
+			{/* Delete Confirmation Modal */}
+			{quoteToDelete && (
+				<DeleteConfirmationModal
+					isOpen={deleteModalOpen}
+					onClose={() => setDeleteModalOpen(false)}
+					onConfirm={confirmDelete}
+					title="Delete Quote"
+					itemName={quoteToDelete.name}
+					itemType="Quote"
+				/>
+			)}
 		</div>
 	);
 }

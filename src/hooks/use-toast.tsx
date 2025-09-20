@@ -6,7 +6,9 @@ import React, {
 	useState,
 	useCallback,
 	ReactNode,
+	useEffect,
 } from "react";
+import { usePathname } from "next/navigation";
 import { AnimatePresence } from "motion/react";
 import Notification, {
 	NotificationType,
@@ -60,6 +62,21 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({
 	maxToasts = 5,
 }) => {
 	const [toasts, setToasts] = useState<Toast[]>([]);
+	const pathname = usePathname();
+
+	// Clear certain types of toasts when navigating to a different page
+	useEffect(() => {
+		// Clear success and info toasts on navigation, but keep error and warning toasts
+		// Also keep loading toasts as they might be in progress
+		setToasts((prevToasts) =>
+			prevToasts.filter(
+				(toast) =>
+					toast.type === "error" ||
+					toast.type === "warning" ||
+					toast.type === "loading"
+			)
+		);
+	}, [pathname]); // This will run whenever the route changes
 
 	const generateId = useCallback(() => {
 		return Math.random().toString(36).substring(2) + Date.now().toString(36);

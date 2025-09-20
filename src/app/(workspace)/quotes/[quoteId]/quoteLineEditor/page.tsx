@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../../../convex/_generated/api";
@@ -127,6 +127,18 @@ export default function QuoteLineEditorPage() {
 		showTotals: true,
 	});
 
+	// Initialize PDF settings from quote data
+	useEffect(() => {
+		if (quote?.pdfSettings) {
+			setPdfSettings({
+				showQuantities: quote.pdfSettings.showQuantities ?? true,
+				showUnitPrices: quote.pdfSettings.showUnitPrices ?? true,
+				showLineItemTotals: quote.pdfSettings.showLineItemTotals ?? true,
+				showTotals: quote.pdfSettings.showTotals ?? true,
+			});
+		}
+	}, [quote]);
+
 	// Tax and discount state
 	const [discount, setDiscount] = useState<{
 		enabled: boolean;
@@ -141,6 +153,21 @@ export default function QuoteLineEditorPage() {
 		enabled: false,
 		rate: 0,
 	});
+
+	// Initialize discount and tax state from quote data
+	useEffect(() => {
+		if (quote) {
+			setDiscount({
+				enabled: quote.discountEnabled || false,
+				amount: quote.discountAmount || 0,
+				type: quote.discountType || "percentage",
+			});
+			setTax({
+				enabled: quote.taxEnabled || false,
+				rate: quote.taxRate || 0,
+			});
+		}
+	}, [quote]);
 
 	// Combine saved line items with local ones
 	const allLineItems = useMemo(() => {
@@ -642,54 +669,55 @@ export default function QuoteLineEditorPage() {
 
 										{/* Discount */}
 										{discount.enabled ? (
-											<div className="space-y-2">
-												<div className="flex justify-between items-center">
-													<span className="text-sm text-gray-600 dark:text-gray-400">
-														Discount:
-													</span>
-													<div className="flex items-center gap-2">
-														<span className="text-sm font-medium text-red-600 dark:text-red-400">
-															-{formatCurrency(totals.discountAmount)}
-														</span>
-														<Button
-															intent="outline"
-															size="sq-sm"
-															onPress={handleRemoveDiscount}
-															aria-label="Remove discount"
-														>
-															<X className="h-3 w-3" />
-														</Button>
-													</div>
-												</div>
+											<div className="flex justify-between items-center">
+												<span className="text-sm text-gray-600 dark:text-gray-400">
+													Discount:
+												</span>
 												<div className="flex items-center gap-2">
-													<Input
-														type="number"
-														value={discount.amount}
-														onChange={(e) => {
-															setDiscount((prev) => ({
-																...prev,
-																amount: parseFloat(e.target.value) || 0,
-															}));
-															setHasChanges(true);
-														}}
-														className="w-20 text-right"
-														min="0"
-														step="0.01"
-													/>
-													<select
-														value={discount.type}
-														onChange={(e) => {
-															setDiscount((prev) => ({
-																...prev,
-																type: e.target.value as "percentage" | "fixed",
-															}));
-															setHasChanges(true);
-														}}
-														className="text-sm border border-input bg-background px-2 py-1 rounded"
+													<div className="flex items-center border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden">
+														<Input
+															type="number"
+															value={discount.amount}
+															onChange={(e) => {
+																setDiscount((prev) => ({
+																	...prev,
+																	amount: parseFloat(e.target.value) || 0,
+																}));
+																setHasChanges(true);
+															}}
+															className="w-20 text-right h-8 text-sm border-0 rounded-none focus:ring-0 focus:border-0"
+															min="0"
+															step="0.01"
+														/>
+														<select
+															value={discount.type}
+															onChange={(e) => {
+																setDiscount((prev) => ({
+																	...prev,
+																	type: e.target.value as
+																		| "percentage"
+																		| "fixed",
+																}));
+																setHasChanges(true);
+															}}
+															className="text-sm border-0 bg-background px-2 py-2 h-8 rounded-none focus:ring-0 focus:border-0 cursor-pointer"
+														>
+															<option value="percentage">%</option>
+															<option value="fixed">$</option>
+														</select>
+													</div>
+													<span className="text-sm font-medium text-red-600 dark:text-red-400 min-w-[60px] text-right">
+														-{formatCurrency(totals.discountAmount)}
+													</span>
+													<Button
+														intent="outline"
+														size="sq-sm"
+														onPress={handleRemoveDiscount}
+														aria-label="Remove discount"
+														className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
 													>
-														<option value="percentage">%</option>
-														<option value="fixed">$</option>
-													</select>
+														<X className="h-3 w-3" />
+													</Button>
 												</div>
 											</div>
 										) : (
@@ -710,44 +738,43 @@ export default function QuoteLineEditorPage() {
 
 										{/* Tax */}
 										{tax.enabled ? (
-											<div className="space-y-2">
-												<div className="flex justify-between items-center">
-													<span className="text-sm text-gray-600 dark:text-gray-400">
-														Tax:
-													</span>
-													<div className="flex items-center gap-2">
-														<span className="text-sm font-medium">
-															{formatCurrency(totals.taxAmount)}
-														</span>
-														<Button
-															intent="outline"
-															size="sq-sm"
-															onPress={handleRemoveTax}
-															aria-label="Remove tax"
-														>
-															<X className="h-3 w-3" />
-														</Button>
-													</div>
-												</div>
+											<div className="flex justify-between items-center">
+												<span className="text-sm text-gray-600 dark:text-gray-400">
+													Tax:
+												</span>
 												<div className="flex items-center gap-2">
-													<Input
-														type="number"
-														value={tax.rate}
-														onChange={(e) => {
-															setTax((prev) => ({
-																...prev,
-																rate: parseFloat(e.target.value) || 0,
-															}));
-															setHasChanges(true);
-														}}
-														className="w-20 text-right"
-														min="0"
-														step="0.01"
-														max="100"
-													/>
-													<span className="text-sm text-gray-600 dark:text-gray-400">
-														%
+													<div className="flex items-center border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden">
+														<Input
+															type="number"
+															value={tax.rate}
+															onChange={(e) => {
+																setTax((prev) => ({
+																	...prev,
+																	rate: parseFloat(e.target.value) || 0,
+																}));
+																setHasChanges(true);
+															}}
+															className="w-20 text-right h-8 text-sm border-0 rounded-none focus:ring-0 focus:border-0"
+															min="0"
+															step="0.01"
+															max="100"
+														/>
+														<span className="text-sm text-gray-600 dark:text-gray-400 px-2 py-2 h-8 flex items-center bg-gray-50 dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700">
+															%
+														</span>
+													</div>
+													<span className="text-sm font-medium min-w-[60px] text-right">
+														{formatCurrency(totals.taxAmount)}
 													</span>
+													<Button
+														intent="outline"
+														size="sq-sm"
+														onPress={handleRemoveTax}
+														aria-label="Remove tax"
+														className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+													>
+														<X className="h-3 w-3" />
+													</Button>
 												</div>
 											</div>
 										) : (

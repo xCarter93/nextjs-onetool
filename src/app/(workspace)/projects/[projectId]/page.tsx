@@ -6,10 +6,10 @@ import { useParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import Announcement from "@/components/ui/announcement";
 import { Badge } from "@/components/ui/badge";
-import { Avatar } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
+import ComboBox from "@/components/ui/combo-box";
 import {
 	CalendarIcon,
 	UserIcon,
@@ -22,6 +22,7 @@ import {
 	PlayIcon,
 	CheckIcon,
 } from "@heroicons/react/24/outline";
+import { StickyFormFooter } from "@/components/sticky-form-footer";
 import { useEffect, useMemo, useState } from "react";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 
@@ -71,6 +72,9 @@ export default function ProjectDetailPage() {
 		invoiceReminderEnabled: false as boolean | undefined,
 		scheduleForLater: false as boolean | undefined,
 	});
+
+	// Calendar state
+	const [calendarDate, setCalendarDate] = useState(new Date());
 
 	useEffect(() => {
 		if (project) {
@@ -301,56 +305,77 @@ export default function ProjectDetailPage() {
 		}
 	};
 
-	const getStatusActions = () => {
-		switch (project.status) {
-			case "planned":
-				return (
-					<Button
-						size="sm"
-						onClick={() => handleStatusUpdate("in-progress")}
-						isDisabled={isUpdating}
-						className="bg-green-600 hover:bg-green-700"
-					>
-						<PlayIcon className="h-4 w-4 mr-1" />
-						Start Project
-					</Button>
-				);
-			case "in-progress":
-				return (
-					<Button
-						size="sm"
-						onClick={() => handleStatusUpdate("completed")}
-						isDisabled={isUpdating}
-						className="bg-green-600 hover:bg-green-700"
-					>
-						<CheckIcon className="h-4 w-4 mr-1" />
-						Complete
-					</Button>
-				);
-			case "completed":
-				return (
-					<Button
-						size="sm"
-						intent="outline"
-						onClick={() => handleStatusUpdate("in-progress")}
-						isDisabled={isUpdating}
-					>
-						Reopen Project
-					</Button>
-				);
-			case "cancelled":
-				return (
-					<Button
-						size="sm"
-						intent="outline"
-						onClick={() => handleStatusUpdate("planned")}
-						isDisabled={isUpdating}
-					>
-						Restore Project
-					</Button>
-				);
-			default:
-				return null;
+	// Calendar helper functions
+	const getCalendarDays = (date: Date) => {
+		const year = date.getFullYear();
+		const month = date.getMonth();
+
+		// First day of the month
+		const firstDay = new Date(year, month, 1);
+		// Last day of the month
+		const lastDay = new Date(year, month + 1, 0);
+		// Day of week for first day (0 = Sunday)
+		const startingDayOfWeek = firstDay.getDay();
+		// Number of days in month
+		const daysInMonth = lastDay.getDate();
+
+		const calendarDays = [];
+
+		// Add empty cells for days before the first day of the month
+		for (let i = 0; i < startingDayOfWeek; i++) {
+			calendarDays.push(null);
+		}
+
+		// Add all days of the month
+		for (let day = 1; day <= daysInMonth; day++) {
+			calendarDays.push(day);
+		}
+
+		// Fill remaining cells to make 42 (6 rows × 7 days)
+		while (calendarDays.length < 42) {
+			calendarDays.push(null);
+		}
+
+		return calendarDays;
+	};
+
+	const handleCalendarNavigation = (direction: "prev" | "next") => {
+		setCalendarDate((prevDate) => {
+			const newDate = new Date(prevDate);
+			if (direction === "prev") {
+				newDate.setMonth(newDate.getMonth() - 1);
+			} else {
+				newDate.setMonth(newDate.getMonth() + 1);
+			}
+			return newDate;
+		});
+	};
+
+	const handleDateClick = (day: number | null) => {
+		if (!day || !isEditing) return;
+
+		const clickedDate = new Date(
+			calendarDate.getFullYear(),
+			calendarDate.getMonth(),
+			day
+		);
+		const timestamp = clickedDate.getTime();
+
+		// Set as start date if none exists, otherwise set as end date
+		if (!form.startDate) {
+			setForm((f) => ({ ...f, startDate: timestamp }));
+		} else if (!form.endDate) {
+			setForm((f) => ({ ...f, endDate: timestamp }));
+		} else if (!form.dueDate) {
+			setForm((f) => ({ ...f, dueDate: timestamp }));
+		} else {
+			// Cycle through: reset and set as start date
+			setForm((f) => ({
+				...f,
+				startDate: timestamp,
+				endDate: undefined,
+				dueDate: undefined,
+			}));
 		}
 	};
 
@@ -359,6 +384,91 @@ export default function ProjectDetailPage() {
 	const primaryProperty =
 		clientProperties?.find((property) => property.isPrimary) ||
 		clientProperties?.[0];
+
+	// Create sticky footer buttons based on current state
+	const getFooterButtons = () => {
+		const buttons = [];
+
+		// Left side buttons - Primary actions
+		if (isEditing) {
+			buttons.push({
+				label: isUpdating ? "Saving..." : "Save",
+				onClick: handleSave,
+				intent: "primary" as const,
+				disabled: isUpdating || !isDirty,
+				icon: <CheckIcon className="h-4 w-4" />,
+			});
+			buttons.push({
+				label: "Cancel",
+				onClick: () => {
+					resetForm();
+					setIsEditing(false);
+				},
+				intent: "outline" as const,
+			});
+		} else {
+			buttons.push({
+				label: "Edit",
+				onClick: () => setIsEditing(true),
+				intent: "outline" as const,
+				icon: <PencilIcon className="h-4 w-4" />,
+			});
+		}
+
+		// Right side buttons - Status actions and secondary actions
+		if (project) {
+			switch (project.status) {
+				case "planned":
+					buttons.push({
+						label: "Start Project",
+						onClick: () => handleStatusUpdate("in-progress"),
+						intent: "success" as const,
+						disabled: isUpdating,
+						icon: <PlayIcon className="h-4 w-4" />,
+						position: "right" as const,
+					});
+					break;
+				case "in-progress":
+					buttons.push({
+						label: "Complete",
+						onClick: () => handleStatusUpdate("completed"),
+						intent: "success" as const,
+						disabled: isUpdating,
+						icon: <CheckIcon className="h-4 w-4" />,
+						position: "right" as const,
+					});
+					break;
+				case "completed":
+					buttons.push({
+						label: "Reopen Project",
+						onClick: () => handleStatusUpdate("in-progress"),
+						intent: "outline" as const,
+						disabled: isUpdating,
+						position: "right" as const,
+					});
+					break;
+				case "cancelled":
+					buttons.push({
+						label: "Restore Project",
+						onClick: () => handleStatusUpdate("planned"),
+						intent: "outline" as const,
+						disabled: isUpdating,
+						position: "right" as const,
+					});
+					break;
+			}
+		}
+
+		buttons.push({
+			label: "Delete",
+			onClick: handleDeleteProject,
+			intent: "destructive" as const,
+			icon: <TrashIcon className="h-4 w-4" />,
+			position: "right" as const,
+		});
+
+		return buttons;
+	};
 
 	return (
 		<>
@@ -387,139 +497,432 @@ export default function ProjectDetailPage() {
 							</div>
 						</div>
 
-						{/* Action Buttons */}
-						<div className="flex items-center gap-2 mt-4">
-							{getStatusActions()}
-							{isEditing ? (
-								<>
-									<Button
-										size="sm"
-										onClick={handleSave}
-										isDisabled={isUpdating || !isDirty}
-									>
-										<CheckIcon className="h-4 w-4 mr-1" />
-										Save
-									</Button>
-									<Button
-										size="sm"
-										intent="outline"
-										onClick={() => {
-											resetForm();
-											setIsEditing(false);
-										}}
-									>
-										Cancel
-									</Button>
-								</>
-							) : (
-								<Button
-									size="sm"
-									intent="outline"
-									onClick={() => setIsEditing(true)}
-								>
-									<PencilIcon className="h-4 w-4 mr-1" />
-									Edit
-								</Button>
-							)}
-							<Button
-								size="sm"
-								intent="outline"
-								onClick={handleDeleteProject}
-								className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-							>
-								<TrashIcon className="h-4 w-4 mr-1" />
-								Delete
-							</Button>
-						</div>
-
 						{isEditing && isDirty && (
-							<Alert className="mt-3">
-								<AlertTitle>Unsaved changes</AlertTitle>
-								<AlertDescription>
-									You have modified this project. Save or cancel your changes.
-								</AlertDescription>
-							</Alert>
+							<Announcement
+								variant="warning"
+								className="mt-3 cursor-default"
+								disabled={true}
+							>
+								Unsaved changes - Save or cancel your changes
+							</Announcement>
 						)}
 					</div>
 
 					<div className="space-y-8">
-						{/* Client Information */}
-						<Card className="shadow-sm border-gray-200/60 dark:border-white/10">
-							<CardHeader className="pb-4">
-								<CardTitle className="flex items-center gap-2 text-xl font-semibold text-gray-900 dark:text-white">
-									<MagnifyingGlassIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-									Client Information
-								</CardTitle>
-							</CardHeader>
-							<CardContent>
-								{client && !isEditing ? (
-									<div className="flex items-center justify-between p-4 bg-gray-50 dark:bg:white/5 rounded-lg">
-										<span className="flex items-center gap-3">
-											<div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-sm text-white font-medium">
-												{client.companyName
-													.split(" ")
-													.map((n) => n[0])
-													.join("")}
+						{/* Client Information, Property Address & Contact Details */}
+						<div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+							{/* Client Information */}
+							<Card className="shadow-sm border-gray-200/60 dark:border-white/10">
+								<CardHeader className="pb-4">
+									<CardTitle className="flex items-center gap-2 text-xl font-semibold text-gray-900 dark:text-white">
+										<MagnifyingGlassIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+										Client Information
+									</CardTitle>
+								</CardHeader>
+								<CardContent className="space-y-4">
+									{/* Always show ComboBox at top */}
+									<div className="grid gap-2">
+										<label className="text-sm text-gray-600 dark:text-gray-400 text-left">
+											Selected Client
+										</label>
+										<ComboBox
+											options={
+												Array.isArray(allClients)
+													? allClients.map((c) => c.companyName)
+													: []
+											}
+											placeholder={
+												client ? client.companyName : "No client selected..."
+											}
+											disabled={!isEditing}
+											onSelect={(option) => {
+												if (isEditing) {
+													const selectedClient = Array.isArray(allClients)
+														? allClients.find((c) => c.companyName === option)
+														: null;
+													setForm((f) => ({
+														...f,
+														clientId: selectedClient
+															? selectedClient._id
+															: undefined,
+													}));
+												}
+											}}
+										/>
+									</div>
+
+									{/* Show details only when not editing and client exists */}
+									{client && !isEditing ? (
+										<div className="grid grid-cols-2 gap-4 text-sm">
+											<div>
+												<span className="text-gray-500 dark:text-gray-400">
+													Status:
+												</span>
+												<div className="flex items-center gap-2 mt-1">
+													<Badge
+														className={getStatusColor(client.status)}
+														variant="outline"
+													>
+														{client.status}
+													</Badge>
+												</div>
 											</div>
 											<div>
-												<div className="font-medium text-gray-900 dark:text-gray-400">
-													{client.companyName}
+												<span className="text-gray-500 dark:text-gray-400">
+													Type:
+												</span>
+												<div className="mt-1 text-gray-900 dark:text-white capitalize">
+													{client.clientType || "Not specified"}
 												</div>
-												<div className="text-sm text-gray-500 dark:text-gray-400">
+											</div>
+											<div>
+												<span className="text-gray-500 dark:text-gray-400">
+													Industry:
+												</span>
+												<div className="mt-1 text-gray-900 dark:text-white">
 													{client.industry || "No industry specified"}
 												</div>
 											</div>
-										</span>
-										<Button
-											intent="outline"
-											size="sm"
-											onClick={() => router.push(`/clients/${client._id}`)}
-										>
-											View Client
-										</Button>
-									</div>
-								) : (
-									<div className="p-4 border-2 border-dashed border-gray-300 dark:border-white/20 rounded-lg text-center">
-										{isEditing ? (
-											<div className="grid gap-2">
-												<label className="text-sm text-gray-600 dark:text-gray-400 text-left">
-													Select Client
-												</label>
-												<select
-													className="w-full h-11 px-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-md text-gray-900 dark:text-white"
-													value={form.clientId || ""}
-													onChange={(e) =>
-														setForm((f) => ({
-															...f,
-															clientId: (e.target.value || undefined) as
-																| Id<"clients">
-																| undefined,
-														}))
-													}
+											{client.companyDescription && (
+												<div className="col-span-2">
+													<span className="text-gray-500 dark:text-gray-400">
+														Description:
+													</span>
+													<div className="mt-1 text-gray-900 dark:text-white">
+														{client.companyDescription}
+													</div>
+												</div>
+											)}
+											{primaryContact?.email && (
+												<div>
+													<span className="text-gray-500 dark:text-gray-400">
+														Email:
+													</span>
+													<div className="mt-1">
+														<a
+															href={`mailto:${primaryContact.email}`}
+															className="text-blue-600 dark:text-blue-400 hover:underline"
+														>
+															{primaryContact.email}
+														</a>
+													</div>
+												</div>
+											)}
+											{primaryContact?.phone && (
+												<div>
+													<span className="text-gray-500 dark:text-gray-400">
+														Phone:
+													</span>
+													<div className="mt-1">
+														<a
+															href={`tel:${primaryContact.phone}`}
+															className="text-blue-600 dark:text-blue-400 hover:underline"
+														>
+															{primaryContact.phone}
+														</a>
+													</div>
+												</div>
+											)}
+											<div className="col-span-2 pt-2 border-t border-gray-200 dark:border-white/10">
+												<Button
+													intent="outline"
+													size="sm"
+													onClick={() => router.push(`/clients/${client._id}`)}
+													className="w-full"
 												>
-													<option value="">-- Select --</option>
-													{Array.isArray(allClients) &&
-														allClients.map((c) => (
-															<option key={c._id} value={c._id}>
-																{c.companyName}
-															</option>
-														))}
-												</select>
+													View Full Client Details
+												</Button>
 											</div>
-										) : (
-											<p className="text-sm text-gray-500 dark:text-gray-400">
-												No client information available
+										</div>
+									) : isEditing ? (
+										<div className="text-center py-8 text-gray-500 dark:text-gray-400">
+											<p className="text-sm">
+												Select a client above to see details
 											</p>
-										)}
-									</div>
-								)}
-							</CardContent>
-						</Card>
+										</div>
+									) : (
+										<div className="text-center py-8 text-gray-500 dark:text-gray-400">
+											<p className="text-sm">No client selected</p>
+										</div>
+									)}
+								</CardContent>
+							</Card>
 
-						{/* Project Information & Team */}
-						<div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+							{/* Property Address */}
+							<Card className="shadow-sm border-gray-200/60 dark:border-white/10">
+								<CardHeader className="pb-4">
+									<CardTitle className="flex items-center gap-2 text-xl font-semibold text-gray-900 dark:text-white">
+										<MapPinIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
+										Property Address
+									</CardTitle>
+								</CardHeader>
+								<CardContent className="space-y-4">
+									{/* Always show ComboBox at top */}
+									<div className="grid gap-2">
+										<label className="text-sm text-gray-600 dark:text-gray-400 text-left">
+											Selected Property
+										</label>
+										<ComboBox
+											options={
+												clientProperties && clientProperties.length > 0
+													? clientProperties.map((property) =>
+															property.propertyName
+																? `${property.propertyName} - ${property.streetAddress}`
+																: property.streetAddress
+														)
+													: []
+											}
+											placeholder={
+												primaryProperty
+													? primaryProperty.propertyName
+														? `${primaryProperty.propertyName} - ${primaryProperty.streetAddress}`
+														: primaryProperty.streetAddress
+													: client &&
+														  clientProperties &&
+														  clientProperties.length > 0
+														? "Select a property..."
+														: client
+															? "No properties available..."
+															: "Select a client first..."
+											}
+											disabled={!isEditing}
+											onSelect={(option) => {
+												if (isEditing && clientProperties) {
+													const selectedProperty = clientProperties.find(
+														(property) => {
+															const displayName = property.propertyName
+																? `${property.propertyName} - ${property.streetAddress}`
+																: property.streetAddress;
+															return displayName === option;
+														}
+													);
+													console.log("Selected property:", selectedProperty);
+												}
+											}}
+										/>
+									</div>
+
+									{/* Show details only when not editing and property exists */}
+									{primaryProperty && !isEditing ? (
+										<div className="grid grid-cols-2 gap-4 text-sm">
+											{primaryProperty.propertyName && (
+												<div className="col-span-2">
+													<span className="text-gray-500 dark:text-gray-400">
+														Property Name:
+													</span>
+													<div className="mt-1 text-gray-900 dark:text-white font-medium">
+														{primaryProperty.propertyName}
+													</div>
+												</div>
+											)}
+											<div>
+												<span className="text-gray-500 dark:text-gray-400">
+													Type:
+												</span>
+												<div className="mt-1 text-gray-900 dark:text-white capitalize">
+													{primaryProperty.propertyType || "Not specified"}
+												</div>
+											</div>
+											{primaryProperty.squareFootage && (
+												<div>
+													<span className="text-gray-500 dark:text-gray-400">
+														Square Footage:
+													</span>
+													<div className="mt-1 text-gray-900 dark:text-white">
+														{primaryProperty.squareFootage.toLocaleString()} sq
+														ft
+													</div>
+												</div>
+											)}
+											<div className="col-span-2">
+												<span className="text-gray-500 dark:text-gray-400">
+													Address:
+												</span>
+												<div className="mt-1 text-gray-900 dark:text-white">
+													<div className="font-medium">
+														{primaryProperty.streetAddress}
+													</div>
+													<div className="text-gray-600 dark:text-gray-400">
+														{primaryProperty.city}, {primaryProperty.state}{" "}
+														{primaryProperty.zipCode}
+														{primaryProperty.country &&
+															`, ${primaryProperty.country}`}
+													</div>
+												</div>
+											</div>
+											{primaryProperty.description && (
+												<div className="col-span-2">
+													<span className="text-gray-500 dark:text-gray-400">
+														Description:
+													</span>
+													<div className="mt-1 text-gray-900 dark:text-white">
+														{primaryProperty.description}
+													</div>
+												</div>
+											)}
+										</div>
+									) : isEditing ? (
+										<div className="text-center py-8 text-gray-500 dark:text-gray-400">
+											<p className="text-sm">
+												{client
+													? clientProperties && clientProperties.length > 0
+														? "Select a property above to see details"
+														: "No properties available for this client"
+													: "Select a client first to see properties"}
+											</p>
+										</div>
+									) : (
+										<div className="text-center py-8 text-gray-500 dark:text-gray-400">
+											<p className="text-sm">No property selected</p>
+										</div>
+									)}
+								</CardContent>
+							</Card>
+
+							{/* Contact Details */}
+							<Card className="shadow-sm border-gray-200/60 dark:border-white/10">
+								<CardHeader className="pb-4">
+									<CardTitle className="flex items-center gap-2 text-xl font-semibold text-gray-900 dark:text-white">
+										<UserIcon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+										Contact Details
+									</CardTitle>
+								</CardHeader>
+								<CardContent className="space-y-4">
+									{/* Always show ComboBox at top */}
+									<div className="grid gap-2">
+										<label className="text-sm text-gray-600 dark:text-gray-400 text-left">
+											Selected Contact
+										</label>
+										<ComboBox
+											options={
+												clientContacts && clientContacts.length > 0
+													? clientContacts.map(
+															(contact) =>
+																`${contact.firstName} ${contact.lastName}${contact.jobTitle ? ` - ${contact.jobTitle}` : ""}`
+														)
+													: []
+											}
+											placeholder={
+												primaryContact
+													? `${primaryContact.firstName} ${primaryContact.lastName}${primaryContact.jobTitle ? ` - ${primaryContact.jobTitle}` : ""}`
+													: client &&
+														  clientContacts &&
+														  clientContacts.length > 0
+														? "Select a contact..."
+														: client
+															? "No contacts available..."
+															: "Select a client first..."
+											}
+											disabled={!isEditing}
+											onSelect={(option) => {
+												if (isEditing && clientContacts) {
+													const selectedContact = clientContacts.find(
+														(contact) => {
+															const displayName = `${contact.firstName} ${contact.lastName}${contact.jobTitle ? ` - ${contact.jobTitle}` : ""}`;
+															return displayName === option;
+														}
+													);
+													console.log("Selected contact:", selectedContact);
+												}
+											}}
+										/>
+									</div>
+
+									{/* Show details only when not editing and contact exists */}
+									{primaryContact && !isEditing ? (
+										<div className="grid grid-cols-2 gap-4 text-sm">
+											<div className="col-span-2">
+												<span className="text-gray-500 dark:text-gray-400">
+													Name:
+												</span>
+												<div className="mt-1 text-gray-900 dark:text-white font-medium">
+													{primaryContact.firstName} {primaryContact.lastName}
+												</div>
+											</div>
+											{primaryContact.jobTitle && (
+												<div>
+													<span className="text-gray-500 dark:text-gray-400">
+														Job Title:
+													</span>
+													<div className="mt-1 text-gray-900 dark:text-white">
+														{primaryContact.jobTitle}
+													</div>
+												</div>
+											)}
+											{primaryContact.role && (
+												<div>
+													<span className="text-gray-500 dark:text-gray-400">
+														Role:
+													</span>
+													<div className="mt-1 text-gray-900 dark:text-white capitalize">
+														{primaryContact.role}
+													</div>
+												</div>
+											)}
+											{primaryContact.department && (
+												<div>
+													<span className="text-gray-500 dark:text-gray-400">
+														Department:
+													</span>
+													<div className="mt-1 text-gray-900 dark:text-white">
+														{primaryContact.department}
+													</div>
+												</div>
+											)}
+											{primaryContact.email && (
+												<div>
+													<span className="text-gray-500 dark:text-gray-400">
+														Email:
+													</span>
+													<div className="mt-1">
+														<a
+															href={`mailto:${primaryContact.email}`}
+															className="text-blue-600 dark:text-blue-400 hover:underline"
+														>
+															{primaryContact.email}
+														</a>
+													</div>
+												</div>
+											)}
+											{primaryContact.phone && (
+												<div>
+													<span className="text-gray-500 dark:text-gray-400">
+														Phone:
+													</span>
+													<div className="mt-1">
+														<a
+															href={`tel:${primaryContact.phone}`}
+															className="text-blue-600 dark:text-blue-400 hover:underline"
+														>
+															{primaryContact.phone}
+														</a>
+													</div>
+												</div>
+											)}
+										</div>
+									) : isEditing ? (
+										<div className="text-center py-8 text-gray-500 dark:text-gray-400">
+											<p className="text-sm">
+												{client
+													? clientContacts && clientContacts.length > 0
+														? "Select a contact above to see details"
+														: "No contacts available for this client"
+													: "Select a client first to see contacts"}
+											</p>
+										</div>
+									) : (
+										<div className="text-center py-8 text-gray-500 dark:text-gray-400">
+											<p className="text-sm">No contact selected</p>
+										</div>
+									)}
+								</CardContent>
+							</Card>
+						</div>
+
+						{/* Project Information */}
+						<div className="grid grid-cols-1 gap-6">
 							{/* Basic Project Information */}
-							<Card className="lg:col-span-2 shadow-sm border-gray-200/60 dark:border-white/10">
+							<Card className="shadow-sm border-gray-200/60 dark:border-white/10">
 								<CardHeader className="pb-4">
 									<CardTitle className="text-xl font-semibold text-gray-900 dark:text-white">
 										Project Information
@@ -606,60 +1009,9 @@ export default function ProjectDetailPage() {
 												)}
 											</div>
 										</div>
-									</div>
-								</CardContent>
-							</Card>
 
-							{/* Team */}
-							<Card className="shadow-sm border-gray-200/60 dark:border-white/10">
-								<CardHeader className="pb-4">
-									<CardTitle className="text-xl font-semibold text-gray-900 dark:text-white">
-										Team
-									</CardTitle>
-								</CardHeader>
-								<CardContent className="space-y-4">
-									{project.salespersonId && (
-										<div>
-											<label className="text-sm font-medium text-gray-500 dark:text-gray-400">
-												Salesperson
-											</label>
-											<div className="mt-2 flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 px-3 py-2 rounded-lg">
-												<div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-xs text-white font-medium">
-													SP
-												</div>
-												<span className="text-sm text-gray-900 dark:text-white font-medium">
-													Salesperson
-												</span>
-											</div>
-										</div>
-									)}
-
-									{project.assignedUserIds &&
-										project.assignedUserIds.length > 0 && (
-											<div>
-												<label className="text-sm font-medium text-gray-500 dark:text-gray-400">
-													Assigned Team
-												</label>
-												<div className="mt-2 space-y-2">
-													{project.assignedUserIds.map((userId, index) => (
-														<div
-															key={userId}
-															className="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 px-3 py-2 rounded-lg"
-														>
-															<div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center text-xs text-white font-medium">
-																T{index + 1}
-															</div>
-															<span className="text-sm text-gray-900 dark:text-white font-medium">
-																Team Member {index + 1}
-															</span>
-														</div>
-													))}
-												</div>
-											</div>
-										)}
-
-									{project.invoiceReminderEnabled && (
-										<div className="flex items-center gap-3">
+										{/* Invoice Reminder Checkbox */}
+										<div className="flex items-center gap-3 pt-4 border-t border-gray-200 dark:border-white/10">
 											<input
 												type="checkbox"
 												checked={
@@ -680,114 +1032,7 @@ export default function ProjectDetailPage() {
 												Remind me to invoice when I close the project
 											</label>
 										</div>
-									)}
-								</CardContent>
-							</Card>
-						</div>
-
-						{/* Property Address & Contact Details */}
-						<div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-							{/* Property Address */}
-							<Card className="shadow-sm border-gray-200/60 dark:border-white/10">
-								<CardHeader className="pb-4">
-									<CardTitle className="flex items-center gap-2 text-xl font-semibold text-gray-900 dark:text-white">
-										<MapPinIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
-										Property Address
-									</CardTitle>
-								</CardHeader>
-								<CardContent className="space-y-4">
-									{primaryProperty ? (
-										<div className="p-4 bg-gray-50 dark:bg-white/5 rounded-lg">
-											<p className="text-base text-gray-900 dark:text-white font-medium">
-												{primaryProperty.streetAddress}
-											</p>
-											<p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-												{primaryProperty.city}, {primaryProperty.state}{" "}
-												{primaryProperty.zipCode}
-											</p>
-											{primaryProperty.propertyType && (
-												<Badge variant="outline" className="mt-2">
-													{primaryProperty.propertyType}
-												</Badge>
-											)}
-										</div>
-									) : (
-										<div className="p-4 border-2 border-dashed border-gray-300 dark:border-white/20 rounded-lg text-center">
-											<p className="text-sm text-gray-500 dark:text-gray-400">
-												No property address available
-											</p>
-										</div>
-									)}
-								</CardContent>
-							</Card>
-
-							{/* Contact Details */}
-							<Card className="shadow-sm border-gray-200/60 dark:border-white/10">
-								<CardHeader className="pb-4">
-									<CardTitle className="flex items-center gap-2 text-xl font-semibold text-gray-900 dark:text-white">
-										<UserIcon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-										Contact Details
-									</CardTitle>
-								</CardHeader>
-								<CardContent className="space-y-4">
-									{primaryContact ? (
-										<div className="p-4 bg-gray-50 dark:bg-white/5 rounded-lg space-y-3">
-											<div className="flex items-center gap-3">
-												<Avatar className="h-10 w-10">
-													<div className="bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-sm text-white font-medium h-full w-full">
-														{(
-															primaryContact.firstName[0] +
-															primaryContact.lastName[0]
-														).toUpperCase()}
-													</div>
-												</Avatar>
-												<div className="flex-1">
-													<p className="font-medium text-gray-900 dark:text-white">
-														{primaryContact.firstName} {primaryContact.lastName}
-													</p>
-													{primaryContact.jobTitle && (
-														<p className="text-sm text-gray-500 dark:text-gray-400">
-															{primaryContact.jobTitle}
-														</p>
-													)}
-												</div>
-											</div>
-											<div className="space-y-2">
-												{primaryContact.email && (
-													<div className="flex items-center gap-2">
-														<span className="text-sm text-gray-500 dark:text-gray-400 min-w-[60px]">
-															Email:
-														</span>
-														<a
-															href={`mailto:${primaryContact.email}`}
-															className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
-														>
-															{primaryContact.email}
-														</a>
-													</div>
-												)}
-												{primaryContact.phone && (
-													<div className="flex items-center gap-2">
-														<span className="text-sm text-gray-500 dark:text-gray-400 min-w-[60px]">
-															Phone:
-														</span>
-														<a
-															href={`tel:${primaryContact.phone}`}
-															className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
-														>
-															{primaryContact.phone}
-														</a>
-													</div>
-												)}
-											</div>
-										</div>
-									) : (
-										<div className="p-4 border-2 border-dashed border-gray-300 dark:border-white/20 rounded-lg text-center">
-											<p className="text-sm text-gray-500 dark:text-gray-400">
-												No contact information available
-											</p>
-										</div>
-									)}
+									</div>
 								</CardContent>
 							</Card>
 						</div>
@@ -920,84 +1165,188 @@ export default function ProjectDetailPage() {
 												Scheduled for later
 											</label>
 										</div>
-
-										{/* Invoicing */}
-										<div className="pt-4 border-t border-gray-200 dark:border-white/10">
-											<h4 className="text-lg font-medium text-gray-900 dark:text-white mb-3">
-												Invoicing
-											</h4>
-											<div className="flex items-center gap-3">
-												<input
-													type="checkbox"
-													checked={
-														!!(isEditing
-															? form.invoiceReminderEnabled
-															: project.invoiceReminderEnabled)
-													}
-													onChange={(e) =>
-														setForm((f) => ({
-															...f,
-															invoiceReminderEnabled: e.target.checked,
-														}))
-													}
-													readOnly={!isEditing}
-													className="h-4 w-4 rounded border-gray-300 dark:border-white/10 text-blue-600 dark:text-indigo-500"
-												/>
-												<label className="text-sm text-gray-900 dark:text-white">
-													Remind me to invoice when I close the project
-												</label>
-											</div>
-										</div>
 									</div>
 
-									{/* Project Stats */}
+									{/* Project Timeline Calendar */}
 									<div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/10 rounded-xl p-6 shadow-sm">
-										<h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-											Project Statistics
-										</h3>
-										<div className="space-y-3">
-											<div className="flex justify-between">
-												<span className="text-sm text-gray-500 dark:text-gray-400">
-													Tasks
-												</span>
-												<span className="text-sm font-medium text-gray-900 dark:text-white">
-													{projectTasks?.length || 0}
-												</span>
+										<div className="flex items-center justify-between mb-6">
+											<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+												{calendarDate.toLocaleDateString("en-US", {
+													month: "long",
+													year: "numeric",
+												})}
+											</h3>
+											<div className="flex gap-2">
+												<Button
+													intent="outline"
+													size="sm"
+													onClick={() => handleCalendarNavigation("prev")}
+												>
+													<svg
+														className="w-4 h-4 mr-1"
+														fill="none"
+														stroke="currentColor"
+														viewBox="0 0 24 24"
+													>
+														<path
+															strokeLinecap="round"
+															strokeLinejoin="round"
+															strokeWidth="2"
+															d="M15 19l-7-7 7-7"
+														/>
+													</svg>
+												</Button>
+												<Button
+													intent="outline"
+													size="sm"
+													onClick={() => handleCalendarNavigation("next")}
+												>
+													<svg
+														className="w-4 h-4 ml-1"
+														fill="none"
+														stroke="currentColor"
+														viewBox="0 0 24 24"
+													>
+														<path
+															strokeLinecap="round"
+															strokeLinejoin="round"
+															strokeWidth="2"
+															d="M9 5l7 7-7 7"
+														/>
+													</svg>
+												</Button>
 											</div>
-											<div className="flex justify-between">
-												<span className="text-sm text-gray-500 dark:text-gray-400">
-													Quotes
-												</span>
-												<span className="text-sm font-medium text-gray-900 dark:text-white">
-													{projectQuotes?.length || 0}
-												</span>
-											</div>
-											<div className="border-t border-gray-200 dark:border-white/10 pt-3">
-												<div className="flex justify-between">
-													<span className="text-sm text-gray-500 dark:text-gray-400">
-														Created
-													</span>
-													<span className="text-sm font-medium text-gray-900 dark:text-white">
-														{formatDate(project._creationTime)}
+										</div>
+										<div className="grid grid-cols-7 gap-1">
+											{["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(
+												(day) => (
+													<div
+														key={day}
+														className="text-center text-xs font-medium text-gray-500 dark:text-gray-400 py-3 border-b border-gray-100 dark:border-white/5"
+													>
+														{day}
+													</div>
+												)
+											)}
+
+											{/* Calendar Days */}
+											{getCalendarDays(calendarDate).map((day, i) => {
+												const isCurrentMonth = day !== null;
+												const today = new Date();
+												const isToday =
+													isCurrentMonth &&
+													day === today.getDate() &&
+													calendarDate.getMonth() === today.getMonth() &&
+													calendarDate.getFullYear() === today.getFullYear();
+
+												// Check if this day has project dates
+												let isStartDate = false;
+												let isEndDate = false;
+												let isDueDate = false;
+
+												if (day && project.startDate) {
+													const startDateObj = new Date(project.startDate);
+													isStartDate =
+														day === startDateObj.getDate() &&
+														calendarDate.getMonth() ===
+															startDateObj.getMonth() &&
+														calendarDate.getFullYear() ===
+															startDateObj.getFullYear();
+												}
+
+												if (day && project.endDate) {
+													const endDateObj = new Date(project.endDate);
+													isEndDate =
+														day === endDateObj.getDate() &&
+														calendarDate.getMonth() === endDateObj.getMonth() &&
+														calendarDate.getFullYear() ===
+															endDateObj.getFullYear();
+												}
+
+												if (day && project.dueDate) {
+													const dueDateObj = new Date(project.dueDate);
+													isDueDate =
+														day === dueDateObj.getDate() &&
+														calendarDate.getMonth() === dueDateObj.getMonth() &&
+														calendarDate.getFullYear() ===
+															dueDateObj.getFullYear();
+												}
+
+												const hasProjectEvent =
+													isStartDate || isEndDate || isDueDate;
+												const isClickable = isEditing && isCurrentMonth;
+
+												return (
+													<div
+														key={i}
+														onClick={() => handleDateClick(day)}
+														className={`
+															relative h-10 flex items-center justify-center text-sm transition-all duration-200
+															${isClickable ? "cursor-pointer" : "cursor-default"}
+															${
+																isCurrentMonth
+																	? "text-gray-900 dark:text-white"
+																	: "text-gray-300 dark:text-gray-600"
+															}
+															${
+																isClickable && !hasProjectEvent
+																	? "hover:bg-blue-50 dark:hover:bg-blue-900/30"
+																	: ""
+															}
+															${hasProjectEvent ? "bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 font-medium" : ""}
+															${
+																isToday && !hasProjectEvent
+																	? "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-lg font-medium"
+																	: ""
+															}
+														`}
+														title={
+															isStartDate
+																? "Project Start"
+																: isEndDate
+																	? "Project End"
+																	: isDueDate
+																		? "Due Date"
+																		: isClickable
+																			? "Click to set date"
+																			: ""
+														}
+													>
+														{day || ""}
+														{hasProjectEvent && (
+															<div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-white rounded-full"></div>
+														)}
+													</div>
+												);
+											})}
+										</div>
+
+										{/* Calendar Legend */}
+										<div className="flex items-center justify-center gap-6 mt-4 pt-4 border-t border-gray-200 dark:border-white/10">
+											{project.startDate && (
+												<div className="flex items-center gap-2">
+													<div className="w-3 h-3 bg-blue-600 rounded"></div>
+													<span className="text-xs text-gray-500 dark:text-gray-400">
+														Start: {formatDate(project.startDate)}
 													</span>
 												</div>
-											</div>
-											<div className="flex justify-between">
-												<span className="text-sm text-gray-500 dark:text-gray-400">
-													Status
-												</span>
-												<Badge className={getStatusColor(project.status)}>
-													{formatStatus(project.status)}
-												</Badge>
-											</div>
-											<div className="flex justify-between">
-												<span className="text-sm text-gray-500 dark:text-gray-400">
-													Type
-												</span>
-												<span className="text-sm font-medium text-gray-900 dark:text-white capitalize">
-													{project.projectType}
-												</span>
-											</div>
+											)}
+											{project.endDate && (
+												<div className="flex items-center gap-2">
+													<div className="w-3 h-3 bg-blue-600 rounded"></div>
+													<span className="text-xs text-gray-500 dark:text-gray-400">
+														End: {formatDate(project.endDate)}
+													</span>
+												</div>
+											)}
+											{project.dueDate && (
+												<div className="flex items-center gap-2">
+													<div className="w-3 h-3 bg-blue-600 rounded"></div>
+													<span className="text-xs text-gray-500 dark:text-gray-400">
+														Due: {formatDate(project.dueDate)}
+													</span>
+												</div>
+											)}
 										</div>
 									</div>
 								</div>
@@ -1173,162 +1522,10 @@ export default function ProjectDetailPage() {
 								</CardContent>
 							</Card>
 						</div>
-
-						{/* Calendar View */}
-						<Card className="shadow-sm border-gray-200/60 dark:border-white/10">
-							<CardHeader className="pb-4">
-								<CardTitle className="flex items-center gap-2 text-xl font-semibold text-gray-900 dark:text-white">
-									<CalendarIcon className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-									Project Timeline
-								</CardTitle>
-							</CardHeader>
-							<CardContent>
-								<div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/10 rounded-xl p-6 shadow-sm">
-									<div className="flex items-center justify-between mb-6">
-										<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-											{new Date().toLocaleDateString("en-US", {
-												month: "long",
-												year: "numeric",
-											})}
-										</h3>
-										<div className="flex gap-2">
-											<Button intent="outline" size="sm">
-												<svg
-													className="w-4 h-4 mr-1"
-													fill="none"
-													stroke="currentColor"
-													viewBox="0 0 24 24"
-												>
-													<path
-														strokeLinecap="round"
-														strokeLinejoin="round"
-														strokeWidth="2"
-														d="M15 19l-7-7 7-7"
-													/>
-												</svg>
-											</Button>
-											<Button intent="outline" size="sm">
-												<svg
-													className="w-4 h-4 ml-1"
-													fill="none"
-													stroke="currentColor"
-													viewBox="0 0 24 24"
-												>
-													<path
-														strokeLinecap="round"
-														strokeLinejoin="round"
-														strokeWidth="2"
-														d="M9 5l7 7-7 7"
-													/>
-												</svg>
-											</Button>
-										</div>
-									</div>
-									<div className="grid grid-cols-7 gap-1">
-										{["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(
-											(day) => (
-												<div
-													key={day}
-													className="text-center text-xs font-medium text-gray-500 dark:text-gray-400 py-3 border-b border-gray-100 dark:border-white/5"
-												>
-													{day}
-												</div>
-											)
-										)}
-
-										{/* Calendar Days */}
-										{Array.from({ length: 35 }, (_, i) => {
-											const day = i - 5;
-											const isCurrentMonth = day > 0 && day <= 31;
-											const today = new Date().getDate();
-											const isToday = day === today;
-
-											// Check if this day has project dates
-											const startDay = project.startDate
-												? new Date(project.startDate).getDate()
-												: null;
-											const endDay = project.endDate
-												? new Date(project.endDate).getDate()
-												: null;
-											const dueDay = project.dueDate
-												? new Date(project.dueDate).getDate()
-												: null;
-
-											const isStartDate = day === startDay;
-											const isEndDate = day === endDay;
-											const isDueDate = day === dueDay;
-											const hasProjectEvent =
-												isStartDate || isEndDate || isDueDate;
-
-											return (
-												<div
-													key={i}
-													className={`
-														relative h-10 flex items-center justify-center text-sm cursor-pointer transition-all duration-200
-														${
-															isCurrentMonth
-																? "text-gray-900 dark:text-white hover:bg-blue-50 dark:hover:bg-blue-900/30"
-																: "text-gray-300 dark:text-gray-600"
-														}
-														${hasProjectEvent ? "bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 font-medium" : ""}
-														${
-															isToday && !hasProjectEvent
-																? "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-lg font-medium"
-																: ""
-														}
-													`}
-													title={
-														isStartDate
-															? "Project Start"
-															: isEndDate
-																? "Project End"
-																: isDueDate
-																	? "Due Date"
-																	: ""
-													}
-												>
-													{isCurrentMonth ? day : ""}
-													{hasProjectEvent && (
-														<div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-white rounded-full"></div>
-													)}
-												</div>
-											);
-										})}
-									</div>
-
-									{/* Calendar Legend */}
-									<div className="flex items-center justify-center gap-6 mt-4 pt-4 border-t border-gray-200 dark:border-white/10">
-										{project.startDate && (
-											<div className="flex items-center gap-2">
-												<div className="w-3 h-3 bg-blue-600 rounded"></div>
-												<span className="text-xs text-gray-500 dark:text-gray-400">
-													Start: {formatDate(project.startDate)}
-												</span>
-											</div>
-										)}
-										{project.endDate && (
-											<div className="flex items-center gap-2">
-												<div className="w-3 h-3 bg-blue-600 rounded"></div>
-												<span className="text-xs text-gray-500 dark:text-gray-400">
-													End: {formatDate(project.endDate)}
-												</span>
-											</div>
-										)}
-										{project.dueDate && (
-											<div className="flex items-center gap-2">
-												<div className="w-3 h-3 bg-blue-600 rounded"></div>
-												<span className="text-xs text-gray-500 dark:text-gray-400">
-													Due: {formatDate(project.dueDate)}
-												</span>
-											</div>
-										)}
-									</div>
-								</div>
-							</CardContent>
-						</Card>
 					</div>
 				</div>
 			</div>
+			<StickyFormFooter buttons={getFooterButtons()} />
 		</>
 	);
 }
