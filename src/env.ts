@@ -7,14 +7,16 @@ export const env = createEnv({
 		CLERK_WEBHOOK_SECRET: z.string().min(1),
 	},
 	client: {
-		NEXT_PUBLIC_CONVEX_URL: z.string().min(1),
+		NEXT_PUBLIC_CONVEX_URL_DEV: z.string().min(1),
+		NEXT_PUBLIC_CONVEX_URL_PROD: z.string().min(1),
 		NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().min(1),
 		NEXT_PUBLIC_CLERK_FRONTEND_API_URL: z.string().min(1),
 	},
 	experimental__runtimeEnv: {
 		NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:
 			process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
-		NEXT_PUBLIC_CONVEX_URL: process.env.NEXT_PUBLIC_CONVEX_URL,
+		NEXT_PUBLIC_CONVEX_URL_DEV: process.env.NEXT_PUBLIC_CONVEX_URL_DEV,
+		NEXT_PUBLIC_CONVEX_URL_PROD: process.env.NEXT_PUBLIC_CONVEX_URL_PROD,
 		NEXT_PUBLIC_CLERK_FRONTEND_API_URL:
 			process.env.NEXT_PUBLIC_CLERK_FRONTEND_API_URL,
 	},
