@@ -1,7 +1,7 @@
 import { query, mutation, QueryCtx, MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
-import { getCurrentUserOrgId } from "./lib/auth";
+import { getCurrentUserOrgIdOptional, getCurrentUserOrgId } from "./lib/auth";
 import { ActivityHelpers } from "./lib/activities";
 import { DateUtils } from "./lib/shared";
 
@@ -19,7 +19,10 @@ async function getTaskWithOrgValidation(
 	ctx: QueryCtx | MutationCtx,
 	id: Id<"tasks">
 ): Promise<Doc<"tasks"> | null> {
-	const userOrgId = await getCurrentUserOrgId(ctx);
+	const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+	if (!userOrgId) {
+		return null;
+	}
 	const task = await ctx.db.get(id);
 
 	if (!task) {
@@ -54,7 +57,10 @@ async function validateClientAccess(
 	ctx: QueryCtx | MutationCtx,
 	clientId: Id<"clients">
 ): Promise<void> {
-	const userOrgId = await getCurrentUserOrgId(ctx);
+	const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+	if (!userOrgId) {
+		throw new Error("User is not associated with an organization");
+	}
 	const client = await ctx.db.get(clientId);
 
 	if (!client) {
@@ -73,7 +79,10 @@ async function validateProjectAccess(
 	ctx: QueryCtx | MutationCtx,
 	projectId: Id<"projects">
 ): Promise<void> {
-	const userOrgId = await getCurrentUserOrgId(ctx);
+	const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+	if (!userOrgId) {
+		throw new Error("User is not associated with an organization");
+	}
 	const project = await ctx.db.get(projectId);
 
 	if (!project) {
@@ -92,7 +101,10 @@ async function validateUserAccess(
 	ctx: QueryCtx | MutationCtx,
 	userId: Id<"users">
 ): Promise<void> {
-	const userOrgId = await getCurrentUserOrgId(ctx);
+	const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+	if (!userOrgId) {
+		throw new Error("User is not associated with an organization");
+	}
 	const user = await ctx.db.get(userId);
 
 	if (!user) {
@@ -203,7 +215,10 @@ export const list = query({
 		dateTo: v.optional(v.number()),
 	},
 	handler: async (ctx, args): Promise<TaskDocument[]> => {
-		const userOrgId = await getCurrentUserOrgId(ctx);
+		const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+		if (!userOrgId) {
+			return [];
+		}
 
 		let tasks: TaskDocument[];
 
@@ -292,12 +307,14 @@ export const create = mutation({
 			v.literal("completed"),
 			v.literal("cancelled")
 		),
-		priority: v.optional(v.union(
-			v.literal("low"),
-			v.literal("medium"),
-			v.literal("high"),
-			v.literal("urgent")
-		)),
+		priority: v.optional(
+			v.union(
+				v.literal("low"),
+				v.literal("medium"),
+				v.literal("high"),
+				v.literal("urgent")
+			)
+		),
 		repeat: v.optional(
 			v.union(
 				v.literal("none"),
@@ -383,12 +400,14 @@ export const update = mutation({
 				v.literal("cancelled")
 			)
 		),
-		priority: v.optional(v.union(
-			v.literal("low"),
-			v.literal("medium"),
-			v.literal("high"),
-			v.literal("urgent")
-		)),
+		priority: v.optional(
+			v.union(
+				v.literal("low"),
+				v.literal("medium"),
+				v.literal("high"),
+				v.literal("urgent")
+			)
+		),
 		repeat: v.optional(
 			v.union(
 				v.literal("none"),
@@ -521,7 +540,10 @@ export const search = query({
 		assigneeUserId: v.optional(v.id("users")),
 	},
 	handler: async (ctx, args): Promise<TaskDocument[]> => {
-		const userOrgId = await getCurrentUserOrgId(ctx);
+		const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+		if (!userOrgId) {
+			return [];
+		}
 		let tasks = await ctx.db
 			.query("tasks")
 			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
@@ -563,7 +585,22 @@ export const search = query({
 export const getStats = query({
 	args: {},
 	handler: async (ctx): Promise<TaskStats> => {
-		const userOrgId = await getCurrentUserOrgId(ctx);
+		const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+		if (!userOrgId) {
+			return {
+				total: 0,
+				byStatus: {
+					pending: 0,
+					inProgress: 0,
+					completed: 0,
+					cancelled: 0,
+				},
+				todayTasks: 0,
+				overdue: 0,
+				thisWeek: 0,
+				recurring: 0,
+			};
+		}
 		const tasks = await ctx.db
 			.query("tasks")
 			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
@@ -615,7 +652,10 @@ export const getStats = query({
 			}
 
 			// Count overdue tasks
-			if (task.date < today && (task.status === "pending" || task.status === "in-progress")) {
+			if (
+				task.date < today &&
+				(task.status === "pending" || task.status === "in-progress")
+			) {
 				stats.overdue++;
 			}
 
@@ -670,7 +710,10 @@ export const getToday = query({
 export const getOverdue = query({
 	args: { assigneeUserId: v.optional(v.id("users")) },
 	handler: async (ctx, args): Promise<TaskDocument[]> => {
-		const userOrgId = await getCurrentUserOrgId(ctx);
+		const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+		if (!userOrgId) {
+			return [];
+		}
 		const today = DateUtils.startOfDay(Date.now());
 
 		let tasks = await ctx.db
@@ -679,7 +722,9 @@ export const getOverdue = query({
 			.collect();
 
 		// Only include pending and in-progress tasks (not completed or cancelled)
-		tasks = tasks.filter((task) => task.status === "pending" || task.status === "in-progress");
+		tasks = tasks.filter(
+			(task) => task.status === "pending" || task.status === "in-progress"
+		);
 
 		// Filter by assignee if specified
 		if (args.assigneeUserId) {
@@ -697,12 +742,15 @@ export const getOverdue = query({
  * Get upcoming tasks (due within the next 7 days) for dashboard/home page
  */
 export const getUpcoming = query({
-	args: { 
+	args: {
 		assigneeUserId: v.optional(v.id("users")),
-		daysAhead: v.optional(v.number()) // Default to 7 days if not specified
+		daysAhead: v.optional(v.number()), // Default to 7 days if not specified
 	},
 	handler: async (ctx, args): Promise<TaskDocument[]> => {
-		const userOrgId = await getCurrentUserOrgId(ctx);
+		const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+		if (!userOrgId) {
+			return [];
+		}
 		const today = DateUtils.startOfDay(Date.now());
 		const daysAhead = args.daysAhead || 7;
 		const futureDate = DateUtils.addDays(today, daysAhead);
@@ -715,8 +763,8 @@ export const getUpcoming = query({
 			.collect();
 
 		// Only include pending and in-progress tasks
-		tasks = tasks.filter((task) => 
-			task.status === "pending" || task.status === "in-progress"
+		tasks = tasks.filter(
+			(task) => task.status === "pending" || task.status === "in-progress"
 		);
 
 		// Filter by assignee if specified
@@ -733,21 +781,21 @@ export const getUpcoming = query({
 			if (a.date !== b.date) {
 				return a.date - b.date;
 			}
-			
+
 			// Then by priority (urgent -> high -> medium -> low)
 			const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
 			const aPriority = priorityOrder[a.priority || "medium"];
 			const bPriority = priorityOrder[b.priority || "medium"];
-			
+
 			if (aPriority !== bPriority) {
 				return bPriority - aPriority; // Higher priority first
 			}
-			
+
 			// Finally by start time if available
 			if (a.startTime && b.startTime) {
 				return a.startTime.localeCompare(b.startTime);
 			}
-			
+
 			return a._creationTime - b._creationTime;
 		});
 	},
@@ -757,7 +805,7 @@ export const getUpcoming = query({
  * Get tasks assigned to a specific user
  */
 export const getByUser = query({
-	args: { 
+	args: {
 		userId: v.id("users"),
 		status: v.optional(
 			v.union(
@@ -767,11 +815,14 @@ export const getByUser = query({
 				v.literal("cancelled")
 			)
 		),
-		includeCompleted: v.optional(v.boolean()) // Whether to include completed tasks
+		includeCompleted: v.optional(v.boolean()), // Whether to include completed tasks
 	},
 	handler: async (ctx, args): Promise<TaskDocument[]> => {
-		const userOrgId = await getCurrentUserOrgId(ctx);
-		
+		const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+		if (!userOrgId) {
+			return [];
+		}
+
 		// Validate the user exists and belongs to the same org
 		await validateUserAccess(ctx, args.userId);
 
@@ -788,8 +839,8 @@ export const getByUser = query({
 			tasks = tasks.filter((task) => task.status === args.status);
 		} else if (!args.includeCompleted) {
 			// By default, exclude completed and cancelled tasks
-			tasks = tasks.filter((task) => 
-				task.status === "pending" || task.status === "in-progress"
+			tasks = tasks.filter(
+				(task) => task.status === "pending" || task.status === "in-progress"
 			);
 		}
 
@@ -799,21 +850,21 @@ export const getByUser = query({
 			if (a.date !== b.date) {
 				return a.date - b.date;
 			}
-			
+
 			// Then by priority (urgent -> high -> medium -> low)
 			const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
 			const aPriority = priorityOrder[a.priority || "medium"];
 			const bPriority = priorityOrder[b.priority || "medium"];
-			
+
 			if (aPriority !== bPriority) {
 				return bPriority - aPriority; // Higher priority first
 			}
-			
+
 			// Finally by start time if available
 			if (a.startTime && b.startTime) {
 				return a.startTime.localeCompare(b.startTime);
 			}
-			
+
 			return a._creationTime - b._creationTime;
 		});
 	},
