@@ -352,8 +352,9 @@ export const getClientsStats = query({
 		const userOrgId = await getCurrentUserOrgIdOptional(ctx);
 		if (!userOrgId) {
 			return {
-				current: 0,
-				previous: 0,
+				total: 0,
+				thisMonth: 0,
+				lastMonth: 0,
 				change: 0,
 				changeType: "neutral" as const,
 			};
@@ -411,7 +412,7 @@ export const getRevenueGoalProgress = query({
 	}> => {
 		const userOrgId = await getCurrentUserOrgIdOptional(ctx);
 		if (!userOrgId) {
-			return { current: 0, target: 0, isOnTrack: false };
+			return { percentage: 0, current: 0, target: 0, isOnTrack: false };
 		}
 
 		// Get organization to fetch revenue target
