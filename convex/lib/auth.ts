@@ -45,6 +45,29 @@ export async function getCurrentUserOrgId(ctx: QueryCtx | MutationCtx) {
 }
 
 /**
+ * Get the current user's organization ID, returning null if not found (new user-friendly version)
+ */
+export async function getCurrentUserOrgIdOptional(ctx: QueryCtx | MutationCtx) {
+	const user = await getCurrentUser(ctx);
+	if (!user || !user.organizationId) {
+		return null;
+	}
+	return user.organizationId;
+}
+
+/**
+ * Get the current user's organization ID, returning null if user is not authenticated or has no org
+ */
+export async function getCurrentUserOrgIdSafe(ctx: QueryCtx | MutationCtx) {
+	try {
+		const user = await getCurrentUser(ctx);
+		return user?.organizationId || null;
+	} catch {
+		return null;
+	}
+}
+
+/**
  * Ensure the current user has access to the specified organization
  */
 export async function validateOrgAccess(
@@ -52,6 +75,23 @@ export async function validateOrgAccess(
 	orgId: string
 ) {
 	const userOrgId = await getCurrentUserOrgId(ctx);
+	if (userOrgId !== orgId) {
+		throw new Error("User does not have access to this organization");
+	}
+	return userOrgId;
+}
+
+/**
+ * Validate organization access optionally - returns null if user has no org instead of throwing
+ */
+export async function validateOrgAccessOptional(
+	ctx: QueryCtx | MutationCtx,
+	orgId: string
+) {
+	const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+	if (!userOrgId) {
+		return null;
+	}
 	if (userOrgId !== orgId) {
 		throw new Error("User does not have access to this organization");
 	}

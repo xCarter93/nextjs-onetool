@@ -7,7 +7,7 @@ import {
 } from "./_generated/server";
 import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
-import { getCurrentUserOrgId } from "./lib/auth";
+import { getCurrentUserOrgIdOptional, getCurrentUserOrgId } from "./lib/auth";
 import { ActivityHelpers } from "./lib/activities";
 
 /**
@@ -24,7 +24,10 @@ async function getClientWithOrgValidation(
 	ctx: QueryCtx | MutationCtx,
 	id: Id<"clients">
 ): Promise<Doc<"clients"> | null> {
-	const userOrgId = await getCurrentUserOrgId(ctx);
+	const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+	if (!userOrgId) {
+		return null;
+	}
 	const client = await ctx.db.get(id);
 
 	if (!client) {
@@ -60,7 +63,10 @@ async function listClientsForOrg(
 	indexName?: "by_org" | "by_status",
 	includeArchived: boolean = false
 ): Promise<Doc<"clients">[]> {
-	const userOrgId = await getCurrentUserOrgId(ctx);
+	const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+	if (!userOrgId) {
+		return [];
+	}
 
 	if (indexName) {
 		const clients = await ctx.db
@@ -178,7 +184,10 @@ export const list = query({
 export const listArchived = query({
 	args: {},
 	handler: async (ctx): Promise<ClientDocument[]> => {
-		const userOrgId = await getCurrentUserOrgId(ctx);
+		const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+		if (!userOrgId) {
+			return [];
+		}
 
 		return await ctx.db
 			.query("clients")
@@ -745,7 +754,10 @@ export const getRecentActivity = query({
 		const limit = args.limit || 10;
 
 		// Get user's org ID first
-		const userOrgId = await getCurrentUserOrgId(ctx);
+		const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+		if (!userOrgId) {
+			return [];
+		}
 
 		// Get recent client-related activities
 		const activities = await ctx.db
@@ -790,7 +802,10 @@ export const listWithProjectCounts = query({
 
 		// Get clients based on status filter
 		let clients: Doc<"clients">[];
-		const userOrgId = await getCurrentUserOrgId(ctx);
+		const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+		if (!userOrgId) {
+			return [];
+		}
 
 		if (args.status) {
 			// Use the by_status index to get clients with specific status

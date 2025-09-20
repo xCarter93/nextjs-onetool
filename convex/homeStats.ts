@@ -1,5 +1,5 @@
 import { query } from "./_generated/server";
-import { getCurrentUserOrgId } from "./lib/auth";
+import { getCurrentUserOrgIdOptional } from "./lib/auth";
 import { DateUtils } from "./lib/shared";
 
 /**
@@ -56,7 +56,52 @@ export interface HomeStats {
 export const getHomeStats = query({
 	args: {},
 	handler: async (ctx): Promise<HomeStats> => {
-		const userOrgId = await getCurrentUserOrgId(ctx);
+		const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+
+		// Return empty stats for users without organizations
+		if (!userOrgId) {
+			return {
+				totalClients: {
+					current: 0,
+					previous: 0,
+					change: 0,
+					changeType: "neutral" as const,
+				},
+				completedProjects: {
+					current: 0,
+					previous: 0,
+					change: 0,
+					changeType: "neutral" as const,
+					totalValue: 0,
+				},
+				approvedQuotes: {
+					current: 0,
+					previous: 0,
+					change: 0,
+					changeType: "neutral" as const,
+					totalValue: 0,
+				},
+				invoicesSent: {
+					current: 0,
+					previous: 0,
+					change: 0,
+					changeType: "neutral" as const,
+					totalValue: 0,
+					outstanding: 0,
+				},
+				revenueGoal: {
+					percentage: 0,
+					current: 0,
+					target: 0,
+					previousPercentage: 0,
+					changePercentage: 0,
+				},
+				pendingTasks: {
+					total: 0,
+					dueThisWeek: 0,
+				},
+			};
+		}
 		const now = Date.now();
 		const startOfThisMonth = new Date(new Date(now).setDate(1));
 		startOfThisMonth.setHours(0, 0, 0, 0);
@@ -261,7 +306,10 @@ export const getHomeStats = query({
 export const getPendingTasksCount = query({
 	args: {},
 	handler: async (ctx): Promise<{ count: number; dueThisWeek: number }> => {
-		const userOrgId = await getCurrentUserOrgId(ctx);
+		const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+		if (!userOrgId) {
+			return { count: 0, dueThisWeek: 0 };
+		}
 		const today = DateUtils.startOfDay(Date.now());
 		const nextWeek = DateUtils.addDays(today, 7);
 
@@ -301,7 +349,15 @@ export const getClientsStats = query({
 		change: number;
 		changeType: "increase" | "decrease" | "neutral";
 	}> => {
-		const userOrgId = await getCurrentUserOrgId(ctx);
+		const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+		if (!userOrgId) {
+			return {
+				current: 0,
+				previous: 0,
+				change: 0,
+				changeType: "neutral" as const,
+			};
+		}
 		const now = Date.now();
 		const startOfThisMonth = new Date(new Date(now).setDate(1)).getTime();
 		const startOfLastMonth = new Date(
@@ -353,7 +409,10 @@ export const getRevenueGoalProgress = query({
 		target: number;
 		isOnTrack: boolean;
 	}> => {
-		const userOrgId = await getCurrentUserOrgId(ctx);
+		const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+		if (!userOrgId) {
+			return { current: 0, target: 0, isOnTrack: false };
+		}
 
 		// Get organization to fetch revenue target
 		const organization = await ctx.db.get(userOrgId);
@@ -411,7 +470,10 @@ export const getClientsCreatedThisMonth = query({
 			_creationTime: number;
 		}>
 	> => {
-		const userOrgId = await getCurrentUserOrgId(ctx);
+		const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+		if (!userOrgId) {
+			return [];
+		}
 
 		// Calculate start of current month
 		const now = new Date();
@@ -450,7 +512,10 @@ export const getProjectsCompletedThisMonth = query({
 			_creationTime: number;
 		}>
 	> => {
-		const userOrgId = await getCurrentUserOrgId(ctx);
+		const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+		if (!userOrgId) {
+			return [];
+		}
 
 		// Calculate start of current month
 		const now = new Date();
@@ -492,7 +557,10 @@ export const getQuotesApprovedThisMonth = query({
 			_creationTime: number;
 		}>
 	> => {
-		const userOrgId = await getCurrentUserOrgId(ctx);
+		const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+		if (!userOrgId) {
+			return [];
+		}
 
 		// Calculate start of current month
 		const now = new Date();
@@ -534,7 +602,10 @@ export const getInvoicesSentThisMonth = query({
 			_creationTime: number;
 		}>
 	> => {
-		const userOrgId = await getCurrentUserOrgId(ctx);
+		const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+		if (!userOrgId) {
+			return [];
+		}
 
 		// Calculate start of current month
 		const now = new Date();
@@ -571,7 +642,10 @@ export const getRevenueThisMonth = query({
 			_creationTime: number;
 		}>
 	> => {
-		const userOrgId = await getCurrentUserOrgId(ctx);
+		const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+		if (!userOrgId) {
+			return [];
+		}
 
 		// Calculate start of current month
 		const now = new Date();
@@ -613,7 +687,10 @@ export const getTasksCreatedThisMonth = query({
 			_creationTime: number;
 		}>
 	> => {
-		const userOrgId = await getCurrentUserOrgId(ctx);
+		const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+		if (!userOrgId) {
+			return [];
+		}
 
 		// Calculate start of current month
 		const now = new Date();

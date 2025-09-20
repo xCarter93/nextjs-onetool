@@ -1,7 +1,7 @@
 import { query } from "./_generated/server";
 import { v } from "convex/values";
 import { Doc } from "./_generated/dataModel";
-import { getCurrentUserOrThrow, getCurrentUserOrgId } from "./lib/auth";
+import { getCurrentUserOrThrow, getCurrentUserOrgIdOptional } from "./lib/auth";
 
 /**
  * Activity operations for activity feed
@@ -24,7 +24,10 @@ export const getRecent = query({
 	},
 	handler: async (ctx, args): Promise<ActivityWithUser[]> => {
 		await getCurrentUserOrThrow(ctx);
-		const orgId = await getCurrentUserOrgId(ctx);
+		const orgId = await getCurrentUserOrgIdOptional(ctx);
+		if (!orgId) {
+			return [];
+		}
 
 		// Query all recent activities for the organization, ordered by timestamp (newest first)
 		const activities = await ctx.db
@@ -82,7 +85,10 @@ export const getByType = query({
 	},
 	handler: async (ctx, args): Promise<ActivityWithUser[]> => {
 		await getCurrentUserOrThrow(ctx);
-		const orgId = await getCurrentUserOrgId(ctx);
+		const orgId = await getCurrentUserOrgIdOptional(ctx);
+		if (!orgId) {
+			return [];
+		}
 
 		const activities = await ctx.db
 			.query("activities")
@@ -132,7 +138,10 @@ export const getByEntity = query({
 	},
 	handler: async (ctx, args): Promise<ActivityWithUser[]> => {
 		await getCurrentUserOrThrow(ctx);
-		const orgId = await getCurrentUserOrgId(ctx);
+		const orgId = await getCurrentUserOrgIdOptional(ctx);
+		if (!orgId) {
+			return [];
+		}
 
 		const activities = await ctx.db
 			.query("activities")
@@ -195,7 +204,10 @@ export const getCount = query({
 	},
 	handler: async (ctx, args): Promise<number> => {
 		await getCurrentUserOrThrow(ctx);
-		const orgId = await getCurrentUserOrgId(ctx);
+		const orgId = await getCurrentUserOrgIdOptional(ctx);
+		if (!orgId) {
+			return 0;
+		}
 
 		// Calculate timestamp filter if dayRange is provided
 		let timestampFilter: number | undefined;
