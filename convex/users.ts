@@ -1,13 +1,28 @@
 import { internalMutation, query } from "./_generated/server";
 import { UserJSON } from "@clerk/backend";
 import { v, Validator } from "convex/values";
-import { getCurrentUser, userByExternalId } from "./lib/auth";
+import { getCurrentUser, getCurrentUserOrgId, userByExternalId } from "./lib/auth";
 import { internal } from "./_generated/api";
 
 export const current = query({
 	args: {},
 	handler: async (ctx) => {
 		return await getCurrentUser(ctx);
+	},
+});
+
+/**
+ * List all users in the current user's organization
+ */
+export const listByOrg = query({
+	args: {},
+	handler: async (ctx) => {
+		const userOrgId = await getCurrentUserOrgId(ctx);
+		
+		return await ctx.db
+			.query("users")
+			.withIndex("by_organization", (q) => q.eq("organizationId", userOrgId))
+			.collect();
 	},
 });
 

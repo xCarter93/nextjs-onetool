@@ -11,6 +11,9 @@ import {
 	ClockIcon,
 } from "@heroicons/react/24/outline";
 import { Card, CardContent } from "@/components/ui/card";
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import type { HomeStats as HomeStatsType } from "../../convex/homeStats";
 
 interface StatItem {
 	name: string;
@@ -23,69 +26,136 @@ interface StatItem {
 	icon: React.ComponentType<{ className?: string }>;
 }
 
-const stats: StatItem[] = [
-	{
-		name: "Total Clients",
-		stat: "127",
-		previousStat: "115",
-		change: "+12",
-		changeType: "increase",
-		subtitle: "Active relationships",
-		icon: UsersIcon,
-	},
-	{
-		name: "Projects Completed",
-		stat: "89",
-		previousStat: "76",
-		change: "+13",
-		changeType: "increase",
-		value: "$487,320",
-		subtitle: "Total value this month",
-		icon: CheckCircleIcon,
-	},
-	{
-		name: "Approved Quotes",
-		stat: "34",
-		previousStat: "28",
-		change: "+6",
-		changeType: "increase",
-		value: "$234,890",
-		subtitle: "Ready for invoicing",
-		icon: DocumentTextIcon,
-	},
-	{
-		name: "Invoices Sent",
-		stat: "67",
-		previousStat: "58",
-		change: "+9",
-		changeType: "increase",
-		value: "$389,450",
-		subtitle: "Outstanding: $127,340",
-		icon: DocumentIcon,
-	},
-	{
-		name: "Revenue Goal",
-		stat: "78%",
-		previousStat: "72%",
-		change: "+6%",
-		changeType: "increase",
-		subtitle: "Monthly target progress",
-		icon: ChartBarIcon,
-	},
-	{
-		name: "Pending Tasks",
-		stat: "23",
-		changeType: "neutral",
-		subtitle: "Due this week",
-		icon: ClockIcon,
-	},
-];
+// Helper function to format currency
+function formatCurrency(amount: number): string {
+	return new Intl.NumberFormat('en-US', {
+		style: 'currency',
+		currency: 'USD',
+		maximumFractionDigits: 0,
+	}).format(amount);
+}
+
+// Helper function to format change with sign
+function formatChange(change: number, isPercentage: boolean = false): string {
+	const sign = change >= 0 ? '+' : '';
+	const suffix = isPercentage ? '%' : '';
+	return `${sign}${change}${suffix}`;
+}
+
+// Generate stats array from Convex data
+function generateStats(homeStats: HomeStatsType | undefined): StatItem[] {
+	if (!homeStats) {
+		// Return loading placeholders
+		return [
+			{
+				name: "Total Clients",
+				stat: "—",
+				subtitle: "Loading...",
+				icon: UsersIcon,
+			},
+			{
+				name: "Projects Completed",
+				stat: "—",
+				subtitle: "Loading...",
+				icon: CheckCircleIcon,
+			},
+			{
+				name: "Approved Quotes",
+				stat: "—",
+				subtitle: "Loading...",
+				icon: DocumentTextIcon,
+			},
+			{
+				name: "Invoices Sent",
+				stat: "—",
+				subtitle: "Loading...",
+				icon: DocumentIcon,
+			},
+			{
+				name: "Revenue Goal",
+				stat: "—",
+				subtitle: "Loading...",
+				icon: ChartBarIcon,
+			},
+			{
+				name: "Pending Tasks",
+				stat: "—",
+				subtitle: "Loading...",
+				icon: ClockIcon,
+			},
+		];
+	}
+
+	return [
+		{
+			name: "Total Clients",
+			stat: homeStats.totalClients.current.toString(),
+			previousStat: homeStats.totalClients.previous.toString(),
+			change: formatChange(homeStats.totalClients.change),
+			changeType: homeStats.totalClients.changeType,
+			subtitle: "Active relationships",
+			icon: UsersIcon,
+		},
+		{
+			name: "Projects Completed",
+			stat: homeStats.completedProjects.current.toString(),
+			previousStat: homeStats.completedProjects.previous.toString(),
+			change: formatChange(homeStats.completedProjects.change),
+			changeType: homeStats.completedProjects.changeType,
+			value: formatCurrency(homeStats.completedProjects.totalValue),
+			subtitle: "Total value this month",
+			icon: CheckCircleIcon,
+		},
+		{
+			name: "Approved Quotes",
+			stat: homeStats.approvedQuotes.current.toString(),
+			previousStat: homeStats.approvedQuotes.previous.toString(),
+			change: formatChange(homeStats.approvedQuotes.change),
+			changeType: homeStats.approvedQuotes.changeType,
+			value: formatCurrency(homeStats.approvedQuotes.totalValue),
+			subtitle: "Ready for invoicing",
+			icon: DocumentTextIcon,
+		},
+		{
+			name: "Invoices Sent",
+			stat: homeStats.invoicesSent.current.toString(),
+			previousStat: homeStats.invoicesSent.previous.toString(),
+			change: formatChange(homeStats.invoicesSent.change),
+			changeType: homeStats.invoicesSent.changeType,
+			value: formatCurrency(homeStats.invoicesSent.totalValue),
+			subtitle: `Outstanding: ${formatCurrency(homeStats.invoicesSent.outstanding)}`,
+			icon: DocumentIcon,
+		},
+		{
+			name: "Revenue Goal",
+			stat: `${homeStats.revenueGoal.percentage}%`,
+			previousStat: `${homeStats.revenueGoal.previousPercentage}%`,
+			change: formatChange(homeStats.revenueGoal.changePercentage, true),
+			changeType: homeStats.revenueGoal.changePercentage > 0 ? "increase" : homeStats.revenueGoal.changePercentage < 0 ? "decrease" : "neutral",
+			subtitle: "Monthly target progress",
+			icon: ChartBarIcon,
+		},
+		{
+			name: "Pending Tasks",
+			stat: homeStats.pendingTasks.total.toString(),
+			changeType: "neutral",
+			subtitle: `${homeStats.pendingTasks.dueThisWeek} due this week`,
+			icon: ClockIcon,
+		},
+	];
+}
 
 function classNames(...classes: string[]) {
 	return classes.filter(Boolean).join(" ");
 }
 
 export default function HomeStats() {
+	// Fetch home stats from Convex
+	const homeStats = useQuery(api.homeStats.getHomeStats);
+
+	// Generate stats array from Convex data
+	const stats = generateStats(homeStats);
+
 	return (
 		<div className="mb-8">
 			<h3 className="text-lg font-semibold text-foreground mb-4">
@@ -101,7 +171,9 @@ export default function HomeStats() {
 							role="article"
 							tabIndex={0}
 						>
-							<CardContent className="relative p-4">
+							{/* Glass morphism overlay */}
+							<div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
+							<CardContent className="relative z-10 p-4">
 								<div className="flex items-center justify-between mb-3">
 									<div className="flex items-center space-x-3">
 										<div className="flex items-center justify-center w-8 h-8 rounded-lg bg-muted/50 dark:bg-muted/70 text-muted-foreground dark:text-muted-foreground/90 ring-1 ring-border/10 dark:ring-border/30">

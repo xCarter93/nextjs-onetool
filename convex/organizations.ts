@@ -194,12 +194,12 @@ export const updateFromClerk = internalMutation({
 		}
 
 		// Update the organization name and logo URL
-		const updates: any = {
+		const updates: { name: string; logoUrl?: string } = {
 			name: args.name,
 		};
 
 		// Only update logoUrl if provided (Clerk might not always include it)
-		if (args.logoUrl !== undefined) {
+		if (args.logoUrl !== undefined && args.logoUrl !== null) {
 			updates.logoUrl = args.logoUrl;
 		}
 
@@ -271,7 +271,7 @@ export const retryPendingOrganizationCreation = internalMutation({
 	args: {
 		ownerClerkUserId: v.string(),
 	},
-	handler: async (ctx, args) => {
+	handler: async (_ctx, args) => {
 		// This is a placeholder for now - in a production system, you might want to
 		// store pending organization creation requests and retry them here
 		console.log(

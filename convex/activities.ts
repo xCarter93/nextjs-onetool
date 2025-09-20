@@ -20,36 +20,19 @@ export interface ActivityWithUser extends Doc<"activities"> {
  */
 export const getRecent = query({
 	args: {
-		limit: v.optional(v.number()),
-		dayRange: v.optional(v.number()), // Number of days to look back
+		limit: v.optional(v.number()), // Max activities to fetch
 	},
 	handler: async (ctx, args): Promise<ActivityWithUser[]> => {
 		await getCurrentUserOrThrow(ctx);
 		const orgId = await getCurrentUserOrgId(ctx);
 
-		// Calculate timestamp filter if dayRange is provided
-		let timestampFilter: number | undefined;
-		if (args.dayRange) {
-			const daysInMs = args.dayRange * 24 * 60 * 60 * 1000;
-			timestampFilter = Date.now() - daysInMs;
-		}
-
-		// Query activities for the organization, ordered by timestamp (newest first)
-		const activitiesQuery = ctx.db
+		// Query all recent activities for the organization, ordered by timestamp (newest first)
+		const activities = await ctx.db
 			.query("activities")
-			.withIndex("by_org_timestamp", (q) => {
-				if (timestampFilter) {
-					return q.eq("orgId", orgId).gte("timestamp", timestampFilter);
-				} else {
-					return q.eq("orgId", orgId);
-				}
-			})
+			.withIndex("by_org_timestamp", (q) => q.eq("orgId", orgId))
 			.order("desc")
-			.filter((q) => q.eq(q.field("isVisible"), true));
-
-		// Apply limit if provided (default to 50)
-		const limit = args.limit || 50;
-		const activities = await activitiesQuery.take(limit);
+			.filter((q) => q.eq(q.field("isVisible"), true))
+			.take(args.limit || 1000); // Default to last 1000 activities
 
 		// Fetch user data for each activity
 		const activitiesWithUsers: ActivityWithUser[] = [];

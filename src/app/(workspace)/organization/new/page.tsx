@@ -35,13 +35,7 @@ export default function CreateOrganizationPage() {
 	}
 
 	return (
-		<div className="min-h-screen flex-1">
-			{/* Enhanced Background with Gradient */}
-			<div className="relative bg-gradient-to-br from-background via-muted/30 to-muted/60 dark:from-background dark:via-muted/20 dark:to-muted/40 min-h-full rounded-xl">
-				{/* Subtle Pattern Overlay */}
-				<div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(120,119,198,0.1),transparent_50%)] rounded-xl" />
-
-				<div className="relative p-4 sm:p-6 lg:p-8 min-h-screen flex flex-col items-center justify-center">
+		<div className="relative p-4 sm:p-6 lg:p-8 min-h-screen flex flex-col items-center justify-center">
 					<div className="w-full max-w-lg mx-auto">
 						{/* Enhanced Header */}
 						<div className="mb-10 text-center">
@@ -175,8 +169,6 @@ export default function CreateOrganizationPage() {
 							</p>
 						</div>
 					</div>
-				</div>
-			</div>
 		</div>
 	);
 }

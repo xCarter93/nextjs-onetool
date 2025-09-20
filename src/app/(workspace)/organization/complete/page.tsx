@@ -443,38 +443,30 @@ export default function CompleteOrganizationMetadata() {
 	}
 
 	return (
-		<div className="min-h-screen flex-1">
-			{/* Enhanced Background with Gradient */}
-			<div className="relative bg-gradient-to-br from-background via-muted/30 to-muted/60 dark:from-background dark:via-muted/20 dark:to-muted/40 min-h-full rounded-xl">
-				{/* Subtle Pattern Overlay */}
-				<div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(120,119,198,0.1),transparent_50%)] rounded-xl" />
-
-				<div className="relative p-4 sm:p-6 lg:p-8 min-h-screen flex flex-col">
-					<div className="flex-1 flex flex-col py-8 max-w-4xl mx-auto w-full">
-						{/* Enhanced Header */}
-						<div className="mb-10">
-							<div className="flex items-center gap-3 mb-3">
-								<div className="w-2 h-8 bg-gradient-to-b from-primary to-primary/60 rounded-full" />
-								<h1 className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent tracking-tight">
-									Complete Your Organization Setup
-								</h1>
-							</div>
-							<p className="text-muted-foreground ml-5 leading-relaxed">
-								Welcome to {organization?.name}! Let&apos;s finish setting up
-								your organization.
-							</p>
-						</div>
-
-						{/* Enhanced Progress Bar */}
-						<div className="mb-10">
-							<ProgressBar steps={progressSteps} />
-						</div>
-
-						{/* Enhanced Form Content */}
-						<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-2xl p-10 shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50 flex-shrink-0">
-							{renderCurrentStep()}
-						</div>
+		<div className="relative p-4 sm:p-6 lg:p-8 min-h-screen flex flex-col">
+			<div className="flex-1 flex flex-col py-8 max-w-4xl mx-auto w-full">
+				{/* Enhanced Header */}
+				<div className="mb-10">
+					<div className="flex items-center gap-3 mb-3">
+						<div className="w-2 h-8 bg-gradient-to-b from-primary to-primary/60 rounded-full" />
+						<h1 className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent tracking-tight">
+							Complete Your Organization Setup
+						</h1>
 					</div>
+					<p className="text-muted-foreground ml-5 leading-relaxed">
+						Welcome to {organization?.name}! Let&apos;s finish setting up your
+						organization.
+					</p>
+				</div>
+
+				{/* Enhanced Progress Bar */}
+				<div className="mb-10">
+					<ProgressBar steps={progressSteps} />
+				</div>
+
+				{/* Enhanced Form Content */}
+				<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-2xl p-10 shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50 flex-shrink-0">
+					{renderCurrentStep()}
 				</div>
 			</div>
 		</div>

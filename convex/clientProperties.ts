@@ -447,6 +447,113 @@ export const setPrimary = mutation({
 });
 
 /**
+ * Bulk create properties for a client
+ */
+export const bulkCreate = mutation({
+	args: {
+		clientId: v.id("clients"),
+		properties: v.array(
+			v.object({
+				propertyName: v.optional(v.string()),
+				propertyType: v.optional(
+					v.union(
+						v.literal("residential"),
+						v.literal("commercial"),
+						v.literal("industrial"),
+						v.literal("retail"),
+						v.literal("office"),
+						v.literal("mixed-use")
+					)
+				),
+				squareFootage: v.optional(v.number()),
+				streetAddress: v.string(),
+				city: v.string(),
+				state: v.string(),
+				zipCode: v.string(),
+				country: v.optional(v.string()),
+				description: v.optional(v.string()),
+				imageStorageIds: v.optional(v.array(v.id("_storage"))),
+				isPrimary: v.boolean(),
+			})
+		),
+	},
+	handler: async (ctx, args): Promise<ClientPropertyId[]> => {
+		const userOrgId = await getCurrentUserOrgId(ctx);
+
+		// Validate client access
+		await validateClientAccess(ctx, args.clientId);
+
+		const propertyIds: ClientPropertyId[] = [];
+		let hasPrimary = false;
+
+		// Check if any property is marked as primary
+		for (const property of args.properties) {
+			if (property.isPrimary) {
+				if (hasPrimary) {
+					throw new Error("Only one property can be marked as primary");
+				}
+				hasPrimary = true;
+			}
+		}
+
+		// If setting a primary property, unset existing primary
+		if (hasPrimary) {
+			const existingPrimary = await ctx.db
+				.query("clientProperties")
+				.withIndex("by_primary", (q) =>
+					q.eq("clientId", args.clientId).eq("isPrimary", true)
+				)
+				.unique();
+
+			if (existingPrimary) {
+				await ctx.db.patch(existingPrimary._id, { isPrimary: false });
+			}
+		}
+
+		// Create all properties
+		for (const propertyData of args.properties) {
+			// Validate required address fields
+			if (!propertyData.streetAddress.trim()) {
+				throw new Error("Street address is required for all properties");
+			}
+			if (!propertyData.city.trim()) {
+				throw new Error("City is required for all properties");
+			}
+			if (!propertyData.state.trim()) {
+				throw new Error("State is required for all properties");
+			}
+			if (!propertyData.zipCode.trim()) {
+				throw new Error("ZIP code is required for all properties");
+			}
+
+			// Validate square footage is positive if provided
+			if (
+				propertyData.squareFootage !== undefined &&
+				propertyData.squareFootage <= 0
+			) {
+				throw new Error("Square footage must be positive");
+			}
+
+			const propertyId = await ctx.db.insert("clientProperties", {
+				...propertyData,
+				clientId: args.clientId,
+				orgId: userOrgId,
+			});
+
+			propertyIds.push(propertyId);
+		}
+
+		// Log activity on the client
+		const client = await ctx.db.get(args.clientId);
+		if (client) {
+			await ActivityHelpers.clientUpdated(ctx, client);
+		}
+
+		return propertyIds;
+	},
+});
+
+/**
  * Get property statistics for the organization
  */
 export const getStats = query({

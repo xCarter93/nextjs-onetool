@@ -43,6 +43,7 @@ export function ProjectOnboardingForm({
 	const [isLoading, setIsLoading] = useState(false);
 	const [selectedClient, setSelectedClient] = useState<Client | null>(null);
 	const [showClientDropdown, setShowClientDropdown] = useState(false);
+	const [calendarDate, setCalendarDate] = useState(new Date());
 
 	// Form fields
 	const [projectTitle, setProjectTitle] = useState("");
@@ -64,6 +65,70 @@ export function ProjectOnboardingForm({
 	const handleClientSelect = (client: Client) => {
 		setSelectedClient(client);
 		setShowClientDropdown(false);
+	};
+
+	// Calendar helper functions
+	const getCalendarDays = (date: Date) => {
+		const year = date.getFullYear();
+		const month = date.getMonth();
+		
+		// First day of the month
+		const firstDay = new Date(year, month, 1);
+		// Last day of the month
+		const lastDay = new Date(year, month + 1, 0);
+		// Day of week for first day (0 = Sunday)
+		const startingDayOfWeek = firstDay.getDay();
+		// Number of days in month
+		const daysInMonth = lastDay.getDate();
+		
+		const calendarDays = [];
+		
+		// Add empty cells for days before the first day of the month
+		for (let i = 0; i < startingDayOfWeek; i++) {
+			calendarDays.push(null);
+		}
+		
+		// Add all days of the month
+		for (let day = 1; day <= daysInMonth; day++) {
+			calendarDays.push(day);
+		}
+		
+		// Fill remaining cells to make 42 (6 rows × 7 days)
+		while (calendarDays.length < 42) {
+			calendarDays.push(null);
+		}
+		
+		return calendarDays;
+	};
+
+	const handleCalendarNavigation = (direction: 'prev' | 'next') => {
+		setCalendarDate(prevDate => {
+			const newDate = new Date(prevDate);
+			if (direction === 'prev') {
+				newDate.setMonth(newDate.getMonth() - 1);
+			} else {
+				newDate.setMonth(newDate.getMonth() + 1);
+			}
+			return newDate;
+		});
+	};
+
+	const handleDateClick = (day: number | null) => {
+		if (!day) return;
+		
+		const clickedDate = new Date(calendarDate.getFullYear(), calendarDate.getMonth(), day);
+		const dateString = clickedDate.toISOString().slice(0, 10);
+		
+		// Set as start date if none exists, otherwise set as end date
+		if (!startDate) {
+			setStartDate(dateString);
+		} else if (!endDate) {
+			setEndDate(dateString);
+		} else {
+			// Reset and set as start date
+			setStartDate(dateString);
+			setEndDate("");
+		}
 	};
 
 	const handleSaveAsDraft = async () => {
@@ -172,7 +237,7 @@ export function ProjectOnboardingForm({
 						</p>
 					</div>
 
-					<form className="space-y-8 max-w-7xl">
+					<form className="space-y-8">
 						{/* Client Lookup */}
 						<Card className="shadow-sm border-gray-200/60 dark:border-white/10">
 							<CardHeader className="pb-4">
@@ -632,10 +697,17 @@ export function ProjectOnboardingForm({
 									<div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/10 rounded-xl p-6 shadow-sm">
 										<div className="flex items-center justify-between mb-6">
 											<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-												July 2025
+												{calendarDate.toLocaleDateString("en-US", {
+													month: "long",
+													year: "numeric",
+												})}
 											</h3>
 											<div className="flex gap-2">
-												<Button intent="outline" size="sm">
+												<Button 
+													intent="outline" 
+													size="sm"
+													onClick={() => handleCalendarNavigation('prev')}
+												>
 													<svg
 														className="w-4 h-4 mr-1"
 														fill="none"
@@ -650,7 +722,11 @@ export function ProjectOnboardingForm({
 														/>
 													</svg>
 												</Button>
-												<Button intent="outline" size="sm">
+												<Button 
+													intent="outline" 
+													size="sm"
+													onClick={() => handleCalendarNavigation('next')}
+												>
 													<svg
 														className="w-4 h-4 ml-1"
 														fill="none"
@@ -680,15 +756,38 @@ export function ProjectOnboardingForm({
 											)}
 
 											{/* Calendar Days */}
-											{Array.from({ length: 35 }, (_, i) => {
-												const day = i - 5;
-												const isCurrentMonth = day > 0 && day <= 31;
-												const isSelected = day === 28;
-												const isToday = day === 29;
+											{getCalendarDays(calendarDate).map((day, i) => {
+												const isCurrentMonth = day !== null;
+												const today = new Date();
+												const isToday = isCurrentMonth && 
+													day === today.getDate() &&
+													calendarDate.getMonth() === today.getMonth() &&
+													calendarDate.getFullYear() === today.getFullYear();
+
+												// Check if this day has selected dates
+												let isStartDate = false;
+												let isEndDate = false;
+												
+												if (day && startDate) {
+													const startDateObj = new Date(startDate);
+													isStartDate = day === startDateObj.getDate() &&
+														calendarDate.getMonth() === startDateObj.getMonth() &&
+														calendarDate.getFullYear() === startDateObj.getFullYear();
+												}
+												
+												if (day && endDate) {
+													const endDateObj = new Date(endDate);
+													isEndDate = day === endDateObj.getDate() &&
+														calendarDate.getMonth() === endDateObj.getMonth() &&
+														calendarDate.getFullYear() === endDateObj.getFullYear();
+												}
+
+												const hasSelectedDate = isStartDate || isEndDate;
 
 												return (
 													<div
 														key={i}
+														onClick={() => handleDateClick(day)}
 														className={`
 															relative h-10 flex items-center justify-center text-sm cursor-pointer transition-all duration-200
 															${
@@ -696,16 +795,25 @@ export function ProjectOnboardingForm({
 																	? "text-gray-900 dark:text-white hover:bg-blue-50 dark:hover:bg-blue-900/30"
 																	: "text-gray-300 dark:text-gray-600"
 															}
-															${isSelected ? "bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 font-medium" : ""}
+															${hasSelectedDate ? "bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 font-medium" : ""}
 															${
-																isToday && !isSelected
+																isToday && !hasSelectedDate
 																	? "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-lg font-medium"
 																	: ""
 															}
 														`}
+														title={
+															isStartDate
+																? "Start Date"
+																: isEndDate
+																	? "End Date"
+																	: isCurrentMonth
+																		? "Click to set date"
+																		: ""
+														}
 													>
-														{isCurrentMonth ? day : ""}
-														{isSelected && (
+														{day || ""}
+														{hasSelectedDate && (
 															<div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-white rounded-full"></div>
 														)}
 													</div>

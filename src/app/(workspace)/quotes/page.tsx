@@ -40,9 +40,14 @@ import {
 	Clock,
 	ExternalLink,
 	Plus,
+	Trash2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { Doc } from "../../../../convex/_generated/dataModel";
+import { useMutation } from "convex/react";
+import { useState } from "react";
+import type { Id } from "../../../../convex/_generated/dataModel";
+import DeleteConfirmationModal from "@/components/ui/delete-confirmation-modal";
 
 type QuoteWithClient = Doc<"quotes"> & {
 	clientName: string;
@@ -91,7 +96,8 @@ const formatCurrency = (amount: number) => {
 };
 
 const createColumns = (
-	router: ReturnType<typeof useRouter>
+	router: ReturnType<typeof useRouter>,
+	onDelete: (id: string, name: string) => void
 ): ColumnDef<QuoteWithClient>[] => [
 	{
 		accessorKey: "quoteNumber",
@@ -162,20 +168,42 @@ const createColumns = (
 		id: "actions",
 		header: "",
 		cell: ({ row }) => (
-			<Button
-				intent="outline"
-				size="sq-sm"
-				onPress={() => router.push(`/quotes/${row.original._id}`)}
-				aria-label={`View quote ${row.original.quoteNumber || row.original._id.slice(-6)}`}
-			>
-				<ExternalLink className="size-4" />
-			</Button>
+			<div className="flex items-center gap-2">
+				<Button
+					intent="outline"
+					size="sq-sm"
+					onPress={() => router.push(`/quotes/${row.original._id}`)}
+					aria-label={`View quote ${row.original.quoteNumber || row.original._id.slice(-6)}`}
+				>
+					<ExternalLink className="size-4" />
+				</Button>
+				<Button
+					intent="outline"
+					size="sq-sm"
+					onPress={() =>
+						onDelete(
+							row.original._id,
+							row.original.quoteNumber || row.original._id.slice(-6)
+						)
+					}
+					className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+					aria-label={`Delete quote ${row.original.quoteNumber || row.original._id.slice(-6)}`}
+				>
+					<Trash2 className="size-4" />
+				</Button>
+			</div>
 		),
 	},
 ];
 
 export default function QuotesPage() {
 	const router = useRouter();
+	const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+	const [quoteToDelete, setQuoteToDelete] = useState<{
+		id: string;
+		name: string;
+	} | null>(null);
+	const deleteQuote = useMutation(api.quotes.remove);
 
 	// Fetch data from Convex
 	const quotes = useQuery(api.quotes.list, {});
@@ -208,9 +236,26 @@ export default function QuotesPage() {
 	const [query, setQuery] = React.useState("");
 	const pageSize = 10;
 
+	const handleDelete = (id: string, name: string) => {
+		setQuoteToDelete({ id, name });
+		setDeleteModalOpen(true);
+	};
+
+	const confirmDelete = async () => {
+		if (quoteToDelete) {
+			try {
+				await deleteQuote({ id: quoteToDelete.id as Id<"quotes"> });
+				setDeleteModalOpen(false);
+				setQuoteToDelete(null);
+			} catch (error) {
+				console.error("Failed to delete quote:", error);
+			}
+		}
+	};
+
 	const table = useReactTable({
 		data,
-		columns: createColumns(router),
+		columns: createColumns(router, handleDelete),
 		state: {
 			sorting,
 			columnFilters,
@@ -254,230 +299,249 @@ export default function QuotesPage() {
 	const isEmpty = !isLoading && data.length === 0;
 
 	return (
-		<div className="min-h-[100vh] flex-1 md:min-h-min">
-			<div className="relative bg-gradient-to-br from-background via-muted/30 to-muted/60 dark:from-background dark:via-muted/20 dark:to-muted/40 min-h-[100vh] md:min-h-min rounded-xl">
-				<div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(120,119,198,0.08),transparent_50%)] rounded-xl" />
-				<div className="relative p-6 space-y-6">
-					<div className="flex items-center justify-between">
-						<div className="flex items-center gap-3">
-							<div className="w-1.5 h-6 bg-gradient-to-b from-primary to-primary/60 rounded-full" />
-							<div>
-								<h1 className="text-2xl font-bold text-foreground">Quotes</h1>
-								<p className="text-muted-foreground text-sm">
-									Overview of your quotes and proposals
-								</p>
+		<div className="relative p-6 space-y-6">
+			<div className="flex items-center justify-between">
+				<div className="flex items-center gap-3">
+					<div className="w-1.5 h-6 bg-gradient-to-b from-primary to-primary/60 rounded-full" />
+					<div>
+						<h1 className="text-2xl font-bold text-foreground">Quotes</h1>
+						<p className="text-muted-foreground text-sm">
+							Overview of your quotes and proposals
+						</p>
+					</div>
+				</div>
+				<button
+					onClick={() => router.push("/quotes/new")}
+					className="group inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-all duration-200 px-4 py-2 rounded-lg bg-primary/10 hover:bg-primary/15 ring-1 ring-primary/30 hover:ring-primary/40 shadow-sm hover:shadow-md backdrop-blur-sm"
+				>
+					<Plus className="h-4 w-4" />
+					Create Quote
+					<span
+						aria-hidden="true"
+						className="group-hover:translate-x-1 transition-transform duration-200"
+					>
+						→
+					</span>
+				</button>
+			</div>
+
+			<div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+				<Card className="group relative backdrop-blur-md overflow-hidden ring-1 ring-border/20 dark:ring-border/40">
+					<div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
+					<CardHeader className="relative z-10">
+						<CardTitle className="flex items-center gap-2 text-base">
+							<FileText className="size-4" /> Total Quotes
+						</CardTitle>
+						<CardDescription>All quotes in your workspace</CardDescription>
+					</CardHeader>
+					<CardContent className="relative z-10">
+						<div className="text-3xl font-semibold">
+							{isLoading ? (
+								<div className="h-9 w-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+							) : (
+								data.length
+							)}
+						</div>
+					</CardContent>
+				</Card>
+				<Card className="group relative backdrop-blur-md overflow-hidden ring-1 ring-border/20 dark:ring-border/40">
+					<div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
+					<CardHeader className="relative z-10">
+						<CardTitle className="flex items-center gap-2 text-base">
+							<Clock className="size-4" /> Pending Approval
+						</CardTitle>
+						<CardDescription>Quotes awaiting client response</CardDescription>
+					</CardHeader>
+					<CardContent className="relative z-10">
+						<div className="text-3xl font-semibold">
+							{isLoading ? (
+								<div className="h-9 w-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+							) : (
+								totalPending
+							)}
+						</div>
+					</CardContent>
+				</Card>
+				<Card className="group relative backdrop-blur-md overflow-hidden ring-1 ring-border/20 dark:ring-border/40">
+					<div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
+					<CardHeader className="relative z-10">
+						<CardTitle className="flex items-center gap-2 text-base">
+							<DollarSign className="size-4" /> Approved Value
+						</CardTitle>
+						<CardDescription>Total value of approved quotes</CardDescription>
+					</CardHeader>
+					<CardContent className="relative z-10">
+						<div className="text-3xl font-semibold">
+							{isLoading ? (
+								<div className="h-9 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+							) : (
+								formatCurrency(totalValue)
+							)}
+						</div>
+					</CardContent>
+				</Card>
+			</div>
+
+			<Card className="group relative backdrop-blur-md overflow-hidden ring-1 ring-border/20 dark:ring-border/40">
+				<div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
+				<CardHeader className="relative z-10 flex flex-col gap-2 border-b">
+					<div className="flex items-center justify-between gap-3">
+						<div>
+							<CardTitle>Quotes</CardTitle>
+							<CardDescription>
+								Search, sort, and browse your quotes
+							</CardDescription>
+						</div>
+						<div className="flex items-center gap-2">
+							<Input
+								placeholder="Search quotes..."
+								value={query}
+								onChange={(e) => setQuery(e.target.value)}
+								className="w-56"
+							/>
+						</div>
+					</div>
+				</CardHeader>
+				<CardContent className="relative z-10 px-0">
+					<div className="px-6">
+						<div className="overflow-hidden rounded-lg border">
+							<Table>
+								<TableHeader className="bg-muted sticky top-0 z-10">
+									{table.getHeaderGroups().map((headerGroup) => (
+										<TableRow key={headerGroup.id}>
+											{headerGroup.headers.map((header) => (
+												<TableHead key={header.id}>
+													{header.isPlaceholder
+														? null
+														: flexRender(
+																header.column.columnDef.header,
+																header.getContext()
+															)}
+												</TableHead>
+											))}
+										</TableRow>
+									))}
+								</TableHeader>
+								<TableBody>
+									{isLoading ? (
+										// Loading skeleton rows
+										Array.from({ length: 5 }).map((_, i) => (
+											<TableRow key={i}>
+												{Array.from({
+													length: createColumns(router, handleDelete).length,
+												}).map((_, j) => (
+													<TableCell key={j}>
+														<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+													</TableCell>
+												))}
+											</TableRow>
+										))
+									) : table.getRowModel().rows?.length ? (
+										table.getRowModel().rows.map((row) => (
+											<TableRow
+												key={row.id}
+												data-state={row.getIsSelected() && "selected"}
+											>
+												{row.getVisibleCells().map((cell) => (
+													<TableCell key={cell.id}>
+														{flexRender(
+															cell.column.columnDef.cell,
+															cell.getContext()
+														)}
+													</TableCell>
+												))}
+											</TableRow>
+										))
+									) : isEmpty ? (
+										<TableRow>
+											<TableCell
+												colSpan={createColumns(router, handleDelete).length}
+												className="h-96 text-center"
+											>
+												<div className="flex flex-col items-center justify-center space-y-4">
+													<div className="text-6xl">📄</div>
+													<div>
+														<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+															No quotes yet
+														</h3>
+														<p className="text-gray-600 dark:text-gray-400 mt-1">
+															Create your first quote to get started
+														</p>
+													</div>
+													<button
+														onClick={() => router.push("/quotes/new")}
+														className="group inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-all duration-200 px-4 py-2 rounded-lg bg-primary/10 hover:bg-primary/15 ring-1 ring-primary/30 hover:ring-primary/40 shadow-sm hover:shadow-md backdrop-blur-sm"
+													>
+														<Plus className="h-4 w-4" />
+														Create Your First Quote
+														<span
+															aria-hidden="true"
+															className="group-hover:translate-x-1 transition-transform duration-200"
+														>
+															→
+														</span>
+													</button>
+												</div>
+											</TableCell>
+										</TableRow>
+									) : (
+										<TableRow>
+											<TableCell
+												colSpan={createColumns(router, handleDelete).length}
+												className="h-24 text-center"
+											>
+												No results found.
+											</TableCell>
+										</TableRow>
+									)}
+								</TableBody>
+							</Table>
+						</div>
+						<div className="flex items-center justify-between py-4">
+							<div className="text-muted-foreground text-sm">
+								{table.getFilteredRowModel().rows.length} of {data.length}{" "}
+								quotes
+							</div>
+							<div className="flex items-center gap-2">
+								<Button
+									intent="outline"
+									size="sq-sm"
+									onPress={() => table.previousPage()}
+									isDisabled={!table.getCanPreviousPage()}
+									aria-label="Previous page"
+								>
+									<ChevronLeft className="size-4" />
+								</Button>
+								<div className="text-sm font-medium">
+									Page {table.getState().pagination?.pageIndex + 1} of{" "}
+									{table.getPageCount()}
+								</div>
+								<Button
+									intent="outline"
+									size="sq-sm"
+									onPress={() => table.nextPage()}
+									isDisabled={!table.getCanNextPage()}
+									aria-label="Next page"
+								>
+									<ChevronRight className="size-4" />
+								</Button>
 							</div>
 						</div>
-						<Button
-							onPress={() => router.push("/quotes/new")}
-							className="flex items-center gap-2"
-						>
-							<Plus className="h-4 w-4" />
-							Create Quote
-						</Button>
 					</div>
+				</CardContent>
+			</Card>
 
-					<div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-						<Card>
-							<CardHeader>
-								<CardTitle className="flex items-center gap-2 text-base">
-									<FileText className="size-4" /> Total Quotes
-								</CardTitle>
-								<CardDescription>All quotes in your workspace</CardDescription>
-							</CardHeader>
-							<CardContent>
-								<div className="text-3xl font-semibold">
-									{isLoading ? (
-										<div className="h-9 w-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-									) : (
-										data.length
-									)}
-								</div>
-							</CardContent>
-						</Card>
-						<Card>
-							<CardHeader>
-								<CardTitle className="flex items-center gap-2 text-base">
-									<Clock className="size-4" /> Pending Approval
-								</CardTitle>
-								<CardDescription>
-									Quotes awaiting client response
-								</CardDescription>
-							</CardHeader>
-							<CardContent>
-								<div className="text-3xl font-semibold">
-									{isLoading ? (
-										<div className="h-9 w-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-									) : (
-										totalPending
-									)}
-								</div>
-							</CardContent>
-						</Card>
-						<Card>
-							<CardHeader>
-								<CardTitle className="flex items-center gap-2 text-base">
-									<DollarSign className="size-4" /> Approved Value
-								</CardTitle>
-								<CardDescription>
-									Total value of approved quotes
-								</CardDescription>
-							</CardHeader>
-							<CardContent>
-								<div className="text-3xl font-semibold">
-									{isLoading ? (
-										<div className="h-9 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-									) : (
-										formatCurrency(totalValue)
-									)}
-								</div>
-							</CardContent>
-						</Card>
-					</div>
-
-					<Card>
-						<CardHeader className="flex flex-col gap-2 border-b">
-							<div className="flex items-center justify-between gap-3">
-								<div>
-									<CardTitle>Quotes</CardTitle>
-									<CardDescription>
-										Search, sort, and browse your quotes
-									</CardDescription>
-								</div>
-								<div className="flex items-center gap-2">
-									<Input
-										placeholder="Search quotes..."
-										value={query}
-										onChange={(e) => setQuery(e.target.value)}
-										className="w-56"
-									/>
-								</div>
-							</div>
-						</CardHeader>
-						<CardContent className="px-0">
-							<div className="px-6">
-								<div className="overflow-hidden rounded-lg border">
-									<Table>
-										<TableHeader className="bg-muted sticky top-0 z-10">
-											{table.getHeaderGroups().map((headerGroup) => (
-												<TableRow key={headerGroup.id}>
-													{headerGroup.headers.map((header) => (
-														<TableHead key={header.id}>
-															{header.isPlaceholder
-																? null
-																: flexRender(
-																		header.column.columnDef.header,
-																		header.getContext()
-																	)}
-														</TableHead>
-													))}
-												</TableRow>
-											))}
-										</TableHeader>
-										<TableBody>
-											{isLoading ? (
-												// Loading skeleton rows
-												Array.from({ length: 5 }).map((_, i) => (
-													<TableRow key={i}>
-														{Array.from({
-															length: createColumns(router).length,
-														}).map((_, j) => (
-															<TableCell key={j}>
-																<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-															</TableCell>
-														))}
-													</TableRow>
-												))
-											) : table.getRowModel().rows?.length ? (
-												table.getRowModel().rows.map((row) => (
-													<TableRow
-														key={row.id}
-														data-state={row.getIsSelected() && "selected"}
-													>
-														{row.getVisibleCells().map((cell) => (
-															<TableCell key={cell.id}>
-																{flexRender(
-																	cell.column.columnDef.cell,
-																	cell.getContext()
-																)}
-															</TableCell>
-														))}
-													</TableRow>
-												))
-											) : isEmpty ? (
-												<TableRow>
-													<TableCell
-														colSpan={createColumns(router).length}
-														className="h-96 text-center"
-													>
-														<div className="flex flex-col items-center justify-center space-y-4">
-															<div className="text-6xl">📄</div>
-															<div>
-																<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-																	No quotes yet
-																</h3>
-																<p className="text-gray-600 dark:text-gray-400 mt-1">
-																	Create your first quote to get started
-																</p>
-															</div>
-															<Button
-																onPress={() => router.push("/quotes/new")}
-																className="flex items-center gap-2"
-															>
-																<Plus className="h-4 w-4" />
-																Create Your First Quote
-															</Button>
-														</div>
-													</TableCell>
-												</TableRow>
-											) : (
-												<TableRow>
-													<TableCell
-														colSpan={createColumns(router).length}
-														className="h-24 text-center"
-													>
-														No results found.
-													</TableCell>
-												</TableRow>
-											)}
-										</TableBody>
-									</Table>
-								</div>
-								<div className="flex items-center justify-between py-4">
-									<div className="text-muted-foreground text-sm">
-										{table.getFilteredRowModel().rows.length} of {data.length}{" "}
-										quotes
-									</div>
-									<div className="flex items-center gap-2">
-										<Button
-											intent="outline"
-											size="sq-sm"
-											onPress={() => table.previousPage()}
-											isDisabled={!table.getCanPreviousPage()}
-											aria-label="Previous page"
-										>
-											<ChevronLeft className="size-4" />
-										</Button>
-										<div className="text-sm font-medium">
-											Page {table.getState().pagination?.pageIndex + 1} of{" "}
-											{table.getPageCount()}
-										</div>
-										<Button
-											intent="outline"
-											size="sq-sm"
-											onPress={() => table.nextPage()}
-											isDisabled={!table.getCanNextPage()}
-											aria-label="Next page"
-										>
-											<ChevronRight className="size-4" />
-										</Button>
-									</div>
-								</div>
-							</div>
-						</CardContent>
-					</Card>
-				</div>
-			</div>
+			{/* Delete Confirmation Modal */}
+			{quoteToDelete && (
+				<DeleteConfirmationModal
+					isOpen={deleteModalOpen}
+					onClose={() => setDeleteModalOpen(false)}
+					onConfirm={confirmDelete}
+					title="Delete Quote"
+					itemName={quoteToDelete.name}
+					itemType="Quote"
+				/>
+			)}
 		</div>
 	);
 }

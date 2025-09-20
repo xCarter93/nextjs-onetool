@@ -205,8 +205,8 @@ export default function NewQuotePage() {
 	};
 
 	return (
-		<>
-			<div className="w-full px-6">
+		<div className="flex flex-col min-h-screen">
+			<div className="flex-1 w-full px-6">
 				<div className="w-full pt-8 pb-24">
 					{/* Header */}
 					<div className="mb-8">
@@ -219,7 +219,7 @@ export default function NewQuotePage() {
 						</p>
 					</div>
 
-					<form className="space-y-8 max-w-7xl">
+					<form className="space-y-8">
 						{/* Client Selection */}
 						<Card className="shadow-sm border-gray-200/60 dark:border-white/10">
 							<CardHeader className="pb-4">
@@ -542,6 +542,6 @@ export default function NewQuotePage() {
 				saveText="Create Quote"
 				isLoading={isLoading}
 			/>
-		</>
+		</div>
 	);
 }

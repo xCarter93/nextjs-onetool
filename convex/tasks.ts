@@ -172,7 +172,8 @@ type TaskId = Id<"tasks">;
 interface TaskStats {
 	total: number;
 	byStatus: {
-		scheduled: number;
+		pending: number;
+		inProgress: number;
 		completed: number;
 		cancelled: number;
 	};
@@ -189,7 +190,8 @@ export const list = query({
 	args: {
 		status: v.optional(
 			v.union(
-				v.literal("scheduled"),
+				v.literal("pending"),
+				v.literal("in-progress"),
 				v.literal("completed"),
 				v.literal("cancelled")
 			)
@@ -285,10 +287,17 @@ export const create = mutation({
 		endTime: v.optional(v.string()),
 		assigneeUserId: v.optional(v.id("users")),
 		status: v.union(
-			v.literal("scheduled"),
+			v.literal("pending"),
+			v.literal("in-progress"),
 			v.literal("completed"),
 			v.literal("cancelled")
 		),
+		priority: v.optional(v.union(
+			v.literal("low"),
+			v.literal("medium"),
+			v.literal("high"),
+			v.literal("urgent")
+		)),
 		repeat: v.optional(
 			v.union(
 				v.literal("none"),
@@ -368,11 +377,18 @@ export const update = mutation({
 		assigneeUserId: v.optional(v.id("users")),
 		status: v.optional(
 			v.union(
-				v.literal("scheduled"),
+				v.literal("pending"),
+				v.literal("in-progress"),
 				v.literal("completed"),
 				v.literal("cancelled")
 			)
 		),
+		priority: v.optional(v.union(
+			v.literal("low"),
+			v.literal("medium"),
+			v.literal("high"),
+			v.literal("urgent")
+		)),
 		repeat: v.optional(
 			v.union(
 				v.literal("none"),
@@ -495,7 +511,8 @@ export const search = query({
 		query: v.string(),
 		status: v.optional(
 			v.union(
-				v.literal("scheduled"),
+				v.literal("pending"),
+				v.literal("in-progress"),
 				v.literal("completed"),
 				v.literal("cancelled")
 			)
@@ -555,7 +572,8 @@ export const getStats = query({
 		const stats: TaskStats = {
 			total: tasks.length,
 			byStatus: {
-				scheduled: 0,
+				pending: 0,
+				inProgress: 0,
 				completed: 0,
 				cancelled: 0,
 			},
@@ -572,7 +590,15 @@ export const getStats = query({
 
 		tasks.forEach((task: TaskDocument) => {
 			// Count by status
-			stats.byStatus[task.status]++;
+			if (task.status === "pending") {
+				stats.byStatus.pending++;
+			} else if (task.status === "in-progress") {
+				stats.byStatus.inProgress++;
+			} else if (task.status === "completed") {
+				stats.byStatus.completed++;
+			} else if (task.status === "cancelled") {
+				stats.byStatus.cancelled++;
+			}
 
 			// Count today's tasks
 			if (task.date >= today && task.date < tomorrow) {
@@ -583,13 +609,13 @@ export const getStats = query({
 			if (
 				task.date >= today &&
 				task.date < nextWeek &&
-				task.status === "scheduled"
+				(task.status === "pending" || task.status === "in-progress")
 			) {
 				stats.thisWeek++;
 			}
 
 			// Count overdue tasks
-			if (task.date < today && task.status === "scheduled") {
+			if (task.date < today && (task.status === "pending" || task.status === "in-progress")) {
 				stats.overdue++;
 			}
 
@@ -652,8 +678,8 @@ export const getOverdue = query({
 			.withIndex("by_date", (q) => q.eq("orgId", userOrgId).lt("date", today))
 			.collect();
 
-		// Only include scheduled tasks (not completed or cancelled)
-		tasks = tasks.filter((task) => task.status === "scheduled");
+		// Only include pending and in-progress tasks (not completed or cancelled)
+		tasks = tasks.filter((task) => task.status === "pending" || task.status === "in-progress");
 
 		// Filter by assignee if specified
 		if (args.assigneeUserId) {
@@ -664,5 +690,131 @@ export const getOverdue = query({
 		}
 
 		return tasks.sort((a, b) => b.date - a.date); // Most recent overdue first
+	},
+});
+
+/**
+ * Get upcoming tasks (due within the next 7 days) for dashboard/home page
+ */
+export const getUpcoming = query({
+	args: { 
+		assigneeUserId: v.optional(v.id("users")),
+		daysAhead: v.optional(v.number()) // Default to 7 days if not specified
+	},
+	handler: async (ctx, args): Promise<TaskDocument[]> => {
+		const userOrgId = await getCurrentUserOrgId(ctx);
+		const today = DateUtils.startOfDay(Date.now());
+		const daysAhead = args.daysAhead || 7;
+		const futureDate = DateUtils.addDays(today, daysAhead);
+
+		let tasks = await ctx.db
+			.query("tasks")
+			.withIndex("by_date", (q) =>
+				q.eq("orgId", userOrgId).gte("date", today).lt("date", futureDate)
+			)
+			.collect();
+
+		// Only include pending and in-progress tasks
+		tasks = tasks.filter((task) => 
+			task.status === "pending" || task.status === "in-progress"
+		);
+
+		// Filter by assignee if specified
+		if (args.assigneeUserId) {
+			await validateUserAccess(ctx, args.assigneeUserId);
+			tasks = tasks.filter(
+				(task) => task.assigneeUserId === args.assigneeUserId
+			);
+		}
+
+		// Sort by date, then by priority (urgent first), then by start time
+		return tasks.sort((a, b) => {
+			// First sort by date
+			if (a.date !== b.date) {
+				return a.date - b.date;
+			}
+			
+			// Then by priority (urgent -> high -> medium -> low)
+			const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
+			const aPriority = priorityOrder[a.priority || "medium"];
+			const bPriority = priorityOrder[b.priority || "medium"];
+			
+			if (aPriority !== bPriority) {
+				return bPriority - aPriority; // Higher priority first
+			}
+			
+			// Finally by start time if available
+			if (a.startTime && b.startTime) {
+				return a.startTime.localeCompare(b.startTime);
+			}
+			
+			return a._creationTime - b._creationTime;
+		});
+	},
+});
+
+/**
+ * Get tasks assigned to a specific user
+ */
+export const getByUser = query({
+	args: { 
+		userId: v.id("users"),
+		status: v.optional(
+			v.union(
+				v.literal("pending"),
+				v.literal("in-progress"),
+				v.literal("completed"),
+				v.literal("cancelled")
+			)
+		),
+		includeCompleted: v.optional(v.boolean()) // Whether to include completed tasks
+	},
+	handler: async (ctx, args): Promise<TaskDocument[]> => {
+		const userOrgId = await getCurrentUserOrgId(ctx);
+		
+		// Validate the user exists and belongs to the same org
+		await validateUserAccess(ctx, args.userId);
+
+		let tasks = await ctx.db
+			.query("tasks")
+			.withIndex("by_assignee", (q) => q.eq("assigneeUserId", args.userId))
+			.collect();
+
+		// Filter by organization (additional security check)
+		tasks = tasks.filter((task) => task.orgId === userOrgId);
+
+		// Filter by status if specified
+		if (args.status) {
+			tasks = tasks.filter((task) => task.status === args.status);
+		} else if (!args.includeCompleted) {
+			// By default, exclude completed and cancelled tasks
+			tasks = tasks.filter((task) => 
+				task.status === "pending" || task.status === "in-progress"
+			);
+		}
+
+		// Sort by date, then by priority, then by start time
+		return tasks.sort((a, b) => {
+			// First sort by date
+			if (a.date !== b.date) {
+				return a.date - b.date;
+			}
+			
+			// Then by priority (urgent -> high -> medium -> low)
+			const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
+			const aPriority = priorityOrder[a.priority || "medium"];
+			const bPriority = priorityOrder[b.priority || "medium"];
+			
+			if (aPriority !== bPriority) {
+				return bPriority - aPriority; // Higher priority first
+			}
+			
+			// Finally by start time if available
+			if (a.startTime && b.startTime) {
+				return a.startTime.localeCompare(b.startTime);
+			}
+			
+			return a._creationTime - b._creationTime;
+		});
 	},
 });

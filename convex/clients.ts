@@ -1,4 +1,10 @@
-import { query, mutation, QueryCtx, MutationCtx } from "./_generated/server";
+import {
+	query,
+	mutation,
+	internalMutation,
+	QueryCtx,
+	MutationCtx,
+} from "./_generated/server";
 import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
 import { getCurrentUserOrgId } from "./lib/auth";
@@ -51,21 +57,36 @@ async function getClientOrThrow(
  */
 async function listClientsForOrg(
 	ctx: QueryCtx,
-	indexName?: "by_org" | "by_status"
+	indexName?: "by_org" | "by_status",
+	includeArchived: boolean = false
 ): Promise<Doc<"clients">[]> {
 	const userOrgId = await getCurrentUserOrgId(ctx);
 
 	if (indexName) {
-		return await ctx.db
+		const clients = await ctx.db
 			.query("clients")
 			.withIndex(indexName, (q) => q.eq("orgId", userOrgId))
 			.collect();
+
+		// Filter out archived clients unless explicitly requested
+		if (!includeArchived) {
+			return clients.filter((client) => client.status !== "archived");
+		}
+
+		return clients;
 	}
 
-	return await ctx.db
+	const clients = await ctx.db
 		.query("clients")
 		.filter((q) => q.eq(q.field("orgId"), userOrgId))
 		.collect();
+
+	// Filter out archived clients unless explicitly requested
+	if (!includeArchived) {
+		return clients.filter((client) => client.status !== "archived");
+	}
+
+	return clients;
 }
 
 /**
@@ -98,20 +119,6 @@ async function updateClientWithValidation(
 
 	// Update the client
 	await ctx.db.patch(id, updates);
-}
-
-/**
- * Delete a client with validation
- */
-async function deleteClientWithValidation(
-	ctx: MutationCtx,
-	id: Id<"clients">
-): Promise<void> {
-	// Validate client exists and belongs to user's org
-	await getClientOrThrow(ctx, id);
-
-	// Delete the client
-	await ctx.db.delete(id);
 }
 
 // Define specific types for client operations
@@ -153,12 +160,32 @@ export const list = query({
 				v.literal("archived")
 			)
 		),
+		includeArchived: v.optional(v.boolean()),
 	},
 	handler: async (ctx, args): Promise<ClientDocument[]> => {
+		const includeArchived = args.includeArchived || false;
+
 		if (args.status) {
-			return await listClientsForOrg(ctx, "by_status");
+			return await listClientsForOrg(ctx, "by_status", includeArchived);
 		}
-		return await listClientsForOrg(ctx, "by_org");
+		return await listClientsForOrg(ctx, "by_org", includeArchived);
+	},
+});
+
+/**
+ * Get only archived clients for the current user's organization
+ */
+export const listArchived = query({
+	args: {},
+	handler: async (ctx): Promise<ClientDocument[]> => {
+		const userOrgId = await getCurrentUserOrgId(ctx);
+
+		return await ctx.db
+			.query("clients")
+			.withIndex("by_status", (q) =>
+				q.eq("orgId", userOrgId).eq("status", "archived")
+			)
+			.collect();
 	},
 });
 
@@ -371,52 +398,231 @@ export const update = mutation({
 });
 
 /**
- * Delete a client with relationship validation
+ * Archive a client (soft delete) - sets status to archived and archivedAt timestamp
+ */
+export const archive = mutation({
+	args: { id: v.id("clients") },
+	handler: async (ctx, args): Promise<ClientId> => {
+		// Validate client exists and belongs to user's org
+		await getClientOrThrow(ctx, args.id);
+
+		// Archive the client by setting status to archived and adding archivedAt timestamp
+		await ctx.db.patch(args.id, {
+			status: "archived",
+			archivedAt: Date.now(),
+		});
+
+		// Get the updated client for activity logging
+		const client = await ctx.db.get(args.id);
+		if (client) {
+			await ActivityHelpers.clientUpdated(ctx, client as ClientDocument);
+		}
+
+		return args.id;
+	},
+});
+
+/**
+ * Restore an archived client back to active status
+ */
+export const restore = mutation({
+	args: { id: v.id("clients") },
+	handler: async (ctx, args): Promise<ClientId> => {
+		// Validate client exists and belongs to user's org
+		const client = await getClientOrThrow(ctx, args.id);
+
+		if (client.status !== "archived") {
+			throw new Error("Only archived clients can be restored");
+		}
+
+		// Restore the client by setting status back to active and removing archivedAt
+		await ctx.db.patch(args.id, {
+			status: "active",
+			archivedAt: undefined,
+		});
+
+		// Get the updated client for activity logging
+		const updatedClient = await ctx.db.get(args.id);
+		if (updatedClient) {
+			await ActivityHelpers.clientUpdated(ctx, updatedClient as ClientDocument);
+		}
+
+		return args.id;
+	},
+});
+
+/**
+ * Helper function to permanently delete a client and all related data
+ */
+async function permanentlyDeleteHandler(
+	ctx: MutationCtx,
+	args: { id: Id<"clients"> }
+): Promise<ClientId> {
+	// Validate client exists and belongs to user's org
+	const client = await getClientOrThrow(ctx, args.id);
+
+	if (client.status !== "archived") {
+		throw new Error("Only archived clients can be permanently deleted");
+	}
+
+	return await permanentlyDeleteSystemHandler(ctx, args);
+}
+
+/**
+ * System-level helper function to permanently delete a client and all related data
+ * This version doesn't require user authentication and is used by system operations
+ */
+async function permanentlyDeleteSystemHandler(
+	ctx: MutationCtx,
+	args: { id: Id<"clients"> }
+): Promise<ClientId> {
+	// Get client directly without user validation (system operation)
+	const client = await ctx.db.get(args.id);
+
+	if (!client) {
+		throw new Error("Client not found");
+	}
+
+	if (client.status !== "archived") {
+		throw new Error("Only archived clients can be permanently deleted");
+	}
+
+	// Delete all related data first
+	const contacts = await ctx.db
+		.query("clientContacts")
+		.withIndex("by_client", (q) => q.eq("clientId", args.id))
+		.collect();
+
+	const properties = await ctx.db
+		.query("clientProperties")
+		.withIndex("by_client", (q) => q.eq("clientId", args.id))
+		.collect();
+
+	const projects = await ctx.db
+		.query("projects")
+		.withIndex("by_client", (q) => q.eq("clientId", args.id))
+		.collect();
+
+	const quotes = await ctx.db
+		.query("quotes")
+		.withIndex("by_client", (q) => q.eq("clientId", args.id))
+		.collect();
+
+	const invoices = await ctx.db
+		.query("invoices")
+		.withIndex("by_client", (q) => q.eq("clientId", args.id))
+		.collect();
+
+	const tasks = await ctx.db
+		.query("tasks")
+		.withIndex("by_client", (q) => q.eq("clientId", args.id))
+		.collect();
+
+	// Delete all related records
+	for (const contact of contacts) {
+		await ctx.db.delete(contact._id);
+	}
+
+	for (const property of properties) {
+		await ctx.db.delete(property._id);
+	}
+
+	for (const project of projects) {
+		await ctx.db.delete(project._id);
+	}
+
+	for (const quote of quotes) {
+		// Also delete quote line items
+		const quoteLineItems = await ctx.db
+			.query("quoteLineItems")
+			.withIndex("by_quote", (q) => q.eq("quoteId", quote._id))
+			.collect();
+
+		for (const lineItem of quoteLineItems) {
+			await ctx.db.delete(lineItem._id);
+		}
+
+		// Delete associated documents
+		const documents = await ctx.db
+			.query("documents")
+			.withIndex("by_document", (q) =>
+				q.eq("documentType", "quote").eq("documentId", quote._id)
+			)
+			.collect();
+
+		for (const document of documents) {
+			await ctx.db.delete(document._id);
+		}
+
+		await ctx.db.delete(quote._id);
+	}
+
+	for (const invoice of invoices) {
+		// Also delete invoice line items
+		const invoiceLineItems = await ctx.db
+			.query("invoiceLineItems")
+			.withIndex("by_invoice", (q) => q.eq("invoiceId", invoice._id))
+			.collect();
+
+		for (const lineItem of invoiceLineItems) {
+			await ctx.db.delete(lineItem._id);
+		}
+
+		// Delete associated documents
+		const documents = await ctx.db
+			.query("documents")
+			.withIndex("by_document", (q) =>
+				q.eq("documentType", "invoice").eq("documentId", invoice._id)
+			)
+			.collect();
+
+		for (const document of documents) {
+			await ctx.db.delete(document._id);
+		}
+
+		await ctx.db.delete(invoice._id);
+	}
+
+	for (const task of tasks) {
+		await ctx.db.delete(task._id);
+	}
+
+	// Finally delete the client itself
+	await ctx.db.delete(args.id);
+	return args.id;
+}
+
+/**
+ * Permanently delete a client and all related data (used by cron job)
+ * This is an internal function that should only be called by the cron job
+ */
+export const permanentlyDelete = mutation({
+	args: { id: v.id("clients") },
+	handler: async (ctx, args): Promise<ClientId> => {
+		return await permanentlyDeleteHandler(ctx, args);
+	},
+});
+
+/**
+ * Legacy delete function - now redirects to archive for backward compatibility
+ * @deprecated Use archive() instead
  */
 export const remove = mutation({
 	args: { id: v.id("clients") },
 	handler: async (ctx, args): Promise<ClientId> => {
-		// First check if client has any related data
-		const contacts = await ctx.db
-			.query("clientContacts")
-			.withIndex("by_client", (q) => q.eq("clientId", args.id))
-			.collect();
+		// For backward compatibility, redirect to archive
+		// Archive the client by setting status to archived and adding archivedAt timestamp
+		await ctx.db.patch(args.id, {
+			status: "archived",
+			archivedAt: Date.now(),
+		});
 
-		const properties = await ctx.db
-			.query("clientProperties")
-			.withIndex("by_client", (q) => q.eq("clientId", args.id))
-			.collect();
-
-		const projects = await ctx.db
-			.query("projects")
-			.withIndex("by_client", (q) => q.eq("clientId", args.id))
-			.collect();
-
-		const quotes = await ctx.db
-			.query("quotes")
-			.withIndex("by_client", (q) => q.eq("clientId", args.id))
-			.collect();
-
-		const invoices = await ctx.db
-			.query("invoices")
-			.withIndex("by_client", (q) => q.eq("clientId", args.id))
-			.collect();
-
-		// Prevent deletion if client has related data
-		if (
-			contacts.length > 0 ||
-			properties.length > 0 ||
-			projects.length > 0 ||
-			quotes.length > 0 ||
-			invoices.length > 0
-		) {
-			throw new Error(
-				"Cannot delete client with existing contacts, properties, projects, quotes, or invoices. " +
-					"Please remove or transfer these items first."
-			);
+		// Get the updated client for activity logging
+		const client = await ctx.db.get(args.id);
+		if (client) {
+			await ActivityHelpers.clientUpdated(ctx, client as ClientDocument);
 		}
 
-		await deleteClientWithValidation(ctx, args.id);
 		return args.id;
 	},
 });
@@ -485,7 +691,7 @@ export const search = query({
 export const getStats = query({
 	args: {},
 	handler: async (ctx): Promise<ClientStats> => {
-		const clients = await listClientsForOrg(ctx, "by_org");
+		const clients = await listClientsForOrg(ctx, "by_org", true);
 
 		const stats: ClientStats = {
 			total: clients.length,
@@ -577,12 +783,34 @@ export const listWithProjectCounts = query({
 				v.literal("archived")
 			)
 		),
+		includeArchived: v.optional(v.boolean()),
 	},
 	handler: async (ctx, args) => {
-		// Get clients
-		const clients = args.status
-			? await listClientsForOrg(ctx, "by_status")
-			: await listClientsForOrg(ctx, "by_org");
+		const includeArchived = args.includeArchived || false;
+
+		// Get clients based on status filter
+		let clients: Doc<"clients">[];
+		const userOrgId = await getCurrentUserOrgId(ctx);
+
+		if (args.status) {
+			// Use the by_status index to get clients with specific status
+			clients = await ctx.db
+				.query("clients")
+				.withIndex("by_status", (q) =>
+					q.eq("orgId", userOrgId).eq("status", args.status!)
+				)
+				.collect();
+		} else {
+			// For all clients, filter out archived unless explicitly requested
+			clients = await ctx.db
+				.query("clients")
+				.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
+				.collect();
+
+			if (!includeArchived) {
+				clients = clients.filter((client) => client.status !== "archived");
+			}
+		}
 
 		// For each client, get their active project count
 		const clientsWithProjectCounts = await Promise.all(
@@ -597,6 +825,14 @@ export const listWithProjectCounts = query({
 						)
 					)
 					.collect();
+
+				// Get the primary contact for this client
+				const primaryContact = await ctx.db
+					.query("clientContacts")
+					.withIndex("by_primary", (q) =>
+						q.eq("clientId", client._id).eq("isPrimary", true)
+					)
+					.first();
 
 				// Get the most recent activity timestamp for this client
 				const recentActivities = await ctx.db
@@ -629,12 +865,78 @@ export const listWithProjectCounts = query({
 									: client.status === "inactive"
 										? ("Paused" as const)
 										: client.status === "archived"
-											? ("Paused" as const)
+											? ("Archived" as const)
 											: ("Paused" as const),
+					primaryContact: primaryContact
+						? {
+								name: `${primaryContact.firstName} ${primaryContact.lastName}`,
+								email: primaryContact.email || "No email",
+								jobTitle: primaryContact.jobTitle || "No title",
+							}
+						: null,
 				};
 			})
 		);
 
 		return clientsWithProjectCounts;
+	},
+});
+
+/**
+ * Internal function to cleanup archived clients that have been archived for 7+ days
+ * This is called by the cron job and should not be called directly
+ */
+/**
+ * System-level cleanup function that doesn't require user authentication
+ * This is used by cron jobs and can be run manually from the dashboard
+ */
+export const cleanupArchivedClients = internalMutation({
+	args: {},
+	handler: async (ctx): Promise<{ deleted: number; errors: string[] }> => {
+		const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+		const errors: string[] = [];
+		let deletedCount = 0;
+
+		try {
+			// Find all archived clients that were archived 7+ days ago
+			const archivedClients = await ctx.db
+				.query("clients")
+				.filter((q) =>
+					q.and(
+						q.eq(q.field("status"), "archived"),
+						q.lt(q.field("archivedAt"), sevenDaysAgo)
+					)
+				)
+				.collect();
+
+			console.log(
+				`Found ${archivedClients.length} archived clients to cleanup`
+			);
+
+			// Permanently delete each archived client using system-level deletion
+			for (const client of archivedClients) {
+				try {
+					await permanentlyDeleteSystemHandler(ctx, { id: client._id });
+					deletedCount++;
+					console.log(
+						`Deleted archived client: ${client.companyName} (${client._id})`
+					);
+				} catch (error) {
+					const errorMsg = `Failed to delete client ${client.companyName} (${client._id}): ${error}`;
+					console.error(errorMsg);
+					errors.push(errorMsg);
+				}
+			}
+
+			console.log(
+				`Cleanup completed: ${deletedCount} clients deleted, ${errors.length} errors`
+			);
+		} catch (error) {
+			const errorMsg = `Failed to run archived clients cleanup: ${error}`;
+			console.error(errorMsg);
+			errors.push(errorMsg);
+		}
+
+		return { deleted: deletedCount, errors };
 	},
 });
