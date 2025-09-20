@@ -1,7 +1,7 @@
 import { query, mutation, QueryCtx, MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
-import { getCurrentUserOrgId } from "./lib/auth";
+import { getCurrentUserOrgIdOptional, getCurrentUserOrgId } from "./lib/auth";
 import { ActivityHelpers } from "./lib/activities";
 import { DateUtils } from "./lib/shared";
 
@@ -19,7 +19,10 @@ async function getProjectWithOrgValidation(
 	ctx: QueryCtx | MutationCtx,
 	id: Id<"projects">
 ): Promise<Doc<"projects"> | null> {
-	const userOrgId = await getCurrentUserOrgId(ctx);
+	const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+	if (!userOrgId) {
+		return null;
+	}
 	const project = await ctx.db.get(id);
 
 	if (!project) {
@@ -54,7 +57,10 @@ async function validateClientAccess(
 	ctx: QueryCtx | MutationCtx,
 	clientId: Id<"clients">
 ): Promise<void> {
-	const userOrgId = await getCurrentUserOrgId(ctx);
+	const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+	if (!userOrgId) {
+		throw new Error("User is not associated with an organization");
+	}
 	const client = await ctx.db.get(clientId);
 
 	if (!client) {
@@ -73,7 +79,10 @@ async function validateUserAccess(
 	ctx: QueryCtx | MutationCtx,
 	userIds: Id<"users">[]
 ): Promise<void> {
-	const userOrgId = await getCurrentUserOrgId(ctx);
+	const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+	if (!userOrgId) {
+		throw new Error("User is not associated with an organization");
+	}
 
 	for (const userId of userIds) {
 		const user = await ctx.db.get(userId);
@@ -183,7 +192,10 @@ export const list = query({
 		clientId: v.optional(v.id("clients")),
 	},
 	handler: async (ctx, args): Promise<ProjectDocument[]> => {
-		const userOrgId = await getCurrentUserOrgId(ctx);
+		const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+		if (!userOrgId) {
+			return [];
+		}
 
 		let projects: ProjectDocument[];
 
@@ -413,7 +425,10 @@ export const search = query({
 		clientId: v.optional(v.id("clients")),
 	},
 	handler: async (ctx, args): Promise<ProjectDocument[]> => {
-		const userOrgId = await getCurrentUserOrgId(ctx);
+		const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+		if (!userOrgId) {
+			return [];
+		}
 		let projects = await ctx.db
 			.query("projects")
 			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
@@ -462,7 +477,24 @@ export const search = query({
 export const getStats = query({
 	args: {},
 	handler: async (ctx): Promise<ProjectStats> => {
-		const userOrgId = await getCurrentUserOrgId(ctx);
+		const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+		if (!userOrgId) {
+			return {
+				total: 0,
+				byStatus: {
+					planned: 0,
+					"in-progress": 0,
+					completed: 0,
+					cancelled: 0,
+				},
+				byType: {
+					"one-off": 0,
+					recurring: 0,
+				},
+				upcomingDeadlines: 0,
+				overdue: 0,
+			};
+		}
 		const projects = await ctx.db
 			.query("projects")
 			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
@@ -523,7 +555,10 @@ export const getStats = query({
 export const getByAssignee = query({
 	args: { userId: v.id("users") },
 	handler: async (ctx, args): Promise<ProjectDocument[]> => {
-		const userOrgId = await getCurrentUserOrgId(ctx);
+		const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+		if (!userOrgId) {
+			return [];
+		}
 
 		// Validate user belongs to organization
 		await validateUserAccess(ctx, [args.userId]);
@@ -549,7 +584,10 @@ export const getByAssignee = query({
 export const getUpcomingDeadlines = query({
 	args: { days: v.optional(v.number()) },
 	handler: async (ctx, args): Promise<ProjectDocument[]> => {
-		const userOrgId = await getCurrentUserOrgId(ctx);
+		const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+		if (!userOrgId) {
+			return [];
+		}
 		const daysAhead = args.days || 7;
 
 		const projects = await ctx.db
@@ -577,7 +615,10 @@ export const getUpcomingDeadlines = query({
 export const getOverdue = query({
 	args: {},
 	handler: async (ctx): Promise<ProjectDocument[]> => {
-		const userOrgId = await getCurrentUserOrgId(ctx);
+		const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+		if (!userOrgId) {
+			return [];
+		}
 
 		const projects = await ctx.db
 			.query("projects")
