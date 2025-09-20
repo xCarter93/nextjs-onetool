@@ -10,7 +10,7 @@ import { ConvexProviderWithClerk } from "convex/react-clerk";
 import { useAuth } from "@clerk/nextjs";
 import { env } from "@/env";
 
-const convex = new ConvexReactClient(env.NEXT_PUBLIC_CONVEX_URL_DEV);
+const convex = new ConvexReactClient(env.NEXT_PUBLIC_CONVEX_URL);
 
 export default function ConvexClientProvider({
 	children,
