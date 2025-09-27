@@ -2,7 +2,8 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { SignInButton, SignUpButton } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
+import { SignInButton, SignUpButton, SignedIn, SignedOut } from "@clerk/nextjs";
 import GlowLine from "@/components/glowline";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 
@@ -179,6 +180,7 @@ const navigationLinks = [
 
 function AppNavBar() {
 	const [isMenuOpen, setIsMenuOpen] = useState(false);
+	const router = useRouter();
 
 	return (
 		<header className="sticky top-0 z-50 w-full backdrop-blur-xl bg-white/80 dark:bg-black/80 border-b border-gray-200 dark:border-gray-700">
@@ -218,16 +220,29 @@ function AppNavBar() {
 						{/* Clerk Authentication Buttons */}
 						<div className="hidden sm:flex items-center gap-3">
 							<ThemeSwitcher />
-							<SignInButton mode="modal" forceRedirectUrl="/home">
-								<Button variant="ghost" size="sm">
-									Sign In
+							<SignedOut>
+								<div className="flex items-center gap-3">
+									<SignInButton mode="modal" forceRedirectUrl="/home">
+										<Button variant="ghost" size="sm">
+											Sign In
+										</Button>
+									</SignInButton>
+									<SignUpButton mode="modal" forceRedirectUrl="/home">
+										<Button variant="glass" size="sm">
+											Sign Up
+										</Button>
+									</SignUpButton>
+								</div>
+							</SignedOut>
+							<SignedIn>
+								<Button
+									variant="glass"
+									size="sm"
+									onClick={() => router.push("/home")}
+								>
+									Go To Dashboard
 								</Button>
-							</SignInButton>
-							<SignUpButton mode="modal" forceRedirectUrl="/home">
-								<Button variant="glass" size="sm">
-									Sign Up
-								</Button>
-							</SignUpButton>
+							</SignedIn>
 						</div>
 
 						{/* Mobile menu button */}
@@ -275,16 +290,33 @@ function AppNavBar() {
 								<div className="flex justify-center mb-2">
 									<ThemeSwitcher />
 								</div>
-								<SignInButton mode="modal">
-									<Button variant="ghost" size="sm" className="w-full">
-										Sign In
+								<SignedOut>
+									<div className="space-y-2">
+										<SignInButton mode="modal" forceRedirectUrl="/home">
+											<Button variant="ghost" size="sm" className="w-full">
+												Sign In
+											</Button>
+										</SignInButton>
+										<SignUpButton mode="modal" forceRedirectUrl="/home">
+											<Button variant="glass" size="sm" className="w-full">
+												Sign Up
+											</Button>
+										</SignUpButton>
+									</div>
+								</SignedOut>
+								<SignedIn>
+									<Button
+										variant="glass"
+										size="sm"
+										className="w-full"
+										onClick={() => {
+											router.push("/home");
+											setIsMenuOpen(false);
+										}}
+									>
+										Go To Dashboard
 									</Button>
-								</SignInButton>
-								<SignUpButton mode="modal">
-									<Button variant="glass" size="sm" className="w-full">
-										Sign Up
-									</Button>
-								</SignUpButton>
+								</SignedIn>
 							</div>
 						</div>
 					</div>
