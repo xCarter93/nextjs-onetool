@@ -143,6 +143,7 @@ export const completeMetadata = mutation({
 		smsEnabled: v.optional(v.boolean()),
 		monthlyRevenueTarget: v.optional(v.number()),
 		logoUrl: v.optional(v.string()),
+		logoInvertInDarkMode: v.optional(v.boolean()),
 	},
 	handler: async (ctx, args) => {
 		const user = await getCurrentUserOrThrow(ctx);
@@ -170,6 +171,8 @@ export const completeMetadata = mutation({
 			smsEnabled: args.smsEnabled ?? false,
 			monthlyRevenueTarget: args.monthlyRevenueTarget,
 			logoUrl: args.logoUrl,
+			logoInvertInDarkMode:
+				args.logoInvertInDarkMode ?? organization.logoInvertInDarkMode ?? true,
 			isMetadataComplete: true,
 		});
 
@@ -307,6 +310,7 @@ export const update = mutation({
 		email: v.optional(v.string()),
 		website: v.optional(v.string()),
 		logoUrl: v.optional(v.string()),
+		logoInvertInDarkMode: v.optional(v.boolean()),
 		logoStorageId: v.optional(v.id("_storage")),
 		brandColor: v.optional(v.string()),
 		address: v.optional(v.string()),

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useUser, useOrganization } from "@clerk/nextjs";
 import { useMutation, useQuery } from "convex/react";
 import { useRouter } from "next/navigation";
@@ -8,19 +8,26 @@ import ProgressBar, { ProgressStep } from "@/components/progress-bar";
 import SelectService from "@/components/choice-set";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useToast } from "@/hooks/use-toast";
 import { Users, Building2, Globe } from "lucide-react";
 import { api } from "../../../../../convex/_generated/api";
+import Image from "next/image";
 
 interface FormData {
 	email: string;
 	website: string;
 	phone: string;
-	address: string;
+	addressStreet: string;
+	addressCity: string;
+	addressState: string;
+	addressZip: string;
 	companySize: string;
 	defaultTaxRate: number;
 	defaultReminderTiming: number;
 	smsEnabled: boolean;
 	monthlyRevenueTarget: number;
+	logoInvertInDarkMode: boolean;
 }
 
 export default function CompleteOrganizationMetadata() {
@@ -30,6 +37,7 @@ export default function CompleteOrganizationMetadata() {
 	const completeMetadata = useMutation(api.organizations.completeMetadata);
 	const organization = useQuery(api.organizations.get);
 	const needsCompletion = useQuery(api.organizations.needsMetadataCompletion);
+	const toast = useToast();
 
 	const [currentStep, setCurrentStep] = useState(1);
 	const [isLoading, setIsLoading] = useState(false);
@@ -38,12 +46,16 @@ export default function CompleteOrganizationMetadata() {
 		email: user?.primaryEmailAddress?.emailAddress || "",
 		website: "",
 		phone: "",
-		address: "",
+		addressStreet: "",
+		addressCity: "",
+		addressState: "",
+		addressZip: "",
 		companySize: "",
 		defaultTaxRate: 0,
 		defaultReminderTiming: 24, // 24 hours default
 		smsEnabled: false,
 		monthlyRevenueTarget: 0,
+		logoInvertInDarkMode: true,
 	});
 
 	// Redirect if metadata is already complete
@@ -110,8 +122,28 @@ export default function CompleteOrganizationMetadata() {
 		},
 	];
 
+	const isStep1Complete = () => {
+		const requiredFields = [
+			formData.email.trim(),
+			formData.phone.trim(),
+			formData.addressStreet.trim(),
+			formData.addressCity.trim(),
+			formData.addressState.trim(),
+			formData.addressZip.trim(),
+		];
+		return requiredFields.every(Boolean);
+	};
+
 	const handleNext = () => {
 		setError(null);
+		if (currentStep === 1 && !isStep1Complete()) {
+			toast.warning(
+				"Missing Required Information",
+				"Please complete business email, phone number, and full address to continue."
+			);
+			return;
+		}
+
 		if (currentStep < 3) {
 			setCurrentStep(currentStep + 1);
 		}
@@ -124,14 +156,32 @@ export default function CompleteOrganizationMetadata() {
 		}
 	};
 
+	const normalizedWebsite = useMemo(() => {
+		if (!formData.website.trim()) {
+			return "";
+		}
+		const trimmed = formData.website.trim();
+		return trimmed.replace(/^https?:\/\//i, "");
+	}, [formData.website]);
+
+	const invertPreviewStyles = formData.logoInvertInDarkMode
+		? "invert brightness-0"
+		: "";
+
 	const handleCompleteMetadata = async () => {
 		setError(null);
 
 		// Basic validation
-		if (!formData.website.trim() || !formData.companySize) {
-			setError(
-				"Please fill in the required fields (website and company size)."
+		if (!isStep1Complete()) {
+			toast.warning(
+				"Missing Required Information",
+				"Please complete business email, phone number, and full address to finish setup."
 			);
+			return;
+		}
+
+		if (!formData.companySize) {
+			setError("Please select a company size before completing setup.");
 			return;
 		}
 
@@ -140,15 +190,24 @@ export default function CompleteOrganizationMetadata() {
 		try {
 			await completeMetadata({
 				email: formData.email.trim() || undefined,
-				website: formData.website.trim(),
+				website: normalizedWebsite ? `https://${normalizedWebsite}` : undefined,
 				phone: formData.phone.trim() || undefined,
-				address: formData.address.trim() || undefined,
+				address:
+					[
+						formData.addressStreet.trim(),
+						formData.addressCity.trim(),
+						formData.addressState.trim(),
+						formData.addressZip.trim(),
+					]
+						.filter(Boolean)
+						.join(", ") || undefined,
 				companySize: formData.companySize as "1-10" | "10-100" | "100+",
 				defaultTaxRate: formData.defaultTaxRate || undefined,
 				defaultReminderTiming: formData.defaultReminderTiming,
 				smsEnabled: formData.smsEnabled,
 				monthlyRevenueTarget: formData.monthlyRevenueTarget || undefined,
 				logoUrl: clerkOrganization?.imageUrl || undefined,
+				logoInvertInDarkMode: formData.logoInvertInDarkMode,
 			});
 
 			router.push("/home");
@@ -196,17 +255,25 @@ export default function CompleteOrganizationMetadata() {
 
 				<div>
 					<label className="block text-sm font-semibold text-foreground mb-3 tracking-wide">
-						Company Website *
+						Company Website
 					</label>
-					<Input
-						value={formData.website}
-						onChange={(e) =>
-							setFormData({ ...formData, website: e.target.value })
-						}
-						className="w-full border-border dark:border-border bg-background dark:bg-background focus:bg-background dark:focus:bg-background transition-colors shadow-sm ring-1 ring-border/10"
-						placeholder="https://www.yourcompany.com"
-						type="url"
-					/>
+					<div className="mt-2 flex">
+						<span className="flex shrink-0 items-center rounded-l-md border border-border bg-muted/40 px-3 text-sm font-medium text-muted-foreground">
+							https://
+						</span>
+						<Input
+							value={formData.website}
+							onChange={(e) =>
+								setFormData({
+									...formData,
+									website: e.target.value.replace(/^https?:\/\//i, ""),
+								})
+							}
+							className="w-full rounded-l-none border border-l-0 border-border dark:border-border bg-background dark:bg-background focus:bg-background dark:focus:bg-background transition-colors shadow-sm ring-1 ring-border/10"
+							placeholder="www.yourcompany.com"
+							type="text"
+						/>
+					</div>
 				</div>
 
 				<div>
@@ -228,24 +295,134 @@ export default function CompleteOrganizationMetadata() {
 					<label className="block text-sm font-semibold text-foreground mb-3 tracking-wide">
 						Business Address
 					</label>
-					<Input
-						value={formData.address}
-						onChange={(e) =>
-							setFormData({ ...formData, address: e.target.value })
-						}
-						className="w-full border-border dark:border-border bg-background dark:bg-background focus:bg-background dark:focus:bg-background transition-colors shadow-sm ring-1 ring-border/10"
-						placeholder="123 Business St, City, State 12345"
-					/>
+					<div className="grid gap-4 sm:grid-cols-2">
+						<div className="sm:col-span-2">
+							<Input
+								value={formData.addressStreet}
+								onChange={(e) =>
+									setFormData({ ...formData, addressStreet: e.target.value })
+								}
+								className="w-full border-border dark:border-border bg-background dark:bg-background focus:bg-background dark:focus:bg-background transition-colors shadow-sm ring-1 ring-border/10"
+								placeholder="123 Business St"
+							/>
+						</div>
+						<div>
+							<Input
+								value={formData.addressCity}
+								onChange={(e) =>
+									setFormData({ ...formData, addressCity: e.target.value })
+								}
+								className="w-full border-border dark:border-border bg-background dark:bg-background focus:bg-background dark:focus:bg-background transition-colors shadow-sm ring-1 ring-border/10"
+								placeholder="City"
+							/>
+						</div>
+						<div className="grid grid-cols-2 gap-4">
+							<Input
+								value={formData.addressState}
+								onChange={(e) =>
+									setFormData({ ...formData, addressState: e.target.value })
+								}
+								className="w-full border-border dark:border-border bg-background dark:bg-background focus:bg-background dark:focus:bg-background transition-colors shadow-sm ring-1 ring-border/10"
+								placeholder="State"
+							/>
+							<Input
+								value={formData.addressZip}
+								onChange={(e) =>
+									setFormData({ ...formData, addressZip: e.target.value })
+								}
+								className="w-full border-border dark:border-border bg-background dark:bg-background focus:bg-background dark:focus:bg-background transition-colors shadow-sm ring-1 ring-border/10"
+								placeholder="ZIP"
+							/>
+						</div>
+					</div>
+				</div>
+
+				<div>
+					<label className="block text-sm font-semibold text-foreground mb-3 tracking-wide">
+						Logo Display Preferences
+					</label>
+					<div className="space-y-4 border border-border dark:border-border/80 rounded-xl p-5">
+						<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+							<div>
+								<p className="text-sm font-medium text-foreground">
+									Invert logo colors in dark mode
+								</p>
+								<p className="text-xs text-muted-foreground">
+									Enable this if your logo is dark so it stays visible on dark
+									backgrounds.
+								</p>
+							</div>
+							<div className="flex items-center gap-3">
+								<Checkbox
+									checked={formData.logoInvertInDarkMode}
+									onCheckedChange={(checked) =>
+										setFormData({
+											...formData,
+											logoInvertInDarkMode: Boolean(checked),
+										})
+									}
+									className="size-5"
+								/>
+								<span className="text-sm text-muted-foreground">
+									{formData.logoInvertInDarkMode ? "Enabled" : "Disabled"}
+								</span>
+							</div>
+						</div>
+
+						<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+							<div className="border border-border/60 dark:border-border/40 rounded-lg p-4 flex flex-col items-center gap-3 bg-white">
+								<span className="text-xs uppercase tracking-wide text-muted-foreground">
+									Light Mode Preview
+								</span>
+								<div className="h-16 w-16 rounded-lg border border-border flex items-center justify-center bg-white">
+									{clerkOrganization?.imageUrl ? (
+										<Image
+											src={clerkOrganization.imageUrl}
+											alt="Logo preview light"
+											width={64}
+											height={64}
+											className="max-h-12 max-w-full object-contain"
+										/>
+									) : (
+										<span className="text-xs text-muted-foreground">
+											No logo
+										</span>
+									)}
+								</div>
+							</div>
+							<div className="border border-border/60 dark:border-border/40 rounded-lg p-4 flex flex-col items-center gap-3 bg-zinc-900">
+								<span className="text-xs uppercase tracking-wide text-muted-foreground">
+									Dark Mode Preview
+								</span>
+								<div className="h-16 w-16 rounded-lg border border-border/40 flex items-center justify-center bg-zinc-900">
+									{clerkOrganization?.imageUrl ? (
+										<Image
+											src={clerkOrganization.imageUrl}
+											alt="Logo preview dark"
+											width={64}
+											height={64}
+											className={`max-h-12 max-w-full object-contain transition-all duration-200 ${invertPreviewStyles}`}
+										/>
+									) : (
+										<span className="text-xs text-muted-foreground">
+											No logo
+										</span>
+									)}
+								</div>
+							</div>
+						</div>
+					</div>
 				</div>
 			</div>
 
 			<div className="flex justify-end pt-6">
-				<Button
+				<button
+					type="button"
 					onClick={handleNext}
-					className="px-8 py-2.5 shadow-lg hover:shadow-xl transition-shadow"
+					className="group inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-all duration-200 px-4 py-2 rounded-lg bg-primary/10 hover:bg-primary/15 ring-1 ring-primary/30 hover:ring-primary/40 shadow-sm hover:shadow-md backdrop-blur-sm"
 				>
 					Next Step
-				</Button>
+				</button>
 			</div>
 		</div>
 	);
@@ -283,12 +460,13 @@ export default function CompleteOrganizationMetadata() {
 				>
 					Previous
 				</Button>
-				<Button
+				<button
+					type="button"
 					onClick={handleNext}
-					className="px-8 py-2.5 shadow-lg hover:shadow-xl transition-shadow"
+					className="group inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-all duration-200 px-4 py-2 rounded-lg bg-primary/10 hover:bg-primary/15 ring-1 ring-primary/30 hover:ring-primary/40 shadow-sm hover:shadow-md backdrop-blur-sm"
 				>
 					Next Step
-				</Button>
+				</button>
 			</div>
 		</div>
 	);
@@ -384,13 +562,14 @@ export default function CompleteOrganizationMetadata() {
 				>
 					Previous
 				</Button>
-				<Button
+				<button
+					type="button"
 					onClick={handleCompleteMetadata}
-					isDisabled={isLoading}
-					className="px-8 py-2.5 shadow-lg hover:shadow-xl transition-shadow bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary disabled:opacity-50 disabled:cursor-not-allowed"
+					disabled={isLoading}
+					className="group inline-flex items-center gap-2 text-sm font-semibold text-white transition-all duration-200 px-4 py-2 rounded-lg bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
 				>
 					{isLoading ? "Saving..." : "Complete Setup"}
-				</Button>
+				</button>
 			</div>
 		</div>
 	);
