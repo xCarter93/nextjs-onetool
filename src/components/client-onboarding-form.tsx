@@ -6,9 +6,6 @@ import React, {
 	forwardRef,
 	useImperativeHandle,
 } from "react";
-import { useRouter } from "next/navigation";
-import { useMutation } from "convex/react";
-import { api } from "../../convex/_generated/api";
 import { ChevronDownIcon } from "@heroicons/react/16/solid";
 import Accordion from "./ui/accordion";
 import { useToastOperations } from "@/hooks/use-toast";
@@ -85,6 +82,7 @@ export interface ClientFormData {
 	projectDimensions: string;
 	priorityLevel: "low" | "medium" | "high" | "urgent" | "";
 	tags: string;
+	notes: string;
 
 	// Service Requirements
 	servicesNeeded: string[];
@@ -156,6 +154,7 @@ const initialFormData: ClientFormData = {
 	projectDimensions: "",
 	priorityLevel: "",
 	tags: "",
+	notes: "",
 
 	// Service Requirements
 	servicesNeeded: [],
@@ -208,10 +207,6 @@ export const ClientOnboardingForm = forwardRef<
 	) => {
 		const [formData, setFormData] = useState<ClientFormData>(initialFormData);
 		const [errors, setErrors] = useState<Record<string, string>>({});
-		const router = useRouter();
-		const createClient = useMutation(api.clients.create);
-		const createContact = useMutation(api.clientContacts.create);
-		const createProperty = useMutation(api.clientProperties.create);
 		const toast = useToastOperations();
 
 		// Expose form methods via ref
@@ -364,108 +359,6 @@ export const ClientOnboardingForm = forwardRef<
 			try {
 				if (onSubmit) {
 					onSubmit(formData);
-				} else {
-					await toast.confirmAction(
-						async () => {
-							const clientData = {
-								// Company Information
-								companyName: formData.companyName.trim(),
-								industry: formData.industry.trim() || undefined,
-								companyDescription:
-									formData.companyDescription.trim() || undefined,
-								status: formData.status as
-									| "lead"
-									| "prospect"
-									| "active"
-									| "inactive"
-									| "archived",
-								leadSource: formData.leadSource || undefined,
-
-								// Custom Categories
-								category: formData.category || undefined,
-								clientSize: formData.clientSize || undefined,
-								clientType: formData.clientType || undefined,
-								isActive:
-									formData.isActive === "yes"
-										? true
-										: formData.isActive === "no"
-											? false
-											: undefined,
-								priorityLevel: formData.priorityLevel || undefined,
-								projectDimensions:
-									formData.projectDimensions.trim() || undefined,
-
-								// Communication preferences
-								communicationPreference:
-									formData.communicationPreference || undefined,
-								emailOptIn: formData.emailOptIn,
-								smsOptIn: formData.smsOptIn,
-
-								// Services
-								servicesNeeded:
-									formData.servicesNeeded.length > 0
-										? formData.servicesNeeded
-										: undefined,
-
-								// Metadata
-								tags: formData.tags.trim()
-									? formData.tags
-											.split(",")
-											.map((tag) => tag.trim())
-											.filter(Boolean)
-									: undefined,
-								notes: undefined,
-							};
-
-							// Create the client first
-							const clientId = await createClient(clientData);
-
-							// Create contacts
-							for (const contact of formData.contacts) {
-								if (contact.firstName.trim() && contact.lastName.trim()) {
-									await createContact({
-										clientId,
-										firstName: contact.firstName.trim(),
-										lastName: contact.lastName.trim(),
-										email: contact.email.trim() || undefined,
-										phone: contact.phone.trim() || undefined,
-										jobTitle: contact.jobTitle.trim() || undefined,
-										role: contact.role.trim() || undefined,
-										department: contact.department.trim() || undefined,
-										isPrimary: contact.isPrimary,
-									});
-								}
-							}
-
-							// Create properties
-							for (const property of formData.properties) {
-								if (property.streetAddress.trim()) {
-									await createProperty({
-										clientId,
-										propertyName: property.propertyName.trim() || undefined,
-										propertyType: property.propertyType || undefined,
-										squareFootage: property.squareFootage.trim()
-											? parseInt(property.squareFootage)
-											: undefined,
-										streetAddress: property.streetAddress.trim(),
-										city: property.city.trim(),
-										state: property.region.trim(),
-										zipCode: property.postalCode.trim(),
-										description:
-											property.propertyDescription.trim() || undefined,
-										isPrimary: property.isPrimary,
-									});
-								}
-							}
-
-							router.push("/clients");
-						},
-						{
-							loading: "Creating client profile...",
-							success: `Client "${formData.companyName}" created successfully!`,
-							error: "Failed to create client profile",
-						}
-					);
 				}
 			} catch (error) {
 				console.error("Failed to create client:", error);
