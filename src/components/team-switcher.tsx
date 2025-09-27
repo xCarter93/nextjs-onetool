@@ -2,10 +2,18 @@
 
 import * as React from "react";
 import { OrganizationSwitcher } from "@clerk/nextjs";
+import { useQuery } from "convex/react";
+
+import { api } from "../../convex/_generated/api";
 
 import { SidebarMenu, SidebarMenuItem } from "@/components/ui/sidebar";
 
 export function TeamSwitcher() {
+	const organization = useQuery(api.organizations.get);
+	const shouldInvert = organization?.logoInvertInDarkMode ?? true;
+	const avatarImageClass = `w-8 h-8 rounded-lg object-cover ${
+		shouldInvert ? "dark:invert dark:brightness-0" : ""
+	}`;
 	return (
 		<SidebarMenu>
 			<SidebarMenuItem>
@@ -46,8 +54,7 @@ export function TeamSwitcher() {
 									"w-full p-2 rounded-lg bg-transparent hover:bg-muted/50 transition-colors text-left text-foreground",
 								organizationPreviewAvatarBox:
 									"w-8 h-8 rounded-lg dark:bg-zinc-800 bg-gray-100 flex items-center justify-center",
-								organizationPreviewAvatarImage:
-									"w-8 h-8 rounded-lg object-cover dark:brightness-0 dark:invert",
+								organizationPreviewAvatarImage: avatarImageClass,
 
 								// Organization list text with design tokens
 								organizationSwitcherPopoverOrganization: "text-foreground",

@@ -27,6 +27,7 @@ export default defineSchema({
 		email: v.optional(v.string()),
 		website: v.optional(v.string()),
 		logoUrl: v.optional(v.string()),
+		logoInvertInDarkMode: v.optional(v.boolean()),
 		brandColor: v.optional(v.string()),
 		address: v.optional(v.string()),
 		phone: v.optional(v.string()),
