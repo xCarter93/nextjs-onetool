@@ -73,12 +73,12 @@ export function PropertyTable({
 		console.log("allProperties useMemo:", {
 			savedItems: savedItems.map((p) => ({
 				id: p._id,
-				name: p.propertyName,
+				name: p.streetAddress,
 				isNew: p.isNew,
 			})),
 			localProperties: localProperties.map((p) => ({
 				id: p._id,
-				name: p.propertyName,
+				name: p.streetAddress,
 				isNew: p.isNew,
 			})),
 		});
