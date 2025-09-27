@@ -1,4 +1,14 @@
 import { QueryCtx, MutationCtx } from "../_generated/server";
+import { Id } from "../_generated/dataModel";
+
+// Extended identity type that includes Clerk's activeOrgId
+interface ClerkIdentityWithActiveOrg {
+	tokenIdentifier: string;
+	subject: string;
+	issuer: string;
+	activeOrgId?: string;
+	// ... other Clerk identity fields
+}
 
 /**
  * Get the current authenticated user, throwing an error if not found
@@ -34,14 +44,45 @@ export async function userByExternalId(
 }
 
 /**
- * Get the current user's organization ID, throwing an error if not found
+ * Get an organization by its Clerk organization ID
  */
-export async function getCurrentUserOrgId(ctx: QueryCtx | MutationCtx) {
-	const user = await getCurrentUserOrThrow(ctx);
-	if (!user.organizationId) {
-		throw new Error("User is not associated with an organization");
+export async function getOrganizationByClerkId(
+	ctx: QueryCtx | MutationCtx,
+	clerkOrgId: string
+) {
+	return await ctx.db
+		.query("organizations")
+		.withIndex("by_clerk_org", (q) => q.eq("clerkOrganizationId", clerkOrgId))
+		.unique();
+}
+
+/**
+ * Get the current user's active organization ID from Clerk identity, throwing an error if not found
+ * This uses the activeOrgId from the Clerk JWT token to ensure proper data isolation
+ * when users are members of multiple organizations.
+ */
+export async function getCurrentUserOrgId(
+	ctx: QueryCtx | MutationCtx
+): Promise<Id<"organizations">> {
+	const identity = await ctx.auth.getUserIdentity();
+	if (!identity) {
+		throw new Error("User not authenticated");
 	}
-	return user.organizationId;
+
+	// Get the active organization ID from Clerk JWT token
+	const clerkIdentity = identity as ClerkIdentityWithActiveOrg;
+	const activeOrgId = clerkIdentity.activeOrgId;
+	if (!activeOrgId) {
+		throw new Error("No active organization found in user session");
+	}
+
+	// Look up the organization by Clerk organization ID
+	const organization = await getOrganizationByClerkId(ctx, activeOrgId);
+	if (!organization) {
+		throw new Error("Active organization not found in database");
+	}
+
+	return organization._id;
 }
 
 /**
@@ -49,7 +90,7 @@ export async function getCurrentUserOrgId(ctx: QueryCtx | MutationCtx) {
  */
 export async function validateOrgAccess(
 	ctx: QueryCtx | MutationCtx,
-	orgId: string
+	orgId: Id<"organizations">
 ) {
 	const userOrgId = await getCurrentUserOrgId(ctx);
 	if (userOrgId !== orgId) {
