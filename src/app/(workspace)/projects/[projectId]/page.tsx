@@ -22,6 +22,7 @@ import {
 	PlayIcon,
 	CheckIcon,
 } from "@heroicons/react/24/outline";
+import { Plus } from "lucide-react";
 import { StickyFormFooter } from "@/components/sticky-form-footer";
 import { useEffect, useMemo, useState } from "react";
 import type { Id } from "../../../../../convex/_generated/dataModel";
@@ -1360,15 +1361,22 @@ export default function ProjectDetailPage() {
 								<CardHeader className="pb-4">
 									<CardTitle className="flex items-center justify-between text-xl font-semibold text-gray-900 dark:text-white">
 										<span>Tasks ({projectTasks?.length || 0})</span>
-										<Button
-											size="sm"
-											intent="outline"
+										<button
+											type="button"
 											onClick={() =>
 												router.push(`/tasks/new?projectId=${projectId}`)
 											}
+											className="group inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-all duration-200 px-4 py-2 rounded-lg bg-primary/10 hover:bg-primary/15 ring-1 ring-primary/30 hover:ring-primary/40 shadow-sm hover:shadow-md backdrop-blur-sm"
 										>
-											+ Add Task
-										</Button>
+											<Plus className="h-4 w-4" />
+											Add Task
+											<span
+												aria-hidden="true"
+												className="group-hover:translate-x-1 transition-transform duration-200"
+											>
+												→
+											</span>
+										</button>
 									</CardTitle>
 								</CardHeader>
 								<CardContent>
@@ -1424,14 +1432,6 @@ export default function ProjectDetailPage() {
 											<p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
 												No tasks created yet
 											</p>
-											<Button
-												size="sm"
-												onClick={() =>
-													router.push(`/tasks/new?projectId=${projectId}`)
-												}
-											>
-												Create First Task
-											</Button>
 										</div>
 									)}
 								</CardContent>
@@ -1442,15 +1442,22 @@ export default function ProjectDetailPage() {
 								<CardHeader className="pb-4">
 									<CardTitle className="flex items-center justify-between text-xl font-semibold text-gray-900 dark:text-white">
 										<span>Quotes ({projectQuotes?.length || 0})</span>
-										<Button
-											size="sm"
-											intent="outline"
+										<button
+											type="button"
 											onClick={() =>
 												router.push(`/quotes/new?projectId=${projectId}`)
 											}
+											className="group inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-all duration-200 px-4 py-2 rounded-lg bg-primary/10 hover:bg-primary/15 ring-1 ring-primary/30 hover:ring-primary/40 shadow-sm hover:shadow-md backdrop-blur-sm"
 										>
-											+ Add Quote
-										</Button>
+											<Plus className="h-4 w-4" />
+											Add Quote
+											<span
+												aria-hidden="true"
+												className="group-hover:translate-x-1 transition-transform duration-200"
+											>
+												→
+											</span>
+										</button>
 									</CardTitle>
 								</CardHeader>
 								<CardContent>
@@ -1509,14 +1516,6 @@ export default function ProjectDetailPage() {
 											<p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
 												No quotes created yet
 											</p>
-											<Button
-												size="sm"
-												onClick={() =>
-													router.push(`/quotes/new?projectId=${projectId}`)
-												}
-											>
-												Create First Quote
-											</Button>
 										</div>
 									)}
 								</CardContent>
