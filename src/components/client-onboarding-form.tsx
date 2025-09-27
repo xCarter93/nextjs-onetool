@@ -1359,46 +1359,6 @@ export const ClientOnboardingForm = forwardRef<
 											))}
 										</div>
 									</fieldset>
-
-									{/* Opt-in checkboxes */}
-									<div className="space-y-4">
-										<div className="flex items-center gap-x-3">
-											<input
-												id="email-opt-in"
-												name="email-opt-in"
-												type="checkbox"
-												checked={formData.emailOptIn}
-												onChange={(e) =>
-													updateField("emailOptIn", e.target.checked)
-												}
-												className="size-4 appearance-none rounded border border-gray-300 dark:border-white/10 bg-white dark:bg-white/5 checked:border-blue-600 dark:checked:border-indigo-500 checked:bg-blue-600 dark:checked:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:focus-visible:outline-indigo-500"
-											/>
-											<label
-												htmlFor="email-opt-in"
-												className="text-sm font-medium text-gray-900 dark:text-white"
-											>
-												I agree to receive email communications
-											</label>
-										</div>
-										<div className="flex items-center gap-x-3">
-											<input
-												id="sms-opt-in"
-												name="sms-opt-in"
-												type="checkbox"
-												checked={formData.smsOptIn}
-												onChange={(e) =>
-													updateField("smsOptIn", e.target.checked)
-												}
-												className="size-4 appearance-none rounded border border-gray-300 dark:border-white/10 bg-white dark:bg-white/5 checked:border-blue-600 dark:checked:border-indigo-500 checked:bg-blue-600 dark:checked:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:focus-visible:outline-indigo-500"
-											/>
-											<label
-												htmlFor="sms-opt-in"
-												className="text-sm font-medium text-gray-900 dark:text-white"
-											>
-												I agree to receive SMS communications
-											</label>
-										</div>
-									</div>
 								</div>
 							</div>
 						</div>

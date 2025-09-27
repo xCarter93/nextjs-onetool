@@ -46,11 +46,39 @@ function formatCategory(category?: string): string {
 	return category.charAt(0).toUpperCase() + category.slice(1);
 }
 
+const STATUS_OPTIONS = [
+	"lead",
+	"prospect",
+	"active",
+	"inactive",
+	"archived",
+] as const;
+
 // Helper function to format phone number for display
 function formatPhoneNumber(phone?: string): string {
 	if (!phone) return "";
 	// Basic phone formatting - you can enhance this
 	return phone;
+}
+
+function OverviewEmptyState({
+	title,
+	description,
+}: {
+	title: string;
+	description: string;
+}) {
+	return (
+		<div className="flex flex-col items-center justify-center py-12 text-center">
+			<div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center mb-4">
+				<BuildingOffice2Icon className="h-8 w-8 text-gray-400" />
+			</div>
+			<h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+				{title}
+			</h3>
+			<p className="text-gray-600 dark:text-gray-400">{description}</p>
+		</div>
+	);
 }
 
 export default function ClientDetailPage() {
@@ -312,19 +340,35 @@ export default function ClientDetailPage() {
 									<h1 className="text-3xl font-bold text-gray-900 dark:text-white">
 										{client.companyName}
 									</h1>
-									<Badge
-										variant="secondary"
-										className={`${
-											client.status === "active"
-												? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
-												: client.status === "lead" ||
-													  client.status === "prospect"
-													? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
-													: "bg-gray-100 dark:bg-gray-900/30 text-gray-700 dark:text-gray-300"
-										}`}
-									>
-										{formatStatus(client.status)}
-									</Badge>
+									{isEditing ? (
+										<select
+											value={form.status}
+											onChange={(e) =>
+												setForm((prev) => ({ ...prev, status: e.target.value }))
+											}
+											className="rounded-md border border-gray-300 dark:border-white/10 bg-white dark:bg-white/5 px-3 py-1 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-indigo-500"
+										>
+											{STATUS_OPTIONS.map((status) => (
+												<option key={status} value={status}>
+													{formatStatus(status)}
+												</option>
+											))}
+										</select>
+									) : (
+										<Badge
+											variant="secondary"
+											className={`${
+												client.status === "active"
+													? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
+													: client.status === "lead" ||
+														  client.status === "prospect"
+														? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
+														: "bg-gray-100 dark:bg-gray-900/30 text-gray-700 dark:text-gray-300"
+											}`}
+										>
+											{formatStatus(client.status)}
+										</Badge>
+									)}
 								</div>
 								{client.industry && (
 									<p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
@@ -333,6 +377,16 @@ export default function ClientDetailPage() {
 								)}
 							</div>
 						</div>
+						{isEditing && isDirty && (
+							<Alert className="ml-auto w-auto border border-yellow-300 bg-yellow-50 text-yellow-800 dark:border-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-200">
+								<AlertTitle className="text-sm font-semibold">
+									Unsaved changes
+								</AlertTitle>
+								<AlertDescription className="text-xs">
+									Save or cancel your changes.
+								</AlertDescription>
+							</Alert>
+						)}
 					</div>
 
 					{/* Two Column Layout */}
@@ -364,14 +418,6 @@ export default function ClientDetailPage() {
 										<CardTitle className="text-xl">Overview</CardTitle>
 									</CardHeader>
 									<CardContent>
-										{isEditing && isDirty && (
-											<Alert className="mb-4">
-												<AlertTitle>Unsaved changes</AlertTitle>
-												<AlertDescription>
-													Save or cancel your changes.
-												</AlertDescription>
-											</Alert>
-										)}
 										<Tabs defaultValue="projects" className="w-full">
 											<TabsList className="grid w-full grid-cols-4">
 												<TabsTrigger value="projects">
@@ -417,17 +463,10 @@ export default function ClientDetailPage() {
 														))}
 													</div>
 												) : (
-													<div className="flex flex-col items-center justify-center py-12 text-center">
-														<div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center mb-4">
-															<BuildingOffice2Icon className="h-8 w-8 text-gray-400" />
-														</div>
-														<h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-															No projects
-														</h3>
-														<p className="text-gray-600 dark:text-gray-400">
-															No projects have been created for this client yet.
-														</p>
-													</div>
+													<OverviewEmptyState
+														title="No projects"
+														description="No projects have been created for this client yet."
+													/>
 												)}
 											</TabsContent>
 											<TabsContent value="quotes" className="mt-6">
@@ -471,11 +510,10 @@ export default function ClientDetailPage() {
 														))}
 													</div>
 												) : (
-													<div className="text-center py-8">
-														<p className="text-gray-600 dark:text-gray-400">
-															No quotes found
-														</p>
-													</div>
+													<OverviewEmptyState
+														title="No quotes"
+														description="No quotes have been created for this client yet."
+													/>
 												)}
 											</TabsContent>
 											<TabsContent value="invoices" className="mt-6">
@@ -508,11 +546,10 @@ export default function ClientDetailPage() {
 														))}
 													</div>
 												) : (
-													<div className="text-center py-8">
-														<p className="text-gray-600 dark:text-gray-400">
-															No invoices found
-														</p>
-													</div>
+													<OverviewEmptyState
+														title="No invoices"
+														description="This client hasn’t been billed yet."
+													/>
 												)}
 											</TabsContent>
 											<TabsContent value="tasks" className="mt-6">
@@ -556,14 +593,47 @@ export default function ClientDetailPage() {
 														))}
 													</div>
 												) : (
-													<div className="text-center py-8">
-														<p className="text-gray-600 dark:text-gray-400">
-															No tasks found
-														</p>
-													</div>
+													<OverviewEmptyState
+														title="No tasks"
+														description="No tasks have been scheduled for this client yet."
+													/>
 												)}
 											</TabsContent>
 										</Tabs>
+									</CardContent>
+								</Card>
+							</div>
+							{/* Client Notes Card (moved under overview) */}
+							<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-xl shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50">
+								<Card className="bg-transparent border-none shadow-none ring-0">
+									<CardHeader>
+										<CardTitle className="text-lg">Client notes</CardTitle>
+										<p className="text-sm text-gray-600 dark:text-gray-400">
+											Internal notes visible only to your team
+										</p>
+									</CardHeader>
+									<CardContent>
+										{isEditing ? (
+											<textarea
+												className="w-full min-h-[100px] px-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-md text-gray-900 dark:text-white"
+												value={form.notes}
+												onChange={(e) =>
+													setForm((f) => ({ ...f, notes: e.target.value }))
+												}
+											/>
+										) : client.notes ? (
+											<div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
+												<p className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">
+													{client.notes}
+												</p>
+											</div>
+										) : (
+											<div className="text-center py-6">
+												<p className="text-sm text-gray-600 dark:text-gray-400 italic">
+													No notes added for this client yet
+												</p>
+											</div>
+										)}
 									</CardContent>
 								</Card>
 							</div>
@@ -751,6 +821,34 @@ export default function ClientDetailPage() {
 									</Card>
 								</div>
 
+								{/* Services Needed */}
+								{client.servicesNeeded && client.servicesNeeded.length > 0 && (
+									<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-xl shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50">
+										<Card className="bg-transparent border-none shadow-none ring-0">
+											<CardHeader>
+												<CardTitle className="text-lg">
+													Services needed
+												</CardTitle>
+											</CardHeader>
+											<CardContent>
+												<div className="space-y-2">
+													{client.servicesNeeded.map((service, index) => (
+														<div
+															key={index}
+															className="flex items-center gap-2"
+														>
+															<div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+															<span className="text-sm text-gray-900 dark:text-white">
+																{service}
+															</span>
+														</div>
+													))}
+												</div>
+											</CardContent>
+										</Card>
+									</div>
+								)}
+
 								{/* Billing History */}
 								<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-xl shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50">
 									<Card className="bg-transparent border-none shadow-none ring-0">
@@ -834,69 +932,6 @@ export default function ClientDetailPage() {
 										</CardContent>
 									</Card>
 								</div>
-
-								{/* Client Notes */}
-								<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-xl shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50">
-									<Card className="bg-transparent border-none shadow-none ring-0">
-										<CardHeader>
-											<CardTitle className="text-lg">Client notes</CardTitle>
-											<p className="text-sm text-gray-600 dark:text-gray-400">
-												Internal notes visible only to your team
-											</p>
-										</CardHeader>
-										<CardContent>
-											{isEditing ? (
-												<textarea
-													className="w-full min-h-[100px] px-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-md text-gray-900 dark:text-white"
-													value={form.notes}
-													onChange={(e) =>
-														setForm((f) => ({ ...f, notes: e.target.value }))
-													}
-												/>
-											) : client.notes ? (
-												<div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
-													<p className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">
-														{client.notes}
-													</p>
-												</div>
-											) : (
-												<div className="text-center py-6">
-													<p className="text-sm text-gray-600 dark:text-gray-400 italic">
-														No notes added for this client yet
-													</p>
-												</div>
-											)}
-										</CardContent>
-									</Card>
-								</div>
-
-								{/* Services Needed */}
-								{client.servicesNeeded && client.servicesNeeded.length > 0 && (
-									<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-xl shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50">
-										<Card className="bg-transparent border-none shadow-none ring-0">
-											<CardHeader>
-												<CardTitle className="text-lg">
-													Services needed
-												</CardTitle>
-											</CardHeader>
-											<CardContent>
-												<div className="space-y-2">
-													{client.servicesNeeded.map((service, index) => (
-														<div
-															key={index}
-															className="flex items-center gap-2"
-														>
-															<div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-															<span className="text-sm text-gray-900 dark:text-white">
-																{service}
-															</span>
-														</div>
-													))}
-												</div>
-											</CardContent>
-										</Card>
-									</div>
-								)}
 							</div>
 						</div>
 					</div>

@@ -41,6 +41,7 @@ import {
 	Plus,
 	Trash2,
 	RotateCcw,
+	Archive,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
@@ -229,6 +230,8 @@ export default function ClientsPage() {
 		return archivedClients;
 	}, [archivedClients]);
 
+	const isActiveEmpty = activeData.length === 0;
+	const isArchivedEmpty = archivedData.length === 0;
 	const currentData = activeTab === "active" ? activeData : archivedData;
 	const [sorting, setSorting] = React.useState<SortingState>([]);
 	const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
@@ -488,168 +491,211 @@ export default function ClientsPage() {
 							</TabsList>
 						</div>
 						<TabsContent value="active" className="mt-0">
-							<div className="px-6">
-								<div className="overflow-hidden rounded-lg border">
-									<Table>
-										<TableHeader className="bg-muted sticky top-0 z-10">
-											{table.getHeaderGroups().map((headerGroup) => (
-												<TableRow key={headerGroup.id}>
-													{headerGroup.headers.map((header) => (
-														<TableHead key={header.id}>
-															{header.isPlaceholder
-																? null
-																: flexRender(
-																		header.column.columnDef.header,
-																		header.getContext()
-																	)}
-														</TableHead>
-													))}
-												</TableRow>
-											))}
-										</TableHeader>
-										<TableBody>
-											{table.getRowModel().rows?.length ? (
-												table.getRowModel().rows.map((row) => (
-													<TableRow
-														key={row.id}
-														data-state={row.getIsSelected() && "selected"}
-													>
-														{row.getVisibleCells().map((cell) => (
-															<TableCell key={cell.id}>
-																{flexRender(
-																	cell.column.columnDef.cell,
-																	cell.getContext()
-																)}
-															</TableCell>
+							{isActiveEmpty ? (
+								<div className="px-6 py-12 text-center">
+									<div className="mx-auto mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-muted">
+										<Users className="h-12 w-12 text-muted-foreground" />
+									</div>
+									<h3 className="mb-2 text-lg font-semibold text-foreground">
+										No clients yet
+									</h3>
+									<p className="mx-auto mb-6 max-w-sm text-muted-foreground">
+										Create your first client to start organizing relationships
+										and tracking activity.
+									</p>
+									<button
+										onClick={() => router.push("/clients/new")}
+										className="group inline-flex items-center gap-2 rounded-lg bg-primary/10 px-4 py-2 text-sm font-semibold text-primary shadow-sm transition-all duration-200 hover:bg-primary/15 hover:text-primary/80 hover:shadow-md ring-1 ring-primary/30 hover:ring-primary/40 backdrop-blur-sm"
+									>
+										<Plus className="h-4 w-4" />
+										Add Your First Client
+										<span
+											aria-hidden="true"
+											className="transition-transform duration-200 group-hover:translate-x-1"
+										>
+											→
+										</span>
+									</button>
+								</div>
+							) : (
+								<div className="px-6">
+									<div className="overflow-hidden rounded-lg border">
+										<Table>
+											<TableHeader className="bg-muted sticky top-0 z-10">
+												{table.getHeaderGroups().map((headerGroup) => (
+													<TableRow key={headerGroup.id}>
+														{headerGroup.headers.map((header) => (
+															<TableHead key={header.id}>
+																{header.isPlaceholder
+																	? null
+																	: flexRender(
+																			header.column.columnDef.header,
+																			header.getContext()
+																		)}
+															</TableHead>
 														))}
 													</TableRow>
-												))
-											) : (
-												<TableRow>
-													<TableCell
-														colSpan={columns.length}
-														className="h-24 text-center"
-													>
-														No active clients found.
-													</TableCell>
-												</TableRow>
-											)}
-										</TableBody>
-									</Table>
-								</div>
-								<div className="flex items-center justify-between py-4">
-									<div className="text-muted-foreground text-sm">
-										{table.getFilteredRowModel().rows.length} of{" "}
-										{currentData.length} active clients
+												))}
+											</TableHeader>
+											<TableBody>
+												{table.getRowModel().rows?.length ? (
+													table.getRowModel().rows.map((row) => (
+														<TableRow
+															key={row.id}
+															data-state={row.getIsSelected() && "selected"}
+														>
+															{row.getVisibleCells().map((cell) => (
+																<TableCell key={cell.id}>
+																	{flexRender(
+																		cell.column.columnDef.cell,
+																		cell.getContext()
+																	)}
+																</TableCell>
+															))}
+														</TableRow>
+													))
+												) : (
+													<TableRow>
+														<TableCell
+															colSpan={columns.length}
+															className="h-24 text-center"
+														>
+															No clients match your search.
+														</TableCell>
+													</TableRow>
+												)}
+											</TableBody>
+										</Table>
 									</div>
-									<div className="flex items-center gap-2">
-										<Button
-											intent="outline"
-											size="sq-sm"
-											onPress={() => table.previousPage()}
-											isDisabled={!table.getCanPreviousPage()}
-											aria-label="Previous page"
-										>
-											<ChevronLeft className="size-4" />
-										</Button>
-										<div className="text-sm font-medium">
-											Page {table.getState().pagination?.pageIndex + 1} of{" "}
-											{table.getPageCount()}
+									<div className="flex items-center justify-between py-4">
+										<div className="text-sm text-muted-foreground">
+											{table.getFilteredRowModel().rows.length} of{" "}
+											{activeData.length} active clients
 										</div>
-										<Button
-											intent="outline"
-											size="sq-sm"
-											onPress={() => table.nextPage()}
-											isDisabled={!table.getCanNextPage()}
-											aria-label="Next page"
-										>
-											<ChevronRight className="size-4" />
-										</Button>
+										<div className="flex items-center gap-2">
+											<Button
+												intent="outline"
+												size="sq-sm"
+												onPress={() => table.previousPage()}
+												isDisabled={!table.getCanPreviousPage()}
+												aria-label="Previous page"
+											>
+												<ChevronLeft className="size-4" />
+											</Button>
+											<div className="text-sm font-medium">
+												Page {table.getState().pagination?.pageIndex + 1} of{" "}
+												{table.getPageCount()}
+											</div>
+											<Button
+												intent="outline"
+												size="sq-sm"
+												onPress={() => table.nextPage()}
+												isDisabled={!table.getCanNextPage()}
+												aria-label="Next page"
+											>
+												<ChevronRight className="size-4" />
+											</Button>
+										</div>
 									</div>
 								</div>
-							</div>
+							)}
 						</TabsContent>
 						<TabsContent value="archived" className="mt-0">
-							<div className="px-6">
-								<div className="overflow-hidden rounded-lg border">
-									<Table>
-										<TableHeader className="bg-muted sticky top-0 z-10">
-											{table.getHeaderGroups().map((headerGroup) => (
-												<TableRow key={headerGroup.id}>
-													{headerGroup.headers.map((header) => (
-														<TableHead key={header.id}>
-															{header.isPlaceholder
-																? null
-																: flexRender(
-																		header.column.columnDef.header,
-																		header.getContext()
-																	)}
-														</TableHead>
-													))}
-												</TableRow>
-											))}
-										</TableHeader>
-										<TableBody>
-											{table.getRowModel().rows?.length ? (
-												table.getRowModel().rows.map((row) => (
-													<TableRow
-														key={row.id}
-														data-state={row.getIsSelected() && "selected"}
-													>
-														{row.getVisibleCells().map((cell) => (
-															<TableCell key={cell.id}>
-																{flexRender(
-																	cell.column.columnDef.cell,
-																	cell.getContext()
-																)}
-															</TableCell>
+							{isArchivedEmpty ? (
+								<div className="px-6 py-12 text-center">
+									<div className="mx-auto mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-muted">
+										<Archive className="h-12 w-12 text-muted-foreground" />
+									</div>
+									<h3 className="mb-2 text-lg font-semibold text-foreground">
+										No archived clients
+									</h3>
+									<p className="mx-auto max-w-sm text-muted-foreground">
+										Clients you archive will appear here for seven days before
+										being permanently deleted.
+									</p>
+								</div>
+							) : (
+								<div className="px-6">
+									<div className="overflow-hidden rounded-lg border">
+										<Table>
+											<TableHeader className="bg-muted sticky top-0 z-10">
+												{table.getHeaderGroups().map((headerGroup) => (
+													<TableRow key={headerGroup.id}>
+														{headerGroup.headers.map((header) => (
+															<TableHead key={header.id}>
+																{header.isPlaceholder
+																	? null
+																	: flexRender(
+																			header.column.columnDef.header,
+																			header.getContext()
+																		)}
+															</TableHead>
 														))}
 													</TableRow>
-												))
-											) : (
-												<TableRow>
-													<TableCell
-														colSpan={columns.length}
-														className="h-24 text-center"
-													>
-														No archived clients found.
-													</TableCell>
-												</TableRow>
-											)}
-										</TableBody>
-									</Table>
-								</div>
-								<div className="flex items-center justify-between py-4">
-									<div className="text-muted-foreground text-sm">
-										{table.getFilteredRowModel().rows.length} of{" "}
-										{currentData.length} archived clients
+												))}
+											</TableHeader>
+											<TableBody>
+												{table.getRowModel().rows?.length ? (
+													table.getRowModel().rows.map((row) => (
+														<TableRow
+															key={row.id}
+															data-state={row.getIsSelected() && "selected"}
+														>
+															{row.getVisibleCells().map((cell) => (
+																<TableCell key={cell.id}>
+																	{flexRender(
+																		cell.column.columnDef.cell,
+																		cell.getContext()
+																	)}
+																</TableCell>
+															))}
+														</TableRow>
+													))
+												) : (
+													<TableRow>
+														<TableCell
+															colSpan={columns.length}
+															className="h-24 text-center"
+														>
+															No archived clients match your search.
+														</TableCell>
+													</TableRow>
+												)}
+											</TableBody>
+										</Table>
 									</div>
-									<div className="flex items-center gap-2">
-										<Button
-											intent="outline"
-											size="sq-sm"
-											onPress={() => table.previousPage()}
-											isDisabled={!table.getCanPreviousPage()}
-											aria-label="Previous page"
-										>
-											<ChevronLeft className="size-4" />
-										</Button>
-										<div className="text-sm font-medium">
-											Page {table.getState().pagination?.pageIndex + 1} of{" "}
-											{table.getPageCount()}
+									<div className="flex items-center justify-between py-4">
+										<div className="text-sm text-muted-foreground">
+											{table.getFilteredRowModel().rows.length} of{" "}
+											{archivedData.length} archived clients
 										</div>
-										<Button
-											intent="outline"
-											size="sq-sm"
-											onPress={() => table.nextPage()}
-											isDisabled={!table.getCanNextPage()}
-											aria-label="Next page"
-										>
-											<ChevronRight className="size-4" />
-										</Button>
+										<div className="flex items-center gap-2">
+											<Button
+												intent="outline"
+												size="sq-sm"
+												onPress={() => table.previousPage()}
+												isDisabled={!table.getCanPreviousPage()}
+												aria-label="Previous page"
+											>
+												<ChevronLeft className="size-4" />
+											</Button>
+											<div className="text-sm font-medium">
+												Page {table.getState().pagination?.pageIndex + 1} of{" "}
+												{table.getPageCount()}
+											</div>
+											<Button
+												intent="outline"
+												size="sq-sm"
+												onPress={() => table.nextPage()}
+												isDisabled={!table.getCanNextPage()}
+												aria-label="Next page"
+											>
+												<ChevronRight className="size-4" />
+											</Button>
+										</div>
 									</div>
 								</div>
-							</div>
+							)}
 						</TabsContent>
 					</Tabs>
 				</CardContent>

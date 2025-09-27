@@ -36,46 +36,6 @@ export default function NewClientPage() {
 		setFormErrors([]);
 
 		try {
-			// Build notes from contacts and properties
-			const contactNotes = formData.contacts
-				.map((contact) => {
-					if (!contact.firstName.trim() && !contact.lastName.trim()) return "";
-
-					const contactInfo = [
-						`${contact.firstName} ${contact.lastName}`.trim(),
-					];
-					if (contact.email) contactInfo.push(`Email: ${contact.email}`);
-					if (contact.phone) contactInfo.push(`Phone: ${contact.phone}`);
-					if (contact.jobTitle) contactInfo.push(`Title: ${contact.jobTitle}`);
-					if (contact.role) contactInfo.push(`Role: ${contact.role}`);
-					if (contact.department)
-						contactInfo.push(`Department: ${contact.department}`);
-
-					return `${contact.isPrimary ? "Primary" : "Additional"} Contact: ${contactInfo.join(", ")}`;
-				})
-				.filter(Boolean);
-
-			const propertyNotes = formData.properties
-				.map((property) => {
-					if (!property.streetAddress.trim()) return "";
-
-					const propertyInfo = [];
-					if (property.propertyName)
-						propertyInfo.push(`Name: ${property.propertyName}`);
-					if (property.propertyType)
-						propertyInfo.push(`Type: ${property.propertyType}`);
-					if (property.squareFootage)
-						propertyInfo.push(`Size: ${property.squareFootage} sq ft`);
-					propertyInfo.push(
-						`Address: ${property.streetAddress}, ${property.city}, ${property.region} ${property.postalCode}`
-					);
-					if (property.propertyDescription)
-						propertyInfo.push(`Description: ${property.propertyDescription}`);
-
-					return `${property.isPrimary ? "Primary" : "Additional"} Property: ${propertyInfo.join(", ")}`;
-				})
-				.filter(Boolean);
-
 			const clientData = {
 				// Company Information
 				companyName: formData.companyName.trim(),
@@ -120,7 +80,7 @@ export default function NewClientPage() {
 							.map((tag: string) => tag.trim())
 							.filter(Boolean)
 					: undefined,
-				notes: [...contactNotes, ...propertyNotes].join("\n\n") || undefined,
+				notes: formData.notes?.trim() ? formData.notes.trim() : undefined,
 			};
 
 			const clientId = await createClient(clientData);
