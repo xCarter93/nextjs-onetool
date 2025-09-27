@@ -1,6 +1,10 @@
 import { query, mutation, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
-import { getCurrentUserOrThrow, getCurrentUser } from "./lib/auth";
+import {
+	getCurrentUserOrThrow,
+	getCurrentUser,
+	getCurrentUserOrgId,
+} from "./lib/auth";
 import { ActivityHelpers } from "./lib/activities";
 
 /**
@@ -10,11 +14,17 @@ export const get = query({
 	args: {},
 	handler: async (ctx) => {
 		const user = await getCurrentUser(ctx);
-		if (!user || !user.organizationId) {
+		if (!user) {
 			return null;
 		}
 
-		return await ctx.db.get(user.organizationId);
+		try {
+			const userOrgId = await getCurrentUserOrgId(ctx);
+			return await ctx.db.get(userOrgId);
+		} catch (error) {
+			// User might not have an active organization
+			return null;
+		}
 	},
 });
 
@@ -25,19 +35,26 @@ export const needsMetadataCompletion = query({
 	args: {},
 	handler: async (ctx) => {
 		const user = await getCurrentUser(ctx);
-		if (!user || !user.organizationId) {
+		if (!user) {
 			return false;
 		}
 
-		const organization = await ctx.db.get(user.organizationId);
-		if (!organization) {
+		try {
+			const userOrgId = await getCurrentUserOrgId(ctx);
+			const organization = await ctx.db.get(userOrgId);
+			if (!organization) {
+				return false;
+			}
+
+			// Return true if metadata is not complete and user is the owner
+			return (
+				!organization.isMetadataComplete &&
+				organization.ownerUserId === user._id
+			);
+		} catch (error) {
+			// User might not have an active organization
 			return false;
 		}
-
-		// Return true if metadata is not complete and user is the owner
-		return (
-			!organization.isMetadataComplete && organization.ownerUserId === user._id
-		);
 	},
 });
 
@@ -129,12 +146,9 @@ export const completeMetadata = mutation({
 	},
 	handler: async (ctx, args) => {
 		const user = await getCurrentUserOrThrow(ctx);
+		const userOrgId = await getCurrentUserOrgId(ctx);
 
-		if (!user.organizationId) {
-			throw new Error("User is not associated with an organization");
-		}
-
-		const organization = await ctx.db.get(user.organizationId);
+		const organization = await ctx.db.get(userOrgId);
 		if (!organization) {
 			throw new Error("Organization not found");
 		}
@@ -145,7 +159,7 @@ export const completeMetadata = mutation({
 		}
 
 		// Update the organization with metadata
-		await ctx.db.patch(user.organizationId, {
+		await ctx.db.patch(userOrgId, {
 			email: args.email,
 			website: args.website,
 			address: args.address,
@@ -160,12 +174,12 @@ export const completeMetadata = mutation({
 		});
 
 		// Log activity
-		const updatedOrganization = await ctx.db.get(user.organizationId);
+		const updatedOrganization = await ctx.db.get(userOrgId);
 		if (updatedOrganization) {
 			await ActivityHelpers.organizationUpdated(ctx, updatedOrganization);
 		}
 
-		return user.organizationId;
+		return userOrgId;
 	},
 });
 
@@ -307,13 +321,10 @@ export const update = mutation({
 	},
 	handler: async (ctx, args) => {
 		const user = await getCurrentUserOrThrow(ctx);
-
-		if (!user.organizationId) {
-			throw new Error("User is not associated with an organization");
-		}
+		const userOrgId = await getCurrentUserOrgId(ctx);
 
 		// Get the organization to ensure it exists and user is owner
-		const organization = await ctx.db.get(user.organizationId);
+		const organization = await ctx.db.get(userOrgId);
 		if (!organization) {
 			throw new Error("Organization not found");
 		}
@@ -335,15 +346,15 @@ export const update = mutation({
 		}
 
 		// Update the organization
-		await ctx.db.patch(user.organizationId, updates);
+		await ctx.db.patch(userOrgId, updates);
 
 		// Log activity
-		const updatedOrganization = await ctx.db.get(user.organizationId);
+		const updatedOrganization = await ctx.db.get(userOrgId);
 		if (updatedOrganization) {
 			await ActivityHelpers.organizationUpdated(ctx, updatedOrganization);
 		}
 
-		return user.organizationId;
+		return userOrgId;
 	},
 });
 
@@ -357,12 +368,9 @@ export const updatePlan = mutation({
 	},
 	handler: async (ctx, args) => {
 		const user = await getCurrentUserOrThrow(ctx);
+		const userOrgId = await getCurrentUserOrgId(ctx);
 
-		if (!user.organizationId) {
-			throw new Error("User is not associated with an organization");
-		}
-
-		const organization = await ctx.db.get(user.organizationId);
+		const organization = await ctx.db.get(userOrgId);
 		if (!organization) {
 			throw new Error("Organization not found");
 		}
@@ -372,12 +380,12 @@ export const updatePlan = mutation({
 			throw new Error("Only organization owner can update plan");
 		}
 
-		await ctx.db.patch(user.organizationId, {
+		await ctx.db.patch(userOrgId, {
 			plan: args.plan,
 			stripeCustomerId: args.stripeCustomerId,
 		});
 
-		return user.organizationId;
+		return userOrgId;
 	},
 });
 
@@ -388,16 +396,20 @@ export const getMembers = query({
 	args: {},
 	handler: async (ctx) => {
 		const user = await getCurrentUser(ctx);
-		if (!user || !user.organizationId) {
+		if (!user) {
 			return [];
 		}
 
-		return await ctx.db
-			.query("users")
-			.withIndex("by_organization", (q) =>
-				q.eq("organizationId", user.organizationId)
-			)
-			.collect();
+		try {
+			const userOrgId = await getCurrentUserOrgId(ctx);
+			return await ctx.db
+				.query("users")
+				.withIndex("by_organization", (q) => q.eq("organizationId", userOrgId))
+				.collect();
+		} catch (error) {
+			// User might not have an active organization
+			return [];
+		}
 	},
 });
 
@@ -459,12 +471,9 @@ export const deleteOrganization = mutation({
 	},
 	handler: async (ctx, args) => {
 		const user = await getCurrentUserOrThrow(ctx);
+		const userOrgId = await getCurrentUserOrgId(ctx);
 
-		if (!user.organizationId) {
-			throw new Error("User is not associated with an organization");
-		}
-
-		const organization = await ctx.db.get(user.organizationId);
+		const organization = await ctx.db.get(userOrgId);
 		if (!organization) {
 			throw new Error("Organization not found");
 		}
@@ -482,9 +491,7 @@ export const deleteOrganization = mutation({
 		// Remove all users from the organization first
 		const orgMembers = await ctx.db
 			.query("users")
-			.withIndex("by_organization", (q) =>
-				q.eq("organizationId", user.organizationId)
-			)
+			.withIndex("by_organization", (q) => q.eq("organizationId", userOrgId))
 			.collect();
 
 		for (const member of orgMembers) {
@@ -494,7 +501,7 @@ export const deleteOrganization = mutation({
 		}
 
 		// Delete the organization
-		await ctx.db.delete(user.organizationId);
+		await ctx.db.delete(userOrgId);
 
 		return { success: true };
 	},
