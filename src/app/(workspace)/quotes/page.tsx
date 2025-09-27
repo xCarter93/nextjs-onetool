@@ -397,137 +397,132 @@ export default function QuotesPage() {
 								placeholder="Search quotes..."
 								value={query}
 								onChange={(e) => setQuery(e.target.value)}
-								className="w-56"
+								className="w-96"
 							/>
 						</div>
 					</div>
 				</CardHeader>
 				<CardContent className="relative z-10 px-0">
-					<div className="px-6">
-						<div className="overflow-hidden rounded-lg border">
-							<Table>
-								<TableHeader className="bg-muted sticky top-0 z-10">
-									{table.getHeaderGroups().map((headerGroup) => (
-										<TableRow key={headerGroup.id}>
-											{headerGroup.headers.map((header) => (
-												<TableHead key={header.id}>
-													{header.isPlaceholder
-														? null
-														: flexRender(
-																header.column.columnDef.header,
-																header.getContext()
+					{isEmpty ? (
+						<div className="px-6 py-12 text-center">
+							<div className="mx-auto mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-muted">
+								<FileText className="h-12 w-12 text-muted-foreground" />
+							</div>
+							<h3 className="text-lg font-semibold text-foreground mb-2">
+								No quotes yet
+							</h3>
+							<p className="text-muted-foreground mb-6 max-w-sm mx-auto">
+								Create your first quote to get started and track proposals in
+								one place.
+							</p>
+							<button
+								onClick={() => router.push("/quotes/new")}
+								className="group inline-flex items-center gap-2 rounded-lg bg-primary/10 px-4 py-2 text-sm font-semibold text-primary shadow-sm transition-all duration-200 hover:bg-primary/15 hover:text-primary/80 hover:shadow-md ring-1 ring-primary/30 hover:ring-primary/40 backdrop-blur-sm"
+							>
+								<Plus className="h-4 w-4" />
+								Create Your First Quote
+								<span
+									aria-hidden="true"
+									className="transition-transform duration-200 group-hover:translate-x-1"
+								>
+									→
+								</span>
+							</button>
+						</div>
+					) : (
+						<div className="px-6">
+							<div className="overflow-hidden rounded-lg border">
+								<Table>
+									<TableHeader className="bg-muted sticky top-0 z-10">
+										{table.getHeaderGroups().map((headerGroup) => (
+											<TableRow key={headerGroup.id}>
+												{headerGroup.headers.map((header) => (
+													<TableHead key={header.id}>
+														{header.isPlaceholder
+															? null
+															: flexRender(
+																	header.column.columnDef.header,
+																	header.getContext()
+																)}
+													</TableHead>
+												))}
+											</TableRow>
+										))}
+									</TableHeader>
+									<TableBody>
+										{isLoading ? (
+											Array.from({ length: 5 }).map((_, i) => (
+												<TableRow key={i}>
+													{Array.from({
+														length: createColumns(router, handleDelete).length,
+													}).map((_, j) => (
+														<TableCell key={j}>
+															<div className="h-4 rounded bg-gray-200 dark:bg-gray-700 animate-pulse" />
+														</TableCell>
+													))}
+												</TableRow>
+											))
+										) : table.getRowModel().rows?.length ? (
+											table.getRowModel().rows.map((row) => (
+												<TableRow
+													key={row.id}
+													data-state={row.getIsSelected() && "selected"}
+												>
+													{row.getVisibleCells().map((cell) => (
+														<TableCell key={cell.id}>
+															{flexRender(
+																cell.column.columnDef.cell,
+																cell.getContext()
 															)}
-												</TableHead>
-											))}
-										</TableRow>
-									))}
-								</TableHeader>
-								<TableBody>
-									{isLoading ? (
-										// Loading skeleton rows
-										Array.from({ length: 5 }).map((_, i) => (
-											<TableRow key={i}>
-												{Array.from({
-													length: createColumns(router, handleDelete).length,
-												}).map((_, j) => (
-													<TableCell key={j}>
-														<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-													</TableCell>
-												))}
+														</TableCell>
+													))}
+												</TableRow>
+											))
+										) : (
+											<TableRow>
+												<TableCell
+													colSpan={createColumns(router, handleDelete).length}
+													className="h-24 text-center"
+												>
+													No quotes match your search.
+												</TableCell>
 											</TableRow>
-										))
-									) : table.getRowModel().rows?.length ? (
-										table.getRowModel().rows.map((row) => (
-											<TableRow
-												key={row.id}
-												data-state={row.getIsSelected() && "selected"}
-											>
-												{row.getVisibleCells().map((cell) => (
-													<TableCell key={cell.id}>
-														{flexRender(
-															cell.column.columnDef.cell,
-															cell.getContext()
-														)}
-													</TableCell>
-												))}
-											</TableRow>
-										))
-									) : isEmpty ? (
-										<TableRow>
-											<TableCell
-												colSpan={createColumns(router, handleDelete).length}
-												className="h-96 text-center"
-											>
-												<div className="flex flex-col items-center justify-center space-y-4">
-													<div className="text-6xl">📄</div>
-													<div>
-														<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-															No quotes yet
-														</h3>
-														<p className="text-gray-600 dark:text-gray-400 mt-1">
-															Create your first quote to get started
-														</p>
-													</div>
-													<button
-														onClick={() => router.push("/quotes/new")}
-														className="group inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-all duration-200 px-4 py-2 rounded-lg bg-primary/10 hover:bg-primary/15 ring-1 ring-primary/30 hover:ring-primary/40 shadow-sm hover:shadow-md backdrop-blur-sm"
-													>
-														<Plus className="h-4 w-4" />
-														Create Your First Quote
-														<span
-															aria-hidden="true"
-															className="group-hover:translate-x-1 transition-transform duration-200"
-														>
-															→
-														</span>
-													</button>
-												</div>
-											</TableCell>
-										</TableRow>
-									) : (
-										<TableRow>
-											<TableCell
-												colSpan={createColumns(router, handleDelete).length}
-												className="h-24 text-center"
-											>
-												No results found.
-											</TableCell>
-										</TableRow>
-									)}
-								</TableBody>
-							</Table>
-						</div>
-						<div className="flex items-center justify-between py-4">
-							<div className="text-muted-foreground text-sm">
-								{table.getFilteredRowModel().rows.length} of {data.length}{" "}
-								quotes
+										)}
+									</TableBody>
+								</Table>
 							</div>
-							<div className="flex items-center gap-2">
-								<Button
-									intent="outline"
-									size="sq-sm"
-									onPress={() => table.previousPage()}
-									isDisabled={!table.getCanPreviousPage()}
-									aria-label="Previous page"
-								>
-									<ChevronLeft className="size-4" />
-								</Button>
-								<div className="text-sm font-medium">
-									Page {table.getState().pagination?.pageIndex + 1} of{" "}
-									{table.getPageCount()}
+							<div className="flex items-center justify-between py-4">
+								<div className="text-muted-foreground text-sm">
+									{table.getFilteredRowModel().rows.length} of {data.length}{" "}
+									quotes
 								</div>
-								<Button
-									intent="outline"
-									size="sq-sm"
-									onPress={() => table.nextPage()}
-									isDisabled={!table.getCanNextPage()}
-									aria-label="Next page"
-								>
-									<ChevronRight className="size-4" />
-								</Button>
+								<div className="flex items-center gap-2">
+									<Button
+										intent="outline"
+										size="sq-sm"
+										onPress={() => table.previousPage()}
+										isDisabled={!table.getCanPreviousPage()}
+										aria-label="Previous page"
+									>
+										<ChevronLeft className="size-4" />
+									</Button>
+									<div className="text-sm font-medium">
+										Page {table.getState().pagination?.pageIndex + 1} of{" "}
+										{table.getPageCount()}
+									</div>
+									<Button
+										intent="outline"
+										size="sq-sm"
+										onPress={() => table.nextPage()}
+										isDisabled={!table.getCanNextPage()}
+										aria-label="Next page"
+									>
+										<ChevronRight className="size-4" />
+									</Button>
+								</div>
 							</div>
 						</div>
-					</div>
+					)}
 				</CardContent>
 			</Card>
 

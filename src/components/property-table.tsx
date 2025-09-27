@@ -5,7 +5,6 @@ import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useToast } from "@/hooks/use-toast";
 import type { Id, Doc } from "../../convex/_generated/dataModel";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
 	Table,
@@ -30,15 +29,6 @@ import { StarIcon as StarFilledIcon } from "@heroicons/react/24/solid";
 
 type Property = {
 	_id: Id<"clientProperties"> | string; // Allow temp IDs for new items
-	propertyName?: string;
-	propertyType?:
-		| "residential"
-		| "commercial"
-		| "industrial"
-		| "retail"
-		| "office"
-		| "mixed-use";
-	squareFootage?: number;
 	streetAddress: string;
 	city: string;
 	state: string;
@@ -48,12 +38,6 @@ type Property = {
 	isPrimary: boolean;
 	isNew?: boolean; // Track if this is a new item not yet saved
 };
-
-// Helper function to format property type for display
-function formatPropertyType(type?: string): string {
-	if (!type) return "Not specified";
-	return type.charAt(0).toUpperCase() + type.slice(1);
-}
 
 interface PropertyTableProps {
 	clientId: Id<"clients">;
@@ -108,9 +92,6 @@ export function PropertyTable({
 
 		const newProperty: Property = {
 			_id: tempId,
-			propertyName: "",
-			propertyType: undefined,
-			squareFootage: undefined,
 			streetAddress: "",
 			city: "",
 			state: "",
@@ -140,7 +121,6 @@ export function PropertyTable({
 			propertyId: property._id,
 			propertyIdType: typeof property._id,
 			isNew: property.isNew,
-			propertyName: property.propertyName,
 		});
 
 		// Check if this is a new property by looking at the isNew flag or if it's a temporary ID
@@ -154,9 +134,6 @@ export function PropertyTable({
 			try {
 				await createProperty({
 					clientId,
-					propertyName: property.propertyName,
-					propertyType: property.propertyType,
-					squareFootage: property.squareFootage,
 					streetAddress: property.streetAddress || "Address Required",
 					city: property.city || "City Required",
 					state: property.state || "State Required",
@@ -186,9 +163,6 @@ export function PropertyTable({
 			try {
 				await updateProperty({
 					id: property._id as Id<"clientProperties">,
-					propertyName: property.propertyName,
-					propertyType: property.propertyType,
-					squareFootage: property.squareFootage,
 					streetAddress: property.streetAddress,
 					city: property.city,
 					state: property.state,
@@ -251,12 +225,10 @@ export function PropertyTable({
 							<Table>
 								<TableHeader>
 									<TableRow>
-										<TableHead className="w-[25%]">Property</TableHead>
-										<TableHead className="w-[20%]">Address</TableHead>
-										<TableHead className="w-[15%]">City</TableHead>
-										<TableHead className="w-[10%]">State</TableHead>
-										<TableHead className="w-[10%]">ZIP</TableHead>
-										<TableHead className="w-[10%]">Type</TableHead>
+										<TableHead className="w-[40%]">Address</TableHead>
+										<TableHead className="w-[20%]">City</TableHead>
+										<TableHead className="w-[15%]">State</TableHead>
+										<TableHead className="w-[15%]">ZIP</TableHead>
 										<TableHead className="w-[5%]">Primary</TableHead>
 										<TableHead className="w-[5%]">Actions</TableHead>
 									</TableRow>
@@ -347,14 +319,6 @@ function PropertyRow({
 			>
 				<TableCell>
 					<Input
-						value={editedProperty.propertyName || ""}
-						onChange={(e) => handleFieldChange("propertyName", e.target.value)}
-						placeholder="Property name..."
-						className="w-full"
-					/>
-				</TableCell>
-				<TableCell>
-					<Input
 						value={editedProperty.streetAddress}
 						onChange={(e) => handleFieldChange("streetAddress", e.target.value)}
 						placeholder="Street address..."
@@ -384,23 +348,6 @@ function PropertyRow({
 						placeholder="ZIP..."
 						className="w-full"
 					/>
-				</TableCell>
-				<TableCell>
-					<select
-						value={editedProperty.propertyType || ""}
-						onChange={(e) =>
-							handleFieldChange("propertyType", e.target.value || undefined)
-						}
-						className="w-full text-sm border border-input bg-background px-2 py-1 rounded"
-					>
-						<option value="">Select type</option>
-						<option value="residential">Residential</option>
-						<option value="commercial">Commercial</option>
-						<option value="industrial">Industrial</option>
-						<option value="retail">Retail</option>
-						<option value="office">Office</option>
-						<option value="mixed-use">Mixed Use</option>
-					</select>
 				</TableCell>
 				<TableCell>
 					<Checkbox
@@ -440,7 +387,7 @@ function PropertyRow({
 		>
 			<TableCell className="font-medium">
 				<div className="flex items-center gap-2">
-					<span>{property.propertyName || "Unnamed Property"}</span>
+					<span>{property.streetAddress}</span>
 					{property.isNew && (
 						<span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
 							Unsaved
@@ -448,17 +395,9 @@ function PropertyRow({
 					)}
 				</div>
 			</TableCell>
-			<TableCell>{property.streetAddress}</TableCell>
 			<TableCell>{property.city}</TableCell>
 			<TableCell>{property.state}</TableCell>
 			<TableCell>{property.zipCode}</TableCell>
-			<TableCell>
-				{property.propertyType && (
-					<Badge variant="outline" className="text-xs">
-						{formatPropertyType(property.propertyType)}
-					</Badge>
-				)}
-			</TableCell>
 			<TableCell>
 				{property.isPrimary && (
 					<StarFilledIcon className="h-4 w-4 text-yellow-400" />

@@ -35,7 +35,6 @@ type Contact = {
 	phone?: string;
 	jobTitle?: string;
 	role?: string;
-	department?: string;
 	isPrimary: boolean;
 	isNew?: boolean; // Track if this is a new item not yet saved
 };
@@ -99,7 +98,6 @@ export function ContactTable({
 			phone: "",
 			jobTitle: "",
 			role: "",
-			department: "",
 			isPrimary: false,
 			isNew: true,
 		};
@@ -143,7 +141,6 @@ export function ContactTable({
 					phone: contact.phone,
 					jobTitle: contact.jobTitle,
 					role: contact.role,
-					department: contact.department,
 					isPrimary: contact.isPrimary,
 				});
 
@@ -170,7 +167,6 @@ export function ContactTable({
 					phone: contact.phone,
 					jobTitle: contact.jobTitle,
 					role: contact.role,
-					department: contact.department,
 					isPrimary: contact.isPrimary,
 				});
 				setEditingId(null);
@@ -227,11 +223,10 @@ export function ContactTable({
 							<Table>
 								<TableHeader>
 									<TableRow>
-										<TableHead className="w-[20%]">Name</TableHead>
-										<TableHead className="w-[20%]">Role</TableHead>
-										<TableHead className="w-[15%]">Phone</TableHead>
+										<TableHead className="w-[25%]">Name</TableHead>
+										<TableHead className="w-[25%]">Job Title</TableHead>
+										<TableHead className="w-[20%]">Phone</TableHead>
 										<TableHead className="w-[20%]">Email</TableHead>
-										<TableHead className="w-[15%]">Department</TableHead>
 										<TableHead className="w-[5%]">Primary</TableHead>
 										<TableHead className="w-[5%]">Actions</TableHead>
 									</TableRow>
@@ -341,12 +336,6 @@ function ContactRow({
 							placeholder="Job title..."
 							className="w-full"
 						/>
-						<Input
-							value={editedContact.role || ""}
-							onChange={(e) => handleFieldChange("role", e.target.value)}
-							placeholder="Role..."
-							className="w-full"
-						/>
 					</div>
 				</TableCell>
 				<TableCell>
@@ -364,14 +353,6 @@ function ContactRow({
 						placeholder="Email..."
 						className="w-full"
 						type="email"
-					/>
-				</TableCell>
-				<TableCell>
-					<Input
-						value={editedContact.department || ""}
-						onChange={(e) => handleFieldChange("department", e.target.value)}
-						placeholder="Department..."
-						className="w-full"
 					/>
 				</TableCell>
 				<TableCell>
@@ -427,16 +408,10 @@ function ContactRow({
 					{contact.jobTitle && (
 						<p className="font-medium">{contact.jobTitle}</p>
 					)}
-					{contact.role && (
-						<p className="text-sm text-gray-500 dark:text-gray-400">
-							{contact.role}
-						</p>
-					)}
 				</div>
 			</TableCell>
 			<TableCell>{contact.phone || "—"}</TableCell>
 			<TableCell>{contact.email || "—"}</TableCell>
-			<TableCell>{contact.department || "—"}</TableCell>
 			<TableCell>
 				{contact.isPrimary && (
 					<StarFilledIcon className="h-4 w-4 text-yellow-400" />
