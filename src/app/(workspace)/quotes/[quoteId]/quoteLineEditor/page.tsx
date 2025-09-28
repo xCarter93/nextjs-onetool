@@ -45,6 +45,13 @@ type LineItem = {
 	isNew?: boolean; // Track if this is a new item not yet saved
 };
 
+const TEMP_LINE_ITEM_ID_PREFIX = "temp-";
+const isTempLineItemId = (id: Id<"quoteLineItems"> | string): id is string =>
+	typeof id === "string" && id.startsWith(TEMP_LINE_ITEM_ID_PREFIX);
+
+const isTempLineItem = (item: LineItem) =>
+	item.isNew || isTempLineItemId(item._id);
+
 // Status formatting functions
 const formatStatus = (status: string) => {
 	switch (status) {
@@ -263,7 +270,7 @@ export default function QuoteLineEditorPage() {
 	}
 
 	const handleAddLineItem = () => {
-		const tempId = `temp-${nextTempId}`;
+		const tempId = `${TEMP_LINE_ITEM_ID_PREFIX}${nextTempId}`;
 		const newSortOrder = allLineItems.length;
 
 		const newLineItem: LineItem = {
@@ -289,7 +296,7 @@ export default function QuoteLineEditorPage() {
 	};
 
 	const handleSaveLineItem = async (item: LineItem) => {
-		if (item.isNew || typeof item._id === "string") {
+		if (isTempLineItem(item)) {
 			// Update local item
 			setLocalLineItems((prev) =>
 				prev.map((localItem) =>
@@ -321,7 +328,7 @@ export default function QuoteLineEditorPage() {
 	};
 
 	const handleDeleteLineItem = async (id: Id<"quoteLineItems"> | string) => {
-		if (typeof id === "string") {
+		if (isTempLineItemId(id)) {
 			// Remove local item
 			setLocalLineItems((prev) => prev.filter((item) => item._id !== id));
 			setHasChanges(true);
@@ -332,6 +339,9 @@ export default function QuoteLineEditorPage() {
 			// Delete from database
 			try {
 				await deleteLineItem({ id });
+				if (editingId === id) {
+					setEditingId(null);
+				}
 				setHasChanges(true);
 			} catch (error) {
 				console.error("Failed to delete line item:", error);
