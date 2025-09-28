@@ -25,6 +25,7 @@ import type * as invoiceLineItems from "../invoiceLineItems.js";
 import type * as invoices from "../invoices.js";
 import type * as lib_activities from "../lib/activities.js";
 import type * as lib_auth from "../lib/auth.js";
+import type * as lib_memberships from "../lib/memberships.js";
 import type * as lib_shared from "../lib/shared.js";
 import type * as notifications from "../notifications.js";
 import type * as organizations from "../organizations.js";
@@ -55,6 +56,7 @@ declare const fullApi: ApiFromModules<{
   invoices: typeof invoices;
   "lib/activities": typeof lib_activities;
   "lib/auth": typeof lib_auth;
+  "lib/memberships": typeof lib_memberships;
   "lib/shared": typeof lib_shared;
   notifications: typeof notifications;
   organizations: typeof organizations;

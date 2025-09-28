@@ -63,7 +63,7 @@ async function listClientsForOrg(
 	indexName?: "by_org" | "by_status",
 	includeArchived: boolean = false
 ): Promise<Doc<"clients">[]> {
-	const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+	const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
 	if (!userOrgId) {
 		return [];
 	}
@@ -181,10 +181,11 @@ export const list = query({
 /**
  * Get only archived clients for the current user's organization
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const listArchived = query({
 	args: {},
 	handler: async (ctx): Promise<ClientDocument[]> => {
-		const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
 		if (!userOrgId) {
 			return [];
 		}
@@ -204,6 +205,10 @@ export const listArchived = query({
 export const get = query({
 	args: { id: v.id("clients") },
 	handler: async (ctx, args): Promise<ClientDocument | null> => {
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return null;
+		}
 		return await getClientWithOrgValidation(ctx, args.id);
 	},
 });
@@ -605,6 +610,7 @@ async function permanentlyDeleteSystemHandler(
  * Permanently delete a client and all related data (used by cron job)
  * This is an internal function that should only be called by the cron job
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const permanentlyDelete = mutation({
 	args: { id: v.id("clients") },
 	handler: async (ctx, args): Promise<ClientId> => {
@@ -616,6 +622,7 @@ export const permanentlyDelete = mutation({
  * Legacy delete function - now redirects to archive for backward compatibility
  * @deprecated Use archive() instead
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const remove = mutation({
 	args: { id: v.id("clients") },
 	handler: async (ctx, args): Promise<ClientId> => {
@@ -639,6 +646,7 @@ export const remove = mutation({
 /**
  * Search clients with type-safe filtering
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const search = query({
 	args: {
 		query: v.string(),
@@ -748,13 +756,14 @@ export const getStats = query({
 /**
  * Get clients with recent activity using proper types
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const getRecentActivity = query({
 	args: { limit: v.optional(v.number()) },
 	handler: async (ctx, args): Promise<ClientDocument[]> => {
 		const limit = args.limit || 10;
 
 		// Get user's org ID first
-		const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
 		if (!userOrgId) {
 			return [];
 		}
@@ -802,7 +811,7 @@ export const listWithProjectCounts = query({
 
 		// Get clients based on status filter
 		let clients: Doc<"clients">[];
-		const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
 		if (!userOrgId) {
 			return [];
 		}

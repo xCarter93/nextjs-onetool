@@ -3,10 +3,16 @@ import { UserJSON } from "@clerk/backend";
 import { v, Validator } from "convex/values";
 import {
 	getCurrentUser,
-	getCurrentUserOrgIdOptional,
+	getCurrentUserOrgId,
+	getOrganizationByClerkId,
 	userByExternalId,
 } from "./lib/auth";
 import { internal } from "./_generated/api";
+import {
+	ensureMembership,
+	listMembershipsByOrg,
+	removeMembership,
+} from "./lib/memberships";
 
 export const current = query({
 	args: {},
@@ -21,15 +27,19 @@ export const current = query({
 export const listByOrg = query({
 	args: {},
 	handler: async (ctx) => {
-		const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
 		if (!userOrgId) {
 			return [];
 		}
-
-		return await ctx.db
-			.query("users")
-			.withIndex("by_organization", (q) => q.eq("organizationId", userOrgId))
-			.collect();
+		const memberships = await listMembershipsByOrg(ctx, userOrgId);
+		const members = [];
+		for (const membership of memberships) {
+			const member = await ctx.db.get(membership.userId);
+			if (member) {
+				members.push(member);
+			}
+		}
+		return members;
 	},
 });
 
@@ -103,8 +113,9 @@ export const updateUserOrganization = internalMutation({
 	args: {
 		clerkUserId: v.string(),
 		clerkOrganizationId: v.string(),
+		role: v.optional(v.string()),
 	},
-	async handler(ctx, { clerkUserId, clerkOrganizationId }) {
+	async handler(ctx, { clerkUserId, clerkOrganizationId, role }) {
 		const user = await userByExternalId(ctx, clerkUserId);
 		if (!user) {
 			console.warn(`User not found for Clerk ID: ${clerkUserId}`);
@@ -112,12 +123,7 @@ export const updateUserOrganization = internalMutation({
 		}
 
 		// Find the organization by Clerk ID
-		const organization = await ctx.db
-			.query("organizations")
-			.withIndex("by_clerk_org", (q) =>
-				q.eq("clerkOrganizationId", clerkOrganizationId)
-			)
-			.first();
+		const organization = await getOrganizationByClerkId(ctx, clerkOrganizationId);
 
 		if (!organization) {
 			console.warn(
@@ -126,11 +132,7 @@ export const updateUserOrganization = internalMutation({
 			return;
 		}
 
-		// Update user with organization references
-		await ctx.db.patch(user._id, {
-			organizationId: organization._id,
-			clerkOrganizationId: clerkOrganizationId,
-		});
+		await ensureMembership(ctx, user._id, organization._id, role);
 	},
 });
 
@@ -138,18 +140,25 @@ export const updateUserOrganization = internalMutation({
  * Remove user from organization when they leave via Clerk
  */
 export const removeUserFromOrganization = internalMutation({
-	args: { clerkUserId: v.string() },
-	async handler(ctx, { clerkUserId }) {
+	args: {
+		clerkUserId: v.string(),
+		clerkOrganizationId: v.string(),
+	},
+	async handler(ctx, { clerkUserId, clerkOrganizationId }) {
 		const user = await userByExternalId(ctx, clerkUserId);
 		if (!user) {
 			console.warn(`User not found for Clerk ID: ${clerkUserId}`);
 			return;
 		}
 
-		// Remove organization references
-		await ctx.db.patch(user._id, {
-			organizationId: undefined,
-			clerkOrganizationId: undefined,
-		});
+		const organization = await getOrganizationByClerkId(ctx, clerkOrganizationId);
+		if (!organization) {
+			console.warn(
+				`Organization not found for Clerk ID: ${clerkOrganizationId}`
+			);
+			return;
+		}
+
+		await removeMembership(ctx, user._id, organization._id);
 	},
 });

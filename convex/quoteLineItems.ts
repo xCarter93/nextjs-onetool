@@ -144,6 +144,7 @@ export const list = query({
 /**
  * Get a specific quote line item by ID
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const get = query({
 	args: { id: v.id("quoteLineItems") },
 	handler: async (ctx, args): Promise<QuoteLineItemDocument | null> => {
@@ -154,6 +155,7 @@ export const get = query({
 /**
  * Create a new quote line item
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const create = mutation({
 	args: {
 		quoteId: v.id("quotes"),
@@ -355,6 +357,7 @@ export const bulkCreate = mutation({
 /**
  * Reorder quote line items
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const reorder = mutation({
 	args: {
 		quoteId: v.id("quotes"),
@@ -383,6 +386,7 @@ export const reorder = mutation({
 /**
  * Duplicate a quote line item
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const duplicate = mutation({
 	args: { id: v.id("quoteLineItems") },
 	handler: async (ctx, args): Promise<QuoteLineItemId> => {
@@ -420,6 +424,7 @@ export const duplicate = mutation({
 /**
  * Get quote line item statistics
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const getStats = query({
 	args: { quoteId: v.id("quotes") },
 	handler: async (ctx, args) => {

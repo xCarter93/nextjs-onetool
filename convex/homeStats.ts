@@ -56,51 +56,51 @@ export interface HomeStats {
 export const getHomeStats = query({
 	args: {},
 	handler: async (ctx): Promise<HomeStats> => {
-		const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+		const emptyStats: HomeStats = {
+			totalClients: {
+				current: 0,
+				previous: 0,
+				change: 0,
+				changeType: "neutral",
+			},
+			completedProjects: {
+				current: 0,
+				previous: 0,
+				change: 0,
+				changeType: "neutral",
+				totalValue: 0,
+			},
+			approvedQuotes: {
+				current: 0,
+				previous: 0,
+				change: 0,
+				changeType: "neutral",
+				totalValue: 0,
+			},
+			invoicesSent: {
+				current: 0,
+				previous: 0,
+				change: 0,
+				changeType: "neutral",
+				totalValue: 0,
+				outstanding: 0,
+			},
+			revenueGoal: {
+				percentage: 0,
+				current: 0,
+				target: 0,
+				previousPercentage: 0,
+				changePercentage: 0,
+			},
+			pendingTasks: {
+				total: 0,
+				dueThisWeek: 0,
+			},
+		};
 
-		// Return empty stats for users without organizations
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
 		if (!userOrgId) {
-			return {
-				totalClients: {
-					current: 0,
-					previous: 0,
-					change: 0,
-					changeType: "neutral" as const,
-				},
-				completedProjects: {
-					current: 0,
-					previous: 0,
-					change: 0,
-					changeType: "neutral" as const,
-					totalValue: 0,
-				},
-				approvedQuotes: {
-					current: 0,
-					previous: 0,
-					change: 0,
-					changeType: "neutral" as const,
-					totalValue: 0,
-				},
-				invoicesSent: {
-					current: 0,
-					previous: 0,
-					change: 0,
-					changeType: "neutral" as const,
-					totalValue: 0,
-					outstanding: 0,
-				},
-				revenueGoal: {
-					percentage: 0,
-					current: 0,
-					target: 0,
-					previousPercentage: 0,
-					changePercentage: 0,
-				},
-				pendingTasks: {
-					total: 0,
-					dueThisWeek: 0,
-				},
-			};
+			return emptyStats;
 		}
 		const now = Date.now();
 		const startOfThisMonth = new Date(new Date(now).setDate(1));
@@ -303,10 +303,11 @@ export const getHomeStats = query({
 /**
  * Get simple task count for pending tasks widget
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const getPendingTasksCount = query({
 	args: {},
 	handler: async (ctx): Promise<{ count: number; dueThisWeek: number }> => {
-		const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
 		if (!userOrgId) {
 			return { count: 0, dueThisWeek: 0 };
 		}
@@ -338,6 +339,7 @@ export const getPendingTasksCount = query({
 /**
  * Get clients count with month-over-month comparison
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const getClientsStats = query({
 	args: {},
 	handler: async (
@@ -349,14 +351,14 @@ export const getClientsStats = query({
 		change: number;
 		changeType: "increase" | "decrease" | "neutral";
 	}> => {
-		const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
 		if (!userOrgId) {
 			return {
 				total: 0,
 				thisMonth: 0,
 				lastMonth: 0,
 				change: 0,
-				changeType: "neutral" as const,
+				changeType: "neutral",
 			};
 		}
 		const now = Date.now();
@@ -410,9 +412,14 @@ export const getRevenueGoalProgress = query({
 		target: number;
 		isOnTrack: boolean;
 	}> => {
-		const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
 		if (!userOrgId) {
-			return { percentage: 0, current: 0, target: 0, isOnTrack: false };
+			return {
+				percentage: 0,
+				current: 0,
+				target: 0,
+				isOnTrack: false,
+			};
 		}
 
 		// Get organization to fetch revenue target
@@ -471,7 +478,7 @@ export const getClientsCreatedThisMonth = query({
 			_creationTime: number;
 		}>
 	> => {
-		const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
 		if (!userOrgId) {
 			return [];
 		}
@@ -513,7 +520,7 @@ export const getProjectsCompletedThisMonth = query({
 			_creationTime: number;
 		}>
 	> => {
-		const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
 		if (!userOrgId) {
 			return [];
 		}
@@ -558,7 +565,7 @@ export const getQuotesApprovedThisMonth = query({
 			_creationTime: number;
 		}>
 	> => {
-		const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
 		if (!userOrgId) {
 			return [];
 		}
@@ -603,7 +610,7 @@ export const getInvoicesSentThisMonth = query({
 			_creationTime: number;
 		}>
 	> => {
-		const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
 		if (!userOrgId) {
 			return [];
 		}
@@ -643,7 +650,7 @@ export const getRevenueThisMonth = query({
 			_creationTime: number;
 		}>
 	> => {
-		const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
 		if (!userOrgId) {
 			return [];
 		}
@@ -688,7 +695,7 @@ export const getTasksCreatedThisMonth = query({
 			_creationTime: number;
 		}>
 	> => {
-		const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
 		if (!userOrgId) {
 			return [];
 		}

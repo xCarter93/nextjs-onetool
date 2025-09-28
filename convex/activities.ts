@@ -24,7 +24,7 @@ export const getRecent = query({
 	},
 	handler: async (ctx, args): Promise<ActivityWithUser[]> => {
 		await getCurrentUserOrThrow(ctx);
-		const orgId = await getCurrentUserOrgIdOptional(ctx);
+		const orgId = await getCurrentUserOrgId(ctx, { require: false });
 		if (!orgId) {
 			return [];
 		}
@@ -60,6 +60,7 @@ export const getRecent = query({
 /**
  * Get activities by type for the current organization
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const getByType = query({
 	args: {
 		activityType: v.union(
@@ -85,7 +86,7 @@ export const getByType = query({
 	},
 	handler: async (ctx, args): Promise<ActivityWithUser[]> => {
 		await getCurrentUserOrThrow(ctx);
-		const orgId = await getCurrentUserOrgIdOptional(ctx);
+		const orgId = await getCurrentUserOrgId(ctx, { require: false });
 		if (!orgId) {
 			return [];
 		}
@@ -122,6 +123,7 @@ export const getByType = query({
 /**
  * Get activities for a specific entity
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const getByEntity = query({
 	args: {
 		entityType: v.union(
@@ -138,7 +140,7 @@ export const getByEntity = query({
 	},
 	handler: async (ctx, args): Promise<ActivityWithUser[]> => {
 		await getCurrentUserOrThrow(ctx);
-		const orgId = await getCurrentUserOrgIdOptional(ctx);
+		const orgId = await getCurrentUserOrgId(ctx, { require: false });
 		if (!orgId) {
 			return [];
 		}
@@ -177,6 +179,7 @@ export const getByEntity = query({
 /**
  * Get activity count for the current organization
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const getCount = query({
 	args: {
 		dayRange: v.optional(v.number()),
@@ -204,7 +207,7 @@ export const getCount = query({
 	},
 	handler: async (ctx, args): Promise<number> => {
 		await getCurrentUserOrThrow(ctx);
-		const orgId = await getCurrentUserOrgIdOptional(ctx);
+		const orgId = await getCurrentUserOrgId(ctx, { require: false });
 		if (!orgId) {
 			return 0;
 		}

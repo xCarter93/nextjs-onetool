@@ -6,6 +6,12 @@ import {
 	getCurrentUserOrgId,
 } from "./lib/auth";
 import { ActivityHelpers } from "./lib/activities";
+import {
+	ensureMembership,
+	listMembershipsByOrg,
+	removeMembership,
+	requireMembership,
+} from "./lib/memberships";
 
 /**
  * Get the current user's organization
@@ -21,7 +27,7 @@ export const get = query({
 		try {
 			const userOrgId = await getCurrentUserOrgId(ctx);
 			return await ctx.db.get(userOrgId);
-		} catch (error) {
+	} catch {
 			// User might not have an active organization
 			return null;
 		}
@@ -51,7 +57,7 @@ export const needsMetadataCompletion = query({
 				!organization.isMetadataComplete &&
 				organization.ownerUserId === user._id
 			);
-		} catch (error) {
+	} catch {
 			// User might not have an active organization
 			return false;
 		}
@@ -108,11 +114,7 @@ export const createFromClerk = internalMutation({
 			isMetadataComplete: false, // User needs to complete additional setup
 		});
 
-		// Update user to link to the organization
-		await ctx.db.patch(ownerUser._id, {
-			organizationId: orgId,
-			clerkOrganizationId: args.clerkOrganizationId,
-		});
+		await ensureMembership(ctx, ownerUser._id, orgId, "owner");
 
 		console.log(
 			`Created minimal organization record for Clerk org: ${args.clerkOrganizationId}`
@@ -255,19 +257,10 @@ export const deleteFromClerk = internalMutation({
 			return;
 		}
 
-		// Remove all users from the organization first
-		const orgMembers = await ctx.db
-			.query("users")
-			.withIndex("by_organization", (q) =>
-				q.eq("organizationId", organization._id)
-			)
-			.collect();
-
-		for (const member of orgMembers) {
-			await ctx.db.patch(member._id, {
-				organizationId: undefined,
-				clerkOrganizationId: undefined,
-			});
+		// Remove all memberships for the organization
+		const memberships = await listMembershipsByOrg(ctx, organization._id);
+		for (const membership of memberships) {
+			await ctx.db.delete(membership._id);
 		}
 
 		// Delete the organization
@@ -365,6 +358,7 @@ export const update = mutation({
 /**
  * Update organization plan (for billing/subscription management)
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const updatePlan = mutation({
 	args: {
 		plan: v.union(v.literal("trial"), v.literal("pro"), v.literal("cancelled")),
@@ -396,6 +390,7 @@ export const updatePlan = mutation({
 /**
  * Get organization members (users in the organization)
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const getMembers = query({
 	args: {},
 	handler: async (ctx) => {
@@ -406,11 +401,16 @@ export const getMembers = query({
 
 		try {
 			const userOrgId = await getCurrentUserOrgId(ctx);
-			return await ctx.db
-				.query("users")
-				.withIndex("by_organization", (q) => q.eq("organizationId", userOrgId))
-				.collect();
-		} catch (error) {
+			const memberships = await listMembershipsByOrg(ctx, userOrgId);
+			const users = [];
+			for (const membership of memberships) {
+				const member = await ctx.db.get(membership.userId);
+				if (member) {
+					users.push(member);
+				}
+			}
+			return users;
+		} catch {
 			// User might not have an active organization
 			return [];
 		}
@@ -420,18 +420,15 @@ export const getMembers = query({
 /**
  * Remove user from organization (owner only)
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const removeMember = mutation({
 	args: {
 		userId: v.id("users"),
 	},
 	handler: async (ctx, args) => {
 		const currentUser = await getCurrentUserOrThrow(ctx);
-
-		if (!currentUser.organizationId) {
-			throw new Error("User is not associated with an organization");
-		}
-
-		const organization = await ctx.db.get(currentUser.organizationId);
+		const orgId = await getCurrentUserOrgId(ctx);
+		const organization = await ctx.db.get(orgId);
 		if (!organization) {
 			throw new Error("Organization not found");
 		}
@@ -446,21 +443,16 @@ export const removeMember = mutation({
 			throw new Error("Organization owner cannot be removed");
 		}
 
-		// Get the user to be removed
 		const userToRemove = await ctx.db.get(args.userId);
 		if (!userToRemove) {
 			throw new Error("User not found");
 		}
-
-		// Check if user belongs to this organization
-		if (userToRemove.organizationId !== currentUser.organizationId) {
-			throw new Error("User does not belong to this organization");
+		if (userToRemove._id === organization.ownerUserId) {
+			throw new Error("Cannot remove the organization owner");
 		}
 
-		// Remove user from organization
-		await ctx.db.patch(args.userId, {
-			organizationId: undefined,
-		});
+		await requireMembership(ctx, args.userId, orgId);
+		await removeMembership(ctx, args.userId, orgId);
 
 		return args.userId;
 	},
@@ -469,6 +461,7 @@ export const removeMember = mutation({
 /**
  * Delete organization (owner only) - careful operation!
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const deleteOrganization = mutation({
 	args: {
 		confirmationText: v.string(), // Require typing organization name for confirmation
@@ -492,16 +485,10 @@ export const deleteOrganization = mutation({
 			throw new Error("Confirmation text must match organization name exactly");
 		}
 
-		// Remove all users from the organization first
-		const orgMembers = await ctx.db
-			.query("users")
-			.withIndex("by_organization", (q) => q.eq("organizationId", userOrgId))
-			.collect();
-
-		for (const member of orgMembers) {
-			await ctx.db.patch(member._id, {
-				organizationId: undefined,
-			});
+		// Remove all memberships for the organization
+		const memberships = await listMembershipsByOrg(ctx, userOrgId);
+		for (const membership of memberships) {
+			await ctx.db.delete(membership._id);
 		}
 
 		// Delete the organization

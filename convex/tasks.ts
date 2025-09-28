@@ -4,6 +4,7 @@ import { Doc, Id } from "./_generated/dataModel";
 import { getCurrentUserOrgIdOptional, getCurrentUserOrgId } from "./lib/auth";
 import { ActivityHelpers } from "./lib/activities";
 import { DateUtils } from "./lib/shared";
+import { requireMembership } from "./lib/memberships";
 
 /**
  * Task/Schedule operations with embedded CRUD helpers
@@ -17,12 +18,11 @@ import { DateUtils } from "./lib/shared";
  */
 async function getTaskWithOrgValidation(
 	ctx: QueryCtx | MutationCtx,
-	id: Id<"tasks">
+	id: Id<"tasks">,
+	existingOrgId?: Id<"organizations">
 ): Promise<Doc<"tasks"> | null> {
-	const userOrgId = await getCurrentUserOrgIdOptional(ctx);
-	if (!userOrgId) {
-		return null;
-	}
+	const userOrgId =
+		existingOrgId ?? (await getCurrentUserOrgId(ctx));
 	const task = await ctx.db.get(id);
 
 	if (!task) {
@@ -55,12 +55,11 @@ async function getTaskOrThrow(
  */
 async function validateClientAccess(
 	ctx: QueryCtx | MutationCtx,
-	clientId: Id<"clients">
+	clientId: Id<"clients">,
+	existingOrgId?: Id<"organizations">
 ): Promise<void> {
-	const userOrgId = await getCurrentUserOrgIdOptional(ctx);
-	if (!userOrgId) {
-		throw new Error("User is not associated with an organization");
-	}
+	const userOrgId =
+	existingOrgId ?? (await getCurrentUserOrgId(ctx));
 	const client = await ctx.db.get(clientId);
 
 	if (!client) {
@@ -77,12 +76,11 @@ async function validateClientAccess(
  */
 async function validateProjectAccess(
 	ctx: QueryCtx | MutationCtx,
-	projectId: Id<"projects">
+	projectId: Id<"projects">,
+	existingOrgId?: Id<"organizations">
 ): Promise<void> {
-	const userOrgId = await getCurrentUserOrgIdOptional(ctx);
-	if (!userOrgId) {
-		throw new Error("User is not associated with an organization");
-	}
+	const userOrgId =
+	existingOrgId ?? (await getCurrentUserOrgId(ctx));
 	const project = await ctx.db.get(projectId);
 
 	if (!project) {
@@ -99,21 +97,18 @@ async function validateProjectAccess(
  */
 async function validateUserAccess(
 	ctx: QueryCtx | MutationCtx,
-	userId: Id<"users">
+	userId: Id<"users">,
+	existingOrgId?: Id<"organizations">
 ): Promise<void> {
-	const userOrgId = await getCurrentUserOrgIdOptional(ctx);
-	if (!userOrgId) {
-		throw new Error("User is not associated with an organization");
-	}
+	const userOrgId =
+	existingOrgId ?? (await getCurrentUserOrgId(ctx));
 	const user = await ctx.db.get(userId);
 
 	if (!user) {
 		throw new Error("User not found");
 	}
 
-	if (user.organizationId !== userOrgId) {
-		throw new Error("User does not belong to your organization");
-	}
+	await requireMembership(ctx, userId, userOrgId);
 }
 
 /**
@@ -195,6 +190,22 @@ interface TaskStats {
 	recurring: number;
 }
 
+function createEmptyTaskStats(): TaskStats {
+	return {
+		total: 0,
+		byStatus: {
+			pending: 0,
+			inProgress: 0,
+			completed: 0,
+			cancelled: 0,
+		},
+		todayTasks: 0,
+		overdue: 0,
+		thisWeek: 0,
+		recurring: 0,
+	};
+}
+
 /**
  * Get all tasks for the current user's organization
  */
@@ -215,7 +226,7 @@ export const list = query({
 		dateTo: v.optional(v.number()),
 	},
 	handler: async (ctx, args): Promise<TaskDocument[]> => {
-		const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
 		if (!userOrgId) {
 			return [];
 		}
@@ -224,7 +235,7 @@ export const list = query({
 
 		// Start with the most specific query available
 		if (args.assigneeUserId) {
-			await validateUserAccess(ctx, args.assigneeUserId);
+			await validateUserAccess(ctx, args.assigneeUserId, userOrgId);
 			tasks = await ctx.db
 				.query("tasks")
 				.withIndex("by_assignee", (q) =>
@@ -232,13 +243,13 @@ export const list = query({
 				)
 				.collect();
 		} else if (args.projectId) {
-			await validateProjectAccess(ctx, args.projectId);
+			await validateProjectAccess(ctx, args.projectId, userOrgId);
 			tasks = await ctx.db
 				.query("tasks")
 				.withIndex("by_project", (q) => q.eq("projectId", args.projectId))
 				.collect();
 		} else if (args.clientId) {
-			await validateClientAccess(ctx, args.clientId);
+			await validateClientAccess(ctx, args.clientId, userOrgId);
 			tasks = await ctx.db
 				.query("tasks")
 				.withIndex("by_client", (q) => q.eq("clientId", args.clientId!))
@@ -284,7 +295,11 @@ export const list = query({
 export const get = query({
 	args: { id: v.id("tasks") },
 	handler: async (ctx, args): Promise<TaskDocument | null> => {
-		return await getTaskWithOrgValidation(ctx, args.id);
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return null;
+		}
+		return await getTaskWithOrgValidation(ctx, args.id, userOrgId);
 	},
 });
 
@@ -525,6 +540,7 @@ export const remove = mutation({
 /**
  * Search tasks
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const search = query({
 	args: {
 		query: v.string(),
@@ -540,7 +556,7 @@ export const search = query({
 		assigneeUserId: v.optional(v.id("users")),
 	},
 	handler: async (ctx, args): Promise<TaskDocument[]> => {
-		const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
 		if (!userOrgId) {
 			return [];
 		}
@@ -556,13 +572,13 @@ export const search = query({
 
 		// Filter by client if specified
 		if (args.clientId) {
-			await validateClientAccess(ctx, args.clientId);
+			await validateClientAccess(ctx, args.clientId, userOrgId);
 			tasks = tasks.filter((task) => task.clientId === args.clientId);
 		}
 
 		// Filter by assignee if specified
 		if (args.assigneeUserId) {
-			await validateUserAccess(ctx, args.assigneeUserId);
+			await validateUserAccess(ctx, args.assigneeUserId, userOrgId);
 			tasks = tasks.filter(
 				(task) => task.assigneeUserId === args.assigneeUserId
 			);
@@ -585,21 +601,9 @@ export const search = query({
 export const getStats = query({
 	args: {},
 	handler: async (ctx): Promise<TaskStats> => {
-		const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
 		if (!userOrgId) {
-			return {
-				total: 0,
-				byStatus: {
-					pending: 0,
-					inProgress: 0,
-					completed: 0,
-					cancelled: 0,
-				},
-				todayTasks: 0,
-				overdue: 0,
-				thisWeek: 0,
-				recurring: 0,
-			};
+			return createEmptyTaskStats();
 		}
 		const tasks = await ctx.db
 			.query("tasks")
@@ -672,10 +676,14 @@ export const getStats = query({
 /**
  * Get today's tasks
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const getToday = query({
 	args: { assigneeUserId: v.optional(v.id("users")) },
 	handler: async (ctx, args): Promise<TaskDocument[]> => {
-		const userOrgId = await getCurrentUserOrgId(ctx);
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return [];
+		}
 		const today = DateUtils.startOfDay(Date.now());
 		const tomorrow = DateUtils.addDays(today, 1);
 
@@ -688,7 +696,7 @@ export const getToday = query({
 
 		// Filter by assignee if specified
 		if (args.assigneeUserId) {
-			await validateUserAccess(ctx, args.assigneeUserId);
+			await validateUserAccess(ctx, args.assigneeUserId, userOrgId);
 			tasks = tasks.filter(
 				(task) => task.assigneeUserId === args.assigneeUserId
 			);
@@ -710,7 +718,7 @@ export const getToday = query({
 export const getOverdue = query({
 	args: { assigneeUserId: v.optional(v.id("users")) },
 	handler: async (ctx, args): Promise<TaskDocument[]> => {
-		const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
 		if (!userOrgId) {
 			return [];
 		}
@@ -728,7 +736,7 @@ export const getOverdue = query({
 
 		// Filter by assignee if specified
 		if (args.assigneeUserId) {
-			await validateUserAccess(ctx, args.assigneeUserId);
+			await validateUserAccess(ctx, args.assigneeUserId, userOrgId);
 			tasks = tasks.filter(
 				(task) => task.assigneeUserId === args.assigneeUserId
 			);
@@ -747,7 +755,7 @@ export const getUpcoming = query({
 		daysAhead: v.optional(v.number()), // Default to 7 days if not specified
 	},
 	handler: async (ctx, args): Promise<TaskDocument[]> => {
-		const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
 		if (!userOrgId) {
 			return [];
 		}
@@ -769,7 +777,7 @@ export const getUpcoming = query({
 
 		// Filter by assignee if specified
 		if (args.assigneeUserId) {
-			await validateUserAccess(ctx, args.assigneeUserId);
+			await validateUserAccess(ctx, args.assigneeUserId, userOrgId);
 			tasks = tasks.filter(
 				(task) => task.assigneeUserId === args.assigneeUserId
 			);
@@ -804,6 +812,7 @@ export const getUpcoming = query({
 /**
  * Get tasks assigned to a specific user
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const getByUser = query({
 	args: {
 		userId: v.id("users"),
@@ -818,13 +827,13 @@ export const getByUser = query({
 		includeCompleted: v.optional(v.boolean()), // Whether to include completed tasks
 	},
 	handler: async (ctx, args): Promise<TaskDocument[]> => {
-		const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
 		if (!userOrgId) {
 			return [];
 		}
-
+		
 		// Validate the user exists and belongs to the same org
-		await validateUserAccess(ctx, args.userId);
+		await validateUserAccess(ctx, args.userId, userOrgId);
 
 		let tasks = await ctx.db
 			.query("tasks")
