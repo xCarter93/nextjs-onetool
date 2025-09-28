@@ -18,9 +18,11 @@ import { requireMembership } from "./lib/memberships";
  */
 async function getProjectWithOrgValidation(
 	ctx: QueryCtx | MutationCtx,
-	id: Id<"projects">
+	id: Id<"projects">,
+	existingOrgId?: Id<"organizations">
 ): Promise<Doc<"projects"> | null> {
-	const userOrgId = await getCurrentUserOrgId(ctx);
+	const userOrgId =
+		existingOrgId ?? (await getCurrentUserOrgId(ctx));
 	const project = await ctx.db.get(id);
 
 	if (!project) {
@@ -53,9 +55,11 @@ async function getProjectOrThrow(
  */
 async function validateClientAccess(
 	ctx: QueryCtx | MutationCtx,
-	clientId: Id<"clients">
+	clientId: Id<"clients">,
+	existingOrgId?: Id<"organizations">
 ): Promise<void> {
-	const userOrgId = await getCurrentUserOrgId(ctx);
+	const userOrgId =
+	existingOrgId ?? (await getCurrentUserOrgId(ctx));
 	const client = await ctx.db.get(clientId);
 
 	if (!client) {
@@ -72,9 +76,11 @@ async function validateClientAccess(
  */
 async function validateUserAccess(
 	ctx: QueryCtx | MutationCtx,
-	userIds: Id<"users">[]
+	userIds: Id<"users">[],
+	existingOrgId?: Id<"organizations">
 ): Promise<void> {
-	const userOrgId = await getCurrentUserOrgId(ctx);
+	const userOrgId =
+	existingOrgId ?? (await getCurrentUserOrgId(ctx));
 
 	for (const userId of userIds) {
 		const user = await ctx.db.get(userId);
@@ -95,16 +101,16 @@ async function createProjectWithOrg(
 	const userOrgId = await getCurrentUserOrgId(ctx);
 
 	// Validate client access
-	await validateClientAccess(ctx, data.clientId);
+	await validateClientAccess(ctx, data.clientId, userOrgId);
 
 	// Validate assigned users if provided
 	if (data.assignedUserIds && data.assignedUserIds.length > 0) {
-		await validateUserAccess(ctx, data.assignedUserIds);
+		await validateUserAccess(ctx, data.assignedUserIds, userOrgId);
 	}
 
 	// Validate salesperson if provided
 	if (data.salespersonId) {
-		await validateUserAccess(ctx, [data.salespersonId]);
+		await validateUserAccess(ctx, [data.salespersonId], userOrgId);
 	}
 
 	const projectData = {
@@ -166,6 +172,24 @@ interface ProjectStats {
 	overdue: number; // Projects past due date
 }
 
+function createEmptyProjectStats(): ProjectStats {
+	return {
+		total: 0,
+		byStatus: {
+			planned: 0,
+			"in-progress": 0,
+			completed: 0,
+			cancelled: 0,
+		},
+		byType: {
+			"one-off": 0,
+			recurring: 0,
+		},
+		upcomingDeadlines: 0,
+		overdue: 0,
+	};
+}
+
 /**
  * Get all projects for the current user's organization
  */
@@ -182,12 +206,15 @@ export const list = query({
 		clientId: v.optional(v.id("clients")),
 	},
 	handler: async (ctx, args): Promise<ProjectDocument[]> => {
-		const userOrgId = await getCurrentUserOrgId(ctx);
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return [];
+		}
 
 		let projects: ProjectDocument[];
 
 		if (args.clientId) {
-			await validateClientAccess(ctx, args.clientId);
+			await validateClientAccess(ctx, args.clientId, userOrgId);
 			projects = await ctx.db
 				.query("projects")
 				.withIndex("by_client", (q) => q.eq("clientId", args.clientId!))
@@ -216,7 +243,11 @@ export const list = query({
 export const get = query({
 	args: { id: v.id("projects") },
 	handler: async (ctx, args): Promise<ProjectDocument | null> => {
-		return await getProjectWithOrgValidation(ctx, args.id);
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return null;
+		}
+		return await getProjectWithOrgValidation(ctx, args.id, userOrgId);
 	},
 });
 
@@ -413,7 +444,10 @@ export const search = query({
 		clientId: v.optional(v.id("clients")),
 	},
 	handler: async (ctx, args): Promise<ProjectDocument[]> => {
-		const userOrgId = await getCurrentUserOrgId(ctx);
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return [];
+		}
 		let projects = await ctx.db
 			.query("projects")
 			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
@@ -421,7 +455,7 @@ export const search = query({
 
 		// Filter by client if specified
 		if (args.clientId) {
-			await validateClientAccess(ctx, args.clientId);
+			await validateClientAccess(ctx, args.clientId, userOrgId);
 			projects = projects.filter(
 				(project: ProjectDocument) => project.clientId === args.clientId
 			);
@@ -462,7 +496,10 @@ export const search = query({
 export const getStats = query({
 	args: {},
 	handler: async (ctx): Promise<ProjectStats> => {
-		const userOrgId = await getCurrentUserOrgId(ctx);
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return createEmptyProjectStats();
+		}
 		const projects = await ctx.db
 			.query("projects")
 			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
@@ -524,10 +561,13 @@ export const getStats = query({
 export const getByAssignee = query({
 	args: { userId: v.id("users") },
 	handler: async (ctx, args): Promise<ProjectDocument[]> => {
-		const userOrgId = await getCurrentUserOrgId(ctx);
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return [];
+		}
 
 		// Validate user belongs to organization
-		await validateUserAccess(ctx, [args.userId]);
+		await validateUserAccess(ctx, [args.userId], userOrgId);
 
 		const projects = await ctx.db
 			.query("projects")
@@ -551,7 +591,10 @@ export const getByAssignee = query({
 export const getUpcomingDeadlines = query({
 	args: { days: v.optional(v.number()) },
 	handler: async (ctx, args): Promise<ProjectDocument[]> => {
-		const userOrgId = await getCurrentUserOrgId(ctx);
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return [];
+		}
 		const daysAhead = args.days || 7;
 
 		const projects = await ctx.db
@@ -580,7 +623,10 @@ export const getUpcomingDeadlines = query({
 export const getOverdue = query({
 	args: {},
 	handler: async (ctx): Promise<ProjectDocument[]> => {
-		const userOrgId = await getCurrentUserOrgId(ctx);
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return [];
+		}
 
 		const projects = await ctx.db
 			.query("projects")

@@ -24,7 +24,10 @@ export const getRecent = query({
 	},
 	handler: async (ctx, args): Promise<ActivityWithUser[]> => {
 		await getCurrentUserOrThrow(ctx);
-		const orgId = await getCurrentUserOrgId(ctx);
+		const orgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!orgId) {
+			return [];
+		}
 
 		// Query all recent activities for the organization, ordered by timestamp (newest first)
 		const activities = await ctx.db
@@ -83,7 +86,10 @@ export const getByType = query({
 	},
 	handler: async (ctx, args): Promise<ActivityWithUser[]> => {
 		await getCurrentUserOrThrow(ctx);
-		const orgId = await getCurrentUserOrgId(ctx);
+		const orgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!orgId) {
+			return [];
+		}
 
 		const activities = await ctx.db
 			.query("activities")
@@ -134,7 +140,10 @@ export const getByEntity = query({
 	},
 	handler: async (ctx, args): Promise<ActivityWithUser[]> => {
 		await getCurrentUserOrThrow(ctx);
-		const orgId = await getCurrentUserOrgId(ctx);
+		const orgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!orgId) {
+			return [];
+		}
 
 		const activities = await ctx.db
 			.query("activities")
@@ -198,7 +207,10 @@ export const getCount = query({
 	},
 	handler: async (ctx, args): Promise<number> => {
 		await getCurrentUserOrThrow(ctx);
-		const orgId = await getCurrentUserOrgId(ctx);
+		const orgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!orgId) {
+			return 0;
+		}
 
 		// Calculate timestamp filter if dayRange is provided
 		let timestampFilter: number | undefined;

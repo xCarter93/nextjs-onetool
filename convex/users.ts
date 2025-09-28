@@ -27,7 +27,10 @@ export const current = query({
 export const listByOrg = query({
 	args: {},
 	handler: async (ctx) => {
-		const userOrgId = await getCurrentUserOrgId(ctx);
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return [];
+		}
 		const memberships = await listMembershipsByOrg(ctx, userOrgId);
 		const members = [];
 		for (const membership of memberships) {

@@ -65,7 +65,16 @@ export async function getOrganizationByClerkId(
  */
 export async function getCurrentUserOrgId(
 	ctx: QueryCtx | MutationCtx
-): Promise<Id<"organizations">> {
+): Promise<Id<"organizations">>;
+export async function getCurrentUserOrgId(
+	ctx: QueryCtx | MutationCtx,
+	options: { require: false }
+): Promise<Id<"organizations"> | null>;
+export async function getCurrentUserOrgId(
+	ctx: QueryCtx | MutationCtx,
+	options: { require?: boolean } = {}
+): Promise<Id<"organizations"> | null> {
+	const requireOrg = options.require !== false;
 	const identity = await ctx.auth.getUserIdentity();
 	if (!identity) {
 		throw new Error("User not authenticated");
@@ -79,11 +88,17 @@ export async function getCurrentUserOrgId(
 		clerkIdentity.org_id ??
 		undefined;
 	if (!activeOrgId) {
+		if (!requireOrg) {
+			return null;
+		}
 		throw new Error("No active organization found in user session");
 	}
 	// Look up the organization by Clerk organization ID
 	const organization = await getOrganizationByClerkId(ctx, activeOrgId);
 	if (!organization) {
+		if (!requireOrg) {
+			return null;
+		}
 		throw new Error("Active organization not found in database");
 	}
 

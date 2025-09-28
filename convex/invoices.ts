@@ -65,9 +65,11 @@ async function getInvoiceByPublicToken(
  */
 async function validateClientAccess(
 	ctx: QueryCtx | MutationCtx,
-	clientId: Id<"clients">
+	clientId: Id<"clients">,
+	existingOrgId?: Id<"organizations">
 ): Promise<void> {
-	const userOrgId = await getCurrentUserOrgId(ctx);
+	const userOrgId =
+		existingOrgId ?? (await getCurrentUserOrgId(ctx));
 	const client = await ctx.db.get(clientId);
 
 	if (!client) {
@@ -120,6 +122,23 @@ interface InvoiceStats {
 	thisMonth: number;
 }
 
+function createEmptyInvoiceStats(): InvoiceStats {
+	return {
+		total: 0,
+		byStatus: {
+			draft: 0,
+			sent: 0,
+			paid: 0,
+			overdue: 0,
+			cancelled: 0,
+		},
+		totalValue: 0,
+		totalPaid: 0,
+		totalOutstanding: 0,
+		thisMonth: 0,
+	};
+}
+
 /**
  * Get all invoices for the current user's organization
  */
@@ -138,7 +157,10 @@ export const list = query({
 		projectId: v.optional(v.id("projects")),
 	},
 	handler: async (ctx, args): Promise<InvoiceDocument[]> => {
-		const userOrgId = await getCurrentUserOrgId(ctx);
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return [];
+		}
 
 		let invoices: InvoiceDocument[];
 
@@ -158,7 +180,7 @@ export const list = query({
 
 		// Apply additional filters
 		if (args.clientId) {
-			await validateClientAccess(ctx, args.clientId);
+			await validateClientAccess(ctx, args.clientId, userOrgId);
 			invoices = invoices.filter(
 				(invoice) => invoice.clientId === args.clientId
 			);
@@ -182,6 +204,10 @@ export const list = query({
 export const get = query({
 	args: { id: v.id("invoices") },
 	handler: async (ctx, args): Promise<InvoiceDocument | null> => {
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return null;
+		}
 		return await getInvoiceWithOrgValidation(ctx, args.id);
 	},
 });
@@ -413,7 +439,10 @@ export const remove = mutation({
 export const getStats = query({
 	args: {},
 	handler: async (ctx): Promise<InvoiceStats> => {
-		const userOrgId = await getCurrentUserOrgId(ctx);
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return createEmptyInvoiceStats();
+		}
 		const invoices = await ctx.db
 			.query("invoices")
 			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
@@ -474,7 +503,10 @@ export const getStats = query({
 export const getOverdue = query({
 	args: {},
 	handler: async (ctx): Promise<InvoiceDocument[]> => {
-		const userOrgId = await getCurrentUserOrgId(ctx);
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return [];
+		}
 		const now = Date.now();
 
 		const invoices = await ctx.db

@@ -52,9 +52,11 @@ async function getContactOrThrow(
  */
 async function validateClientAccess(
 	ctx: QueryCtx | MutationCtx,
-	clientId: Id<"clients">
+	clientId: Id<"clients">,
+	existingOrgId?: Id<"organizations">
 ): Promise<void> {
-	const userOrgId = await getCurrentUserOrgId(ctx);
+	const userOrgId =
+		existingOrgId ?? (await getCurrentUserOrgId(ctx));
 	const client = await ctx.db.get(clientId);
 
 	if (!client) {
@@ -116,7 +118,12 @@ type ClientContactId = Id<"clientContacts">;
 export const listByClient = query({
 	args: { clientId: v.id("clients") },
 	handler: async (ctx, args): Promise<ClientContactDocument[]> => {
-		await validateClientAccess(ctx, args.clientId);
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return [];
+		}
+
+		await validateClientAccess(ctx, args.clientId, userOrgId);
 
 		return await ctx.db
 			.query("clientContacts")
@@ -131,7 +138,10 @@ export const listByClient = query({
 export const list = query({
 	args: {},
 	handler: async (ctx): Promise<ClientContactDocument[]> => {
-		const userOrgId = await getCurrentUserOrgId(ctx);
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return [];
+		}
 
 		return await ctx.db
 			.query("clientContacts")
@@ -146,6 +156,10 @@ export const list = query({
 export const get = query({
 	args: { id: v.id("clientContacts") },
 	handler: async (ctx, args): Promise<ClientContactDocument | null> => {
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return null;
+		}
 		return await getContactWithValidation(ctx, args.id);
 	},
 });
@@ -156,7 +170,11 @@ export const get = query({
 export const getPrimaryContact = query({
 	args: { clientId: v.id("clients") },
 	handler: async (ctx, args): Promise<ClientContactDocument | null> => {
-		await validateClientAccess(ctx, args.clientId);
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return null;
+		}
+		await validateClientAccess(ctx, args.clientId, userOrgId);
 
 		return await ctx.db
 			.query("clientContacts")
@@ -327,16 +345,20 @@ export const search = query({
 		clientId: v.optional(v.id("clients")),
 	},
 	handler: async (ctx, args): Promise<ClientContactDocument[]> => {
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return [];
+		}
+
 		let contacts: ClientContactDocument[];
 
 		if (args.clientId) {
-			await validateClientAccess(ctx, args.clientId);
+			await validateClientAccess(ctx, args.clientId, userOrgId);
 			contacts = await ctx.db
 				.query("clientContacts")
 				.withIndex("by_client", (q) => q.eq("clientId", args.clientId!))
 				.collect();
 		} else {
-			const userOrgId = await getCurrentUserOrgId(ctx);
 			contacts = await ctx.db
 				.query("clientContacts")
 				.withIndex("by_org", (q) => q.eq("orgId", userOrgId))

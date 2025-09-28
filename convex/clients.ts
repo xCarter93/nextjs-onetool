@@ -60,7 +60,10 @@ async function listClientsForOrg(
 	indexName?: "by_org" | "by_status",
 	includeArchived: boolean = false
 ): Promise<Doc<"clients">[]> {
-	const userOrgId = await getCurrentUserOrgId(ctx);
+	const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+	if (!userOrgId) {
+		return [];
+	}
 
 	if (indexName) {
 		const clients = await ctx.db
@@ -179,7 +182,10 @@ export const list = query({
 export const listArchived = query({
 	args: {},
 	handler: async (ctx): Promise<ClientDocument[]> => {
-		const userOrgId = await getCurrentUserOrgId(ctx);
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return [];
+		}
 
 		return await ctx.db
 			.query("clients")
@@ -196,6 +202,10 @@ export const listArchived = query({
 export const get = query({
 	args: { id: v.id("clients") },
 	handler: async (ctx, args): Promise<ClientDocument | null> => {
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return null;
+		}
 		return await getClientWithOrgValidation(ctx, args.id);
 	},
 });
@@ -750,7 +760,10 @@ export const getRecentActivity = query({
 		const limit = args.limit || 10;
 
 		// Get user's org ID first
-		const userOrgId = await getCurrentUserOrgId(ctx);
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return [];
+		}
 
 		// Get recent client-related activities
 		const activities = await ctx.db
@@ -795,7 +808,10 @@ export const listWithProjectCounts = query({
 
 		// Get clients based on status filter
 		let clients: Doc<"clients">[];
-		const userOrgId = await getCurrentUserOrgId(ctx);
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return [];
+		}
 
 		if (args.status) {
 			// Use the by_status index to get clients with specific status

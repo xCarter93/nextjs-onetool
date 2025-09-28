@@ -50,9 +50,11 @@ async function getLineItemOrThrow(
  */
 async function validateInvoiceAccess(
 	ctx: QueryCtx | MutationCtx,
-	invoiceId: Id<"invoices">
+	invoiceId: Id<"invoices">,
+	existingOrgId?: Id<"organizations">
 ): Promise<void> {
-	const userOrgId = await getCurrentUserOrgId(ctx);
+	const userOrgId =
+		existingOrgId ?? (await getCurrentUserOrgId(ctx));
 	const invoice = await ctx.db.get(invoiceId);
 
 	if (!invoice) {
@@ -115,7 +117,11 @@ type InvoiceLineItemId = Id<"invoiceLineItems">;
 export const listByInvoice = query({
 	args: { invoiceId: v.id("invoices") },
 	handler: async (ctx, args): Promise<InvoiceLineItemDocument[]> => {
-		await validateInvoiceAccess(ctx, args.invoiceId);
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return [];
+		}
+		await validateInvoiceAccess(ctx, args.invoiceId, userOrgId);
 
 		const lineItems = await ctx.db
 			.query("invoiceLineItems")
@@ -134,7 +140,10 @@ export const listByInvoice = query({
 export const list = query({
 	args: {},
 	handler: async (ctx): Promise<InvoiceLineItemDocument[]> => {
-		const userOrgId = await getCurrentUserOrgId(ctx);
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return [];
+		}
 
 		return await ctx.db
 			.query("invoiceLineItems")
@@ -150,6 +159,10 @@ export const list = query({
 export const get = query({
 	args: { id: v.id("invoiceLineItems") },
 	handler: async (ctx, args): Promise<InvoiceLineItemDocument | null> => {
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return null;
+		}
 		return await getLineItemWithOrgValidation(ctx, args.id);
 	},
 });
@@ -397,7 +410,18 @@ export const duplicate = mutation({
 export const getStats = query({
 	args: { invoiceId: v.id("invoices") },
 	handler: async (ctx, args) => {
-		await validateInvoiceAccess(ctx, args.invoiceId);
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return {
+				totalItems: 0,
+				totalAmount: 0,
+				averageUnitPrice: 0,
+				totalQuantity: 0,
+				highestAmount: 0,
+				lowestAmount: 0,
+			};
+		}
+		await validateInvoiceAccess(ctx, args.invoiceId, userOrgId);
 
 		const lineItems = await ctx.db
 			.query("invoiceLineItems")

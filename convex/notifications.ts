@@ -52,9 +52,11 @@ async function getNotificationOrThrow(
  */
 async function validateUserAccess(
 	ctx: QueryCtx | MutationCtx,
-	userId: Id<"users">
+	userId: Id<"users">,
+	existingOrgId?: Id<"organizations">
 ): Promise<void> {
-	const userOrgId = await getCurrentUserOrgId(ctx);
+	const userOrgId =
+		existingOrgId ?? (await getCurrentUserOrgId(ctx));
 	const user = await ctx.db.get(userId);
 
 	if (!user) {
@@ -130,6 +132,29 @@ interface NotificationStats {
 	pending: number; // scheduled but not sent yet
 }
 
+function createEmptyNotificationStats(): NotificationStats {
+	return {
+		total: 0,
+		unread: 0,
+		byType: {
+			task_reminder: 0,
+			quote_approved: 0,
+			invoice_overdue: 0,
+			payment_received: 0,
+			project_deadline: 0,
+			team_assignment: 0,
+		},
+		byPriority: {
+			low: 0,
+			medium: 0,
+			high: 0,
+			urgent: 0,
+		},
+		today: 0,
+		pending: 0,
+	};
+}
+
 /**
  * Get all notifications for a specific user
  */
@@ -151,8 +176,12 @@ export const listByUser = query({
 		limit: v.optional(v.number()),
 	},
 	handler: async (ctx, args): Promise<NotificationDocument[]> => {
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return [];
+		}
 		// Validate user access
-		await validateUserAccess(ctx, args.userId);
+		await validateUserAccess(ctx, args.userId, userOrgId);
 
 		let notifications: NotificationDocument[];
 
@@ -216,7 +245,10 @@ export const list = query({
 		),
 	},
 	handler: async (ctx, args): Promise<NotificationDocument[]> => {
-		const userOrgId = await getCurrentUserOrgId(ctx);
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return [];
+		}
 
 		let notifications: NotificationDocument[];
 
@@ -259,6 +291,10 @@ export const list = query({
 export const get = query({
 	args: { id: v.id("notifications") },
 	handler: async (ctx, args): Promise<NotificationDocument | null> => {
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return null;
+		}
 		return await getNotificationWithValidation(ctx, args.id);
 	},
 });
@@ -490,8 +526,12 @@ export const remove = mutation({
 export const getStatsForUser = query({
 	args: { userId: v.id("users") },
 	handler: async (ctx, args): Promise<NotificationStats> => {
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return createEmptyNotificationStats();
+		}
 		// Validate user access
-		await validateUserAccess(ctx, args.userId);
+		await validateUserAccess(ctx, args.userId, userOrgId);
 
 		const notifications = await ctx.db
 			.query("notifications")
@@ -564,7 +604,10 @@ export const getStatsForUser = query({
 export const getStats = query({
 	args: {},
 	handler: async (ctx): Promise<NotificationStats> => {
-		const userOrgId = await getCurrentUserOrgId(ctx);
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return createEmptyNotificationStats();
+		}
 		const notifications = await ctx.db
 			.query("notifications")
 			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))

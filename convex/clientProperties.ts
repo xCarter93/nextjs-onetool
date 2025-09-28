@@ -51,9 +51,11 @@ async function getPropertyOrThrow(
  */
 async function validateClientAccess(
 	ctx: QueryCtx | MutationCtx,
-	clientId: Id<"clients">
+	clientId: Id<"clients">,
+	existingOrgId?: Id<"organizations">
 ): Promise<void> {
-	const userOrgId = await getCurrentUserOrgId(ctx);
+	const userOrgId =
+		existingOrgId ?? (await getCurrentUserOrgId(ctx));
 	const client = await ctx.db.get(clientId);
 
 	if (!client) {
@@ -115,7 +117,12 @@ type ClientPropertyId = Id<"clientProperties">;
 export const listByClient = query({
 	args: { clientId: v.id("clients") },
 	handler: async (ctx, args): Promise<ClientPropertyDocument[]> => {
-		await validateClientAccess(ctx, args.clientId);
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return [];
+		}
+
+		await validateClientAccess(ctx, args.clientId, userOrgId);
 
 		return await ctx.db
 			.query("clientProperties")
@@ -130,7 +137,10 @@ export const listByClient = query({
 export const list = query({
 	args: {},
 	handler: async (ctx): Promise<ClientPropertyDocument[]> => {
-		const userOrgId = await getCurrentUserOrgId(ctx);
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return [];
+		}
 
 		return await ctx.db
 			.query("clientProperties")
@@ -146,6 +156,10 @@ export const list = query({
 export const get = query({
 	args: { id: v.id("clientProperties") },
 	handler: async (ctx, args): Promise<ClientPropertyDocument | null> => {
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return null;
+		}
 		return await getPropertyWithValidation(ctx, args.id);
 	},
 });
@@ -157,7 +171,11 @@ export const get = query({
 export const getPrimaryProperty = query({
 	args: { clientId: v.id("clients") },
 	handler: async (ctx, args): Promise<ClientPropertyDocument | null> => {
-		await validateClientAccess(ctx, args.clientId);
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return null;
+		}
+		await validateClientAccess(ctx, args.clientId, userOrgId);
 
 		return await ctx.db
 			.query("clientProperties")
@@ -375,17 +393,21 @@ export const search = query({
 			)
 		),
 	},
-	handler: async (ctx, args): Promise<ClientPropertyDocument[]> => {
+		handler: async (ctx, args): Promise<ClientPropertyDocument[]> => {
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return [];
+		}
+
 		let properties: ClientPropertyDocument[];
 
 		if (args.clientId) {
-			await validateClientAccess(ctx, args.clientId);
+			await validateClientAccess(ctx, args.clientId, userOrgId);
 			properties = await ctx.db
 				.query("clientProperties")
 				.withIndex("by_client", (q) => q.eq("clientId", args.clientId!))
 				.collect();
 		} else {
-			const userOrgId = await getCurrentUserOrgId(ctx);
 			properties = await ctx.db
 				.query("clientProperties")
 				.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
@@ -565,7 +587,23 @@ export const bulkCreate = mutation({
 export const getStats = query({
 	args: {},
 	handler: async (ctx) => {
-		const userOrgId = await getCurrentUserOrgId(ctx);
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return {
+				total: 0,
+				byType: {
+					residential: 0,
+					commercial: 0,
+					industrial: 0,
+					retail: 0,
+					office: 0,
+					"mixed-use": 0,
+				},
+				primaryProperties: 0,
+				withPhotos: 0,
+				citiesServed: 0,
+			};
+		}
 		const properties = await ctx.db
 			.query("clientProperties")
 			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))

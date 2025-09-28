@@ -52,9 +52,11 @@ async function getDocumentOrThrow(
 async function validateDocumentOwnership(
 	ctx: QueryCtx | MutationCtx,
 	documentType: "quote" | "invoice",
-	documentId: string
+	documentId: string,
+	existingOrgId?: Id<"organizations">
 ): Promise<void> {
-	const userOrgId = await getCurrentUserOrgId(ctx);
+	const userOrgId =
+		existingOrgId ?? (await getCurrentUserOrgId(ctx));
 	let document: Doc<"quotes"> | Doc<"invoices"> | null;
 
 	if (documentType === "quote") {
@@ -130,7 +132,10 @@ export const list = query({
 		documentId: v.optional(v.string()),
 	},
 	handler: async (ctx, args): Promise<DocumentDocument[]> => {
-		const userOrgId = await getCurrentUserOrgId(ctx);
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return [];
+		}
 
 		let documents: DocumentDocument[];
 
@@ -173,6 +178,10 @@ export const list = query({
 export const get = query({
 	args: { id: v.id("documents") },
 	handler: async (ctx, args): Promise<DocumentDocument | null> => {
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return null;
+		}
 		return await getDocumentWithOrgValidation(ctx, args.id);
 	},
 });
@@ -186,8 +195,17 @@ export const getLatest = query({
 		documentId: v.string(),
 	},
 	handler: async (ctx, args): Promise<DocumentDocument | null> => {
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return null;
+		}
 		// Validate document ownership
-		await validateDocumentOwnership(ctx, args.documentType, args.documentId);
+		await validateDocumentOwnership(
+			ctx,
+			args.documentType,
+			args.documentId,
+			userOrgId
+		);
 
 		const documents = await ctx.db
 			.query("documents")
@@ -199,7 +217,6 @@ export const getLatest = query({
 			.collect();
 
 		// Filter by organization and find the latest
-		const userOrgId = await getCurrentUserOrgId(ctx);
 		const orgDocuments = documents.filter((doc) => doc.orgId === userOrgId);
 
 		if (orgDocuments.length === 0) {
@@ -334,7 +351,20 @@ export const remove = mutation({
 export const getStats = query({
 	args: {},
 	handler: async (ctx) => {
-		const userOrgId = await getCurrentUserOrgId(ctx);
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return {
+				total: 0,
+				byType: {
+					quote: 0,
+					invoice: 0,
+				},
+				thisMonth: 0,
+				thisWeek: 0,
+				totalVersions: 0,
+				averageVersionsPerDocument: 0,
+			};
+		}
 		const documents = await ctx.db
 			.query("documents")
 			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
@@ -466,6 +496,10 @@ export const cleanupOldVersions = mutation({
 export const getDocumentUrl = query({
 	args: { id: v.id("documents") },
 	handler: async (ctx, args): Promise<string | null> => {
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return null;
+		}
 		const document = await getDocumentWithOrgValidation(ctx, args.id);
 
 		if (!document) {
