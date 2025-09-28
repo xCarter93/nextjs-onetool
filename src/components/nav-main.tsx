@@ -24,6 +24,7 @@ import {
 	SidebarMenuSub,
 	SidebarMenuSubButton,
 	SidebarMenuSubItem,
+	SidebarMenuBadge,
 } from "@/components/ui/sidebar";
 import {
 	DropdownMenu,
@@ -33,6 +34,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useIsMobile } from "@/hooks/use-mobile";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 export function NavMain({
 	items,
@@ -42,6 +44,8 @@ export function NavMain({
 		url: string;
 		icon?: LucideIcon;
 		isActive?: boolean;
+		badgeCount?: number;
+		badgeVariant?: "alert";
 		items?: {
 			title: string;
 			url: string;
@@ -181,6 +185,16 @@ export function NavMain({
 										<span>{item.title}</span>
 									</Link>
 								</SidebarMenuButton>
+								{typeof item.badgeCount === "number" && item.badgeCount > 0 && (
+									<SidebarMenuBadge
+										className={cn(
+											item.badgeVariant === "alert" &&
+												"bg-red-500 text-white ring-2 ring-red-300 shadow-[0_0_0_2px_rgba(255,255,255,0.35)]"
+										)}
+									>
+										{item.badgeCount}
+									</SidebarMenuBadge>
+								)}
 							</SidebarMenuItem>
 						);
 					})}

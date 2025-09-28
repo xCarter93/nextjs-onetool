@@ -12,6 +12,7 @@ import {
 	FileText,
 	Receipt,
 	Briefcase,
+	ListCheck,
 } from "lucide-react";
 
 import { NavMain } from "@/components/nav-main";
@@ -24,6 +25,8 @@ import {
 	SidebarHeader,
 	SidebarRail,
 } from "@/components/ui/sidebar";
+import { api } from "../../convex/_generated/api";
+import { useQuery } from "convex/react";
 
 // This is sample data.
 const data = {
@@ -66,6 +69,11 @@ const data = {
 			icon: Briefcase,
 		},
 		{
+			title: "Tasks",
+			url: "/tasks",
+			icon: ListCheck,
+		},
+		{
 			title: "Quotes",
 			url: "/quotes",
 			icon: FileText,
@@ -85,6 +93,8 @@ const data = {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 	const pathname = usePathname();
+	const taskStats = useQuery(api.tasks.getStats, {});
+	const tasksDueToday = taskStats?.todayTasks ?? 0;
 
 	// Function to determine if a navigation item should be active
 	const isNavItemActive = (navUrl: string, title: string) => {
@@ -102,6 +112,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 			return (
 				pathname.startsWith("/projects") || pathname.startsWith("/project")
 			);
+		}
+
+		if (title === "Tasks") {
+			return pathname.startsWith("/tasks") || pathname.startsWith("/task");
 		}
 
 		if (title === "Quotes") {
@@ -122,6 +136,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 	const navigationItems = data.navMain.map((item) => ({
 		...item,
 		isActive: isNavItemActive(item.url, item.title),
+		badgeCount:
+			item.title === "Tasks" && tasksDueToday > 0 ? tasksDueToday : undefined,
+		badgeVariant: item.title === "Tasks" ? "alert" : undefined,
 	}));
 
 	return (
