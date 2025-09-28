@@ -1,6 +1,6 @@
 import { MutationCtx } from "../_generated/server";
 import { Doc, Id } from "../_generated/dataModel";
-import { getCurrentUserOrThrow, getCurrentUserOrgId } from "./auth";
+import { getCurrentUserOrThrow, getCurrentUserOrgIdOptional } from "./auth";
 
 type ActivityType = Doc<"activities">["activityType"];
 type EntityType = Doc<"activities">["entityType"];
@@ -27,9 +27,14 @@ export async function createActivity(
 		metadata?: Record<string, unknown>;
 		isVisible?: boolean;
 	}
-): Promise<Id<"activities">> {
+): Promise<Id<"activities"> | null> {
 	const user = await getCurrentUserOrThrow(ctx);
-	const orgId = await getCurrentUserOrgId(ctx);
+	const orgId = await getCurrentUserOrgIdOptional(ctx);
+
+	// Skip activity logging for users without organizations
+	if (!orgId) {
+		return null;
+	}
 
 	return await ctx.db.insert("activities", {
 		orgId,

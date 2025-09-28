@@ -7,7 +7,7 @@ import {
 } from "./_generated/server";
 import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
-import { getCurrentUserOrgId } from "./lib/auth";
+import { getCurrentUserOrgIdOptional, getCurrentUserOrgId } from "./lib/auth";
 import { ActivityHelpers } from "./lib/activities";
 
 /**
@@ -24,7 +24,10 @@ async function getClientWithOrgValidation(
 	ctx: QueryCtx | MutationCtx,
 	id: Id<"clients">
 ): Promise<Doc<"clients"> | null> {
-	const userOrgId = await getCurrentUserOrgId(ctx);
+	const userOrgId = await getCurrentUserOrgIdOptional(ctx);
+	if (!userOrgId) {
+		return null;
+	}
 	const client = await ctx.db.get(id);
 
 	if (!client) {

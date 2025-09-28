@@ -1,5 +1,5 @@
 import { query } from "./_generated/server";
-import { getCurrentUserOrgId } from "./lib/auth";
+import { getCurrentUserOrgIdOptional } from "./lib/auth";
 import { DateUtils } from "./lib/shared";
 
 /**

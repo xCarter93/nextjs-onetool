@@ -1,7 +1,7 @@
 import { query, mutation, QueryCtx, MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
-import { getCurrentUserOrgId } from "./lib/auth";
+import { getCurrentUserOrgIdOptional, getCurrentUserOrgId } from "./lib/auth";
 import { ActivityHelpers } from "./lib/activities";
 import { DateUtils } from "./lib/shared";
 import { requireMembership } from "./lib/memberships";
@@ -322,12 +322,14 @@ export const create = mutation({
 			v.literal("completed"),
 			v.literal("cancelled")
 		),
-		priority: v.optional(v.union(
-			v.literal("low"),
-			v.literal("medium"),
-			v.literal("high"),
-			v.literal("urgent")
-		)),
+		priority: v.optional(
+			v.union(
+				v.literal("low"),
+				v.literal("medium"),
+				v.literal("high"),
+				v.literal("urgent")
+			)
+		),
 		repeat: v.optional(
 			v.union(
 				v.literal("none"),
@@ -413,12 +415,14 @@ export const update = mutation({
 				v.literal("cancelled")
 			)
 		),
-		priority: v.optional(v.union(
-			v.literal("low"),
-			v.literal("medium"),
-			v.literal("high"),
-			v.literal("urgent")
-		)),
+		priority: v.optional(
+			v.union(
+				v.literal("low"),
+				v.literal("medium"),
+				v.literal("high"),
+				v.literal("urgent")
+			)
+		),
 		repeat: v.optional(
 			v.union(
 				v.literal("none"),
@@ -652,7 +656,10 @@ export const getStats = query({
 			}
 
 			// Count overdue tasks
-			if (task.date < today && (task.status === "pending" || task.status === "in-progress")) {
+			if (
+				task.date < today &&
+				(task.status === "pending" || task.status === "in-progress")
+			) {
 				stats.overdue++;
 			}
 
@@ -723,7 +730,9 @@ export const getOverdue = query({
 			.collect();
 
 		// Only include pending and in-progress tasks (not completed or cancelled)
-		tasks = tasks.filter((task) => task.status === "pending" || task.status === "in-progress");
+		tasks = tasks.filter(
+			(task) => task.status === "pending" || task.status === "in-progress"
+		);
 
 		// Filter by assignee if specified
 		if (args.assigneeUserId) {
@@ -762,8 +771,8 @@ export const getUpcoming = query({
 			.collect();
 
 		// Only include pending and in-progress tasks
-		tasks = tasks.filter((task) => 
-			task.status === "pending" || task.status === "in-progress"
+		tasks = tasks.filter(
+			(task) => task.status === "pending" || task.status === "in-progress"
 		);
 
 		// Filter by assignee if specified
@@ -780,21 +789,21 @@ export const getUpcoming = query({
 			if (a.date !== b.date) {
 				return a.date - b.date;
 			}
-			
+
 			// Then by priority (urgent -> high -> medium -> low)
 			const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
 			const aPriority = priorityOrder[a.priority || "medium"];
 			const bPriority = priorityOrder[b.priority || "medium"];
-			
+
 			if (aPriority !== bPriority) {
 				return bPriority - aPriority; // Higher priority first
 			}
-			
+
 			// Finally by start time if available
 			if (a.startTime && b.startTime) {
 				return a.startTime.localeCompare(b.startTime);
 			}
-			
+
 			return a._creationTime - b._creationTime;
 		});
 	},
@@ -805,7 +814,7 @@ export const getUpcoming = query({
  */
 // TODO: Candidate for deletion if confirmed unused.
 export const getByUser = query({
-	args: { 
+	args: {
 		userId: v.id("users"),
 		status: v.optional(
 			v.union(
@@ -815,7 +824,7 @@ export const getByUser = query({
 				v.literal("cancelled")
 			)
 		),
-		includeCompleted: v.optional(v.boolean()) // Whether to include completed tasks
+		includeCompleted: v.optional(v.boolean()), // Whether to include completed tasks
 	},
 	handler: async (ctx, args): Promise<TaskDocument[]> => {
 		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
@@ -839,8 +848,8 @@ export const getByUser = query({
 			tasks = tasks.filter((task) => task.status === args.status);
 		} else if (!args.includeCompleted) {
 			// By default, exclude completed and cancelled tasks
-			tasks = tasks.filter((task) => 
-				task.status === "pending" || task.status === "in-progress"
+			tasks = tasks.filter(
+				(task) => task.status === "pending" || task.status === "in-progress"
 			);
 		}
 
@@ -850,21 +859,21 @@ export const getByUser = query({
 			if (a.date !== b.date) {
 				return a.date - b.date;
 			}
-			
+
 			// Then by priority (urgent -> high -> medium -> low)
 			const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
 			const aPriority = priorityOrder[a.priority || "medium"];
 			const bPriority = priorityOrder[b.priority || "medium"];
-			
+
 			if (aPriority !== bPriority) {
 				return bPriority - aPriority; // Higher priority first
 			}
-			
+
 			// Finally by start time if available
 			if (a.startTime && b.startTime) {
 				return a.startTime.localeCompare(b.startTime);
 			}
-			
+
 			return a._creationTime - b._creationTime;
 		});
 	},

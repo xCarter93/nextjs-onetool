@@ -1,7 +1,7 @@
 import { query } from "./_generated/server";
 import { v } from "convex/values";
 import { Doc } from "./_generated/dataModel";
-import { getCurrentUserOrThrow, getCurrentUserOrgId } from "./lib/auth";
+import { getCurrentUserOrThrow, getCurrentUserOrgIdOptional } from "./lib/auth";
 
 /**
  * Activity operations for activity feed
