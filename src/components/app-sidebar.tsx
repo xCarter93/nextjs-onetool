@@ -138,7 +138,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 		isActive: isNavItemActive(item.url, item.title),
 		badgeCount:
 			item.title === "Tasks" && tasksDueToday > 0 ? tasksDueToday : undefined,
-		badgeVariant: item.title === "Tasks" ? "alert" : undefined,
+		badgeVariant: item.title === "Tasks" ? ("alert" as const) : undefined,
 	}));
 
 	return (
