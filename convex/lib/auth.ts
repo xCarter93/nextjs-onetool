@@ -109,11 +109,7 @@ export async function getCurrentUserOrgId(
  * Get the current user's organization ID, returning null if not found (new user-friendly version)
  */
 export async function getCurrentUserOrgIdOptional(ctx: QueryCtx | MutationCtx) {
-	const user = await getCurrentUser(ctx);
-	if (!user || !user.organizationId) {
-		return null;
-	}
-	return user.organizationId;
+	return getCurrentUserOrgId(ctx, { require: false });
 }
 
 /**
@@ -121,8 +117,7 @@ export async function getCurrentUserOrgIdOptional(ctx: QueryCtx | MutationCtx) {
  */
 export async function getCurrentUserOrgIdSafe(ctx: QueryCtx | MutationCtx) {
 	try {
-		const user = await getCurrentUser(ctx);
-		return user?.organizationId || null;
+		return await getCurrentUserOrgId(ctx, { require: false });
 	} catch {
 		return null;
 	}
