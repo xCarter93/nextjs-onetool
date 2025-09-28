@@ -5,7 +5,6 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -490,10 +489,16 @@ export default function TasksPage() {
 				<TaskSheet
 					mode="create"
 					trigger={
-						<Button className="gap-2">
+						<>
 							<Plus className="h-4 w-4" />
-							New Task
-						</Button>
+							<span>New Task</span>
+							<span
+								aria-hidden="true"
+								className="group-hover:translate-x-1 transition-transform duration-200"
+							>
+								→
+							</span>
+						</>
 					}
 				/>
 			</div>
@@ -669,10 +674,16 @@ export default function TasksPage() {
 									<TaskSheet
 										mode="create"
 										trigger={
-											<Button className="gap-2">
+											<>
 												<Plus className="h-4 w-4" />
-												Create Your First Task
-											</Button>
+												<span>Create Your First Task</span>
+												<span
+													aria-hidden="true"
+													className="group-hover:translate-x-1 transition-transform duration-200"
+												>
+													→
+												</span>
+											</>
 										}
 									/>
 								)}
