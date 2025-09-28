@@ -405,54 +405,46 @@ export default function ClientsPage() {
 				</button>
 			</div>
 
-			<div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+			<div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 				<Card className="group relative backdrop-blur-md overflow-hidden ring-1 ring-border/20 dark:ring-border/40">
 					<div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
 					<CardHeader className="relative z-10">
 						<CardTitle className="flex items-center gap-2 text-base">
-							<Users className="size-4" /> Total Active
+							<Users className="size-4" /> Prospective Clients
 						</CardTitle>
-						<CardDescription>Active clients in your workspace</CardDescription>
+						<CardDescription>
+							Clients currently marked as prospects
+						</CardDescription>
 					</CardHeader>
 					<CardContent className="relative z-10">
 						<div className="text-3xl font-semibold">
-							{clientsStats.total - clientsStats.byStatus.archived}
+							{clientsStats?.groupedByStatus?.prospective ?? 0}
 						</div>
 					</CardContent>
 				</Card>
 				<Card className="group relative backdrop-blur-md overflow-hidden ring-1 ring-border/20 dark:ring-border/40">
 					<div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
 					<CardHeader className="relative z-10">
-						<CardTitle className="text-base">Active</CardTitle>
-						<CardDescription>Currently engaged clients</CardDescription>
+						<CardTitle className="text-base">Active Clients</CardTitle>
+						<CardDescription>Clients engaged in work right now</CardDescription>
 					</CardHeader>
 					<CardContent className="relative z-10">
 						<div className="text-3xl font-semibold">
-							{clientsStats.byStatus.active}
+							{clientsStats?.groupedByStatus?.active ?? 0}
 						</div>
 					</CardContent>
 				</Card>
 				<Card className="group relative backdrop-blur-md overflow-hidden ring-1 ring-border/20 dark:ring-border/40">
 					<div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
 					<CardHeader className="relative z-10">
-						<CardTitle className="text-base">Prospects</CardTitle>
-						<CardDescription>Potential clients</CardDescription>
+						<CardTitle className="text-base">Inactive Clients</CardTitle>
+						<CardDescription>
+							Clients marked inactive or archived
+						</CardDescription>
 					</CardHeader>
 					<CardContent className="relative z-10">
 						<div className="text-3xl font-semibold">
-							{clientsStats.byStatus.prospect}
-						</div>
-					</CardContent>
-				</Card>
-				<Card className="group relative backdrop-blur-md overflow-hidden ring-1 ring-border/20 dark:ring-border/40">
-					<div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
-					<CardHeader className="relative z-10">
-						<CardTitle className="text-base">Archived</CardTitle>
-						<CardDescription>Archived clients</CardDescription>
-					</CardHeader>
-					<CardContent className="relative z-10">
-						<div className="text-3xl font-semibold">
-							{clientsStats.byStatus.archived}
+							{clientsStats?.groupedByStatus?.inactive ?? 0}
 						</div>
 					</CardContent>
 				</Card>
