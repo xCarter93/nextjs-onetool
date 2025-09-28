@@ -1,7 +1,7 @@
 import { query, mutation, QueryCtx, MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
-import { getCurrentUserOrgIdOptional, getCurrentUserOrgId } from "./lib/auth";
+import { getCurrentUserOrgId } from "./lib/auth";
 import { ActivityHelpers } from "./lib/activities";
 import { DateUtils } from "./lib/shared";
 import { requireMembership } from "./lib/memberships";
@@ -21,8 +21,7 @@ async function getProjectWithOrgValidation(
 	id: Id<"projects">,
 	existingOrgId?: Id<"organizations">
 ): Promise<Doc<"projects"> | null> {
-	const userOrgId =
-		existingOrgId ?? (await getCurrentUserOrgId(ctx));
+	const userOrgId = existingOrgId ?? (await getCurrentUserOrgId(ctx));
 	const project = await ctx.db.get(id);
 
 	if (!project) {
@@ -58,8 +57,7 @@ async function validateClientAccess(
 	clientId: Id<"clients">,
 	existingOrgId?: Id<"organizations">
 ): Promise<void> {
-	const userOrgId =
-	existingOrgId ?? (await getCurrentUserOrgId(ctx));
+	const userOrgId = existingOrgId ?? (await getCurrentUserOrgId(ctx));
 	const client = await ctx.db.get(clientId);
 
 	if (!client) {
@@ -79,8 +77,7 @@ async function validateUserAccess(
 	userIds: Id<"users">[],
 	existingOrgId?: Id<"organizations">
 ): Promise<void> {
-	const userOrgId =
-	existingOrgId ?? (await getCurrentUserOrgId(ctx));
+	const userOrgId = existingOrgId ?? (await getCurrentUserOrgId(ctx));
 
 	for (const userId of userIds) {
 		const user = await ctx.db.get(userId);
