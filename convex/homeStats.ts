@@ -258,6 +258,7 @@ export const getHomeStats = query({
 /**
  * Get simple task count for pending tasks widget
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const getPendingTasksCount = query({
 	args: {},
 	handler: async (ctx): Promise<{ count: number; dueThisWeek: number }> => {
@@ -290,6 +291,7 @@ export const getPendingTasksCount = query({
 /**
  * Get clients count with month-over-month comparison
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const getClientsStats = query({
 	args: {},
 	handler: async (

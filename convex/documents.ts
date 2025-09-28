@@ -123,6 +123,7 @@ type DocumentId = Id<"documents">;
 /**
  * Get all documents for the current user's organization
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const list = query({
 	args: {
 		documentType: v.optional(v.union(v.literal("quote"), v.literal("invoice"))),
@@ -275,6 +276,7 @@ export const create = mutation({
 /**
  * Update a document
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const update = mutation({
 	args: {
 		id: v.id("documents"),
@@ -304,6 +306,7 @@ export const update = mutation({
 /**
  * Delete a document (also removes the file from storage)
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const remove = mutation({
 	args: { id: v.id("documents") },
 	handler: async (ctx, args): Promise<DocumentId> => {
@@ -327,6 +330,7 @@ export const remove = mutation({
 /**
  * Get document statistics for the organization
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const getStats = query({
 	args: {},
 	handler: async (ctx) => {
@@ -395,6 +399,7 @@ export const getStats = query({
 /**
  * Clean up old document versions (keep only the latest N versions)
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const cleanupOldVersions = mutation({
 	args: {
 		documentType: v.union(v.literal("quote"), v.literal("invoice")),

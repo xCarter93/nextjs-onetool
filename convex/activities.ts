@@ -57,6 +57,7 @@ export const getRecent = query({
 /**
  * Get activities by type for the current organization
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const getByType = query({
 	args: {
 		activityType: v.union(
@@ -116,6 +117,7 @@ export const getByType = query({
 /**
  * Get activities for a specific entity
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const getByEntity = query({
 	args: {
 		entityType: v.union(
@@ -168,6 +170,7 @@ export const getByEntity = query({
 /**
  * Get activity count for the current organization
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const getCount = query({
 	args: {
 		dayRange: v.optional(v.number()),

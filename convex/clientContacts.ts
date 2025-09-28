@@ -320,6 +320,7 @@ export const remove = mutation({
 /**
  * Search contacts across the organization
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const search = query({
 	args: {
 		query: v.string(),
@@ -359,6 +360,7 @@ export const search = query({
 /**
  * Bulk create contacts for a client
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const bulkCreate = mutation({
 	args: {
 		clientId: v.id("clients"),
@@ -450,6 +452,7 @@ export const bulkCreate = mutation({
 /**
  * Set a contact as primary (and unset others)
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const setPrimary = mutation({
 	args: { id: v.id("clientContacts") },
 	handler: async (ctx, args): Promise<ClientContactId> => {

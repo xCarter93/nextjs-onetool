@@ -4,6 +4,7 @@ import { Doc, Id } from "./_generated/dataModel";
 import { getCurrentUserOrgId } from "./lib/auth";
 import { ActivityHelpers } from "./lib/activities";
 import { DateUtils } from "./lib/shared";
+import { requireMembership } from "./lib/memberships";
 
 /**
  * Project operations with embedded CRUD helpers
@@ -80,9 +81,7 @@ async function validateUserAccess(
 		if (!user) {
 			throw new Error(`User ${userId} not found`);
 		}
-		if (user.organizationId !== userOrgId) {
-			throw new Error(`User ${userId} does not belong to your organization`);
-		}
+		await requireMembership(ctx, userId, userOrgId);
 	}
 }
 
@@ -396,6 +395,7 @@ export const remove = mutation({
 /**
  * Search projects with filtering
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const search = query({
 	args: {
 		query: v.string(),
@@ -520,6 +520,7 @@ export const getStats = query({
 /**
  * Get projects assigned to a specific user
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const getByAssignee = query({
 	args: { userId: v.id("users") },
 	handler: async (ctx, args): Promise<ProjectDocument[]> => {
@@ -546,6 +547,7 @@ export const getByAssignee = query({
 /**
  * Get projects with upcoming deadlines
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const getUpcomingDeadlines = query({
 	args: { days: v.optional(v.number()) },
 	handler: async (ctx, args): Promise<ProjectDocument[]> => {
@@ -574,6 +576,7 @@ export const getUpcomingDeadlines = query({
 /**
  * Get overdue projects
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const getOverdue = query({
 	args: {},
 	handler: async (ctx): Promise<ProjectDocument[]> => {

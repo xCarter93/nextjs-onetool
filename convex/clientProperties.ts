@@ -142,6 +142,7 @@ export const list = query({
 /**
  * Get a specific client property by ID
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const get = query({
 	args: { id: v.id("clientProperties") },
 	handler: async (ctx, args): Promise<ClientPropertyDocument | null> => {
@@ -152,6 +153,7 @@ export const get = query({
 /**
  * Get primary property for a client
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const getPrimaryProperty = query({
 	args: { clientId: v.id("clients") },
 	handler: async (ctx, args): Promise<ClientPropertyDocument | null> => {
@@ -357,6 +359,7 @@ export const remove = mutation({
 /**
  * Search properties across the organization
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const search = query({
 	args: {
 		query: v.string(),
@@ -416,6 +419,7 @@ export const search = query({
 /**
  * Set a property as primary (and unset others)
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const setPrimary = mutation({
 	args: { id: v.id("clientProperties") },
 	handler: async (ctx, args): Promise<ClientPropertyId> => {
@@ -449,6 +453,7 @@ export const setPrimary = mutation({
 /**
  * Bulk create properties for a client
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const bulkCreate = mutation({
 	args: {
 		clientId: v.id("clients"),
@@ -556,6 +561,7 @@ export const bulkCreate = mutation({
 /**
  * Get property statistics for the organization
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const getStats = query({
 	args: {},
 	handler: async (ctx) => {

@@ -178,6 +178,7 @@ export const list = query({
 /**
  * Get a specific invoice by ID
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const get = query({
 	args: { id: v.id("invoices") },
 	handler: async (ctx, args): Promise<InvoiceDocument | null> => {
@@ -188,6 +189,7 @@ export const get = query({
 /**
  * Get an invoice by public token (for client access)
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const getByPublicToken = query({
 	args: { publicToken: v.string() },
 	handler: async (ctx, args): Promise<InvoiceDocument | null> => {
@@ -198,6 +200,7 @@ export const getByPublicToken = query({
 /**
  * Create a new invoice
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const create = mutation({
 	args: {
 		clientId: v.id("clients"),
@@ -259,6 +262,7 @@ export const create = mutation({
 /**
  * Update an invoice
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const update = mutation({
 	args: {
 		id: v.id("invoices"),
@@ -339,6 +343,7 @@ export const update = mutation({
 /**
  * Mark an invoice as paid
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const markPaid = mutation({
 	args: {
 		id: v.id("invoices"),
@@ -379,6 +384,7 @@ export const markPaid = mutation({
 /**
  * Delete an invoice
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const remove = mutation({
 	args: { id: v.id("invoices") },
 	handler: async (ctx, args): Promise<InvoiceId> => {
@@ -403,6 +409,7 @@ export const remove = mutation({
 /**
  * Get invoice statistics for dashboard
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const getStats = query({
 	args: {},
 	handler: async (ctx): Promise<InvoiceStats> => {
@@ -463,6 +470,7 @@ export const getStats = query({
 /**
  * Get overdue invoices
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const getOverdue = query({
 	args: {},
 	handler: async (ctx): Promise<InvoiceDocument[]> => {
@@ -484,6 +492,7 @@ export const getOverdue = query({
 /**
  * Create invoice from quote
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const createFromQuote = mutation({
 	args: {
 		quoteId: v.id("quotes"),

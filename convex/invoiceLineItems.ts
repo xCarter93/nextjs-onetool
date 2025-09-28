@@ -111,6 +111,7 @@ type InvoiceLineItemId = Id<"invoiceLineItems">;
 /**
  * Get all line items for a specific invoice
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const listByInvoice = query({
 	args: { invoiceId: v.id("invoices") },
 	handler: async (ctx, args): Promise<InvoiceLineItemDocument[]> => {
@@ -129,6 +130,7 @@ export const listByInvoice = query({
 /**
  * Get all line items for the current user's organization
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const list = query({
 	args: {},
 	handler: async (ctx): Promise<InvoiceLineItemDocument[]> => {
@@ -144,6 +146,7 @@ export const list = query({
 /**
  * Get a specific invoice line item by ID
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const get = query({
 	args: { id: v.id("invoiceLineItems") },
 	handler: async (ctx, args): Promise<InvoiceLineItemDocument | null> => {
@@ -154,6 +157,7 @@ export const get = query({
 /**
  * Create a new invoice line item
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const create = mutation({
 	args: {
 		invoiceId: v.id("invoices"),
@@ -196,6 +200,7 @@ export const create = mutation({
 /**
  * Update an invoice line item
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const update = mutation({
 	args: {
 		id: v.id("invoiceLineItems"),
@@ -257,6 +262,7 @@ export const update = mutation({
 /**
  * Delete an invoice line item
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const remove = mutation({
 	args: { id: v.id("invoiceLineItems") },
 	handler: async (ctx, args): Promise<InvoiceLineItemId> => {
@@ -269,6 +275,7 @@ export const remove = mutation({
 /**
  * Bulk create invoice line items
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const bulkCreate = mutation({
 	args: {
 		invoiceId: v.id("invoices"),
@@ -322,6 +329,7 @@ export const bulkCreate = mutation({
 /**
  * Reorder invoice line items
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const reorder = mutation({
 	args: {
 		invoiceId: v.id("invoices"),
@@ -350,6 +358,7 @@ export const reorder = mutation({
 /**
  * Duplicate an invoice line item
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const duplicate = mutation({
 	args: { id: v.id("invoiceLineItems") },
 	handler: async (ctx, args): Promise<InvoiceLineItemId> => {
@@ -384,6 +393,7 @@ export const duplicate = mutation({
 /**
  * Get invoice line item statistics
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const getStats = query({
 	args: { invoiceId: v.id("invoices") },
 	handler: async (ctx, args) => {

@@ -7,6 +7,8 @@ interface ClerkIdentityWithActiveOrg {
 	subject: string;
 	issuer: string;
 	activeOrgId?: string;
+	orgId?: string | null;
+	org_id?: string | null;
 	// ... other Clerk identity fields
 }
 
@@ -71,11 +73,14 @@ export async function getCurrentUserOrgId(
 
 	// Get the active organization ID from Clerk JWT token
 	const clerkIdentity = identity as ClerkIdentityWithActiveOrg;
-	const activeOrgId = clerkIdentity.activeOrgId;
+	const activeOrgId =
+		clerkIdentity.activeOrgId ??
+		clerkIdentity.orgId ??
+		clerkIdentity.org_id ??
+		undefined;
 	if (!activeOrgId) {
 		throw new Error("No active organization found in user session");
 	}
-
 	// Look up the organization by Clerk organization ID
 	const organization = await getOrganizationByClerkId(ctx, activeOrgId);
 	if (!organization) {

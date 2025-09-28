@@ -2,19 +2,16 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
-	// Users - updated to include organization reference
+	// Users - synchronized from Clerk user records
 	users: defineTable({
 		name: v.string(),
 		email: v.string(),
 		image: v.string(),
 		lastSignedInDate: v.optional(v.number()),
 		externalId: v.string(), // Clerk user ID
-		organizationId: v.optional(v.id("organizations")), // Internal Convex organization ID
-		clerkOrganizationId: v.optional(v.string()), // Clerk organization ID (synced from Clerk)
 	})
 		.index("by_external_id", ["externalId"])
-		.index("by_organization", ["organizationId"])
-		.index("by_clerk_org", ["clerkOrganizationId"]),
+		.index("by_email", ["email"]),
 
 	// Organizations - hybrid Clerk + custom metadata
 	organizations: defineTable({
@@ -50,6 +47,15 @@ export default defineSchema({
 	})
 		.index("by_owner", ["ownerUserId"])
 		.index("by_clerk_org", ["clerkOrganizationId"]),
+
+	organizationMemberships: defineTable({
+		orgId: v.id("organizations"),
+		userId: v.id("users"),
+		role: v.optional(v.string()), // role from Clerk membership payload
+	})
+		.index("by_org", ["orgId"])
+		.index("by_user", ["userId"])
+		.index("by_org_user", ["orgId", "userId"]),
 
 	// Clients - main client information
 	clients: defineTable({

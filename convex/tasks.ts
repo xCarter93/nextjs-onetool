@@ -4,6 +4,7 @@ import { Doc, Id } from "./_generated/dataModel";
 import { getCurrentUserOrgId } from "./lib/auth";
 import { ActivityHelpers } from "./lib/activities";
 import { DateUtils } from "./lib/shared";
+import { requireMembership } from "./lib/memberships";
 
 /**
  * Task/Schedule operations with embedded CRUD helpers
@@ -99,9 +100,7 @@ async function validateUserAccess(
 		throw new Error("User not found");
 	}
 
-	if (user.organizationId !== userOrgId) {
-		throw new Error("User does not belong to your organization");
-	}
+	await requireMembership(ctx, userId, userOrgId);
 }
 
 /**
@@ -506,6 +505,7 @@ export const remove = mutation({
 /**
  * Search tasks
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const search = query({
 	args: {
 		query: v.string(),
@@ -632,6 +632,7 @@ export const getStats = query({
 /**
  * Get today's tasks
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const getToday = query({
 	args: { assigneeUserId: v.optional(v.id("users")) },
 	handler: async (ctx, args): Promise<TaskDocument[]> => {
@@ -756,6 +757,7 @@ export const getUpcoming = query({
 /**
  * Get tasks assigned to a specific user
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const getByUser = query({
 	args: { 
 		userId: v.id("users"),

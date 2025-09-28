@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
 import { getCurrentUserOrgId } from "./lib/auth";
 import { DateUtils } from "./lib/shared";
+import { requireMembership } from "./lib/memberships";
 
 /**
  * Notification operations with embedded CRUD helpers
@@ -60,9 +61,7 @@ async function validateUserAccess(
 		throw new Error("User not found");
 	}
 
-	if (user.organizationId !== userOrgId) {
-		throw new Error("User does not belong to your organization");
-	}
+	await requireMembership(ctx, userId, userOrgId);
 }
 
 /**
@@ -134,6 +133,7 @@ interface NotificationStats {
 /**
  * Get all notifications for a specific user
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const listByUser = query({
 	args: {
 		userId: v.id("users"),
@@ -193,6 +193,7 @@ export const listByUser = query({
 /**
  * Get all notifications for the current user's organization
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const list = query({
 	args: {
 		notificationType: v.optional(
@@ -254,6 +255,7 @@ export const list = query({
 /**
  * Get a specific notification by ID
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const get = query({
 	args: { id: v.id("notifications") },
 	handler: async (ctx, args): Promise<NotificationDocument | null> => {
@@ -264,6 +266,7 @@ export const get = query({
 /**
  * Create a new notification
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const create = mutation({
 	args: {
 		userId: v.id("users"),
@@ -326,6 +329,7 @@ export const create = mutation({
 /**
  * Update a notification
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const update = mutation({
 	args: {
 		id: v.id("notifications"),
@@ -379,6 +383,7 @@ export const update = mutation({
 /**
  * Mark a notification as read
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const markRead = mutation({
 	args: { id: v.id("notifications") },
 	handler: async (ctx, args): Promise<NotificationId> => {
@@ -400,6 +405,7 @@ export const markRead = mutation({
 /**
  * Mark a notification as unread
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const markUnread = mutation({
 	args: { id: v.id("notifications") },
 	handler: async (ctx, args): Promise<NotificationId> => {
@@ -421,6 +427,7 @@ export const markUnread = mutation({
 /**
  * Mark multiple notifications as read
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const markMultipleRead = mutation({
 	args: { ids: v.array(v.id("notifications")) },
 	handler: async (ctx, args): Promise<{ updated: number }> => {
@@ -445,6 +452,7 @@ export const markMultipleRead = mutation({
 /**
  * Mark a notification as sent
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const markSent = mutation({
 	args: {
 		id: v.id("notifications"),
@@ -465,6 +473,7 @@ export const markSent = mutation({
 /**
  * Delete a notification
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const remove = mutation({
 	args: { id: v.id("notifications") },
 	handler: async (ctx, args): Promise<NotificationId> => {
@@ -477,6 +486,7 @@ export const remove = mutation({
 /**
  * Get notification statistics for a user
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const getStatsForUser = query({
 	args: { userId: v.id("users") },
 	handler: async (ctx, args): Promise<NotificationStats> => {
@@ -550,6 +560,7 @@ export const getStatsForUser = query({
 /**
  * Get notification statistics for the organization
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const getStats = query({
 	args: {},
 	handler: async (ctx): Promise<NotificationStats> => {
@@ -621,6 +632,7 @@ export const getStats = query({
 /**
  * Get notifications due to be sent
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const getDueNotifications = query({
 	args: {},
 	handler: async (ctx): Promise<NotificationDocument[]> => {
@@ -639,6 +651,7 @@ export const getDueNotifications = query({
 /**
  * Delete old read notifications (cleanup)
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const cleanupOldNotifications = mutation({
 	args: { daysOld: v.number() },
 	handler: async (ctx, args): Promise<{ deletedCount: number }> => {

@@ -173,6 +173,7 @@ http.route({
 					await ctx.runMutation(internal.users.updateUserOrganization, {
 						clerkUserId: userId,
 						clerkOrganizationId: orgId,
+						role: membershipData.role ?? undefined,
 					});
 					console.log("Successfully added user to organization:", {
 						userId,
@@ -205,9 +206,19 @@ http.route({
 					break;
 				}
 
+				const orgId = membershipData.organization?.id;
+				if (!orgId) {
+					console.error(
+						"Missing organization ID for membership deletion:",
+						membershipData
+					);
+					break;
+				}
+
 				try {
 					await ctx.runMutation(internal.users.removeUserFromOrganization, {
 						clerkUserId: userId,
+						clerkOrganizationId: orgId,
 					});
 					console.log("Successfully removed user from organization:", userId);
 				} catch (error) {

@@ -284,6 +284,7 @@ export const get = query({
 /**
  * Get a quote by public token (for client access)
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const getByPublicToken = query({
 	args: { publicToken: v.string() },
 	handler: async (ctx, args): Promise<QuoteDocument | null> => {
@@ -517,6 +518,7 @@ export const update = mutation({
 /**
  * Recalculate quote totals based on line items
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const recalculateTotals = mutation({
 	args: { id: v.id("quotes") },
 	handler: async (ctx, args): Promise<QuoteId> => {
@@ -543,6 +545,7 @@ export const recalculateTotals = mutation({
 /**
  * Approve a quote (client-facing operation)
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const approve = mutation({
 	args: {
 		publicToken: v.string(),
@@ -637,6 +640,7 @@ export const remove = mutation({
 /**
  * Search quotes
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const search = query({
 	args: {
 		query: v.string(),
@@ -686,6 +690,7 @@ export const search = query({
 /**
  * Get quote statistics for dashboard
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const getStats = query({
 	args: {},
 	handler: async (ctx): Promise<QuoteStats> => {
@@ -759,6 +764,7 @@ export const getStats = query({
 /**
  * Get quotes expiring soon
  */
+// TODO: Candidate for deletion if confirmed unused.
 export const getExpiringSoon = query({
 	args: { days: v.optional(v.number()) },
 	handler: async (ctx, args): Promise<QuoteDocument[]> => {
