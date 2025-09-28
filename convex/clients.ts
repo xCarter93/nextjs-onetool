@@ -141,6 +141,11 @@ interface ClientStats {
 		inactive: number;
 		archived: number;
 	};
+	groupedByStatus: {
+		prospective: number;
+		active: number;
+		inactive: number;
+	};
 	byCategory: {
 		design: number;
 		development: number;
@@ -719,6 +724,11 @@ export const getStats = query({
 				inactive: 0,
 				archived: 0,
 			},
+			groupedByStatus: {
+				prospective: 0,
+				active: 0,
+				inactive: 0,
+			},
 			byCategory: {
 				design: 0,
 				development: 0,
@@ -736,6 +746,21 @@ export const getStats = query({
 			// Type-safe status counting
 			if (client.status in stats.byStatus) {
 				stats.byStatus[client.status as keyof typeof stats.byStatus]++;
+			}
+
+			switch (client.status) {
+				case "prospect":
+					stats.groupedByStatus.prospective++;
+					break;
+				case "active":
+					stats.groupedByStatus.active++;
+					break;
+				case "inactive":
+				case "archived":
+					stats.groupedByStatus.inactive++;
+					break;
+				default:
+					break;
 			}
 
 			// Type-safe category counting

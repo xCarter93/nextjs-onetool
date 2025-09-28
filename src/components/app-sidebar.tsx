@@ -85,8 +85,22 @@ const data = {
 		},
 		{
 			title: "Settings",
-			url: "/settings",
+			url: "/organization/profile",
 			icon: Settings,
+			items: [
+				{
+					title: "Overview",
+					url: "/organization/profile",
+				},
+				{
+					title: "Business Info",
+					url: "/organization/profile/business",
+				},
+				{
+					title: "Preferences",
+					url: "/organization/profile/preferences",
+				},
+			],
 		},
 	],
 };
@@ -98,9 +112,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
 	// Function to determine if a navigation item should be active
 	const isNavItemActive = (navUrl: string, title: string) => {
-		// Settings should only be active for exact match
 		if (title === "Settings") {
-			return pathname === navUrl;
+			return pathname.startsWith("/organization/profile");
 		}
 
 		// For other items, check both plural and singular forms
@@ -133,13 +146,28 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 	};
 
 	// Create navigation items with dynamic isActive property
-	const navigationItems = data.navMain.map((item) => ({
-		...item,
-		isActive: isNavItemActive(item.url, item.title),
-		badgeCount:
-			item.title === "Tasks" && tasksDueToday > 0 ? tasksDueToday : undefined,
-		badgeVariant: item.title === "Tasks" ? ("alert" as const) : undefined,
-	}));
+	const navigationItems = data.navMain.map((item) => {
+		const subItems = item.items?.map((subItem) => ({
+			...subItem,
+			isActive:
+				pathname === subItem.url || pathname.startsWith(`${subItem.url}/`),
+		}));
+
+		const isActive =
+			isNavItemActive(item.url, item.title) ||
+			subItems?.some((subItem) => subItem.isActive);
+
+		return {
+			...item,
+			items: subItems,
+			isActive,
+			badgeCount:
+				item.title === "Tasks" && tasksDueToday > 0
+					? tasksDueToday
+					: undefined,
+			badgeVariant: item.title === "Tasks" ? ("alert" as const) : undefined,
+		};
+	});
 
 	return (
 		<Sidebar collapsible="icon" {...props}>
