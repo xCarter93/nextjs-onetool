@@ -750,6 +750,7 @@ export const getStats = query({
 
 			switch (client.status) {
 				case "prospect":
+				case "lead":
 					stats.groupedByStatus.prospective++;
 					break;
 				case "active":

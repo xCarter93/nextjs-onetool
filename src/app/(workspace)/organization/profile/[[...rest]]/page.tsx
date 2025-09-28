@@ -319,6 +319,24 @@ export default function OrganizationProfilePage() {
 			? Number(monthlyRevenueTarget)
 			: undefined;
 
+		if (parsedTaxRate !== undefined && Number.isNaN(parsedTaxRate)) {
+			toast.warning("Invalid tax rate", "Please enter a valid number.");
+			return;
+		}
+
+		if (parsedReminder !== undefined && Number.isNaN(parsedReminder)) {
+			toast.warning("Invalid reminder timing", "Please enter a valid number.");
+			return;
+		}
+
+		if (
+			parsedMonthlyRevenue !== undefined &&
+			Number.isNaN(parsedMonthlyRevenue)
+		) {
+			toast.warning("Invalid target", "Please enter a valid number.");
+			return;
+		}
+
 		if (
 			parsedTaxRate !== undefined &&
 			(parsedTaxRate < 0 || parsedTaxRate > 100)
@@ -427,79 +445,80 @@ export default function OrganizationProfilePage() {
 					<div className="mt-8 space-y-8">
 						<TabsContent value="overview">
 							<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-2xl p-8 shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50">
-									<OrganizationProfile
-										appearance={{
-											elements: {
-												rootBox: "w-full text-foreground",
-												card:
-													"w-full rounded-2xl bg-card/95 dark:bg-card/70 border border-border/70 dark:border-border/50 shadow-xl p-0 backdrop-blur-md",
-												headerTitle:
-													"text-2xl font-bold text-foreground dark:text-foreground mb-2 tracking-tight",
-												headerSubtitle:
-													"text-sm text-muted-foreground dark:text-muted-foreground mb-6 leading-relaxed",
-												navbar:
-													"border-b border-border/60 dark:border-border/40 mb-8 pb-4 bg-transparent",
-												navbarButton:
-													"px-4 py-2 text-muted-foreground dark:text-muted-foreground hover:text-foreground dark:hover:text-foreground hover:bg-muted/40 dark:hover:bg-muted/20 rounded-lg transition-all duration-200 font-medium",
-												navbarButtonActive:
-													"bg-primary text-primary-foreground px-4 py-2 rounded-lg font-medium shadow-sm",
-												pageScrollBox: "bg-transparent",
-												page: "space-y-8 bg-transparent",
-												form: "space-y-6",
-												formFieldLabel:
-													"text-sm font-semibold text-foreground tracking-wide",
-												formFieldInput:
-													"w-full bg-background/95 dark:bg-card/60 border border-border dark:border-border/60 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-lg px-3 py-2.5 text-foreground dark:text-foreground placeholder:text-muted-foreground dark:placeholder:text-muted-foreground transition-all duration-200 shadow-sm dark:shadow-none",
-												formFieldInputShowPasswordButton:
-													"text-muted-foreground hover:text-foreground dark:text-muted-foreground dark:hover:text-foreground",
-												formButtonPrimary:
-													"bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-primary-foreground font-medium py-2.5 px-6 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 border-0",
-												formButtonSecondary:
-													"bg-muted/80 hover:bg-muted/70 dark:bg-muted/40 dark:hover:bg-muted/30 text-muted-foreground hover:text-foreground dark:text-muted-foreground dark:hover:text-foreground font-medium py-2.5 px-6 rounded-lg border border-border/60 dark:border-border/40 transition-all duration-200",
-												table: "w-full border-collapse",
-												tableHead:
-													"border-b border-border dark:border-border bg-muted/30 dark:bg-muted/20",
-												tableHeadRow: "border-b border-border dark:border-border",
-												tableHeadCell:
-													"text-left p-4 font-semibold text-foreground dark:text-foreground text-sm",
-												tableBody: "divide-y divide-border dark:divide-border/60",
-												tableRow:
-													"hover:bg-muted/30 dark:hover:bg-muted/20 transition-colors",
-												tableCell: "p-4 text-sm text-foreground dark:text-foreground",
-												badge:
-													"inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium",
-												badgeSecondary:
-													"bg-muted dark:bg-muted/40 text-muted-foreground dark:text-muted-foreground",
-												badgePrimary: "bg-primary text-primary-foreground",
-												membersPageInviteButton:
-													"bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-primary-foreground font-medium py-2.5 px-6 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 border-0",
-												avatarBox:
-													"w-10 h-10 rounded-lg bg-muted dark:bg-muted/40 flex items-center justify-center",
-												avatarImage: "w-10 h-10 rounded-lg object-cover",
-												footer: "mt-8 pt-6 border-t border-border dark:border-border/60",
-												footerActionText:
-													"text-xs text-muted-foreground dark:text-muted-foreground",
-												footerActionLink:
-													"text-primary hover:text-primary/80 dark:text-primary dark:hover:text-primary/80 font-medium text-xs",
-												spinner: "text-primary dark:text-primary",
-												modalContent:
-													"bg-card dark:bg-card/80 border border-border/60 dark:border-border/40 shadow-xl dark:shadow-xl rounded-xl",
-												modalCloseButton:
-													"text-muted-foreground hover:text-foreground dark:text-muted-foreground dark:hover:text-foreground",
-											},
-											variables: {
-												colorPrimary: "hsl(var(--primary))",
-												colorText: "hsl(var(--foreground))",
-												colorTextSecondary: "hsl(var(--muted-foreground))",
-												colorNeutral: "hsl(var(--muted-foreground))",
-												colorBackground: "hsl(var(--card))",
-												colorInputBackground: "hsl(var(--background))",
-												colorInputText: "hsl(var(--foreground))",
-												fontFamily: "inherit",
-												borderRadius: "0.75rem",
-												spacingUnit: "1rem",
-											},
-										}}
+								<OrganizationProfile
+									appearance={{
+										elements: {
+											rootBox: "w-full text-foreground",
+											card: "w-full rounded-2xl bg-card/95 dark:bg-card/70 border border-border/70 dark:border-border/50 shadow-xl p-0 backdrop-blur-md",
+											headerTitle:
+												"text-2xl font-bold text-foreground dark:text-foreground mb-2 tracking-tight",
+											headerSubtitle:
+												"text-sm text-muted-foreground dark:text-muted-foreground mb-6 leading-relaxed",
+											navbar:
+												"border-b border-border/60 dark:border-border/40 mb-8 pb-4 bg-transparent",
+											navbarButton:
+												"px-4 py-2 text-muted-foreground dark:text-muted-foreground hover:text-foreground dark:hover:text-foreground hover:bg-muted/40 dark:hover:bg-muted/20 rounded-lg transition-all duration-200 font-medium",
+											navbarButtonActive:
+												"bg-primary text-primary-foreground px-4 py-2 rounded-lg font-medium shadow-sm",
+											pageScrollBox: "bg-transparent",
+											page: "space-y-8 bg-transparent",
+											form: "space-y-6",
+											formFieldLabel:
+												"text-sm font-semibold text-foreground tracking-wide",
+											formFieldInput:
+												"w-full bg-background/95 dark:bg-card/60 border border-border dark:border-border/60 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-lg px-3 py-2.5 text-foreground dark:text-foreground placeholder:text-muted-foreground dark:placeholder:text-muted-foreground transition-all duration-200 shadow-sm dark:shadow-none",
+											formFieldInputShowPasswordButton:
+												"text-muted-foreground hover:text-foreground dark:text-muted-foreground dark:hover:text-foreground",
+											formButtonPrimary:
+												"bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-primary-foreground font-medium py-2.5 px-6 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 border-0",
+											formButtonSecondary:
+												"bg-muted/80 hover:bg-muted/70 dark:bg-muted/40 dark:hover:bg-muted/30 text-muted-foreground hover:text-foreground dark:text-muted-foreground dark:hover:text-foreground font-medium py-2.5 px-6 rounded-lg border border-border/60 dark:border-border/40 transition-all duration-200",
+											table: "w-full border-collapse",
+											tableHead:
+												"border-b border-border dark:border-border bg-muted/30 dark:bg-muted/20",
+											tableHeadRow: "border-b border-border dark:border-border",
+											tableHeadCell:
+												"text-left p-4 font-semibold text-foreground dark:text-foreground text-sm",
+											tableBody: "divide-y divide-border dark:divide-border/60",
+											tableRow:
+												"hover:bg-muted/30 dark:hover:bg-muted/20 transition-colors",
+											tableCell:
+												"p-4 text-sm text-foreground dark:text-foreground",
+											badge:
+												"inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium",
+											badgeSecondary:
+												"bg-muted dark:bg-muted/40 text-muted-foreground dark:text-muted-foreground",
+											badgePrimary: "bg-primary text-primary-foreground",
+											membersPageInviteButton:
+												"bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-primary-foreground font-medium py-2.5 px-6 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 border-0",
+											avatarBox:
+												"w-10 h-10 rounded-lg bg-muted dark:bg-muted/40 flex items-center justify-center",
+											avatarImage: "w-10 h-10 rounded-lg object-cover",
+											footer:
+												"mt-8 pt-6 border-t border-border dark:border-border/60",
+											footerActionText:
+												"text-xs text-muted-foreground dark:text-muted-foreground",
+											footerActionLink:
+												"text-primary hover:text-primary/80 dark:text-primary dark:hover:text-primary/80 font-medium text-xs",
+											spinner: "text-primary dark:text-primary",
+											modalContent:
+												"bg-card dark:bg-card/80 border border-border/60 dark:border-border/40 shadow-xl dark:shadow-xl rounded-xl",
+											modalCloseButton:
+												"text-muted-foreground hover:text-foreground dark:text-muted-foreground dark:hover:text-foreground",
+										},
+										variables: {
+											colorPrimary: "hsl(var(--primary))",
+											colorText: "hsl(var(--foreground))",
+											colorTextSecondary: "hsl(var(--muted-foreground))",
+											colorNeutral: "hsl(var(--muted-foreground))",
+											colorBackground: "hsl(var(--card))",
+											colorInputBackground: "hsl(var(--background))",
+											colorInputText: "hsl(var(--foreground))",
+											fontFamily: "inherit",
+											borderRadius: "0.75rem",
+											spacingUnit: "1rem",
+										},
+									}}
 									afterLeaveOrganizationUrl="/organization/new"
 								/>
 							</div>
@@ -775,16 +794,16 @@ export default function OrganizationProfilePage() {
 									</div>
 								</div>
 
-							<div className="flex justify-end pt-4">
-								<button
-									type="button"
-									onClick={handleSaveBusiness}
-									disabled={!isOwner || savingBusiness}
-									className={primaryActionButtonClasses}
-								>
-									{savingBusiness ? "Saving..." : "Save Changes"}
-								</button>
-							</div>
+								<div className="flex justify-end pt-4">
+									<button
+										type="button"
+										onClick={handleSaveBusiness}
+										disabled={!isOwner || savingBusiness}
+										className={primaryActionButtonClasses}
+									>
+										{savingBusiness ? "Saving..." : "Save Changes"}
+									</button>
+								</div>
 							</div>
 						</TabsContent>
 
@@ -909,16 +928,16 @@ export default function OrganizationProfilePage() {
 									</div>
 								</div>
 
-							<div className="flex justify-end pt-4">
-								<button
-									type="button"
-									onClick={handleSavePreferences}
-									disabled={!isOwner || savingPreferences}
-									className={primaryActionButtonClasses}
-								>
-									{savingPreferences ? "Saving..." : "Save Preferences"}
-								</button>
-							</div>
+								<div className="flex justify-end pt-4">
+									<button
+										type="button"
+										onClick={handleSavePreferences}
+										disabled={!isOwner || savingPreferences}
+										className={primaryActionButtonClasses}
+									>
+										{savingPreferences ? "Saving..." : "Save Preferences"}
+									</button>
+								</div>
 							</div>
 						</TabsContent>
 					</div>

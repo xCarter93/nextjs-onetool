@@ -150,7 +150,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 		const subItems = item.items?.map((subItem) => ({
 			...subItem,
 			isActive:
-				pathname === subItem.url || pathname.startsWith(`${subItem.url}/`),
+				pathname === subItem.url ||
+				(subItem.url !== item.url && pathname.startsWith(`${subItem.url}/`)),
 		}));
 
 		const isActive =
@@ -162,9 +163,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 			items: subItems,
 			isActive,
 			badgeCount:
-				item.title === "Tasks" && tasksDueToday > 0
-					? tasksDueToday
-					: undefined,
+				item.title === "Tasks" && tasksDueToday > 0 ? tasksDueToday : undefined,
 			badgeVariant: item.title === "Tasks" ? ("alert" as const) : undefined,
 		};
 	});
