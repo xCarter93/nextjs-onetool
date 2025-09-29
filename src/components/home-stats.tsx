@@ -37,7 +37,7 @@ function formatCurrency(amount: number): string {
 
 // Helper function to format change with sign
 function formatChange(change: number, isPercentage: boolean = false): string {
-	const sign = change >= 0 ? "+" : "";
+	const sign = change > 0 ? "+" : "";
 	const suffix = isPercentage ? "%" : "";
 	return `${sign}${change}${suffix}`;
 }

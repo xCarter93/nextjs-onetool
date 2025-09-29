@@ -152,6 +152,7 @@ export function RoundedPieChartCore({
 					data={prepared}
 					innerRadius={30}
 					dataKey={valueKey}
+					nameKey={nameKey}
 					radius={10}
 					cornerRadius={8}
 					paddingAngle={4}
