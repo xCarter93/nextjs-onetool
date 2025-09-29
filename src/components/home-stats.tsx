@@ -28,17 +28,17 @@ interface StatItem {
 
 // Helper function to format currency
 function formatCurrency(amount: number): string {
-	return new Intl.NumberFormat('en-US', {
-		style: 'currency',
-		currency: 'USD',
+	return new Intl.NumberFormat("en-US", {
+		style: "currency",
+		currency: "USD",
 		maximumFractionDigits: 0,
 	}).format(amount);
 }
 
 // Helper function to format change with sign
 function formatChange(change: number, isPercentage: boolean = false): string {
-	const sign = change >= 0 ? '+' : '';
-	const suffix = isPercentage ? '%' : '';
+	const sign = change > 0 ? "+" : "";
+	const suffix = isPercentage ? "%" : "";
 	return `${sign}${change}${suffix}`;
 }
 
@@ -131,7 +131,12 @@ function generateStats(homeStats: HomeStatsType | undefined): StatItem[] {
 			stat: `${homeStats.revenueGoal.percentage}%`,
 			previousStat: `${homeStats.revenueGoal.previousPercentage}%`,
 			change: formatChange(homeStats.revenueGoal.changePercentage, true),
-			changeType: homeStats.revenueGoal.changePercentage > 0 ? "increase" : homeStats.revenueGoal.changePercentage < 0 ? "decrease" : "neutral",
+			changeType:
+				homeStats.revenueGoal.changePercentage > 0
+					? "increase"
+					: homeStats.revenueGoal.changePercentage < 0
+						? "decrease"
+						: "neutral",
 			subtitle: "Monthly target progress",
 			icon: ChartBarIcon,
 		},

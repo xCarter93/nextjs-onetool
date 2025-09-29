@@ -8,7 +8,7 @@ interface ModalProps {
 	onClose: () => void;
 	children: ReactNode;
 	title?: string;
-	size?: "sm" | "md" | "lg" | "xl";
+	size?: "sm" | "md" | "lg" | "xl" | "2xl";
 	animation?: "scale" | "slide" | "fade" | "bounce";
 }
 
@@ -173,6 +173,7 @@ const Modal: React.FC<ModalProps> = ({
 		md: "max-w-lg",
 		lg: "max-w-2xl",
 		xl: "max-w-4xl",
+		"2xl": "max-w-[70vw]",
 	};
 
 	return createPortal(
