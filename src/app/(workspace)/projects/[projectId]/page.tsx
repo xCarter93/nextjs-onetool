@@ -1169,7 +1169,12 @@ export default function ProjectDetailPage() {
 									</div>
 
 									{/* Project Timeline Calendar */}
-									<div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/10 rounded-xl p-6 shadow-sm">
+									<div
+										className="relative overflow-hidden rounded-2xl p-6 shadow-sm border border-gray-200/60 dark:border-white/10 bg-white/80 dark:bg-white/[0.03] backdrop-blur supports-[backdrop-filter]:bg-white/60 ring-1 ring-black/5 dark:ring-white/10"
+									>
+										{/* subtle decorative glow */}
+										<div className="pointer-events-none absolute -top-24 -right-24 h-48 w-48 rounded-full bg-primary/10 blur-3xl" />
+										<div className="pointer-events-none absolute -bottom-24 -left-24 h-48 w-48 rounded-full bg-blue-500/10 blur-3xl" />
 										<div className="flex items-center justify-between mb-6">
 											<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
 												{calendarDate.toLocaleDateString("en-US", {
@@ -1177,7 +1182,7 @@ export default function ProjectDetailPage() {
 													year: "numeric",
 												})}
 											</h3>
-											<div className="flex gap-2">
+											<div className="flex gap-2 rounded-lg bg-gray-50/80 dark:bg-white/5 p-1 ring-1 ring-inset ring-gray-200/70 dark:ring-white/10 shadow-sm">
 												<Button
 													intent="outline"
 													size="sm"
@@ -1218,12 +1223,12 @@ export default function ProjectDetailPage() {
 												</Button>
 											</div>
 										</div>
-										<div className="grid grid-cols-7 gap-1">
+										<div className="grid grid-cols-7 gap-1.5">
 											{["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(
 												(day) => (
 													<div
 														key={day}
-														className="text-center text-xs font-medium text-gray-500 dark:text-gray-400 py-3 border-b border-gray-100 dark:border-white/5"
+														className="text-center text-[11px] uppercase tracking-wide font-medium text-gray-500 dark:text-gray-400 py-3 border-b border-gray-100/80 dark:border-white/5"
 													>
 														{day}
 													</div>
@@ -1282,7 +1287,7 @@ export default function ProjectDetailPage() {
 														key={i}
 														onClick={() => handleDateClick(day)}
 														className={`
-															relative h-10 flex items-center justify-center text-sm transition-all duration-200
+															relative h-11 flex items-center justify-center text-sm transition-colors duration-200 rounded-lg
 															${isClickable ? "cursor-pointer" : "cursor-default"}
 															${
 																isCurrentMonth
@@ -1291,13 +1296,13 @@ export default function ProjectDetailPage() {
 															}
 															${
 																isClickable && !hasProjectEvent
-																	? "hover:bg-blue-50 dark:hover:bg-blue-900/30"
+																	? "hover:bg-primary/10 ring-1 ring-inset ring-primary/20 dark:hover:bg-primary/15"
 																	: ""
 															}
-															${hasProjectEvent ? "bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 font-medium" : ""}
+															${hasProjectEvent ? "bg-primary text-primary-foreground shadow-sm ring-1 ring-primary/40 font-medium" : ""}
 															${
 																isToday && !hasProjectEvent
-																	? "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-lg font-medium"
+																	? "ring-1 ring-amber-500/60 text-amber-600 dark:text-amber-300 bg-amber-500/10"
 																	: ""
 															}
 														`}
@@ -1315,7 +1320,7 @@ export default function ProjectDetailPage() {
 													>
 														{day || ""}
 														{hasProjectEvent && (
-															<div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-white rounded-full"></div>
+															<div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-6 h-1 rounded-full bg-white/70 dark:bg-white/80" />
 														)}
 													</div>
 												);
@@ -1323,7 +1328,7 @@ export default function ProjectDetailPage() {
 										</div>
 
 										{/* Calendar Legend */}
-										<div className="flex items-center justify-center gap-6 mt-4 pt-4 border-t border-gray-200 dark:border-white/10">
+										<div className="flex items-center justify-center gap-6 mt-5 pt-4 border-t border-gray-200/80 dark:border-white/10 text-xs">
 											{project.startDate && (
 												<div className="flex items-center gap-2">
 													<div className="w-3 h-3 bg-blue-600 rounded"></div>
