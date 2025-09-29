@@ -8,7 +8,7 @@ interface ModalProps {
 	onClose: () => void;
 	children: ReactNode;
 	title?: string;
-	size?: "sm" | "md" | "lg" | "xl";
+	size?: "sm" | "md" | "lg" | "xl" | "2xl";
 	animation?: "scale" | "slide" | "fade" | "bounce";
 }
 
@@ -173,6 +173,7 @@ const Modal: React.FC<ModalProps> = ({
 		md: "max-w-lg",
 		lg: "max-w-2xl",
 		xl: "max-w-4xl",
+		"2xl": "max-w-[70vw]",
 	};
 
 	return createPortal(
@@ -201,7 +202,7 @@ const Modal: React.FC<ModalProps> = ({
 					{/* Modal Content */}
 					<motion.div
 						className={cn(
-							"relative rounded-lg shadow-xl w-full mx-4 max-h-[90vh] overflow-auto",
+							"relative rounded-lg shadow-xl w-full mx-4 max-h-[90vh] overflow-y-auto overflow-x-hidden",
 							"bg-white dark:bg-gray-900",
 							"border-0 dark:border dark:border-gray-700",
 							sizeClasses[size]

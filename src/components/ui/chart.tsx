@@ -204,7 +204,8 @@ function ChartTooltipContent({
                       !hideIndicator && (
                         <div
                           className={cn(
-                            "shrink-0 rounded-[2px] border-(--color-border) bg-(--color-bg)",
+                            // Solid indicator square/line with CSS var-driven color
+                            "shrink-0 rounded-[2px] border-[var(--color-border)] bg-[var(--color-bg)] opacity-100",
                             {
                               "h-2.5 w-2.5": indicator === "dot",
                               "w-1": indicator === "line",
@@ -215,8 +216,9 @@ function ChartTooltipContent({
                           )}
                           style={
                             {
-                              "--color-bg": indicatorColor,
-                              "--color-border": indicatorColor,
+                              "--color-bg": indicatorColor as string,
+                              "--color-border": indicatorColor as string,
+                              opacity: 1,
                             } as React.CSSProperties
                           }
                         />

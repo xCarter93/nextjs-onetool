@@ -1,4 +1,5 @@
 import { query } from "./_generated/server";
+import type { Doc } from "./_generated/dataModel";
 import { getCurrentUserOrgId } from "./lib/auth";
 import { DateUtils } from "./lib/shared";
 
@@ -468,16 +469,18 @@ export const getRevenueGoalProgress = query({
  * Get clients created this month for daily chart visualization
  */
 export const getClientsCreatedThisMonth = query({
-	args: {},
-	handler: async (
-		ctx
-	): Promise<
-		Array<{
-			date: string; // YYYY-MM-DD format
-			count: number;
-			_creationTime: number;
-		}>
-	> => {
+    args: {},
+    handler: async (
+        ctx
+    ): Promise<
+        Array<{
+            date: string; // YYYY-MM-DD format
+            count: number;
+            _creationTime: number;
+            clientType?: string;
+            status?: "lead" | "prospect" | "active" | "inactive" | "archived";
+        }>
+    > => {
 		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
 		if (!userOrgId) {
 			return [];
@@ -498,12 +501,14 @@ export const getClientsCreatedThisMonth = query({
 
 		// Return the raw data with creation timestamps
 		// Frontend will handle grouping by day
-		return clientsThisMonth.map((client) => ({
-			date: new Date(client._creationTime).toISOString().split("T")[0], // YYYY-MM-DD
-			count: 1, // Each client counts as 1
-			_creationTime: client._creationTime,
-		}));
-	},
+        return clientsThisMonth.map((client: Doc<"clients">) => ({
+            date: new Date(client._creationTime).toISOString().split("T")[0], // YYYY-MM-DD
+            count: 1, // Each client counts as 1
+            _creationTime: client._creationTime,
+            clientType: client.clientType ?? undefined,
+            status: client.status,
+        }));
+    },
 });
 
 /**
