@@ -49,8 +49,8 @@
 	--bg: oklch(1 0 0);
 	--fg: oklch(0.141 0.005 285.823);
 	--foreground: var(--fg);
-    /* Ensure muted-foreground is defined for Tailwind text-muted-foreground */
-    --muted-foreground: var(--muted-fg);
+	/* Ensure muted-foreground is defined for Tailwind text-muted-foreground */
+	--muted-foreground: var(--muted-fg);
 
 	--primary: rgb(0, 166, 244);
 	--primary-fg: oklch(1 0 0);
@@ -115,8 +115,8 @@
 	--bg: oklch(0.091 0.005 285.823);
 	--fg: oklch(0.985 0 0);
 	--foreground: var(--fg);
-    /* Dark mode mapping for muted-foreground */
-    --muted-foreground: var(--muted-fg);
+	/* Dark mode mapping for muted-foreground */
+	--muted-foreground: var(--muted-fg);
 
 	--primary: oklch(0.685 0.169 237.323);
 	--primary-fg: oklch(1 0 0);
@@ -175,11 +175,11 @@
 	body {
 		@apply bg-background text-foreground;
 	}
-    /* Make placeholders slightly dimmer than regular input text globally */
-    input::placeholder,
-    textarea::placeholder {
-        color: var(--muted-foreground);
-    }
+	/* Make placeholders slightly dimmer than regular input text globally */
+	input::placeholder,
+	textarea::placeholder {
+		color: var(--muted-foreground);
+	}
 }
 
 @layer utilities {
@@ -205,6 +205,79 @@
 		}
 		100% {
 			transform: translate(0px, 0px) scale(1);
+		}
+	}
+
+	/* Sheet slide animations */
+	@keyframes slideInFromRight {
+		from {
+			transform: translateX(100%);
+		}
+		to {
+			transform: translateX(0);
+		}
+	}
+
+	@keyframes slideOutToRight {
+		from {
+			transform: translateX(0);
+		}
+		to {
+			transform: translateX(100%);
+		}
+	}
+
+	@keyframes slideInFromLeft {
+		from {
+			transform: translateX(-100%);
+		}
+		to {
+			transform: translateX(0);
+		}
+	}
+
+	@keyframes slideOutToLeft {
+		from {
+			transform: translateX(0);
+		}
+		to {
+			transform: translateX(-100%);
+		}
+	}
+
+	@keyframes slideInFromTop {
+		from {
+			transform: translateY(-100%);
+		}
+		to {
+			transform: translateY(0);
+		}
+	}
+
+	@keyframes slideOutToTop {
+		from {
+			transform: translateY(0);
+		}
+		to {
+			transform: translateY(-100%);
+		}
+	}
+
+	@keyframes slideInFromBottom {
+		from {
+			transform: translateY(100%);
+		}
+		to {
+			transform: translateY(0);
+		}
+	}
+
+	@keyframes slideOutToBottom {
+		from {
+			transform: translateY(0);
+		}
+		to {
+			transform: translateY(100%);
 		}
 	}
 }

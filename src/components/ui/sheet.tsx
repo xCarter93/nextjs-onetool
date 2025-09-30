@@ -44,22 +44,22 @@ const generateCompoundVariants = (sides: Array<Sides>) => {
 const sheetContentStyles = tv({
 	base: [
 		"fixed z-50 grid gap-4 border-muted-fg/20 bg-white text-foreground shadow-lg dark:bg-gray-900 dark:border-border",
-		"transform-gpu transition ease-in-out will-change-transform",
+		"transform-gpu will-change-transform",
 	],
 	variants: {
 		isEntering: {
-			true: "animate-in duration-500",
+			true: "[animation-duration:300ms] [animation-timing-function:ease-out]",
 		},
 		isExiting: {
-			true: "animate-out duration-300",
+			true: "[animation-duration:200ms] [animation-timing-function:ease-in]",
 		},
 		side: {
-			top: "entering:slide-in-from-top exiting:slide-out-to-top inset-x-0 top-0 rounded-b-2xl border-b",
+			top: "[animation-name:slideInFromTop] entering:[animation-name:slideInFromTop] exiting:[animation-name:slideOutToTop] inset-x-0 top-0 rounded-b-2xl border-b",
 			bottom:
-				"entering:slide-in-from-bottom exiting:slide-out-to-bottom inset-x-0 bottom-0 rounded-t-2xl border-t",
-			left: "entering:slide-in-from-left exiting:slide-out-to-left inset-y-0 left-0 h-auto w-3/4 overflow-y-auto border-r sm:max-w-sm",
+				"[animation-name:slideInFromBottom] entering:[animation-name:slideInFromBottom] exiting:[animation-name:slideOutToBottom] inset-x-0 bottom-0 rounded-t-2xl border-t",
+			left: "[animation-name:slideInFromLeft] entering:[animation-name:slideInFromLeft] exiting:[animation-name:slideOutToLeft] inset-y-0 left-0 h-auto w-3/4 overflow-y-auto border-r sm:max-w-sm",
 			right:
-				"entering:slide-in-from-right exiting:slide-out-to-right inset-y-0 right-0 h-auto w-3/4 overflow-y-auto border-l sm:max-w-sm",
+				"[animation-name:slideInFromRight] entering:[animation-name:slideInFromRight] exiting:[animation-name:slideOutToRight] inset-y-0 right-0 h-auto w-3/4 overflow-y-auto border-l sm:max-w-sm",
 		},
 		isFloat: {
 			false: "border-fg/20 dark:border-border",
@@ -105,9 +105,9 @@ const SheetContent = ({
 		<ModalOverlay
 			isDismissable={isDismissable}
 			className={twJoin(
-				"fixed inset-0 z-50 h-(--visual-viewport-height,100vh) w-screen overflow-hidden bg-black/50",
-				"entering:fade-in-0 entering:animate-in entering:duration-500",
-				"exiting:fade-out-0 exiting:animate-out exiting:duration-300",
+				"fixed inset-0 z-50 h-(--visual-viewport-height,100vh) w-screen overflow-hidden bg-black/50 transition-opacity",
+				"entering:opacity-100 entering:duration-300",
+				"exiting:opacity-0 exiting:duration-200",
 				isBlurred && "backdrop-blur-sm backdrop-filter"
 			)}
 			{...props}

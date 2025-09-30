@@ -230,36 +230,40 @@ export function TaskSheet({
 	};
 
 	const sheetContent = (
-		<SheetContent className="w-full sm:max-w-md bg-white dark:bg-gray-900">
-			<SheetHeader>
-				<SheetTitle className="flex items-center gap-2">
+		<SheetContent
+			side="right"
+			className="w-full sm:max-w-xl overflow-y-auto"
+			isBlurred={true}
+		>
+			<SheetHeader className="border-b border-border pb-4">
+				<SheetTitle className="flex items-center gap-2 text-2xl font-semibold">
 					{isEditMode ? "Edit Task" : "Create New Task"}
 				</SheetTitle>
-				<SheetDescription>
+				<SheetDescription className="text-muted-foreground">
 					{isEditMode
 						? "Update the task details below."
 						: "Add a new task to your schedule. Fill in the details below."}
 				</SheetDescription>
 			</SheetHeader>
 
-			<SheetBody>
+			<SheetBody className="pt-6">
 				<form onSubmit={handleSubmit} className="space-y-6">
 					{/* Title */}
-					<div className="space-y-2">
-						<label className="text-sm font-medium text-foreground">
-							Task Title <span className="text-red-500">*</span>
+					<div className="space-y-2.5">
+						<label className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+							Task Title <span className="text-danger">*</span>
 						</label>
 						<Input
 							value={formData.title}
 							onChange={(e) => handleInputChange("title", e.target.value)}
 							placeholder="Enter task title..."
-							className="w-full"
+							className="w-full transition-all duration-200 hover:border-primary/50 focus:border-primary"
 						/>
 					</div>
 
 					{/* Description */}
-					<div className="space-y-2">
-						<label className="text-sm font-medium text-foreground">
+					<div className="space-y-2.5">
+						<label className="text-sm font-semibold text-foreground">
 							Description
 						</label>
 						<textarea
@@ -267,28 +271,32 @@ export function TaskSheet({
 							onChange={(e) => handleInputChange("description", e.target.value)}
 							placeholder="Add task description..."
 							className={cn(
-								"flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm",
+								"flex min-h-[100px] w-full rounded-md border border-input bg-transparent px-3 py-2.5 text-sm",
 								"placeholder:text-muted-foreground",
 								"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-								"disabled:cursor-not-allowed disabled:opacity-50"
+								"disabled:cursor-not-allowed disabled:opacity-50",
+								"transition-all duration-200 hover:border-primary/50 focus:border-primary",
+								"resize-none"
 							)}
-							rows={3}
+							rows={4}
 						/>
 					</div>
 
 					{/* Client Selection */}
-					<div className="space-y-2">
-						<label className="text-sm font-medium text-foreground flex items-center gap-2">
-							<Building2 className="h-4 w-4" />
-							Client <span className="text-red-500">*</span>
+					<div className="space-y-2.5">
+						<label className="text-sm font-semibold text-foreground flex items-center gap-2">
+							<Building2 className="h-4 w-4 text-primary" />
+							Client <span className="text-danger">*</span>
 						</label>
 						<select
 							value={formData.clientId}
 							onChange={(e) => handleInputChange("clientId", e.target.value)}
 							className={cn(
-								"flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm",
+								"flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm",
 								"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-								"disabled:cursor-not-allowed disabled:opacity-50"
+								"disabled:cursor-not-allowed disabled:opacity-50",
+								"transition-all duration-200 hover:border-primary/50 focus:border-primary",
+								"cursor-pointer"
 							)}
 						>
 							<option value="">Select a client...</option>
@@ -301,19 +309,22 @@ export function TaskSheet({
 					</div>
 
 					{/* Project Selection */}
-					<div className="space-y-2">
-						<label className="text-sm font-medium text-foreground flex items-center gap-2">
-							<FolderOpen className="h-4 w-4" />
-							Project (Optional)
+					<div className="space-y-2.5">
+						<label className="text-sm font-semibold text-foreground flex items-center gap-2">
+							<FolderOpen className="h-4 w-4 text-primary" />
+							Project{" "}
+							<span className="text-muted-foreground text-xs">(Optional)</span>
 						</label>
 						<select
 							value={formData.projectId}
 							onChange={(e) => handleInputChange("projectId", e.target.value)}
 							disabled={!formData.clientId}
 							className={cn(
-								"flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm",
+								"flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm",
 								"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-								"disabled:cursor-not-allowed disabled:opacity-50"
+								"disabled:cursor-not-allowed disabled:opacity-50",
+								"transition-all duration-200 hover:border-primary/50 focus:border-primary",
+								"cursor-pointer"
 							)}
 						>
 							<option value="">No project selected</option>
@@ -323,60 +334,74 @@ export function TaskSheet({
 								</option>
 							))}
 						</select>
+						{!formData.clientId && (
+							<p className="text-xs text-muted-foreground">
+								Select a client first to choose a project
+							</p>
+						)}
 					</div>
 
 					{/* Date and Time */}
-					<div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-						<div className="space-y-2">
-							<label className="text-sm font-medium text-foreground flex items-center gap-2">
-								<Calendar className="h-4 w-4" />
-								Date <span className="text-red-500">*</span>
-							</label>
-							<Input
-								type="date"
-								value={formData.date}
-								onChange={(e) => handleInputChange("date", e.target.value)}
-								className="w-full"
-							/>
-						</div>
-						<div className="space-y-2">
-							<label className="text-sm font-medium text-foreground flex items-center gap-2">
-								<Clock className="h-4 w-4" />
-								Start Time
-							</label>
-							<Input
-								type="time"
-								value={formData.startTime}
-								onChange={(e) => handleInputChange("startTime", e.target.value)}
-								className="w-full"
-							/>
-						</div>
-						<div className="space-y-2">
-							<label className="text-sm font-medium text-foreground flex items-center gap-2">
-								<Clock className="h-4 w-4" />
-								End Time
-							</label>
-							<Input
-								type="time"
-								value={formData.endTime}
-								onChange={(e) => handleInputChange("endTime", e.target.value)}
-								className="w-full"
-							/>
+					<div className="space-y-4 p-4 rounded-lg bg-muted/30 border border-border/50">
+						<h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+							<Calendar className="h-4 w-4 text-primary" />
+							Schedule
+						</h3>
+						<div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+							<div className="space-y-2">
+								<label className="text-xs font-medium text-foreground">
+									Date <span className="text-danger">*</span>
+								</label>
+								<Input
+									type="date"
+									value={formData.date}
+									onChange={(e) => handleInputChange("date", e.target.value)}
+									className="w-full transition-all duration-200 hover:border-primary/50 focus:border-primary"
+								/>
+							</div>
+							<div className="space-y-2">
+								<label className="text-xs font-medium text-foreground flex items-center gap-1.5">
+									<Clock className="h-3.5 w-3.5" />
+									Start Time
+								</label>
+								<Input
+									type="time"
+									value={formData.startTime}
+									onChange={(e) =>
+										handleInputChange("startTime", e.target.value)
+									}
+									className="w-full transition-all duration-200 hover:border-primary/50 focus:border-primary"
+								/>
+							</div>
+							<div className="space-y-2">
+								<label className="text-xs font-medium text-foreground flex items-center gap-1.5">
+									<Clock className="h-3.5 w-3.5" />
+									End Time
+								</label>
+								<Input
+									type="time"
+									value={formData.endTime}
+									onChange={(e) => handleInputChange("endTime", e.target.value)}
+									className="w-full transition-all duration-200 hover:border-primary/50 focus:border-primary"
+								/>
+							</div>
 						</div>
 					</div>
 
 					{/* Status and Priority */}
 					<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-						<div className="space-y-2">
-							<label className="text-sm font-medium text-foreground">
+						<div className="space-y-2.5">
+							<label className="text-sm font-semibold text-foreground">
 								Status
 							</label>
 							<select
 								value={formData.status}
 								onChange={(e) => handleInputChange("status", e.target.value)}
 								className={cn(
-									"flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm",
-									"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+									"flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm",
+									"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+									"transition-all duration-200 hover:border-primary/50 focus:border-primary",
+									"cursor-pointer"
 								)}
 							>
 								{statusOptions.map((option) => (
@@ -386,17 +411,19 @@ export function TaskSheet({
 								))}
 							</select>
 						</div>
-						<div className="space-y-2">
-							<label className="text-sm font-medium text-foreground flex items-center gap-2">
-								<Flag className="h-4 w-4" />
+						<div className="space-y-2.5">
+							<label className="text-sm font-semibold text-foreground flex items-center gap-2">
+								<Flag className="h-4 w-4 text-primary" />
 								Priority
 							</label>
 							<select
 								value={formData.priority}
 								onChange={(e) => handleInputChange("priority", e.target.value)}
 								className={cn(
-									"flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm",
-									"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+									"flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm",
+									"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+									"transition-all duration-200 hover:border-primary/50 focus:border-primary",
+									"cursor-pointer"
 								)}
 							>
 								{priorityOptions.map((option) => (
@@ -409,9 +436,9 @@ export function TaskSheet({
 					</div>
 
 					{/* Assignee */}
-					<div className="space-y-2">
-						<label className="text-sm font-medium text-foreground flex items-center gap-2">
-							<User className="h-4 w-4" />
+					<div className="space-y-2.5">
+						<label className="text-sm font-semibold text-foreground flex items-center gap-2">
+							<User className="h-4 w-4 text-primary" />
 							Assign To
 						</label>
 						<select
@@ -420,8 +447,10 @@ export function TaskSheet({
 								handleInputChange("assigneeUserId", e.target.value)
 							}
 							className={cn(
-								"flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm",
-								"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+								"flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm",
+								"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+								"transition-all duration-200 hover:border-primary/50 focus:border-primary",
+								"cursor-pointer"
 							)}
 						>
 							<option value="">Unassigned</option>
@@ -434,17 +463,22 @@ export function TaskSheet({
 					</div>
 
 					{/* Repeat Options */}
-					<div className="space-y-4">
-						<div className="space-y-2">
-							<label className="text-sm font-medium text-foreground">
+					<div className="space-y-4 p-4 rounded-lg bg-muted/30 border border-border/50">
+						<h3 className="text-sm font-semibold text-foreground">
+							Recurrence
+						</h3>
+						<div className="space-y-2.5">
+							<label className="text-xs font-medium text-foreground">
 								Repeat
 							</label>
 							<select
 								value={formData.repeat}
 								onChange={(e) => handleInputChange("repeat", e.target.value)}
 								className={cn(
-									"flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm",
-									"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+									"flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm",
+									"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+									"transition-all duration-200 hover:border-primary/50 focus:border-primary",
+									"cursor-pointer"
 								)}
 							>
 								{repeatOptions.map((option) => (
@@ -456,8 +490,8 @@ export function TaskSheet({
 						</div>
 
 						{formData.repeat !== "none" && (
-							<div className="space-y-2">
-								<label className="text-sm font-medium text-foreground">
+							<div className="space-y-2.5 animate-in fade-in-50 slide-in-from-top-2 duration-200">
+								<label className="text-xs font-medium text-foreground">
 									Repeat Until
 								</label>
 								<Input
@@ -466,7 +500,7 @@ export function TaskSheet({
 									onChange={(e) =>
 										handleInputChange("repeatUntil", e.target.value)
 									}
-									className="w-full"
+									className="w-full transition-all duration-200 hover:border-primary/50 focus:border-primary"
 								/>
 							</div>
 						)}
@@ -474,7 +508,7 @@ export function TaskSheet({
 				</form>
 			</SheetBody>
 
-			<SheetFooter className="flex flex-row justify-end gap-2">
+			<SheetFooter className="flex flex-row justify-end gap-3 border-t border-border pt-4 mt-6">
 				<SheetClose intent="outline" isDisabled={isSubmitting}>
 					Cancel
 				</SheetClose>
@@ -484,6 +518,7 @@ export function TaskSheet({
 					isDisabled={
 						isSubmitting || !formData.title.trim() || !formData.clientId
 					}
+					className="min-w-[120px]"
 				>
 					{isSubmitting
 						? isEditMode
@@ -501,7 +536,7 @@ export function TaskSheet({
 	if (trigger) {
 		return (
 			<Sheet>
-				<SheetTrigger className="group inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-all duration-200 px-4 py-2 rounded-lg bg-primary/10 hover:bg-primary/15 ring-1 ring-primary/30 hover:ring-primary/40 shadow-sm hover:shadow-md backdrop-blur-sm">
+				<SheetTrigger className="group inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/90 transition-all duration-300 px-4 py-2.5 rounded-lg bg-primary/10 hover:bg-primary/15 ring-1 ring-primary/20 hover:ring-primary/30 shadow-sm hover:shadow-md backdrop-blur-sm transform hover:scale-[1.02] active:scale-[0.98]">
 					{trigger}
 				</SheetTrigger>
 				{sheetContent}
