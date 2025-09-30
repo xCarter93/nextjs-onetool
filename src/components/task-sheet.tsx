@@ -49,6 +49,7 @@ interface TaskSheetProps {
 	onOpenChange?: (open: boolean) => void;
 	trigger?: React.ReactNode;
 	mode?: "create" | "edit";
+	isOpen?: boolean;
 }
 
 const priorityOptions = [
@@ -77,6 +78,7 @@ export function TaskSheet({
 	onOpenChange,
 	trigger,
 	mode,
+	isOpen,
 }: TaskSheetProps) {
 	const { error: toastError, success: toastSuccess } = useToast();
 	const [formData, setFormData] = useState({
@@ -507,8 +509,12 @@ export function TaskSheet({
 		);
 	}
 
-	// If controlled from parent, just return content
-	return <Sheet>{sheetContent}</Sheet>;
+	// If controlled from parent with isOpen prop
+	return (
+		<Sheet isOpen={isOpen} onOpenChange={onOpenChange}>
+			{sheetContent}
+		</Sheet>
+	);
 }
 
 // Export default for easier importing

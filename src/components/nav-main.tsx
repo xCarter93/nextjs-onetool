@@ -7,6 +7,7 @@ import {
 	UserPlus,
 	FolderPlus,
 	FilePlus,
+	CheckSquare,
 	type LucideIcon,
 } from "lucide-react";
 
@@ -35,6 +36,7 @@ import {
 import { useIsMobile } from "@/hooks/use-mobile";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { TaskSheet } from "@/components/task-sheet";
 
 export function NavMain({
 	items,
@@ -54,25 +56,74 @@ export function NavMain({
 	}[];
 }) {
 	const [openQuickActions, setOpenQuickActions] = React.useState(false);
+	const [taskSheetOpen, setTaskSheetOpen] = React.useState(false);
 	const isMobile = useIsMobile();
+	const openTimerRef = React.useRef<number | null>(null);
 	const closeTimerRef = React.useRef<number | null>(null);
 
-	const openQuickMenu = React.useCallback(() => {
+	const handleOpenChange = React.useCallback((open: boolean) => {
+		// Clear any pending timers
+		if (openTimerRef.current) {
+			window.clearTimeout(openTimerRef.current);
+			openTimerRef.current = null;
+		}
 		if (closeTimerRef.current) {
 			window.clearTimeout(closeTimerRef.current);
 			closeTimerRef.current = null;
 		}
-		setOpenQuickActions(true);
+		setOpenQuickActions(open);
 	}, []);
 
-	const scheduleCloseQuickMenu = React.useCallback(() => {
+	const handleMouseEnterTrigger = React.useCallback(() => {
+		// Clear any close timer
 		if (closeTimerRef.current) {
 			window.clearTimeout(closeTimerRef.current);
+			closeTimerRef.current = null;
 		}
+
+		// Add delay before opening to prevent accidental triggers
+		if (!openQuickActions) {
+			openTimerRef.current = window.setTimeout(() => {
+				setOpenQuickActions(true);
+				openTimerRef.current = null;
+			}, 300);
+		}
+	}, [openQuickActions]);
+
+	const handleMouseLeaveTrigger = React.useCallback(() => {
+		// Clear open timer if user leaves before delay completes
+		if (openTimerRef.current) {
+			window.clearTimeout(openTimerRef.current);
+			openTimerRef.current = null;
+		}
+	}, []);
+
+	const handleMouseEnterContent = React.useCallback(() => {
+		// Clear any close timer when entering content
+		if (closeTimerRef.current) {
+			window.clearTimeout(closeTimerRef.current);
+			closeTimerRef.current = null;
+		}
+	}, []);
+
+	const handleMouseLeaveContent = React.useCallback(() => {
+		// Schedule close when leaving content
 		closeTimerRef.current = window.setTimeout(() => {
 			setOpenQuickActions(false);
 			closeTimerRef.current = null;
-		}, 1200);
+		}, 200);
+	}, []);
+
+	// Cleanup timers on unmount
+	React.useEffect(() => {
+		return () => {
+			if (openTimerRef.current) {
+				window.clearTimeout(openTimerRef.current);
+			}
+			if (closeTimerRef.current) {
+				window.clearTimeout(closeTimerRef.current);
+			}
+		};
 	}, []);
 
 	return (
@@ -83,12 +134,12 @@ export function NavMain({
 					<SidebarMenuItem>
 						<DropdownMenu
 							open={openQuickActions}
-							onOpenChange={setOpenQuickActions}
+							onOpenChange={handleOpenChange}
 						>
 							<DropdownMenuTrigger asChild>
 								<SidebarMenuButton
-									onMouseEnter={openQuickMenu}
-									onMouseLeave={scheduleCloseQuickMenu}
+									onMouseEnter={handleMouseEnterTrigger}
+									onMouseLeave={handleMouseLeaveTrigger}
 								>
 									<Plus />
 									<span>Create</span>
@@ -99,37 +150,111 @@ export function NavMain({
 								align="start"
 								sideOffset={isMobile ? 6 : 8}
 								collisionPadding={12}
-								onMouseEnter={openQuickMenu}
-								onMouseLeave={scheduleCloseQuickMenu}
-								className="w-[calc(100vw-2rem)] md:w-auto max-w-[90vw] md:max-w-none p-3 rounded-md bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 shadow-xl ring-1 ring-black/5 dark:ring-white/10"
+								onMouseEnter={handleMouseEnterContent}
+								onMouseLeave={handleMouseLeaveContent}
+								onPointerDownOutside={(e) => {
+									// Prevent closing when clicking the trigger
+									const target = e.target as HTMLElement;
+									if (target.closest('[data-slot="dropdown-menu-trigger"]')) {
+										e.preventDefault();
+									}
+								}}
+								className="w-[calc(100vw-2rem)] md:w-auto max-w-[90vw] md:max-w-none p-4 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 shadow-2xl"
 							>
-								<div className="flex flex-col md:flex-row gap-2">
-									<DropdownMenuItem asChild className="p-0">
+								<div className="flex flex-col md:flex-row gap-3">
+									{/* Create Client */}
+									<DropdownMenuItem
+										asChild
+										className="p-0"
+										onSelect={() => setOpenQuickActions(false)}
+									>
 										<Link
 											href="/clients/new"
-											className="group flex w-full md:w-40 items-center gap-3 rounded-lg border bg-card p-3 shadow-sm hover:bg-accent hover:text-accent-foreground"
+											className="group relative flex w-full md:w-44 flex-col items-start gap-2 rounded-lg border bg-card p-3 shadow-sm hover:bg-accent hover:text-accent-foreground transition-all duration-200"
 										>
-											<UserPlus className="size-5 text-muted-foreground group-hover:text-accent-foreground" />
-											<span className="font-medium">Create Client</span>
+											<div className="flex items-center gap-2">
+												<div className="rounded-lg bg-blue-500/10 dark:bg-blue-500/20 p-2">
+													<UserPlus className="size-5 text-blue-600 dark:text-blue-400" />
+												</div>
+												<span className="font-semibold text-sm">
+													New Client
+												</span>
+											</div>
+											<p className="text-xs text-muted-foreground">
+												Add a new client to your workspace
+											</p>
 										</Link>
 									</DropdownMenuItem>
-									<DropdownMenuItem asChild className="p-0">
+
+									{/* Create Project */}
+									<DropdownMenuItem
+										asChild
+										className="p-0"
+										onSelect={() => setOpenQuickActions(false)}
+									>
 										<Link
 											href="/projects/new"
-											className="group flex w-full md:w-40 items-center gap-3 rounded-lg border bg-card p-3 shadow-sm hover:bg-accent hover:text-accent-foreground"
+											className="group relative flex w-full md:w-44 flex-col items-start gap-2 rounded-lg border bg-card p-3 shadow-sm hover:bg-accent hover:text-accent-foreground transition-all duration-200"
 										>
-											<FolderPlus className="size-5 text-muted-foreground group-hover:text-accent-foreground" />
-											<span className="font-medium">Create Project</span>
+											<div className="flex items-center gap-2">
+												<div className="rounded-lg bg-purple-500/10 dark:bg-purple-500/20 p-2">
+													<FolderPlus className="size-5 text-purple-600 dark:text-purple-400" />
+												</div>
+												<span className="font-semibold text-sm">
+													New Project
+												</span>
+											</div>
+											<p className="text-xs text-muted-foreground">
+												Start a new project for a client
+											</p>
 										</Link>
 									</DropdownMenuItem>
-									<DropdownMenuItem asChild className="p-0">
+
+									{/* Create Quote */}
+									<DropdownMenuItem
+										asChild
+										className="p-0"
+										onSelect={() => setOpenQuickActions(false)}
+									>
 										<Link
 											href="/quotes/new"
-											className="group flex w-full md:w-40 items-center gap-3 rounded-lg border bg-card p-3 shadow-sm hover:bg-accent hover:text-accent-foreground"
+											className="group relative flex w-full md:w-44 flex-col items-start gap-2 rounded-lg border bg-card p-3 shadow-sm hover:bg-accent hover:text-accent-foreground transition-all duration-200"
 										>
-											<FilePlus className="size-5 text-muted-foreground group-hover:text-accent-foreground" />
-											<span className="font-medium">Create Quote</span>
+											<div className="flex items-center gap-2">
+												<div className="rounded-lg bg-emerald-500/10 dark:bg-emerald-500/20 p-2">
+													<FilePlus className="size-5 text-emerald-600 dark:text-emerald-400" />
+												</div>
+												<span className="font-semibold text-sm">New Quote</span>
+											</div>
+											<p className="text-xs text-muted-foreground">
+												Create a quote for a project
+											</p>
 										</Link>
+									</DropdownMenuItem>
+
+									{/* Create Task */}
+									<DropdownMenuItem
+										className="p-0"
+										onSelect={(e) => {
+											e.preventDefault();
+											setTaskSheetOpen(true);
+											setOpenQuickActions(false);
+										}}
+									>
+										<button
+											type="button"
+											className="group relative flex w-full md:w-44 flex-col items-start gap-2 rounded-lg border bg-card p-3 shadow-sm hover:bg-accent hover:text-accent-foreground transition-all duration-200"
+										>
+											<div className="flex items-center gap-2">
+												<div className="rounded-lg bg-amber-500/10 dark:bg-amber-500/20 p-2">
+													<CheckSquare className="size-5 text-amber-600 dark:text-amber-400" />
+												</div>
+												<span className="font-semibold text-sm">New Task</span>
+											</div>
+											<p className="text-xs text-muted-foreground">
+												Add a task to your schedule
+											</p>
+										</button>
 									</DropdownMenuItem>
 								</div>
 							</DropdownMenuContent>
@@ -143,13 +268,13 @@ export function NavMain({
 				<SidebarMenu>
 					{items.map((item) => {
 						// If item has nested items, use collapsible structure
-					if (item.items && item.items.length > 0) {
-						return (
-							<Collapsible
-								key={item.title}
-								asChild
-								defaultOpen={item.isActive}
-								className="group/collapsible"
+						if (item.items && item.items.length > 0) {
+							return (
+								<Collapsible
+									key={item.title}
+									asChild
+									defaultOpen={item.isActive}
+									className="group/collapsible"
 								>
 									<SidebarMenuItem>
 										<CollapsibleTrigger asChild>
@@ -157,10 +282,10 @@ export function NavMain({
 												tooltip={item.title}
 												isActive={item.isActive}
 											>
-											{item.icon && <item.icon />}
-											<span>{item.title}</span>
-											<ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-										</SidebarMenuButton>
+												{item.icon && <item.icon />}
+												<span>{item.title}</span>
+												<ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+											</SidebarMenuButton>
 										</CollapsibleTrigger>
 										<CollapsibleContent>
 											<SidebarMenuSub>
@@ -207,6 +332,13 @@ export function NavMain({
 					})}
 				</SidebarMenu>
 			</SidebarGroup>
+
+			{/* Task Sheet for Quick Action */}
+			<TaskSheet
+				mode="create"
+				isOpen={taskSheetOpen}
+				onOpenChange={setTaskSheetOpen}
+			/>
 		</>
 	);
 }
