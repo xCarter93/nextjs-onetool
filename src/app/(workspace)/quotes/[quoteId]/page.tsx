@@ -27,6 +27,8 @@ import {
 	Edit,
 	FolderOpen,
 	Check,
+	History,
+	Clock,
 } from "lucide-react";
 import { StickyFormFooter } from "@/components/sticky-form-footer";
 import { pdf } from "@react-pdf/renderer";
@@ -110,9 +112,9 @@ export default function QuoteDetailPage() {
 		api.documents.getLatest,
 		quote ? { documentType: "quote", documentId: quote._id } : "skip"
 	);
-	const documentUrl = useQuery(
-		api.documents.getDocumentUrl,
-		latestDocument ? { id: latestDocument._id } : "skip"
+	const allDocumentVersions = useQuery(
+		api.documents.getAllVersions,
+		quote ? { documentType: "quote", documentId: quote._id } : "skip"
 	);
 
 	// Mutations
@@ -127,6 +129,24 @@ export default function QuoteDetailPage() {
 		clientMessage: "",
 		validUntil: undefined as number | undefined,
 	});
+
+	// Version viewing state
+	const [selectedVersionId, setSelectedVersionId] =
+		useState<Id<"documents"> | null>(null);
+	const [showVersionHistory, setShowVersionHistory] = useState(false);
+
+	// Get the currently selected version's URL (or latest if none selected)
+	const selectedDocument = useMemo(() => {
+		if (selectedVersionId && allDocumentVersions) {
+			return allDocumentVersions.find((v) => v._id === selectedVersionId);
+		}
+		return latestDocument;
+	}, [selectedVersionId, allDocumentVersions, latestDocument]);
+
+	const selectedDocumentUrl = useQuery(
+		api.documents.getDocumentUrl,
+		selectedDocument ? { id: selectedDocument._id } : "skip"
+	);
 
 	useEffect(() => {
 		if (quote) {
@@ -371,6 +391,35 @@ export default function QuoteDetailPage() {
 			console.error(error);
 			const message = error instanceof Error ? error.message : "Unknown error";
 			toast.error("PDF generation failed", message);
+		}
+	};
+
+	const handleDownloadPdf = async () => {
+		if (!selectedDocumentUrl) return;
+		try {
+			// Fetch the PDF as a blob
+			const response = await fetch(selectedDocumentUrl);
+			if (!response.ok) throw new Error("Failed to fetch PDF");
+			const blob = await response.blob();
+
+			// Create a blob URL and trigger download
+			const blobUrl = URL.createObjectURL(blob);
+			const link = document.createElement("a");
+			link.href = blobUrl;
+			const versionSuffix = selectedDocument?.version
+				? `-v${selectedDocument.version}`
+				: "";
+			link.download = `Quote-${quote?.quoteNumber || quote?._id.slice(-6) || "document"}${versionSuffix}.pdf`;
+			document.body.appendChild(link);
+			link.click();
+
+			// Clean up
+			document.body.removeChild(link);
+			URL.revokeObjectURL(blobUrl);
+		} catch (error) {
+			console.error(error);
+			const message = error instanceof Error ? error.message : "Unknown error";
+			toast.error("Download failed", message);
 		}
 	};
 
@@ -791,24 +840,35 @@ export default function QuoteDetailPage() {
 									<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-xl shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50">
 										<Card className="bg-transparent border-none shadow-none ring-0">
 											<CardHeader className="flex flex-row items-center justify-between">
-												<CardTitle className="text-lg">Generated PDF</CardTitle>
+												<div className="flex items-center gap-2">
+													<CardTitle className="text-lg">
+														Generated PDF
+													</CardTitle>
+													{selectedDocument && (
+														<Badge variant="outline" className="text-xs">
+															v{selectedDocument.version}
+														</Badge>
+													)}
+												</div>
 												<FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
 											</CardHeader>
 											<CardContent>
 												<div className="text-center py-6">
-													{documentUrl ? (
+													{selectedDocumentUrl ? (
 														<div className="space-y-4">
 															<div className="h-48 bg-gray-50 dark:bg-gray-800 rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
 																<iframe
-																	src={documentUrl}
+																	src={selectedDocumentUrl}
 																	className="w-full h-full"
 																	title="PDF Preview"
 																	style={{ border: "none" }}
 																/>
 															</div>
+
+															{/* Action buttons */}
 															<div className="flex gap-2">
 																<a
-																	href={documentUrl}
+																	href={selectedDocumentUrl}
 																	target="_blank"
 																	rel="noopener noreferrer"
 																	className="flex-1"
@@ -819,24 +879,100 @@ export default function QuoteDetailPage() {
 																		className="w-full"
 																	>
 																		<Eye className="h-4 w-4 mr-2" />
-																		View PDF
+																		View
 																	</Button>
 																</a>
-																<a
-																	href={documentUrl}
-																	download
-																	className="flex-1"
+																<Button
+																	intent="outline"
+																	size="sm"
+																	className="w-full flex-1"
+																	onClick={handleDownloadPdf}
 																>
-																	<Button
-																		intent="outline"
-																		size="sm"
-																		className="w-full"
-																	>
-																		<Download className="h-4 w-4 mr-2" />
-																		Download
-																	</Button>
-																</a>
+																	<Download className="h-4 w-4 mr-2" />
+																	Download
+																</Button>
 															</div>
+
+															{/* Version History Toggle */}
+															{allDocumentVersions &&
+																allDocumentVersions.length > 1 && (
+																	<div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+																		<Button
+																			intent="outline"
+																			size="sm"
+																			className="w-full"
+																			onClick={() =>
+																				setShowVersionHistory(
+																					!showVersionHistory
+																				)
+																			}
+																		>
+																			<History className="h-4 w-4 mr-2" />
+																			{showVersionHistory
+																				? "Hide"
+																				: "Show"}{" "}
+																			Version History (
+																			{allDocumentVersions.length})
+																		</Button>
+
+																		{/* Version History List */}
+																		{showVersionHistory && (
+																			<div className="mt-3 space-y-2 max-h-48 overflow-y-auto">
+																				{allDocumentVersions.map((version) => (
+																					<button
+																						key={version._id}
+																						onClick={() => {
+																							setSelectedVersionId(
+																								version._id ===
+																									latestDocument?._id
+																									? null
+																									: version._id
+																							);
+																						}}
+																						className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
+																							selectedVersionId ===
+																								version._id ||
+																							(!selectedVersionId &&
+																								version._id ===
+																									latestDocument?._id)
+																								? "bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800"
+																								: "bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800"
+																						}`}
+																					>
+																						<div className="flex items-center justify-between">
+																							<div className="flex items-center gap-2">
+																								<Clock className="h-3 w-3 text-gray-400" />
+																								<span className="font-medium">
+																									Version {version.version}
+																								</span>
+																								{version._id ===
+																									latestDocument?._id && (
+																									<Badge
+																										variant="default"
+																										className="text-xs"
+																									>
+																										Latest
+																									</Badge>
+																								)}
+																							</div>
+																							<span className="text-xs text-gray-500">
+																								{new Date(
+																									version.generatedAt
+																								).toLocaleDateString()}{" "}
+																								{new Date(
+																									version.generatedAt
+																								).toLocaleTimeString([], {
+																									hour: "2-digit",
+																									minute: "2-digit",
+																								})}
+																							</span>
+																						</div>
+																					</button>
+																				))}
+																			</div>
+																		)}
+																	</div>
+																)}
 														</div>
 													) : (
 														<div>

@@ -55,8 +55,7 @@ async function validateDocumentOwnership(
 	documentId: string,
 	existingOrgId?: Id<"organizations">
 ): Promise<void> {
-	const userOrgId =
-		existingOrgId ?? (await getCurrentUserOrgId(ctx));
+	const userOrgId = existingOrgId ?? (await getCurrentUserOrgId(ctx));
 	let document: Doc<"quotes"> | Doc<"invoices"> | null;
 
 	if (documentType === "quote") {
@@ -229,6 +228,49 @@ export const getLatest = query({
 				return current.version > latest.version ? current : latest;
 			}
 			return current.generatedAt > latest.generatedAt ? current : latest;
+		});
+	},
+});
+
+/**
+ * Get all versions of a document for a quote or invoice
+ */
+export const getAllVersions = query({
+	args: {
+		documentType: v.union(v.literal("quote"), v.literal("invoice")),
+		documentId: v.string(),
+	},
+	handler: async (ctx, args): Promise<DocumentDocument[]> => {
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return [];
+		}
+		// Validate document ownership
+		await validateDocumentOwnership(
+			ctx,
+			args.documentType,
+			args.documentId,
+			userOrgId
+		);
+
+		const documents = await ctx.db
+			.query("documents")
+			.withIndex("by_document", (q) =>
+				q
+					.eq("documentType", args.documentType)
+					.eq("documentId", args.documentId)
+			)
+			.collect();
+
+		// Filter by organization
+		const orgDocuments = documents.filter((doc) => doc.orgId === userOrgId);
+
+		// Sort by version (descending - newest first)
+		return orgDocuments.sort((a, b) => {
+			if (a.version && b.version) {
+				return b.version - a.version;
+			}
+			return b.generatedAt - a.generatedAt;
 		});
 	},
 });
