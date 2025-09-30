@@ -52,11 +52,15 @@ export function SidebarWithHeader({ children }: SidebarWithHeaderProps) {
 							animate={{ opacity: 1, scale: 1 }}
 							transition={{ duration: 0.3, delay: 0.1 }}
 						>
-							<div className="relative group">
-								{/* Status Indicator */}
-								<div className="flex items-center gap-3 bg-card/30 dark:bg-card/10 backdrop-blur-sm border border-border/30 dark:border-border/20 rounded-full px-4 py-2 shadow-sm">
-									<div className="flex items-center gap-2">
-										<div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+							<div className="relative flex items-center gap-3">
+								{/* Status Indicator with glossy overlay */}
+								<div className="relative flex items-center gap-3 bg-card/30 dark:bg-card/10 backdrop-blur-sm border border-border/30 dark:border-border/20 rounded-full px-4 py-2 shadow-sm">
+									<div className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent" />
+									<div className="relative flex items-center gap-2">
+										<span className="relative inline-flex h-2.5 w-2.5">
+											<span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60 blur-sm" />
+											<span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-gradient-to-br from-emerald-400 to-green-500 animate-pulse" />
+										</span>
 										<span className="text-sm font-medium text-foreground/80">
 											All systems operational
 										</span>
