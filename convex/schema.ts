@@ -448,10 +448,11 @@ export default defineSchema({
 
 		storageId: v.id("_storage"), // Reference to stored PDF
 		generatedAt: v.number(),
-		version: v.optional(v.number()), // For tracking PDF versions
+		version: v.number(), // Version number for tracking PDF versions (starts at 1)
 	})
 		.index("by_org", ["orgId"])
-		.index("by_document", ["documentType", "documentId"]),
+		.index("by_document", ["documentType", "documentId"])
+		.index("by_document_version", ["documentType", "documentId", "version"]),
 
 	// Activities - for home route activity feed
 	activities: defineTable({
