@@ -97,6 +97,10 @@ const data = {
 					url: "/organization/profile/business",
 				},
 				{
+					title: "Documents",
+					url: "/organization/documents",
+				},
+				{
 					title: "Preferences",
 					url: "/organization/profile/preferences",
 				},

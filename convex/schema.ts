@@ -542,4 +542,23 @@ export default defineSchema({
 		.index("by_org", ["orgId"])
 		.index("by_scheduled", ["scheduledFor"])
 		.index("by_type", ["notificationType"]),
+
+	// Organization Documents - reusable documents for quotes/invoices
+	organizationDocuments: defineTable({
+		orgId: v.id("organizations"),
+
+		// Document metadata
+		name: v.string(), // User-friendly name
+		description: v.optional(v.string()), // Optional description
+
+		// Storage
+		storageId: v.id("_storage"), // Reference to stored PDF
+		fileSize: v.optional(v.number()), // Size in bytes
+
+		// Tracking
+		uploadedAt: v.number(),
+		uploadedBy: v.id("users"),
+	})
+		.index("by_org", ["orgId"])
+		.index("by_org_uploaded", ["orgId", "uploadedAt"]),
 });

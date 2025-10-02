@@ -28,6 +28,7 @@ import type * as lib_auth from "../lib/auth.js";
 import type * as lib_memberships from "../lib/memberships.js";
 import type * as lib_shared from "../lib/shared.js";
 import type * as notifications from "../notifications.js";
+import type * as organizationDocuments from "../organizationDocuments.js";
 import type * as organizations from "../organizations.js";
 import type * as projects from "../projects.js";
 import type * as quoteLineItems from "../quoteLineItems.js";
@@ -59,6 +60,7 @@ declare const fullApi: ApiFromModules<{
   "lib/memberships": typeof lib_memberships;
   "lib/shared": typeof lib_shared;
   notifications: typeof notifications;
+  organizationDocuments: typeof organizationDocuments;
   organizations: typeof organizations;
   projects: typeof projects;
   quoteLineItems: typeof quoteLineItems;
