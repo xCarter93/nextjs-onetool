@@ -12,6 +12,7 @@ import { useState, useRef } from "react";
 export default function OrganizationDocumentsPage() {
 	const toast = useToast();
 	const [isUploading, setIsUploading] = useState(false);
+	const [isDragging, setIsDragging] = useState(false);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	const documents = useQuery(api.organizationDocuments.list);
@@ -21,10 +22,7 @@ export default function OrganizationDocumentsPage() {
 	const createDocument = useMutation(api.organizationDocuments.create);
 	const removeDocument = useMutation(api.organizationDocuments.remove);
 
-	const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-		const file = e.target.files?.[0];
-		if (!file) return;
-
+	const handleFileUpload = async (file: File) => {
 		// Validate PDF
 		if (file.type !== "application/pdf") {
 			toast.error("Invalid file type", "Please upload a PDF file");
@@ -76,6 +74,35 @@ export default function OrganizationDocumentsPage() {
 		}
 	};
 
+	const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+		const file = e.target.files?.[0];
+		if (!file) return;
+		await handleFileUpload(file);
+	};
+
+	const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+		e.preventDefault();
+		setIsDragging(true);
+	};
+
+	const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+		e.preventDefault();
+		setIsDragging(false);
+	};
+
+	const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+		e.preventDefault();
+		setIsDragging(false);
+
+		const file = e.dataTransfer.files?.[0];
+		if (!file) return;
+		await handleFileUpload(file);
+	};
+
+	const handleClick = () => {
+		fileInputRef.current?.click();
+	};
+
 	const handleDelete = async (id: Id<"organizationDocuments">) => {
 		if (!confirm("Are you sure you want to delete this document?")) return;
 
@@ -95,7 +122,7 @@ export default function OrganizationDocumentsPage() {
 				<div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(120,119,198,0.08),transparent_50%)] rounded-xl" />
 
 				<div className="relative px-6 pt-8 pb-20">
-					<div className="mx-auto max-w-6xl">
+					<div className="mx-auto">
 						{/* Header */}
 						<div className="mb-8">
 							<div className="flex items-center gap-4 mb-2">
@@ -123,24 +150,84 @@ export default function OrganizationDocumentsPage() {
 								</CardTitle>
 							</CardHeader>
 							<CardContent>
-								<div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-									<div className="flex-1 w-full">
-										<input
-											ref={fileInputRef}
-											type="file"
-											accept="application/pdf"
-											onChange={handleUpload}
-											disabled={isUploading}
-											className="w-full text-sm text-gray-900 dark:text-white file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/30 dark:file:text-blue-400 dark:hover:file:bg-blue-900/50 disabled:opacity-50 disabled:cursor-not-allowed"
+								<div
+									onClick={handleClick}
+									onDragOver={handleDragOver}
+									onDragLeave={handleDragLeave}
+									onDrop={handleDrop}
+									className={`
+										relative flex flex-col items-center justify-center
+										w-full py-16 px-6
+										border-2 border-dashed rounded-lg
+										cursor-pointer
+										transition-all duration-200 ease-in-out
+										${
+											isDragging
+												? "border-blue-500 bg-blue-50/50 dark:bg-blue-900/20 scale-[1.02]"
+												: "border-gray-300 dark:border-gray-600 bg-gray-50/50 dark:bg-gray-800/50 hover:bg-gray-100/50 dark:hover:bg-gray-800/70 hover:border-gray-400 dark:hover:border-gray-500"
+										}
+										${isUploading ? "opacity-50 cursor-not-allowed" : ""}
+									`}
+								>
+									<input
+										ref={fileInputRef}
+										type="file"
+										accept="application/pdf"
+										onChange={handleUpload}
+										disabled={isUploading}
+										className="hidden"
+									/>
+
+									{/* Upload Icon */}
+									<div
+										className={`
+										flex items-center justify-center w-16 h-16 mb-4 rounded-full
+										transition-colors duration-200
+										${
+											isDragging
+												? "bg-blue-100 dark:bg-blue-900/40"
+												: "bg-gray-200 dark:bg-gray-700"
+										}
+									`}
+									>
+										<Upload
+											className={`
+											w-8 h-8 transition-colors duration-200
+											${
+												isDragging
+													? "text-blue-600 dark:text-blue-400"
+													: "text-gray-500 dark:text-gray-400"
+											}
+										`}
 										/>
-										<p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-											PDF files only, maximum 10MB
+									</div>
+
+									{/* Text Content */}
+									<div className="text-center space-y-2">
+										<p className="text-base font-medium text-gray-900 dark:text-white">
+											{isUploading ? (
+												<span className="flex items-center gap-2">
+													<span className="inline-block w-4 h-4 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin" />
+													Uploading...
+												</span>
+											) : (
+												<>
+													<span className="text-blue-600 dark:text-blue-400 hover:underline">
+														Click to upload
+													</span>{" "}
+													or drag and drop
+												</>
+											)}
+										</p>
+										<p className="text-sm text-gray-500 dark:text-gray-400">
+											PDF files only (max 10MB)
 										</p>
 									</div>
-									<Button isDisabled={isUploading} className="shrink-0">
-										<Upload className="h-4 w-4 mr-2" />
-										{isUploading ? "Uploading..." : "Upload PDF"}
-									</Button>
+
+									{/* Decorative Elements */}
+									{isDragging && (
+										<div className="absolute inset-0 bg-blue-500/5 dark:bg-blue-400/5 rounded-lg pointer-events-none" />
+									)}
 								</div>
 							</CardContent>
 						</Card>
