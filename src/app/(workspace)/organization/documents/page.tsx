@@ -137,7 +137,7 @@ export default function OrganizationDocumentsPage() {
 											PDF files only, maximum 10MB
 										</p>
 									</div>
-									<Button disabled={isUploading} className="shrink-0">
+									<Button isDisabled={isUploading} className="shrink-0">
 										<Upload className="h-4 w-4 mr-2" />
 										{isUploading ? "Uploading..." : "Upload PDF"}
 									</Button>
