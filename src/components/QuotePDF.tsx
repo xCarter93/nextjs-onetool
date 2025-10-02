@@ -58,138 +58,231 @@ const styles = StyleSheet.create({
 	page: {
 		flexDirection: "column",
 		backgroundColor: "#FFFFFF",
-		padding: 36,
-		fontSize: 12,
-		lineHeight: 1.5,
+		padding: 40,
+		fontSize: 11,
+		fontFamily: "Helvetica",
+	},
+	logoSection: {
+		marginBottom: 24,
+		alignItems: "flex-start",
+	},
+	logoContainer: {
+		width: 160,
+		height: 60,
+	},
+	logo: {
+		width: "100%",
+		height: "100%",
+		objectFit: "contain",
+		objectPosition: "left center",
 	},
 	header: {
 		flexDirection: "row",
 		justifyContent: "space-between",
-		marginBottom: 36,
-		paddingBottom: 16,
-		borderBottomWidth: 1.5,
-		borderBottomColor: "#E5E7EB",
+		marginBottom: 40,
+		paddingBottom: 20,
+		borderBottomWidth: 2,
+		borderBottomColor: "#000000",
 	},
 	headerLeft: {
 		flexDirection: "column",
-		maxWidth: 360,
+		maxWidth: 280,
 	},
 	headerRight: {
 		flexDirection: "column",
 		alignItems: "flex-end",
+		justifyContent: "flex-start",
 	},
-	logoContainer: {
-		width: 160,
-		height: 56,
-		marginBottom: 10,
-	},
-	logo: { width: "100%", height: "100%", objectFit: "contain" },
 	title: {
-		fontSize: 24,
+		fontSize: 32,
 		fontWeight: "bold",
-		color: "#1F2937",
-		marginBottom: 5,
+		color: "#000000",
+		marginBottom: 8,
+		letterSpacing: 1,
 	},
 	subtitle: {
-		fontSize: 12,
-		color: "#6B7280",
+		fontSize: 10,
+		color: "#374151",
+		marginBottom: 2,
+		lineHeight: 1.5,
 	},
 	quoteNumber: {
-		fontSize: 18,
+		fontSize: 20,
 		fontWeight: "bold",
-		color: "#1F2937",
-		marginBottom: 5,
+		color: "#000000",
+		marginBottom: 12,
 	},
 	date: {
-		fontSize: 12,
+		fontSize: 10,
 		color: "#6B7280",
 	},
 	quoteMeta: {
 		backgroundColor: "#F9FAFB",
 		borderWidth: 1,
 		borderColor: "#E5E7EB",
-		borderRadius: 6,
-		padding: 10,
+		borderRadius: 4,
+		padding: 14,
 		minWidth: 200,
-		alignItems: "flex-end",
 	},
-	metaRow: { flexDirection: "row", gap: 6, marginTop: 2 },
-	metaLabel: { fontSize: 10, color: "#6B7280" },
-	metaValue: { fontSize: 10, color: "#374151" },
-	billToSection: { marginTop: 18, marginBottom: 26 },
+	metaRow: {
+		flexDirection: "row",
+		justifyContent: "space-between",
+		marginBottom: 6,
+	},
+	metaLabel: {
+		fontSize: 10,
+		color: "#6B7280",
+		fontWeight: "bold",
+	},
+	metaValue: {
+		fontSize: 10,
+		color: "#1F2937",
+		marginLeft: 16,
+	},
+	billToSection: {
+		marginTop: 12,
+		marginBottom: 32,
+		padding: 16,
+		backgroundColor: "#F9FAFB",
+		borderRadius: 4,
+	},
 	sectionTitle: {
-		fontSize: 14,
+		fontSize: 11,
 		fontWeight: "bold",
 		color: "#1F2937",
 		marginBottom: 10,
+		textTransform: "uppercase",
+		letterSpacing: 0.5,
 	},
-	billToContent: { fontSize: 12, color: "#374151", lineHeight: 1.6 },
-	itemsTable: { marginTop: 8, marginBottom: 28 },
+	billToContent: {
+		fontSize: 11,
+		color: "#374151",
+		lineHeight: 1.6,
+	},
+	itemsTable: {
+		marginTop: 16,
+		marginBottom: 32,
+		borderWidth: 1,
+		borderColor: "#E5E7EB",
+		borderRadius: 4,
+	},
 	tableHeader: {
 		flexDirection: "row",
-		backgroundColor: "#F9FAFB",
-		borderBottomWidth: 1,
-		borderBottomColor: "#E5E7EB",
-		paddingVertical: 8,
-		paddingHorizontal: 10,
+		backgroundColor: "#1F2937",
+		paddingVertical: 12,
+		paddingHorizontal: 14,
 	},
 	tableRow: {
 		flexDirection: "row",
 		borderBottomWidth: 1,
 		borderBottomColor: "#E5E7EB",
-		paddingVertical: 8,
-		paddingHorizontal: 10,
+		paddingVertical: 12,
+		paddingHorizontal: 14,
+		backgroundColor: "#FFFFFF",
 	},
-	tableCell: { fontSize: 11, color: "#374151" },
+	tableCell: {
+		fontSize: 10,
+		color: "#374151",
+		lineHeight: 1.4,
+	},
 	tableCellDescription: { flex: 3 },
 	tableCellQuantity: { flex: 1, textAlign: "center" },
 	tableCellUnit: { flex: 1, textAlign: "center" },
 	tableCellPrice: { flex: 1.5, textAlign: "right" },
-	tableCellTotal: { flex: 1.5, textAlign: "right", fontWeight: "bold" },
+	tableCellTotal: {
+		flex: 1.5,
+		textAlign: "right",
+		fontWeight: "bold",
+		color: "#1F2937",
+	},
 	tableHeaderCell: {
 		fontSize: 10,
 		fontWeight: "bold",
-		color: "#6B7280",
+		color: "#FFFFFF",
 		textTransform: "uppercase",
-		letterSpacing: 0.5,
+		letterSpacing: 0.8,
 	},
 	totalsSection: {
 		flexDirection: "row",
 		justifyContent: "flex-end",
-		marginTop: 16,
+		marginTop: 20,
+		marginBottom: 24,
 	},
-	totalsContainer: { width: 220 },
+	totalsContainer: {
+		width: 260,
+		borderWidth: 1,
+		borderColor: "#E5E7EB",
+		borderRadius: 4,
+		padding: 16,
+		backgroundColor: "#F9FAFB",
+	},
 	totalRow: {
 		flexDirection: "row",
 		justifyContent: "space-between",
-		paddingVertical: 4,
+		paddingVertical: 6,
 	},
-	totalLabel: { fontSize: 12, color: "#6B7280" },
-	totalValue: { fontSize: 12, color: "#374151", fontWeight: "bold" },
+	totalLabel: {
+		fontSize: 11,
+		color: "#6B7280",
+	},
+	totalValue: {
+		fontSize: 11,
+		color: "#374151",
+		fontWeight: "bold",
+	},
 	grandTotalRow: {
 		flexDirection: "row",
 		justifyContent: "space-between",
-		paddingVertical: 8,
-		borderTopWidth: 1,
-		borderTopColor: "#E5E7EB",
+		paddingVertical: 10,
+		paddingTop: 12,
+		borderTopWidth: 2,
+		borderTopColor: "#1F2937",
 		marginTop: 8,
 	},
-	grandTotalLabel: { fontSize: 14, fontWeight: "bold", color: "#1F2937" },
-	grandTotalValue: { fontSize: 14, fontWeight: "bold", color: "#1F2937" },
-	termsSection: { marginTop: 28, marginBottom: 24 },
-	termsContent: { fontSize: 11, color: "#6B7280", lineHeight: 1.6 },
+	grandTotalLabel: {
+		fontSize: 14,
+		fontWeight: "bold",
+		color: "#000000",
+	},
+	grandTotalValue: {
+		fontSize: 16,
+		fontWeight: "bold",
+		color: "#000000",
+	},
+	termsSection: {
+		marginTop: 8,
+		marginBottom: 20,
+		padding: 16,
+		backgroundColor: "#F9FAFB",
+		borderRadius: 4,
+		borderLeftWidth: 3,
+		borderLeftColor: "#1F2937",
+	},
+	termsContent: {
+		fontSize: 10,
+		color: "#4B5563",
+		lineHeight: 1.6,
+	},
 	signatureSection: {
-		marginTop: 48,
+		marginTop: 60,
 		flexDirection: "row",
 		justifyContent: "space-between",
+		gap: 40,
 	},
 	signatureBox: {
-		width: 200,
-		borderBottomWidth: 1,
-		borderBottomColor: "#E5E7EB",
-		paddingBottom: 5,
+		flex: 1,
+		borderBottomWidth: 1.5,
+		borderBottomColor: "#1F2937",
+		paddingBottom: 8,
 	},
-	signatureLabel: { fontSize: 10, color: "#6B7280", marginBottom: 20 },
+	signatureLabel: {
+		fontSize: 10,
+		color: "#6B7280",
+		marginBottom: 32,
+		fontWeight: "bold",
+		textTransform: "uppercase",
+		letterSpacing: 0.5,
+	},
 });
 
 const formatCurrency = (amount: number) =>
@@ -213,15 +306,19 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({
 	return (
 		<Document>
 			<Page size="A4" style={styles.page}>
+				{/* Logo Section */}
+				{organization?.logoUrl ? (
+					<View style={styles.logoSection}>
+						<View style={styles.logoContainer}>
+							{/* eslint-disable-next-line jsx-a11y/alt-text */}
+							<Image style={styles.logo} src={organization.logoUrl} />
+						</View>
+					</View>
+				) : null}
+
 				{/* Header */}
 				<View style={styles.header}>
 					<View style={styles.headerLeft}>
-						{organization?.logoUrl ? (
-							<View style={styles.logoContainer}>
-								{/* eslint-disable-next-line jsx-a11y/alt-text */}
-								<Image style={styles.logo} src={organization.logoUrl} />
-							</View>
-						) : null}
 						<Text style={styles.title}>QUOTE</Text>
 						{organization?.name ? (
 							<Text style={styles.subtitle}>{organization.name}</Text>
