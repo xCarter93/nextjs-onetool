@@ -58,8 +58,9 @@ export function DocumentSelectionModal({
 		>
 			<div className="space-y-4">
 				<p className="text-sm text-muted-foreground">
-					Select documents to append to your quote PDF. Selected documents will
-					be added after the quote content.
+					Optionally select documents to append to your quote PDF. Selected
+					documents will be added after the quote content, or continue without
+					attachments.
 				</p>
 
 				{documents === undefined ? (
@@ -129,10 +130,14 @@ export function DocumentSelectionModal({
 
 				<div className="flex justify-between items-center pt-4 border-t border-gray-200 dark:border-gray-700">
 					<div className="text-sm text-muted-foreground">
-						{selectedIds.length > 0 && (
+						{selectedIds.length > 0 ? (
 							<span>
 								{selectedIds.length} document{selectedIds.length !== 1 && "s"}{" "}
 								selected
+							</span>
+						) : (
+							<span className="text-gray-500 dark:text-gray-400 italic">
+								No documents selected
 							</span>
 						)}
 					</div>
@@ -140,13 +145,10 @@ export function DocumentSelectionModal({
 						<Button intent="outline" onClick={handleClose}>
 							Cancel
 						</Button>
-						<Button
-							onClick={handleConfirm}
-							isDisabled={selectedIds.length === 0}
-						>
-							Generate PDF
-							{selectedIds.length > 0 &&
-								` with ${selectedIds.length} document${selectedIds.length !== 1 ? "s" : ""}`}
+						<Button onClick={handleConfirm}>
+							{selectedIds.length > 0
+								? `Generate with ${selectedIds.length} document${selectedIds.length !== 1 ? "s" : ""}`
+								: "Generate PDF Only"}
 						</Button>
 					</div>
 				</div>
