@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import { Id, Doc } from "../../../../../convex/_generated/dataModel";
@@ -18,12 +18,25 @@ import {
 	PencilIcon,
 } from "@heroicons/react/24/outline";
 import { StarIcon as StarSolidIcon } from "@heroicons/react/24/solid";
-import { Check } from "lucide-react";
+import {
+	Check,
+	Plus,
+	FolderOpen,
+	Receipt,
+	FileText,
+	ClipboardList,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { StickyFormFooter } from "@/components/sticky-form-footer";
 import { PropertyTable } from "@/components/property-table";
 import { ContactTable } from "@/components/contact-table";
+import { TaskSheet } from "@/components/task-sheet";
+import {
+	Popover,
+	PopoverTrigger,
+	PopoverContent,
+} from "@/components/ui/popover";
 import { useEffect, useMemo, useState } from "react";
 
 // Helper function to format lead source for display
@@ -44,6 +57,42 @@ function formatStatus(status: string): string {
 function formatCategory(category?: string): string {
 	if (!category) return "Not specified";
 	return category.charAt(0).toUpperCase() + category.slice(1);
+}
+
+// Helper function to format date
+function formatDate(timestamp?: number) {
+	if (!timestamp) return "Not set";
+	return new Date(timestamp).toLocaleDateString("en-US", {
+		year: "numeric",
+		month: "long",
+		day: "numeric",
+	});
+}
+
+// Helper function to get status color
+function getStatusColor(status: string) {
+	switch (status) {
+		case "lead":
+		case "prospect":
+			return "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400";
+		case "active":
+		case "paid":
+		case "approved":
+		case "completed":
+			return "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400";
+		case "sent":
+		case "pending":
+		case "in-progress":
+			return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400";
+		case "inactive":
+		case "cancelled":
+		case "overdue":
+			return "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400";
+		case "draft":
+			return "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400";
+		default:
+			return "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400";
+	}
 }
 
 const STATUS_OPTIONS = [
@@ -83,10 +132,12 @@ function OverviewEmptyState({
 
 export default function ClientDetailPage() {
 	const params = useParams();
+	const router = useRouter();
 	const clientId = params.clientId as string;
 	const toast = useToast();
 	const updateClient = useMutation(api.clients.update);
 	const [isEditing, setIsEditing] = useState(false);
+	const [isTaskSheetOpen, setIsTaskSheetOpen] = useState(false);
 	const [form, setForm] = useState({
 		industry: "",
 		status: "lead",
@@ -327,58 +378,502 @@ export default function ClientDetailPage() {
 
 	return (
 		<>
-			<div className="relative px-6 pt-8 pb-20">
+			<div className="relative min-h-screen px-6 pt-8 pb-20">
 				<div className="mx-auto">
 					{/* Client Header */}
-					<div className="flex items-center justify-between mb-8">
-						<div className="flex items-center gap-4">
-							<div className="flex items-center justify-center w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-900/30">
-								<BuildingOffice2Icon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-							</div>
-							<div>
-								<div className="flex items-center gap-3">
-									<h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-										{client.companyName}
-									</h1>
-									{isEditing ? (
-										<select
-											value={form.status}
-											onChange={(e) =>
-												setForm((prev) => ({ ...prev, status: e.target.value }))
-											}
-											className="rounded-md border border-gray-300 dark:border-white/10 bg-white dark:bg-white/5 px-3 py-1 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-indigo-500"
-										>
-											{STATUS_OPTIONS.map((status) => (
-												<option key={status} value={status}>
-													{formatStatus(status)}
-												</option>
-											))}
-										</select>
-									) : (
-										<Badge
-											variant="secondary"
-											className={`${
-												client.status === "active"
-													? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
-													: client.status === "lead" ||
-														  client.status === "prospect"
-														? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
-														: "bg-gray-100 dark:bg-gray-900/30 text-gray-700 dark:text-gray-300"
-											}`}
-										>
-											{formatStatus(client.status)}
-										</Badge>
+					<div className="mb-8">
+						<div className="flex items-start justify-between gap-6 mb-4">
+							<div className="flex items-start gap-6">
+								<div className="flex items-center justify-center w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex-shrink-0">
+									<BuildingOffice2Icon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+								</div>
+								<div className="flex-1 min-w-0">
+									<div className="flex items-center gap-3 flex-wrap">
+										<h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+											{client.companyName}
+										</h1>
+										{isEditing ? (
+											<select
+												value={form.status}
+												onChange={(e) =>
+													setForm((prev) => ({
+														...prev,
+														status: e.target.value,
+													}))
+												}
+												className="rounded-md border border-gray-300 dark:border-white/10 bg-white dark:bg-white/5 px-3 py-1 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-indigo-500"
+											>
+												{STATUS_OPTIONS.map((status) => (
+													<option key={status} value={status}>
+														{formatStatus(status)}
+													</option>
+												))}
+											</select>
+										) : (
+											<Badge
+												variant="secondary"
+												className={`${
+													client.status === "active"
+														? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
+														: client.status === "lead" ||
+															  client.status === "prospect"
+															? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
+															: "bg-gray-100 dark:bg-gray-900/30 text-gray-700 dark:text-gray-300"
+												}`}
+											>
+												{formatStatus(client.status)}
+											</Badge>
+										)}
+									</div>
+									{client.industry && (
+										<p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+											{client.industry}
+										</p>
 									)}
 								</div>
-								{client.industry && (
-									<p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-										{client.industry}
-									</p>
-								)}
+							</div>
+
+							{/* Compact Indicators with Popovers - Aligned Right */}
+							<div className="flex items-center gap-3 flex-wrap flex-shrink-0">
+								{/* Projects Popover */}
+								<Popover>
+									<PopoverTrigger asChild>
+										<button className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-gray-200/60 dark:border-white/10 hover:border-primary/30 dark:hover:border-primary/30 hover:bg-gray-50 dark:hover:bg-white/5 transition-all cursor-pointer group">
+											<svg
+												className="w-4 h-4 text-purple-600 dark:text-purple-400"
+												fill="none"
+												stroke="currentColor"
+												viewBox="0 0 24 24"
+											>
+												<path
+													strokeLinecap="round"
+													strokeLinejoin="round"
+													strokeWidth="2"
+													d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+												/>
+											</svg>
+											<span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+												{projects?.length || 0}
+											</span>
+											<span className="text-xs text-gray-500 dark:text-gray-400">
+												Projects
+											</span>
+										</button>
+									</PopoverTrigger>
+									<PopoverContent
+										className="w-96 p-0 bg-white dark:bg-gray-900"
+										align="end"
+										side="bottom"
+									>
+										<div className="p-4 border-b border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900">
+											<div className="flex items-center justify-between">
+												<h3 className="font-semibold text-gray-900 dark:text-white">
+													Client Projects
+												</h3>
+												<button
+													onClick={() =>
+														router.push(`/projects/new?clientId=${clientId}`)
+													}
+													className="group inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-all duration-200 px-4 py-2 rounded-lg bg-primary/10 hover:bg-primary/15 ring-1 ring-primary/30 hover:ring-primary/40 shadow-sm hover:shadow-md backdrop-blur-sm"
+												>
+													<Plus className="h-4 w-4" />
+													New Project
+													<span
+														aria-hidden="true"
+														className="group-hover:translate-x-1 transition-transform duration-200"
+													>
+														→
+													</span>
+												</button>
+											</div>
+										</div>
+										<div className="max-h-96 overflow-y-auto bg-white dark:bg-gray-900">
+											{projects && projects.length > 0 ? (
+												<div className="p-2">
+													{projects.map((project: Doc<"projects">) => (
+														<div
+															key={project._id}
+															className="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
+															onClick={() =>
+																router.push(`/projects/${project._id}`)
+															}
+														>
+															<div className="flex items-center gap-3 flex-1 min-w-0">
+																<div
+																	className={`w-2 h-2 rounded-full flex-shrink-0 ${
+																		project.status === "completed"
+																			? "bg-green-500"
+																			: project.status === "in-progress"
+																				? "bg-yellow-500"
+																				: "bg-blue-500"
+																	}`}
+																/>
+																<div className="flex-1 min-w-0">
+																	<p className="font-medium text-sm text-gray-900 dark:text-white truncate">
+																		{project.title}
+																	</p>
+																	{project.description && (
+																		<p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+																			{project.description}
+																		</p>
+																	)}
+																</div>
+															</div>
+															<Badge
+																className={getStatusColor(project.status)}
+																variant="outline"
+															>
+																{formatStatus(project.status)}
+															</Badge>
+														</div>
+													))}
+												</div>
+											) : (
+												<div className="p-8 text-center">
+													<div className="flex justify-center mb-3">
+														<FolderOpen className="h-12 w-12 text-gray-400 dark:text-gray-600" />
+													</div>
+													<p className="text-sm text-gray-500 dark:text-gray-400">
+														No projects yet
+													</p>
+												</div>
+											)}
+										</div>
+									</PopoverContent>
+								</Popover>
+
+								{/* Quotes Popover */}
+								<Popover>
+									<PopoverTrigger asChild>
+										<button className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-gray-200/60 dark:border-white/10 hover:border-primary/30 dark:hover:border-primary/30 hover:bg-gray-50 dark:hover:bg-white/5 transition-all cursor-pointer group">
+											<svg
+												className="w-4 h-4 text-green-600 dark:text-green-400"
+												fill="none"
+												stroke="currentColor"
+												viewBox="0 0 24 24"
+											>
+												<path
+													strokeLinecap="round"
+													strokeLinejoin="round"
+													strokeWidth="2"
+													d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"
+												/>
+											</svg>
+											<span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+												{quotes?.length || 0}
+											</span>
+											<span className="text-xs text-gray-500 dark:text-gray-400">
+												Quotes
+											</span>
+										</button>
+									</PopoverTrigger>
+									<PopoverContent
+										className="w-96 p-0 bg-white dark:bg-gray-900"
+										align="end"
+										side="bottom"
+									>
+										<div className="p-4 border-b border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900">
+											<div className="flex items-center justify-between">
+												<h3 className="font-semibold text-gray-900 dark:text-white">
+													Client Quotes
+												</h3>
+												<button
+													onClick={() =>
+														router.push(`/quotes/new?clientId=${clientId}`)
+													}
+													className="group inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-all duration-200 px-4 py-2 rounded-lg bg-primary/10 hover:bg-primary/15 ring-1 ring-primary/30 hover:ring-primary/40 shadow-sm hover:shadow-md backdrop-blur-sm"
+												>
+													<Plus className="h-4 w-4" />
+													New Quote
+													<span
+														aria-hidden="true"
+														className="group-hover:translate-x-1 transition-transform duration-200"
+													>
+														→
+													</span>
+												</button>
+											</div>
+										</div>
+										<div className="max-h-96 overflow-y-auto bg-white dark:bg-gray-900">
+											{quotes && quotes.length > 0 ? (
+												<div className="p-2">
+													{quotes.map((quote: Doc<"quotes">) => (
+														<div
+															key={quote._id}
+															className="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
+															onClick={() =>
+																router.push(`/quotes/${quote._id}`)
+															}
+														>
+															<div className="flex items-center gap-3 flex-1 min-w-0">
+																<div className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />
+																<div className="flex-1 min-w-0">
+																	<p className="font-medium text-sm text-gray-900 dark:text-white truncate">
+																		Quote #{quote.quoteNumber}
+																	</p>
+																	{quote.title && (
+																		<p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+																			{quote.title}
+																		</p>
+																	)}
+																</div>
+															</div>
+															<div className="text-right flex-shrink-0">
+																{quote.total && (
+																	<p className="font-medium text-sm text-gray-900 dark:text-white">
+																		${quote.total.toLocaleString()}
+																	</p>
+																)}
+																<Badge
+																	className={getStatusColor(
+																		quote.status || "draft"
+																	)}
+																	variant="outline"
+																>
+																	{quote.status || "draft"}
+																</Badge>
+															</div>
+														</div>
+													))}
+												</div>
+											) : (
+												<div className="p-8 text-center">
+													<div className="flex justify-center mb-3">
+														<Receipt className="h-12 w-12 text-gray-400 dark:text-gray-600" />
+													</div>
+													<p className="text-sm text-gray-500 dark:text-gray-400">
+														No quotes yet
+													</p>
+												</div>
+											)}
+										</div>
+									</PopoverContent>
+								</Popover>
+
+								{/* Invoices Popover */}
+								<Popover>
+									<PopoverTrigger asChild>
+										<button className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-gray-200/60 dark:border-white/10 hover:border-primary/30 dark:hover:border-primary/30 hover:bg-gray-50 dark:hover:bg-white/5 transition-all cursor-pointer group">
+											<svg
+												className="w-4 h-4 text-orange-600 dark:text-orange-400"
+												fill="none"
+												stroke="currentColor"
+												viewBox="0 0 24 24"
+											>
+												<path
+													strokeLinecap="round"
+													strokeLinejoin="round"
+													strokeWidth="2"
+													d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+												/>
+											</svg>
+											<span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+												{invoices?.length || 0}
+											</span>
+											<span className="text-xs text-gray-500 dark:text-gray-400">
+												Invoices
+											</span>
+										</button>
+									</PopoverTrigger>
+									<PopoverContent
+										className="w-96 p-0 bg-white dark:bg-gray-900"
+										align="end"
+										side="bottom"
+									>
+										<div className="p-4 border-b border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900">
+											<div className="flex items-center justify-between">
+												<h3 className="font-semibold text-gray-900 dark:text-white">
+													Client Invoices
+												</h3>
+												<button
+													onClick={() =>
+														toast.info(
+															"Create Invoice",
+															"Invoice creation functionality coming soon!"
+														)
+													}
+													className="group inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-all duration-200 px-4 py-2 rounded-lg bg-primary/10 hover:bg-primary/15 ring-1 ring-primary/30 hover:ring-primary/40 shadow-sm hover:shadow-md backdrop-blur-sm"
+												>
+													<Plus className="h-4 w-4" />
+													New Invoice
+													<span
+														aria-hidden="true"
+														className="group-hover:translate-x-1 transition-transform duration-200"
+													>
+														→
+													</span>
+												</button>
+											</div>
+										</div>
+										<div className="max-h-96 overflow-y-auto bg-white dark:bg-gray-900">
+											{invoices && invoices.length > 0 ? (
+												<div className="p-2">
+													{invoices.map((invoice: Doc<"invoices">) => (
+														<div
+															key={invoice._id}
+															className="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
+															onClick={() =>
+																toast.info(
+																	"View Invoice",
+																	"Invoice detail page coming soon!"
+																)
+															}
+														>
+															<div className="flex items-center gap-3 flex-1 min-w-0">
+																<div
+																	className={`w-2 h-2 rounded-full flex-shrink-0 ${
+																		invoice.status === "paid"
+																			? "bg-green-500"
+																			: invoice.status === "sent"
+																				? "bg-yellow-500"
+																				: "bg-red-500"
+																	}`}
+																/>
+																<div className="flex-1 min-w-0">
+																	<p className="font-medium text-sm text-gray-900 dark:text-white truncate">
+																		Invoice #{invoice.invoiceNumber}
+																	</p>
+																	<p className="text-xs text-gray-500 dark:text-gray-400">
+																		{formatDate(invoice._creationTime)}
+																	</p>
+																</div>
+															</div>
+															<div className="text-right flex-shrink-0">
+																{invoice.total && (
+																	<p className="font-medium text-sm text-gray-900 dark:text-white">
+																		${invoice.total.toLocaleString()}
+																	</p>
+																)}
+																<Badge
+																	className={getStatusColor(invoice.status)}
+																	variant="outline"
+																>
+																	{invoice.status}
+																</Badge>
+															</div>
+														</div>
+													))}
+												</div>
+											) : (
+												<div className="p-8 text-center">
+													<div className="flex justify-center mb-3">
+														<FileText className="h-12 w-12 text-gray-400 dark:text-gray-600" />
+													</div>
+													<p className="text-sm text-gray-500 dark:text-gray-400">
+														No invoices yet
+													</p>
+												</div>
+											)}
+										</div>
+									</PopoverContent>
+								</Popover>
+
+								{/* Tasks Popover */}
+								<Popover>
+									<PopoverTrigger asChild>
+										<button className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-gray-200/60 dark:border-white/10 hover:border-primary/30 dark:hover:border-primary/30 hover:bg-gray-50 dark:hover:bg-white/5 transition-all cursor-pointer group">
+											<svg
+												className="w-4 h-4 text-blue-600 dark:text-blue-400"
+												fill="none"
+												stroke="currentColor"
+												viewBox="0 0 24 24"
+											>
+												<path
+													strokeLinecap="round"
+													strokeLinejoin="round"
+													strokeWidth="2"
+													d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+												/>
+											</svg>
+											<span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+												{clientTasks?.length || 0}
+											</span>
+											<span className="text-xs text-gray-500 dark:text-gray-400">
+												Tasks
+											</span>
+										</button>
+									</PopoverTrigger>
+									<PopoverContent
+										className="w-96 p-0 bg-white dark:bg-gray-900"
+										align="end"
+										side="bottom"
+									>
+										<div className="p-4 border-b border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900">
+											<div className="flex items-center justify-between">
+												<h3 className="font-semibold text-gray-900 dark:text-white">
+													Client Tasks
+												</h3>
+												<button
+													onClick={() => setIsTaskSheetOpen(true)}
+													className="group inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-all duration-200 px-4 py-2 rounded-lg bg-primary/10 hover:bg-primary/15 ring-1 ring-primary/30 hover:ring-primary/40 shadow-sm hover:shadow-md backdrop-blur-sm"
+												>
+													<Plus className="h-4 w-4" />
+													New Task
+													<span
+														aria-hidden="true"
+														className="group-hover:translate-x-1 transition-transform duration-200"
+													>
+														→
+													</span>
+												</button>
+											</div>
+										</div>
+										<div className="max-h-96 overflow-y-auto bg-white dark:bg-gray-900">
+											{clientTasks && clientTasks.length > 0 ? (
+												<div className="p-2">
+													{clientTasks.map((task: Doc<"tasks">) => (
+														<div
+															key={task._id}
+															className="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-white/5 rounded-lg transition-colors"
+														>
+															<div className="flex items-center gap-3 flex-1 min-w-0">
+																<div
+																	className={`w-2 h-2 rounded-full flex-shrink-0 ${
+																		task.status === "completed"
+																			? "bg-green-500"
+																			: task.status === "cancelled"
+																				? "bg-red-500"
+																				: "bg-yellow-500"
+																	}`}
+																/>
+																<div className="flex-1 min-w-0">
+																	<p className="font-medium text-sm text-gray-900 dark:text-white truncate">
+																		{task.title}
+																	</p>
+																	{task.date && (
+																		<p className="text-xs text-gray-500 dark:text-gray-400">
+																			{formatDate(task.date)}
+																		</p>
+																	)}
+																</div>
+															</div>
+															<Badge
+																className={getStatusColor(task.status)}
+																variant="outline"
+															>
+																{task.status}
+															</Badge>
+														</div>
+													))}
+												</div>
+											) : (
+												<div className="p-8 text-center">
+													<div className="flex justify-center mb-3">
+														<ClipboardList className="h-12 w-12 text-gray-400 dark:text-gray-600" />
+													</div>
+													<p className="text-sm text-gray-500 dark:text-gray-400">
+														No tasks yet
+													</p>
+												</div>
+											)}
+										</div>
+									</PopoverContent>
+								</Popover>
 							</div>
 						</div>
+
 						{isEditing && isDirty && (
-							<Alert className="ml-auto w-auto border border-yellow-300 bg-yellow-50 text-yellow-800 dark:border-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-200">
+							<Alert className="mt-4 border border-yellow-300 bg-yellow-50 text-yellow-800 dark:border-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-200">
 								<AlertTitle className="text-sm font-semibold">
 									Unsaved changes
 								</AlertTitle>
@@ -938,6 +1433,13 @@ export default function ClientDetailPage() {
 				</div>
 			</div>
 			<StickyFormFooter buttons={getFooterButtons()} />
+			<TaskSheet
+				isOpen={isTaskSheetOpen}
+				onOpenChange={setIsTaskSheetOpen}
+				initialValues={{
+					clientId: clientId as Id<"clients">,
+				}}
+			/>
 		</>
 	);
 }

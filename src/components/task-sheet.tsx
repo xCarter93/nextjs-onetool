@@ -50,6 +50,10 @@ interface TaskSheetProps {
 	trigger?: React.ReactNode;
 	mode?: "create" | "edit";
 	isOpen?: boolean;
+	initialValues?: {
+		clientId?: Id<"clients">;
+		projectId?: Id<"projects">;
+	};
 }
 
 const priorityOptions = [
@@ -79,6 +83,7 @@ export function TaskSheet({
 	trigger,
 	mode,
 	isOpen,
+	initialValues,
 }: TaskSheetProps) {
 	const { error: toastError, success: toastSuccess } = useToast();
 	const [formData, setFormData] = useState({
@@ -134,13 +139,13 @@ export function TaskSheet({
 					: "",
 			});
 		} else if (isCreateMode) {
-			// Reset form for create mode
+			// Reset form for create mode with optional initial values
 			const today = new Date().toISOString().split("T")[0];
 			setFormData({
 				title: "",
 				description: "",
-				clientId: "",
-				projectId: "",
+				clientId: initialValues?.clientId || "",
+				projectId: initialValues?.projectId || "",
 				date: today,
 				startTime: "",
 				endTime: "",
@@ -151,7 +156,7 @@ export function TaskSheet({
 				repeatUntil: "",
 			});
 		}
-	}, [task, isEditMode, isCreateMode]);
+	}, [task, isEditMode, isCreateMode, initialValues, mode]);
 
 	const handleInputChange = (field: string, value: string) => {
 		setFormData((prev) => ({ ...prev, [field]: value }));
