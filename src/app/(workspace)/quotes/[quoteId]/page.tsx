@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useConvex } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,6 +37,7 @@ import type { Id } from "../../../../../convex/_generated/dataModel";
 import type { Id as StorageId } from "../../../../../convex/_generated/dataModel";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useEffect, useState, useMemo } from "react";
+import { DocumentSelectionModal } from "@/components/document-selection-modal";
 
 type QuoteStatus = "draft" | "sent" | "approved" | "declined" | "expired";
 
@@ -94,6 +95,7 @@ export default function QuoteDetailPage() {
 	const router = useRouter();
 	const params = useParams();
 	const toast = useToast();
+	const convex = useConvex();
 	const quoteId = params.quoteId as Id<"quotes">;
 
 	// Fetch quote data from Convex
@@ -134,6 +136,9 @@ export default function QuoteDetailPage() {
 	const [selectedVersionId, setSelectedVersionId] =
 		useState<Id<"documents"> | null>(null);
 	const [showVersionHistory, setShowVersionHistory] = useState(false);
+
+	// Document selection modal state
+	const [showDocumentModal, setShowDocumentModal] = useState(false);
 
 	// Get the currently selected version's URL (or latest if none selected)
 	const selectedDocument = useMemo(() => {
@@ -342,13 +347,19 @@ export default function QuoteDetailPage() {
 
 	const currentStatus = getQuoteStatus(quote.status, quote.validUntil);
 
-	const handleGeneratePdf = async () => {
+	const handleGeneratePdf = async (
+		appendDocumentIds: Id<"organizationDocuments">[] = []
+	) => {
 		try {
 			if (!quote || !lineItems) return;
 			const loadingId = toast.loading(
 				"Generating PDF",
-				"Rendering and uploading…"
+				appendDocumentIds.length > 0
+					? `Merging with ${appendDocumentIds.length} document${appendDocumentIds.length !== 1 ? "s" : ""}…`
+					: "Rendering and uploading…"
 			);
+
+			// Generate main quote PDF
 			const element = (
 				<QuotePDF
 					quote={quote}
@@ -371,12 +382,97 @@ export default function QuoteDetailPage() {
 					}
 				/>
 			);
-			const blob = await pdf(element).toBlob();
+			const quoteBlob = await pdf(element).toBlob();
+
+			// If documents selected, merge PDFs
+			let finalBlob = quoteBlob;
+			if (appendDocumentIds.length > 0) {
+				try {
+					const { PDFDocument } = await import("pdf-lib");
+
+					// Fetch all document URLs using Convex client
+					const documentUrls = await convex.query(
+						api.organizationDocuments.getDocumentUrls,
+						{ ids: appendDocumentIds }
+					);
+
+					console.log("Fetched document URLs:", documentUrls);
+
+					const mergedPdf = await PDFDocument.create();
+
+					// Add quote PDF pages
+					const quotePdfDoc = await PDFDocument.load(
+						await quoteBlob.arrayBuffer()
+					);
+					const quotePages = await mergedPdf.copyPages(
+						quotePdfDoc,
+						quotePdfDoc.getPageIndices()
+					);
+					quotePages.forEach((page) => mergedPdf.addPage(page));
+
+					console.log(`Added ${quotePages.length} pages from quote PDF`);
+
+					// Fetch and add organization documents
+					for (const docInfo of documentUrls) {
+						try {
+							if (!docInfo.url) {
+								console.warn(`No URL found for document ${docInfo.id}`);
+								continue;
+							}
+
+							// Fetch the actual PDF
+							const docResponse = await fetch(docInfo.url);
+							if (!docResponse.ok) {
+								console.warn(
+									`Failed to fetch PDF for document ${docInfo.id}, status: ${docResponse.status}`
+								);
+								continue;
+							}
+
+							const docBytes = await docResponse.arrayBuffer();
+							const docPdf = await PDFDocument.load(docBytes);
+							const docPages = await mergedPdf.copyPages(
+								docPdf,
+								docPdf.getPageIndices()
+							);
+							docPages.forEach((page) => mergedPdf.addPage(page));
+
+							console.log(
+								`Successfully merged document ${docInfo.id} (${docPages.length} pages)`
+							);
+						} catch (docError) {
+							console.error(
+								`Error processing document ${docInfo.id}:`,
+								docError
+							);
+							continue;
+						}
+					}
+
+					const pdfBytes = await mergedPdf.save();
+					finalBlob = new Blob([pdfBytes as BlobPart], {
+						type: "application/pdf",
+					});
+
+					console.log(
+						`Merged PDF created with ${mergedPdf.getPageCount()} total pages`
+					);
+				} catch (mergeError) {
+					console.error("PDF merge error:", mergeError);
+					toast.error(
+						"Merge failed",
+						"Failed to merge documents. Using quote only."
+					);
+					finalBlob = quoteBlob;
+				}
+			}
+
+			// Upload final PDF
 			const uploadUrl = await generateUploadUrl({});
 			const res = await fetch(uploadUrl, {
 				method: "POST",
 				headers: { "Content-Type": "application/pdf" },
-				body: blob,
+				body: finalBlob,
 			});
 			if (!res.ok) throw new Error("Failed to upload PDF");
 			const { storageId } = await res.json();
@@ -386,7 +482,12 @@ export default function QuoteDetailPage() {
 				storageId: storageId as unknown as StorageId<"_storage">,
 			});
 			toast.removeToast(loadingId);
-			toast.success("PDF generated", "Your quote PDF is ready.");
+			toast.success(
+				"PDF generated",
+				appendDocumentIds.length > 0
+					? `Quote PDF with ${appendDocumentIds.length} appended document${appendDocumentIds.length !== 1 ? "s" : ""} is ready.`
+					: "Your quote PDF is ready."
+			);
 		} catch (error) {
 			console.error(error);
 			const message = error instanceof Error ? error.message : "Unknown error";
@@ -983,7 +1084,7 @@ export default function QuoteDetailPage() {
 															<Button
 																intent="outline"
 																size="sm"
-																onPress={handleGeneratePdf}
+																onClick={() => setShowDocumentModal(true)}
 															>
 																<FileText className="h-4 w-4 mr-2" />
 																Generate PDF
@@ -1062,7 +1163,7 @@ export default function QuoteDetailPage() {
 						label: "Generate PDF",
 						intent: "outline",
 						icon: <FileText className="h-4 w-4" />,
-						onClick: handleGeneratePdf,
+						onClick: () => setShowDocumentModal(true),
 						position: "right" as const,
 					},
 					{
@@ -1085,6 +1186,13 @@ export default function QuoteDetailPage() {
 						position: "right" as const,
 					},
 				]}
+			/>
+
+			{/* Document Selection Modal */}
+			<DocumentSelectionModal
+				isOpen={showDocumentModal}
+				onClose={() => setShowDocumentModal(false)}
+				onConfirm={(selectedIds) => handleGeneratePdf(selectedIds)}
 			/>
 		</div>
 	);
