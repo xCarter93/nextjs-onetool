@@ -156,7 +156,7 @@ export function TaskSheet({
 				repeatUntil: "",
 			});
 		}
-	}, [task, isEditMode, isCreateMode, initialValues]);
+	}, [task, isEditMode, isCreateMode, initialValues, mode]);
 
 	const handleInputChange = (field: string, value: string) => {
 		setFormData((prev) => ({ ...prev, [field]: value }));
