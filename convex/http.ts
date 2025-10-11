@@ -254,4 +254,135 @@ async function validateRequest(req: Request): Promise<WebhookEvent | null> {
 	}
 }
 
+/**
+ * BoldSign Webhook Handler
+ *
+ * Handles BoldSign e-signature document events:
+ * - Verification: Initial webhook URL verification during setup
+ * - Completed: Document was signed by all parties
+ * - Declined: Document was declined by a signer
+ * - Revoked: Document was revoked by sender
+ * - Expired: Document expired before completion
+ */
+http.route({
+	path: "/boldsign-webhook",
+	method: "POST",
+	handler: httpAction(async (ctx, request) => {
+		const payloadString = await request.text();
+
+		// Handle BoldSign verification event (sent during webhook setup)
+		const event = JSON.parse(payloadString);
+		if (event.event?.eventType === "Verification") {
+			console.log("BoldSign webhook verification received");
+			return new Response("OK", { status: 200 });
+		}
+
+		// Verify webhook signature for actual events (optional)
+		const signatureHeader = request.headers.get("x-boldsign-signature");
+
+		// Only verify if we have a webhook secret configured
+		if (process.env.BOLDSIGN_WEBHOOK_SECRET) {
+			if (!signatureHeader) {
+				console.warn("BoldSign webhook received without signature header");
+			} else {
+				// Parse the signature header: "t=timestamp, s0=signature"
+				const sigParts: Record<string, string> = {};
+				signatureHeader.split(",").forEach((part) => {
+					const [key, value] = part.trim().split("=");
+					sigParts[key] = value;
+				});
+
+				const timestamp = sigParts["t"];
+				const signature = sigParts["s0"]; // Primary signature
+
+				if (!timestamp || !signature) {
+					console.error("Invalid BoldSign signature format:", signatureHeader);
+					return new Response("Unauthorized", { status: 401 });
+				}
+
+				// Create the signed payload: timestamp.payload
+				const signedPayload = `${timestamp}.${payloadString}`;
+
+				// Use Web Crypto API for HMAC verification
+				const encoder = new TextEncoder();
+				const key = await crypto.subtle.importKey(
+					"raw",
+					encoder.encode(process.env.BOLDSIGN_WEBHOOK_SECRET),
+					{ name: "HMAC", hash: "SHA-256" },
+					false,
+					["sign"]
+				);
+
+				const signatureBytes = await crypto.subtle.sign(
+					"HMAC",
+					key,
+					encoder.encode(signedPayload)
+				);
+
+				// Convert to hex string
+				const expectedSignature = Array.from(new Uint8Array(signatureBytes))
+					.map((b) => b.toString(16).padStart(2, "0"))
+					.join("");
+
+				if (signature !== expectedSignature) {
+					console.error(
+						"BoldSign webhook signature verification failed",
+						"Expected:",
+						expectedSignature.substring(0, 20) + "...",
+						"Received:",
+						signature?.substring(0, 20) + "..."
+					);
+					return new Response("Unauthorized", { status: 401 });
+				}
+
+				console.log("BoldSign webhook signature verified successfully");
+			}
+		} else {
+			console.log(
+				"BoldSign webhook received (signature verification skipped - no secret configured)"
+			);
+		}
+
+		// Handle document status events
+		console.log(
+			"BoldSign webhook event received:",
+			event.event?.eventType,
+			"for document:",
+			event.data?.documentId || event.documentId
+		);
+
+		const eventType = event.event?.eventType;
+		const boldsignDocumentId = event.data?.documentId || event.documentId;
+
+		// BoldSign returns timestamps in seconds, convert to milliseconds
+		const eventTimestamp = event.event?.created
+			? event.event.created * 1000
+			: undefined;
+
+		// Handle all signature lifecycle events
+		switch (eventType) {
+			case "Sent":
+			case "Viewed":
+			case "Signed":
+			case "Completed":
+			case "Declined":
+			case "Revoked":
+			case "Expired":
+				await ctx.runMutation(internal.boldsign.handleWebhook, {
+					boldsignDocumentId,
+					eventType,
+					eventTimestamp,
+				});
+				console.log(
+					`Document status updated successfully: ${eventType} for ${boldsignDocumentId}`
+				);
+				break;
+			default:
+				console.log("Unhandled BoldSign event type:", eventType);
+		}
+
+		return new Response("OK", { status: 200 });
+	}),
+});
+
 export default http;

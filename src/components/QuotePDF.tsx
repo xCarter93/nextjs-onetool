@@ -459,13 +459,41 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({
 					</View>
 				) : null}
 
-				{/* Signature */}
+				{/* Signature Section with BoldSign text tags */}
 				<View style={styles.signatureSection}>
-					<View style={styles.signatureBox}>
-						<Text style={styles.signatureLabel}>Client Signature</Text>
+					<View style={{ width: "45%" }}>
+						<Text style={{ fontSize: 10, color: "#1F2937", marginBottom: 5 }}>
+							Signature:
+						</Text>
+						{/* BoldSign text tag - no placeholder for sign fields */}
+						<Text style={{ fontSize: 8, color: "#FFFFFF" }}>
+							{`{{sign|1|*||client_signature}}`}
+						</Text>
+						<View
+							style={{
+								borderBottomWidth: 1,
+								borderBottomColor: "#1F2937",
+								marginTop: 20,
+								width: "100%",
+							}}
+						/>
 					</View>
-					<View style={styles.signatureBox}>
-						<Text style={styles.signatureLabel}>Date</Text>
+					<View style={{ width: "45%" }}>
+						<Text style={{ fontSize: 10, color: "#1F2937", marginBottom: 5 }}>
+							Date:
+						</Text>
+						{/* BoldSign text tag - no placeholder for date fields */}
+						<Text style={{ fontSize: 8, color: "#FFFFFF" }}>
+							{`{{date|1|*||date_signed}}`}
+						</Text>
+						<View
+							style={{
+								borderBottomWidth: 1,
+								borderBottomColor: "#1F2937",
+								marginTop: 20,
+								width: "100%",
+							}}
+						/>
 					</View>
 				</View>
 			</Page>

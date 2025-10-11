@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useQuery, useMutation, useConvex } from "convex/react";
+import { useQuery, useMutation, useAction, useConvex } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,6 +38,9 @@ import type { Id as StorageId } from "../../../../../convex/_generated/dataModel
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useEffect, useState, useMemo } from "react";
 import { DocumentSelectionModal } from "@/components/document-selection-modal";
+import { SendForSignatureModal } from "@/components/send-for-signature-modal";
+import { SignatureProgressBar } from "@/components/signature-progress-bar";
+import Accordion from "@/components/ui/accordion";
 
 type QuoteStatus = "draft" | "sent" | "approved" | "declined" | "expired";
 
@@ -118,11 +121,24 @@ export default function QuoteDetailPage() {
 		api.documents.getAllVersions,
 		quote ? { documentType: "quote", documentId: quote._id } : "skip"
 	);
+	const primaryContact = useQuery(
+		api.clientContacts.getPrimaryContact,
+		quote?.clientId ? { clientId: quote.clientId } : "skip"
+	);
+	const documentsWithSignatures = useQuery(
+		api.documents.getAllDocumentsWithSignatures,
+		quote ? { documentType: "quote", documentId: quote._id } : "skip"
+	);
 
 	// Mutations
 	const updateQuote = useMutation(api.quotes.update);
 	const generateUploadUrl = useMutation(api.documents.generateUploadUrl);
 	const createDocument = useMutation(api.documents.create);
+
+	// Actions
+	const sendForSignature = useAction(
+		api.boldsignActions.sendDocumentForSignature
+	);
 
 	// Inline edit state
 	const [isEditing, setIsEditing] = useState(false);
@@ -139,6 +155,10 @@ export default function QuoteDetailPage() {
 
 	// Document selection modal state
 	const [showDocumentModal, setShowDocumentModal] = useState(false);
+
+	// Signature modal state
+	const [showSignatureModal, setShowSignatureModal] = useState(false);
+	const [isSendingForSignature, setIsSendingForSignature] = useState(false);
 
 	// Get the currently selected version's URL (or latest if none selected)
 	const selectedDocument = useMemo(() => {
@@ -524,6 +544,38 @@ export default function QuoteDetailPage() {
 		}
 	};
 
+	const handleSendForSignature = async (
+		recipients: Array<{
+			name: string;
+			email: string;
+			signerType: "Signer" | "CC";
+		}>,
+		message?: string
+	) => {
+		if (!selectedDocumentUrl || !latestDocument) {
+			toast.error("No PDF", "Generate a PDF first");
+			return;
+		}
+
+		setIsSendingForSignature(true);
+		try {
+			await sendForSignature({
+				quoteId,
+				documentId: latestDocument._id,
+				recipients,
+				documentUrl: selectedDocumentUrl,
+				message,
+			});
+			toast.success("Sent!", "Quote sent for signature via BoldSign");
+			setShowSignatureModal(false);
+		} catch (error) {
+			const message = error instanceof Error ? error.message : "Unknown error";
+			toast.error("Send failed", message);
+		} finally {
+			setIsSendingForSignature(false);
+		}
+	};
+
 	return (
 		<div className="min-h-[100vh] flex-1 md:min-h-min">
 			<div className="relative min-h-[100vh] rounded-xl">
@@ -647,6 +699,140 @@ export default function QuoteDetailPage() {
 										</CardContent>
 									</Card>
 								</div>
+
+								{/* Signature Status */}
+								{documentsWithSignatures &&
+									documentsWithSignatures.length > 0 && (
+										<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-xl shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50">
+											<Card className="bg-transparent border-none shadow-none ring-0">
+												<CardHeader>
+													<CardTitle className="flex items-center gap-2 text-xl">
+														<FileText className="h-5 w-5" />
+														Signature Status
+													</CardTitle>
+												</CardHeader>
+												<CardContent>
+													<Accordion
+														items={documentsWithSignatures.map((doc) => {
+															// Get the most recent timestamp for last update
+															const lastUpdate =
+																doc.boldsign.completedAt ||
+																doc.boldsign.declinedAt ||
+																doc.boldsign.revokedAt ||
+																doc.boldsign.expiredAt ||
+																doc.boldsign.signedAt ||
+																doc.boldsign.viewedAt ||
+																doc.boldsign.sentAt ||
+																doc.generatedAt;
+
+															// Status badge variant
+															const statusVariant =
+																doc.boldsign.status === "Completed"
+																	? "default"
+																	: doc.boldsign.status === "Declined" ||
+																		  doc.boldsign.status === "Revoked" ||
+																		  doc.boldsign.status === "Expired"
+																		? "destructive"
+																		: "secondary";
+
+															const formattedDate = new Date(
+																lastUpdate
+															).toLocaleDateString("en-US", {
+																month: "short",
+																day: "numeric",
+																hour: "2-digit",
+																minute: "2-digit",
+															});
+
+															return {
+																title: `Version ${doc.version} - ${doc.boldsign.status} - ${formattedDate}`,
+																content: (
+																	<div className="space-y-4">
+																		{/* Status badges at top of content */}
+																		<div className="flex items-center gap-3 pb-3 border-b border-gray-200 dark:border-gray-700">
+																			<Badge
+																				variant="outline"
+																				className="text-xs"
+																			>
+																				v{doc.version}
+																			</Badge>
+																			<Badge
+																				variant={statusVariant}
+																				className="text-xs"
+																			>
+																				{doc.boldsign.status}
+																			</Badge>
+																			<span className="text-xs text-gray-500 dark:text-gray-400 ml-auto">
+																				Last updated: {formattedDate}
+																			</span>
+																		</div>
+
+																		<SignatureProgressBar
+																			status={doc.boldsign.status}
+																			events={[
+																				{
+																					type: "Sent",
+																					timestamp: doc.boldsign.sentAt,
+																				},
+																				{
+																					type: "Viewed",
+																					timestamp: doc.boldsign.viewedAt,
+																				},
+																				{
+																					type: "Signed",
+																					timestamp: doc.boldsign.signedAt,
+																				},
+																				{
+																					type: doc.boldsign.status,
+																					timestamp:
+																						doc.boldsign.completedAt ||
+																						doc.boldsign.declinedAt ||
+																						doc.boldsign.revokedAt ||
+																						doc.boldsign.expiredAt,
+																				},
+																			]}
+																		/>
+
+																		{/* Recipients info */}
+																		<div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+																			<p className="font-medium mb-3 text-sm text-gray-900 dark:text-white">
+																				Sent to:
+																			</p>
+																			<ul className="space-y-2">
+																				{doc.boldsign.sentTo.map(
+																					(recipient, i) => (
+																						<li
+																							key={i}
+																							className="flex items-center justify-between text-sm"
+																						>
+																							<span className="text-gray-700 dark:text-gray-300">
+																								<span className="font-medium">
+																									{recipient.name}
+																								</span>{" "}
+																								<span className="text-gray-500 dark:text-gray-400">
+																									({recipient.email})
+																								</span>
+																							</span>
+																							<Badge
+																								variant="outline"
+																								className="text-xs"
+																							>
+																								{recipient.signerType}
+																							</Badge>
+																						</li>
+																					)
+																				)}
+																			</ul>
+																		</div>
+																	</div>
+																),
+															};
+														})}
+													/>
+												</CardContent>
+											</Card>
+										</div>
+									)}
 
 								{/* Line Items */}
 								<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-xl shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50">
@@ -1153,10 +1339,7 @@ export default function QuoteDetailPage() {
 						label: "Send to Client",
 						intent: "outline",
 						icon: <Mail className="h-4 w-4" />,
-						onClick: () => {
-							// Handle send to client
-							console.log("Send to client");
-						},
+						onClick: () => setShowSignatureModal(true),
 						position: "right" as const,
 					},
 					{
@@ -1193,6 +1376,15 @@ export default function QuoteDetailPage() {
 				isOpen={showDocumentModal}
 				onClose={() => setShowDocumentModal(false)}
 				onConfirm={(selectedIds) => handleGeneratePdf(selectedIds)}
+			/>
+
+			{/* Send for Signature Modal */}
+			<SendForSignatureModal
+				isOpen={showSignatureModal}
+				onClose={() => setShowSignatureModal(false)}
+				onConfirm={handleSendForSignature}
+				primaryContact={primaryContact}
+				isLoading={isSendingForSignature}
 			/>
 		</div>
 	);

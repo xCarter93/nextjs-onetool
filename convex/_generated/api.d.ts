@@ -14,6 +14,8 @@ import type {
   FunctionReference,
 } from "convex/server";
 import type * as activities from "../activities.js";
+import type * as boldsign from "../boldsign.js";
+import type * as boldsignActions from "../boldsignActions.js";
 import type * as clientContacts from "../clientContacts.js";
 import type * as clientProperties from "../clientProperties.js";
 import type * as clients from "../clients.js";
@@ -46,6 +48,8 @@ import type * as users from "../users.js";
  */
 declare const fullApi: ApiFromModules<{
   activities: typeof activities;
+  boldsign: typeof boldsign;
+  boldsignActions: typeof boldsignActions;
   clientContacts: typeof clientContacts;
   clientProperties: typeof clientProperties;
   clients: typeof clients;
