@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { internalMutation } from "./_generated/server";
+import { Id } from "./_generated/dataModel";
 
 // Internal mutation to update document with BoldSign info
 export const updateDocumentWithBoldSign = internalMutation({
@@ -16,7 +17,14 @@ export const updateDocumentWithBoldSign = internalMutation({
 		viewUrl: v.optional(v.string()),
 	},
 	handler: async (ctx, args) => {
+		// Verify document exists before patching
+		const document = await ctx.db.get(args.documentId);
+		if (!document) {
+			throw new Error(`Document not found: ${args.documentId}`);
+		}
+
 		await ctx.db.patch(args.documentId, {
+			boldsignDocumentId: args.boldsignDocumentId,
 			boldsign: {
 				documentId: args.boldsignDocumentId,
 				status: "Sent",
@@ -35,6 +43,12 @@ export const updateQuoteLatestDocument = internalMutation({
 		documentId: v.id("documents"),
 	},
 	handler: async (ctx, args) => {
+		// Verify quote exists before patching
+		const quote = await ctx.db.get(args.quoteId);
+		if (!quote) {
+			throw new Error("Quote not found");
+		}
+
 		await ctx.db.patch(args.quoteId, {
 			latestDocumentId: args.documentId,
 			status: "sent",
@@ -51,18 +65,24 @@ export const handleWebhook = internalMutation({
 		eventTimestamp: v.optional(v.number()),
 	},
 	handler: async (ctx, args) => {
-		// Find document by BoldSign document ID
-		const allDocuments = await ctx.db.query("documents").collect();
-		const document = allDocuments.find(
-			(d) => d.boldsign?.documentId === args.boldsignDocumentId
-		);
+		// Find document by BoldSign document ID using index
+		const document = await ctx.db
+			.query("documents")
+			.withIndex("by_boldsign_documentId", (q) =>
+				q.eq("boldsignDocumentId", args.boldsignDocumentId)
+			)
+			.first();
 
-		if (!document || !document.boldsign) {
-			console.log(
-				"Document not found for BoldSign ID:",
-				args.boldsignDocumentId
+		if (!document) {
+			throw new Error(
+				`Document not found for BoldSign document ID: ${args.boldsignDocumentId}`
 			);
-			return;
+		}
+
+		if (!document.boldsign) {
+			throw new Error(
+				`Document missing BoldSign data for BoldSign document ID: ${args.boldsignDocumentId}`
+			);
 		}
 
 		const timestamp = args.eventTimestamp || Date.now();
@@ -111,9 +131,24 @@ export const handleWebhook = internalMutation({
 
 		// If the document is associated with a quote, update quote status
 		if (document.documentType === "quote") {
-			const quote = await ctx.db.get(document.documentId as any);
+			// Validate that documentId is a proper quotes ID
+			if (
+				typeof document.documentId !== "string" ||
+				!document.documentId.startsWith("quotes|")
+			) {
+				console.warn(
+					`Document ${document._id} has invalid documentId for quote: ${document.documentId}`
+				);
+				return;
+			}
+
+			const quote = await ctx.db.get(document.documentId as Id<"quotes">);
 			if (quote) {
-				const quoteUpdates: any = {};
+				const quoteUpdates: {
+					status?: "approved" | "declined" | "expired";
+					approvedAt?: number;
+					declinedAt?: number;
+				} = {};
 
 				// Update quote status based on BoldSign event
 				if (args.eventType === "Completed") {

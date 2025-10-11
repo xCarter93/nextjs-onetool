@@ -27,9 +27,6 @@ export const sendDocumentForSignature = action({
 				"BOLDSIGN_API_KEY is not configured. Please add it to your environment variables."
 			);
 		}
-
-		console.log("BoldSign API Key found:", apiKey.substring(0, 10) + "...");
-
 		// Initialize BoldSign client
 		const documentApi = new DocumentApi();
 		documentApi.setApiKey(apiKey);
@@ -40,6 +37,11 @@ export const sendDocumentForSignature = action({
 
 		// Download PDF
 		const pdfResponse = await fetch(args.documentUrl);
+		if (!pdfResponse.ok) {
+			throw new Error(
+				`Failed to download document ${args.documentUrl}: ${pdfResponse.status} ${pdfResponse.statusText}`
+			);
+		}
 		const pdfBuffer = await pdfResponse.arrayBuffer();
 		const pdfBufferNode = Buffer.from(pdfBuffer);
 

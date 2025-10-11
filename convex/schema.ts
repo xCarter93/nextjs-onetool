@@ -453,6 +453,9 @@ export default defineSchema({
 		generatedAt: v.number(),
 		version: v.number(), // Version number for tracking PDF versions (starts at 1)
 
+		// Top-level BoldSign document ID for efficient querying
+		boldsignDocumentId: v.optional(v.string()),
+
 		// BoldSign integration fields
 		boldsign: v.optional(
 			v.object({
@@ -486,7 +489,8 @@ export default defineSchema({
 	})
 		.index("by_org", ["orgId"])
 		.index("by_document", ["documentType", "documentId"])
-		.index("by_document_version", ["documentType", "documentId", "version"]),
+		.index("by_document_version", ["documentType", "documentId", "version"])
+		.index("by_boldsign_documentId", ["boldsignDocumentId"]),
 
 	// Activities - for home route activity feed
 	activities: defineTable({

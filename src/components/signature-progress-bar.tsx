@@ -103,7 +103,7 @@ export function SignatureProgressBar({
 	const formatTimestamp = (timestamp?: number): string => {
 		if (!timestamp) return "";
 		const date = new Date(timestamp);
-		return date.toLocaleDateString("en-US", {
+		return date.toLocaleString("en-US", {
 			month: "short",
 			day: "numeric",
 			hour: "2-digit",

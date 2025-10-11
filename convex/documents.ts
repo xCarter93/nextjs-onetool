@@ -621,7 +621,10 @@ export const getAllDocumentsWithSignatures = query({
 
 		// Filter by organization and only return documents with boldsign data
 		const orgDocuments = documents
-			.filter((doc) => doc.orgId === userOrgId && doc.boldsign)
+			.filter(
+				(doc) =>
+					doc.orgId === userOrgId && doc.boldsign && doc.version !== undefined
+			)
 			.map((doc) => ({
 				_id: doc._id,
 				version: doc.version,
@@ -629,7 +632,11 @@ export const getAllDocumentsWithSignatures = query({
 				boldsign: doc.boldsign!,
 			}));
 
-		// Sort by version (descending - newest first)
-		return orgDocuments.sort((a, b) => b.version - a.version);
+		// Sort by version (descending - newest first), falling back to generatedAt
+		return orgDocuments.sort((a, b) => {
+			const aKey = a.version ?? a.generatedAt;
+			const bKey = b.version ?? b.generatedAt;
+			return bKey - aKey;
+		});
 	},
 });

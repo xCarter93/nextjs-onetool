@@ -284,6 +284,7 @@ http.route({
 		if (process.env.BOLDSIGN_WEBHOOK_SECRET) {
 			if (!signatureHeader) {
 				console.warn("BoldSign webhook received without signature header");
+				return new Response("Unauthorized", { status: 401 });
 			} else {
 				// Parse the signature header: "t=timestamp, s0=signature"
 				const sigParts: Record<string, string> = {};

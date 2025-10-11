@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { X, Plus, Mail } from "lucide-react";
 
 interface Recipient {
+	id: string;
 	name: string;
 	email: string;
 	signerType: "Signer" | "CC";
@@ -38,32 +39,41 @@ export function SendForSignatureModal({
 		if (isOpen && primaryContact?.email) {
 			setRecipients([
 				{
+					id: crypto.randomUUID(),
 					name: `${primaryContact.firstName} ${primaryContact.lastName}`,
 					email: primaryContact.email,
 					signerType: "Signer",
 				},
 			]);
 		} else if (isOpen && !primaryContact?.email) {
-			setRecipients([{ name: "", email: "", signerType: "Signer" }]);
+			setRecipients([
+				{ id: crypto.randomUUID(), name: "", email: "", signerType: "Signer" },
+			]);
+		} else if (!isOpen) {
+			setRecipients([]);
+			setMessage("");
 		}
 	}, [isOpen, primaryContact]);
 
 	const addRecipient = () => {
-		setRecipients([...recipients, { name: "", email: "", signerType: "CC" }]);
+		setRecipients([
+			...recipients,
+			{ id: crypto.randomUUID(), name: "", email: "", signerType: "CC" },
+		]);
 	};
 
-	const removeRecipient = (index: number) => {
-		setRecipients(recipients.filter((_, i) => i !== index));
+	const removeRecipient = (id: string) => {
+		setRecipients(recipients.filter((r) => r.id !== id));
 	};
 
 	const updateRecipient = (
-		index: number,
+		id: string,
 		field: keyof Recipient,
 		value: string
 	) => {
-		const updated = [...recipients];
-		updated[index] = { ...updated[index], [field]: value };
-		setRecipients(updated);
+		setRecipients(
+			recipients.map((r) => (r.id === id ? { ...r, [field]: value } : r))
+		);
 	};
 
 	const handleSend = async () => {
@@ -83,11 +93,13 @@ export function SendForSignatureModal({
 				{/* Recipients list */}
 				<div className="space-y-3">
 					{recipients.map((recipient, index) => (
-						<div key={index} className="flex gap-2 items-start">
+						<div key={recipient.id} className="flex gap-2 items-start">
 							<Input
 								placeholder="Name"
 								value={recipient.name}
-								onChange={(e) => updateRecipient(index, "name", e.target.value)}
+								onChange={(e) =>
+									updateRecipient(recipient.id, "name", e.target.value)
+								}
 								className="flex-1"
 							/>
 							<Input
@@ -95,7 +107,7 @@ export function SendForSignatureModal({
 								type="email"
 								value={recipient.email}
 								onChange={(e) =>
-									updateRecipient(index, "email", e.target.value)
+									updateRecipient(recipient.id, "email", e.target.value)
 								}
 								className="flex-1"
 							/>
@@ -103,7 +115,7 @@ export function SendForSignatureModal({
 								value={recipient.signerType}
 								onChange={(e) =>
 									updateRecipient(
-										index,
+										recipient.id,
 										"signerType",
 										e.target.value as "Signer" | "CC"
 									)
@@ -117,7 +129,7 @@ export function SendForSignatureModal({
 								<Button
 									size="sm"
 									intent="outline"
-									onClick={() => removeRecipient(index)}
+									onClick={() => removeRecipient(recipient.id)}
 								>
 									<X className="h-4 w-4" />
 								</Button>
@@ -141,10 +153,10 @@ export function SendForSignatureModal({
 
 				{/* Actions */}
 				<div className="flex justify-end gap-2">
-					<Button intent="outline" onClick={onClose} disabled={isLoading}>
+					<Button intent="outline" onClick={onClose} isDisabled={isLoading}>
 						Cancel
 					</Button>
-					<Button onClick={handleSend} isLoading={isLoading}>
+					<Button onClick={handleSend} isPending={isLoading}>
 						<Mail className="h-4 w-4 mr-2" />
 						Send for Signature
 					</Button>
