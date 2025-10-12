@@ -11,6 +11,7 @@ export const sendDocumentForSignature = action({
 		documentId: v.id("documents"),
 		recipients: v.array(
 			v.object({
+				id: v.optional(v.string()),
 				name: v.string(),
 				email: v.string(),
 				signerType: v.union(v.literal("Signer"), v.literal("CC")),
