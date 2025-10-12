@@ -470,6 +470,7 @@ export default defineSchema({
 				),
 				sentTo: v.array(
 					v.object({
+						id: v.optional(v.string()),
 						name: v.string(),
 						email: v.string(),
 						signerType: v.string(), // "Signer" or "CC"
