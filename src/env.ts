@@ -5,6 +5,8 @@ export const env = createEnv({
 	server: {
 		CLERK_SECRET_KEY: z.string().min(1),
 		CLERK_WEBHOOK_SECRET: z.string().min(1),
+		BOLDSIGN_API_KEY: z.string().min(1),
+		BOLDSIGN_WEBHOOK_SECRET: z.string().optional(),
 	},
 	client: {
 		NEXT_PUBLIC_CONVEX_URL: z.string().min(1),

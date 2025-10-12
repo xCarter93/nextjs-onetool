@@ -562,3 +562,81 @@ export const generateUploadUrl = mutation({
 		return await ctx.storage.generateUploadUrl();
 	},
 });
+
+/**
+ * Get BoldSign status for a document
+ */
+export const getBoldsignStatus = query({
+	args: { documentId: v.id("documents") },
+	handler: async (ctx, args) => {
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return null;
+		}
+		const document = await getDocumentWithOrgValidation(ctx, args.documentId);
+		return document?.boldsign || null;
+	},
+});
+
+/**
+ * Get all documents with BoldSign signatures for a quote or invoice
+ */
+export const getAllDocumentsWithSignatures = query({
+	args: {
+		documentType: v.union(v.literal("quote"), v.literal("invoice")),
+		documentId: v.string(),
+	},
+	handler: async (
+		ctx,
+		args
+	): Promise<
+		Array<{
+			_id: DocumentId;
+			version: number;
+			generatedAt: number;
+			boldsign: NonNullable<DocumentDocument["boldsign"]>;
+		}>
+	> => {
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return [];
+		}
+
+		// Validate document ownership
+		await validateDocumentOwnership(
+			ctx,
+			args.documentType,
+			args.documentId,
+			userOrgId
+		);
+
+		const documents = await ctx.db
+			.query("documents")
+			.withIndex("by_document", (q) =>
+				q
+					.eq("documentType", args.documentType)
+					.eq("documentId", args.documentId)
+			)
+			.collect();
+
+		// Filter by organization and only return documents with boldsign data
+		const orgDocuments = documents
+			.filter(
+				(doc) =>
+					doc.orgId === userOrgId && doc.boldsign && doc.version !== undefined
+			)
+			.map((doc) => ({
+				_id: doc._id,
+				version: doc.version,
+				generatedAt: doc.generatedAt,
+				boldsign: doc.boldsign!,
+			}));
+
+		// Sort by version (descending - newest first), falling back to generatedAt
+		return orgDocuments.sort((a, b) => {
+			const aKey = a.version ?? a.generatedAt;
+			const bKey = b.version ?? b.generatedAt;
+			return bKey - aKey;
+		});
+	},
+});

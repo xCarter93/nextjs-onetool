@@ -267,7 +267,6 @@ export const create = mutation({
 		projectType: v.union(v.literal("one-off"), v.literal("recurring")),
 		startDate: v.optional(v.number()),
 		endDate: v.optional(v.number()),
-		dueDate: v.optional(v.number()),
 		salespersonId: v.optional(v.id("users")),
 		assignedUserIds: v.optional(v.array(v.id("users"))),
 		invoiceReminderEnabled: v.optional(v.boolean()),
@@ -282,10 +281,6 @@ export const create = mutation({
 		// Validate dates if provided
 		if (args.startDate && args.endDate && args.startDate > args.endDate) {
 			throw new Error("Start date cannot be after end date");
-		}
-
-		if (args.startDate && args.dueDate && args.startDate > args.dueDate) {
-			throw new Error("Start date cannot be after due date");
 		}
 
 		const projectId = await createProjectWithOrg(ctx, args);
@@ -324,7 +319,6 @@ export const update = mutation({
 		),
 		startDate: v.optional(v.number()),
 		endDate: v.optional(v.number()),
-		dueDate: v.optional(v.number()),
 		salespersonId: v.optional(v.id("users")),
 		assignedUserIds: v.optional(v.array(v.id("users"))),
 		invoiceReminderEnabled: v.optional(v.boolean()),
@@ -351,15 +345,10 @@ export const update = mutation({
 		const currentProject = await getProjectOrThrow(ctx, id);
 		const startDate = filteredUpdates.startDate ?? currentProject.startDate;
 		const endDate = filteredUpdates.endDate ?? currentProject.endDate;
-		const dueDate = filteredUpdates.dueDate ?? currentProject.dueDate;
 
 		// Validate dates
 		if (startDate && endDate && startDate > endDate) {
 			throw new Error("Start date cannot be after end date");
-		}
-
-		if (startDate && dueDate && startDate > dueDate) {
-			throw new Error("Start date cannot be after due date");
 		}
 
 		// Check if status is being changed to completed
@@ -528,19 +517,19 @@ export const getStats = query({
 			// Count by type
 			stats.byType[project.projectType]++;
 
-			// Count upcoming deadlines (next 7 days)
+			// Count upcoming deadlines (next 7 days) - based on end date
 			if (
-				project.dueDate &&
-				project.dueDate <= nextWeek &&
-				project.dueDate > now
+				project.endDate &&
+				project.endDate <= nextWeek &&
+				project.endDate > now
 			) {
 				stats.upcomingDeadlines++;
 			}
 
-			// Count overdue projects
+			// Count overdue projects - based on end date
 			if (
-				project.dueDate &&
-				project.dueDate < now &&
+				project.endDate &&
+				project.endDate < now &&
 				project.status !== "completed"
 			) {
 				stats.overdue++;
@@ -604,9 +593,9 @@ export const getUpcomingDeadlines = query({
 
 		return projects.filter(
 			(project: ProjectDocument) =>
-				project.dueDate &&
-				project.dueDate <= deadline &&
-				project.dueDate > now &&
+				project.endDate &&
+				project.endDate <= deadline &&
+				project.endDate > now &&
 				project.status !== "completed" &&
 				project.status !== "cancelled"
 		);
@@ -634,8 +623,8 @@ export const getOverdue = query({
 
 		return projects.filter(
 			(project: ProjectDocument) =>
-				project.dueDate &&
-				project.dueDate < now &&
+				project.endDate &&
+				project.endDate < now &&
 				project.status !== "completed" &&
 				project.status !== "cancelled"
 		);

@@ -1,104 +1,128 @@
+/* eslint-disable react/no-children-prop */
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import {
-	CalendarIcon,
-	UserIcon,
-	MagnifyingGlassIcon,
-} from "@heroicons/react/16/solid";
-import { MapPinIcon } from "@heroicons/react/24/outline";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { StickyFormFooter } from "@/components/sticky-form-footer";
-import { Badge } from "@/components/ui/badge";
-import ComboBox from "@/components/ui/combo-box";
+import React, { useEffect, useMemo } from "react";
+import { useForm } from "@tanstack/react-form";
+import * as z from "zod";
+import { useToastOperations } from "@/hooks/use-toast";
+import { Field, FieldError, FieldGroup, FieldLabel } from "./ui/field";
+import { Input } from "./ui/input";
+import { Textarea } from "./ui/textarea";
+import { Checkbox } from "./ui/checkbox";
+import { Label } from "./ui/label";
+import { Button } from "./ui/button";
+import { Calendar } from "./ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import { CalendarIcon } from "lucide-react";
+import { CalendarWidget } from "./ui/calendar-widget";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Badge } from "./ui/badge";
+import { StickyFormFooter } from "./sticky-form-footer";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { useToastOperations } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import type { Key } from "react-aria-components";
 import type { Id } from "../../convex/_generated/dataModel";
-
-const PAGE_TITLE = "Create New Project";
-const PAGE_SUBTITLE =
-	"Set up your project with all the essential details for successful execution.";
-
-const ONE_OFF_KEY: Key = "one-off";
-const RECURRING_KEY: Key = "recurring";
-
-type ProjectType = "one-off" | "recurring";
+import { MagnifyingGlassIcon, UserIcon } from "@heroicons/react/16/solid";
+import { MapPinIcon } from "@heroicons/react/24/outline";
+import ComboBox from "@/components/ui/combo-box";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import type { Key } from "react-aria-components";
 
 type ClientId = Id<"clients">;
 type ClientContactId = Id<"clientContacts">;
 type ClientPropertyId = Id<"clientProperties">;
 
-const formatInputDate = (timestamp?: number) => {
-	if (!timestamp) return "";
-	const date = new Date(timestamp);
-	const year = date.getFullYear();
-	const month = `${date.getMonth() + 1}`.padStart(2, "0");
-	const day = `${date.getDate()}`.padStart(2, "0");
-	return `${year}-${month}-${day}`;
+export interface ProjectFormData {
+	// Client Selection
+	clientId: string;
+
+	// Project Information
+	title: string;
+	instructions: string;
+	projectType: "one-off" | "recurring";
+
+	// Dates
+	startDate: Date | undefined;
+	endDate: Date | undefined;
+
+	// Time (for recurring projects)
+	startTime: string;
+	endTime: string;
+
+	// Settings
+	invoiceReminderEnabled: boolean;
+	scheduleForLater: boolean;
+}
+
+interface ProjectOnboardingFormProps {
+	preselectedClientId?: ClientId | null;
+	onSubmit?: (data: ProjectFormData) => void;
+	isLoading?: boolean;
+}
+
+const initialFormData: ProjectFormData = {
+	clientId: "",
+	title: "",
+	instructions: "",
+	projectType: "one-off",
+	startDate: undefined,
+	endDate: undefined,
+	startTime: "",
+	endTime: "",
+	invoiceReminderEnabled: true,
+	scheduleForLater: false,
 };
 
-const parseDateInput = (value: string): number | undefined => {
-	if (!value) return undefined;
-	const [yearStr, monthStr, dayStr] = value.split("-");
-	const year = Number(yearStr);
-	const month = Number(monthStr);
-	const day = Number(dayStr);
-	if (Number.isNaN(year) || Number.isNaN(month) || Number.isNaN(day)) {
-		return undefined;
-	}
-	return new Date(year, month - 1, day).getTime();
-};
+// Zod validation schema
+const formSchema = z
+	.object({
+		clientId: z.string().min(1, "Client selection is required"),
+		title: z.string().min(1, "Project title is required"),
+		instructions: z.string(),
+		projectType: z.enum(["one-off", "recurring"]),
+		startDate: z.date().optional(),
+		endDate: z.date().optional(),
+		startTime: z.string(),
+		endTime: z.string(),
+		invoiceReminderEnabled: z.boolean(),
+		scheduleForLater: z.boolean(),
+	})
+	.refine(
+		(data) => {
+			if (data.startDate && data.endDate) {
+				return data.endDate >= data.startDate;
+			}
+			return true;
+		},
+		{
+			message: "End date must be on or after start date",
+			path: ["endDate"],
+		}
+	);
 
-const getCalendarDays = (date: Date) => {
-	const year = date.getFullYear();
-	const month = date.getMonth();
-
-	const firstDay = new Date(year, month, 1);
-	const lastDay = new Date(year, month + 1, 0);
-	const startingDayOfWeek = firstDay.getDay();
-	const daysInMonth = lastDay.getDate();
-
-	const calendarDays: Array<number | null> = [];
-
-	for (let i = 0; i < startingDayOfWeek; i++) {
-		calendarDays.push(null);
-	}
-
-	for (let day = 1; day <= daysInMonth; day++) {
-		calendarDays.push(day);
-	}
-
-	while (calendarDays.length < 42) {
-		calendarDays.push(null);
-	}
-
-	return calendarDays;
-};
-
-const formatDisplayDate = (timestamp?: number) => {
-	if (!timestamp) return "Not set";
-	return new Date(timestamp).toLocaleDateString("en-US", {
+const formatDisplayDate = (date?: Date | number) => {
+	if (!date) return "Not set";
+	const dateObj = typeof date === "number" ? new Date(date) : date;
+	return dateObj.toLocaleDateString("en-US", {
 		year: "numeric",
 		month: "long",
 		day: "numeric",
 	});
 };
 
+const ONE_OFF_KEY: Key = "one-off";
+const RECURRING_KEY: Key = "recurring";
+
 const getStatusBadgeClass = (status?: string) => {
 	switch (status) {
-		case "planned":
+		case "lead":
+		case "prospect":
 			return "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400";
-		case "in-progress":
-			return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400";
-		case "completed":
+		case "active":
 			return "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400";
-		case "cancelled":
+		case "inactive":
+			return "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400";
+		case "archived":
 			return "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400";
 		default:
 			return "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400";
@@ -120,44 +144,139 @@ const getContactDisplayName = (contact: {
 }) =>
 	`${contact.firstName} ${contact.lastName}${contact.jobTitle ? ` - ${contact.jobTitle}` : ""}`;
 
-export function ProjectOnboardingForm() {
+// Separate component for date fields to handle state properly
+function DateFieldsSection({
+	form,
+	isLoading,
+}: {
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	form: any;
+	isLoading: boolean;
+}) {
+	const [startDateOpen, setStartDateOpen] = React.useState(false);
+	const [endDateOpen, setEndDateOpen] = React.useState(false);
+
+	return (
+		<div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+			{/* Start Date */}
+			<form.Field
+				name="startDate"
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				children={(field: any) => (
+					<Field>
+						<FieldLabel>Start Date</FieldLabel>
+						<Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
+							<PopoverTrigger asChild>
+								<Button
+									intent="outline"
+									className="w-full justify-start text-left font-normal"
+								>
+									<CalendarIcon className="mr-2 h-4 w-4" />
+									{field.state.value
+										? formatDisplayDate(field.state.value)
+										: "Select start date"}
+								</Button>
+							</PopoverTrigger>
+							<PopoverContent
+								className="w-auto p-0 bg-white dark:bg-gray-950"
+								align="start"
+							>
+								<Calendar
+									mode="single"
+									selected={field.state.value}
+									onSelect={(date) => {
+										field.handleChange(date);
+										setStartDateOpen(false);
+									}}
+									disabled={isLoading}
+									className="!bg-white dark:!bg-gray-950"
+								/>
+							</PopoverContent>
+						</Popover>
+					</Field>
+				)}
+			/>
+
+			{/* End Date */}
+			<form.Field
+				name="endDate"
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				children={(field: any) => {
+					const startDateValue = form.getFieldValue("startDate");
+					return (
+						<Field>
+							<FieldLabel>End Date</FieldLabel>
+							<Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
+								<PopoverTrigger asChild>
+									<Button
+										intent="outline"
+										className="w-full justify-start text-left font-normal"
+									>
+										<CalendarIcon className="mr-2 h-4 w-4" />
+										{field.state.value
+											? formatDisplayDate(field.state.value)
+											: "Select end date"}
+									</Button>
+								</PopoverTrigger>
+								<PopoverContent
+									className="w-auto p-0 bg-white dark:bg-gray-950"
+									align="start"
+								>
+									<Calendar
+										mode="single"
+										selected={field.state.value}
+										onSelect={(date) => {
+											field.handleChange(date);
+											setEndDateOpen(false);
+										}}
+										disabled={(date) => {
+											if (isLoading) return true;
+											if (!startDateValue) return false;
+											const start =
+												typeof startDateValue === "number"
+													? new Date(startDateValue)
+													: new Date(startDateValue.getTime());
+											start.setHours(0, 0, 0, 0);
+											const checkDate = new Date(date);
+											checkDate.setHours(0, 0, 0, 0);
+											return checkDate < start;
+										}}
+										className="!bg-white dark:!bg-gray-950"
+									/>
+								</PopoverContent>
+							</Popover>
+						</Field>
+					);
+				}}
+			/>
+		</div>
+	);
+}
+
+export function ProjectOnboardingForm({
+	preselectedClientId,
+	onSubmit,
+	isLoading = false,
+}: ProjectOnboardingFormProps) {
 	const router = useRouter();
 	const toast = useToastOperations();
 
-	const [projectTypeKeys, setProjectTypeKeys] = useState<Set<Key>>(
-		new Set([ONE_OFF_KEY])
-	);
-	const [reminderEnabled, setReminderEnabled] = useState(true);
-	const [scheduleForLater, setScheduleForLater] = useState(false);
-	const [isLoading, setIsLoading] = useState(false);
+	const [selectedClientId, setSelectedClientId] =
+		React.useState<ClientId | null>(preselectedClientId || null);
+	const [selectedPropertyId, setSelectedPropertyId] =
+		React.useState<ClientPropertyId | null>(null);
+	const [selectedContactId, setSelectedContactId] =
+		React.useState<ClientContactId | null>(null);
 
-	const [projectTitle, setProjectTitle] = useState("");
-	const [projectInstructions, setProjectInstructions] = useState("");
-	const [startDate, setStartDate] = useState<number | undefined>();
-	const [endDate, setEndDate] = useState<number | undefined>();
-	const [dueDate, setDueDate] = useState<number | undefined>();
-	const [startTime, setStartTime] = useState("");
-	const [endTime, setEndTime] = useState("");
-
-	const [calendarDate, setCalendarDate] = useState(() => {
+	const [calendarDate, setCalendarDate] = React.useState(() => {
 		const date = new Date();
 		date.setHours(0, 0, 0, 0);
 		return date;
 	});
 
-	const [selectedClientId, setSelectedClientId] = useState<ClientId | null>(
-		null
+	const [projectTypeKeys, setProjectTypeKeys] = React.useState<Set<Key>>(
+		new Set([ONE_OFF_KEY])
 	);
-	const [selectedPropertyId, setSelectedPropertyId] =
-		useState<ClientPropertyId | null>(null);
-	const [selectedContactId, setSelectedContactId] =
-		useState<ClientContactId | null>(null);
-
-	const selectedProjectType: ProjectType = useMemo(
-		() => (projectTypeKeys.has(RECURRING_KEY) ? "recurring" : "one-off"),
-		[projectTypeKeys]
-	);
-	const showTimeInputs = selectedProjectType === "recurring";
 
 	const clientsResult = useQuery(api.clients.list, {});
 	const clients = useMemo(() => clientsResult ?? [], [clientsResult]);
@@ -175,11 +294,73 @@ export function ProjectOnboardingForm() {
 		selectedClientId ? { clientId: selectedClientId } : "skip"
 	);
 
+	const createProject = useMutation(api.projects.create);
+
+	// Set up form with preselected client
+	const form = useForm({
+		defaultValues: {
+			...initialFormData,
+			clientId: preselectedClientId || "",
+		},
+		onSubmit: async ({ value }) => {
+			// Validate with Zod
+			const result = formSchema.safeParse(value);
+			if (!result.success) {
+				const errors = result.error.flatten();
+				console.error("Validation errors:", errors);
+				toast.error(
+					"Validation Error",
+					"Please fix the errors in the form before submitting."
+				);
+				return;
+			}
+
+			try {
+				const payload = {
+					clientId: value.clientId as ClientId,
+					title: value.title.trim(),
+					description: value.instructions || undefined,
+					instructions: value.instructions || undefined,
+					status: "planned" as const,
+					projectType: value.projectType,
+					startDate: value.startDate ? value.startDate.getTime() : undefined,
+					endDate: value.endDate ? value.endDate.getTime() : undefined,
+					invoiceReminderEnabled: value.invoiceReminderEnabled,
+					scheduleForLater: value.scheduleForLater,
+				};
+
+				if (onSubmit) {
+					onSubmit(value);
+				} else {
+					const projectId = await createProject(payload);
+					toast.success(
+						"Project Created",
+						"Project has been successfully created!"
+					);
+					router.push(`/projects/${projectId}`);
+				}
+			} catch (error) {
+				console.error("Failed to submit form:", error);
+				toast.error("Error", "Failed to create project. Please try again.");
+			}
+		},
+	});
+
+	// Update form when preselected client changes
+	useEffect(() => {
+		if (preselectedClientId) {
+			setSelectedClientId(preselectedClientId);
+			form.setFieldValue("clientId", preselectedClientId);
+		}
+	}, [preselectedClientId, form]);
+
+	// Reset property and contact when client changes
 	useEffect(() => {
 		setSelectedPropertyId(null);
 		setSelectedContactId(null);
 	}, [selectedClientId]);
 
+	// Auto-select primary property
 	useEffect(() => {
 		if (!clientProperties) return;
 		setSelectedPropertyId((current) => {
@@ -197,6 +378,7 @@ export function ProjectOnboardingForm() {
 		});
 	}, [clientProperties]);
 
+	// Auto-select primary contact
 	useEffect(() => {
 		if (!clientContacts) return;
 		setSelectedContactId((current) => {
@@ -254,23 +436,16 @@ export function ProjectOnboardingForm() {
 		[clients]
 	);
 
-	const handleProjectTypeChange = (keys: Set<Key>) => {
-		if (keys.size === 0) {
-			setProjectTypeKeys(new Set([ONE_OFF_KEY]));
-			return;
-		}
-		const nextKey = keys.has(RECURRING_KEY) ? RECURRING_KEY : ONE_OFF_KEY;
-		setProjectTypeKeys(new Set([nextKey]));
-	};
-
 	const handleClientSelect = (selection: string | null) => {
 		if (!selection) {
 			setSelectedClientId(null);
+			form.setFieldValue("clientId", "");
 			return;
 		}
 		const client = clients.find((item) => item.companyName === selection);
 		if (client) {
 			setSelectedClientId(client._id);
+			form.setFieldValue("clientId", client._id);
 		}
 	};
 
@@ -302,7 +477,19 @@ export function ProjectOnboardingForm() {
 		}
 	};
 
-	const createProject = useMutation(api.projects.create);
+	const handleProjectTypeChange = (keys: Set<Key>) => {
+		if (keys.size === 0) {
+			setProjectTypeKeys(new Set([ONE_OFF_KEY]));
+			form.setFieldValue("projectType", "one-off");
+			return;
+		}
+		const nextKey = keys.has(RECURRING_KEY) ? RECURRING_KEY : ONE_OFF_KEY;
+		setProjectTypeKeys(new Set([nextKey]));
+		form.setFieldValue(
+			"projectType",
+			nextKey === RECURRING_KEY ? "recurring" : "one-off"
+		);
+	};
 
 	const handleCalendarNavigation = (direction: "prev" | "next") => {
 		setCalendarDate((previous) => {
@@ -316,96 +503,77 @@ export function ProjectOnboardingForm() {
 
 	const handleDateClick = (day: number | null) => {
 		if (!day) return;
-		const timestamp = new Date(
+		const clickedDate = new Date(
 			calendarDate.getFullYear(),
 			calendarDate.getMonth(),
 			day
-		).getTime();
+		);
+		clickedDate.setHours(0, 0, 0, 0);
 
-		if (!startDate) {
-			setStartDate(timestamp);
-			return;
-		}
-		if (!endDate) {
-			setEndDate(timestamp);
-			return;
-		}
-		if (!dueDate) {
-			setDueDate(timestamp);
+		const currentStartDate = form.getFieldValue("startDate");
+		const currentEndDate = form.getFieldValue("endDate");
+
+		if (!currentStartDate) {
+			// Set start date
+			form.setFieldValue("startDate", clickedDate);
 			return;
 		}
 
-		setStartDate(timestamp);
-		setEndDate(undefined);
-		setDueDate(undefined);
-	};
-
-	const validateBeforeSubmit = () => {
-		if (!selectedClientId) {
-			toast.error(
-				"Missing Client",
-				"Please select a client before continuing."
+		if (!currentEndDate) {
+			// Validate that end date is not before start date
+			const startNormalized = new Date(
+				typeof currentStartDate === "number"
+					? currentStartDate
+					: currentStartDate.getTime()
 			);
-			return false;
-		}
-		if (!projectTitle.trim()) {
-			toast.error("Missing Title", "Please enter a project title.");
-			return false;
-		}
-		return true;
-	};
+			startNormalized.setHours(0, 0, 0, 0);
 
-	const buildProjectPayload = () => ({
-		clientId: selectedClientId as ClientId,
-		title: projectTitle.trim(),
-		description: projectInstructions || undefined,
-		instructions: projectInstructions || undefined,
-		status: "planned" as const,
-		projectType: selectedProjectType,
-		startDate: startDate ?? undefined,
-		endDate: endDate ?? undefined,
-		dueDate: dueDate ?? undefined,
-		invoiceReminderEnabled: reminderEnabled,
-		scheduleForLater,
-	});
+			if (clickedDate < startNormalized) {
+				// If clicked date is before start, reset start date to clicked date
+				form.setFieldValue("startDate", clickedDate);
+				form.setFieldValue("endDate", undefined);
+				toast.error(
+					"Invalid Date Selection",
+					"End date cannot be before start date. Resetting to new start date."
+				);
+				return;
+			}
 
-	const handleFinalSave = async (mode: "draft" | "create") => {
-		if (!validateBeforeSubmit()) return;
-
-		setIsLoading(true);
-		try {
-			const payload = buildProjectPayload();
-			const projectId = await createProject(payload);
-			toast.success(
-				mode === "draft" ? "Draft Saved" : "Project Created",
-				mode === "draft"
-					? "Project has been saved as a draft."
-					: "Project has been successfully created!"
-			);
-			router.push(`/projects/${projectId}`);
-		} catch (error) {
-			console.error(`Failed to ${mode} project`, error);
-			toast.error("Error", `Failed to ${mode} project. Please try again.`);
-		} finally {
-			setIsLoading(false);
+			// Set end date
+			form.setFieldValue("endDate", clickedDate);
+			return;
 		}
+
+		// Reset and start over
+		form.setFieldValue("startDate", clickedDate);
+		form.setFieldValue("endDate", undefined);
 	};
 
 	return (
 		<>
 			<div className="w-full px-6">
 				<div className="w-full pt-8 pb-24">
+					{/* Header */}
 					<div className="mb-8">
 						<h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
-							{PAGE_TITLE}
+							Create New Project
 						</h1>
 						<p className="mt-3 text-base text-gray-600 dark:text-gray-400 max-w-2xl">
-							{PAGE_SUBTITLE}
+							Set up your project with all the essential details for successful
+							execution.
 						</p>
 					</div>
 
-					<form className="space-y-8">
-						<div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+					<form
+						id="project-onboarding-form"
+						onSubmit={(e) => {
+							e.preventDefault();
+							form.handleSubmit();
+						}}
+					>
+						{/* Client, Property, Contact Cards */}
+						<div className="grid grid-cols-1 gap-6 lg:grid-cols-3 mb-8">
+							{/* Client Information Card */}
 							<Card className="shadow-sm border-gray-200/60 dark:border-white/10">
 								<CardHeader className="pb-4">
 									<CardTitle className="flex items-center gap-2 text-xl font-semibold text-gray-900 dark:text-white">
@@ -416,14 +584,28 @@ export function ProjectOnboardingForm() {
 								<CardContent className="space-y-4">
 									<div className="grid gap-2">
 										<label className="text-sm text-gray-600 dark:text-gray-400 text-left">
-											Selected Client
+											Selected Client *
 										</label>
-										<ComboBox
-											options={clientOptions}
-											placeholder={
-												selectedClient?.companyName ?? "Select a client..."
-											}
-											onSelect={handleClientSelect}
+										<form.Field
+											name="clientId"
+											children={(field) => (
+												<ComboBox
+													options={clientOptions}
+													placeholder={
+														selectedClient?.companyName ?? "Select a client..."
+													}
+													onSelect={(value) => {
+														handleClientSelect(value);
+														field.handleChange(
+															value
+																? clients.find((c) => c.companyName === value)
+																		?._id || ""
+																: ""
+														);
+													}}
+													disabled={isLoading}
+												/>
+											)}
 										/>
 									</div>
 
@@ -483,6 +665,7 @@ export function ProjectOnboardingForm() {
 								</CardContent>
 							</Card>
 
+							{/* Property Address Card */}
 							<Card className="shadow-sm border-gray-200/60 dark:border-white/10">
 								<CardHeader className="pb-4">
 									<CardTitle className="flex items-center gap-2 text-xl font-semibold text-gray-900 dark:text-white">
@@ -586,6 +769,7 @@ export function ProjectOnboardingForm() {
 								</CardContent>
 							</Card>
 
+							{/* Contact Details Card */}
 							<Card className="shadow-sm border-gray-200/60 dark:border-white/10">
 								<CardHeader className="pb-4">
 									<CardTitle className="flex items-center gap-2 text-xl font-semibold text-gray-900 dark:text-white">
@@ -702,333 +886,239 @@ export function ProjectOnboardingForm() {
 							</Card>
 						</div>
 
-						<Card className="shadow-sm border-gray-200/60 dark:border-white/10">
-							<CardHeader className="pb-4">
-								<CardTitle className="text-xl font-semibold text-gray-900 dark:text-white">
-									Project Information
-								</CardTitle>
-							</CardHeader>
-							<CardContent className="space-y-6">
-								<div className="space-y-6">
-									<div>
-										<label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
-											Project Title
-										</label>
-										<Input
-											value={projectTitle}
-											onChange={(event) => setProjectTitle(event.target.value)}
-											placeholder="e.g., Workshop & Festival"
-										/>
-									</div>
-
-									<div>
-										<label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
-											Instructions
-										</label>
-										<textarea
-											rows={4}
-											value={projectInstructions}
-											onChange={(event) =>
-												setProjectInstructions(event.target.value)
-											}
-											className="block w-full rounded-md bg-white dark:bg-white/5 px-3 py-2.5 text-base text-gray-900 dark:text-white border border-gray-300 dark:border-white/10 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors"
-											placeholder="Describe any special instructions or context for this project"
-										/>
-									</div>
-								</div>
-
-								<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-									<div>
-										<span className="block text-sm font-medium text-gray-900 dark:text-white">
-											Project Number
-										</span>
-										<p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-											Automatically assigned after creation
-										</p>
-									</div>
-								</div>
-
-								<div className="flex items-center gap-3 pt-4 border-t border-gray-200 dark:border-white/10">
-									<input
-										type="checkbox"
-										checked={reminderEnabled}
-										onChange={(event) =>
-											setReminderEnabled(event.target.checked)
-										}
-										className="h-4 w-4 rounded border-gray-300 dark:border-white/10 text-blue-600 dark:text-indigo-500"
-									/>
-									<label className="text-sm text-gray-900 dark:text-white">
-										Remind me to invoice when I close the project
-									</label>
-								</div>
-							</CardContent>
-						</Card>
-
-						<Card className="shadow-sm border-gray-200/60 dark:border-white/10">
-							<CardHeader className="pb-4">
-								<CardTitle className="flex items-center gap-2 text-xl font-semibold text-gray-900 dark:text-white">
-									<CalendarIcon className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-									Schedule & Project Details
-								</CardTitle>
-							</CardHeader>
-							<CardContent className="space-y-6">
-								<div>
-									<label className="block text-sm font-medium text-gray-900 dark:text-white mb-3">
-										Project Type
-									</label>
-									<ToggleGroup
-										selectedKeys={projectTypeKeys}
-										onSelectionChange={handleProjectTypeChange}
-										selectionMode="single"
-										size="md"
-										className="w-fit"
-									>
-										<ToggleGroupItem id="one-off">
-											One-off Project
-										</ToggleGroupItem>
-										<ToggleGroupItem id="recurring">
-											Recurring Project
-										</ToggleGroupItem>
-									</ToggleGroup>
-								</div>
-
-								<div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-									<div className="space-y-6">
-										<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-											<div>
-												<label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
-													Start Date
-												</label>
-												<Input
-													type="date"
-													value={formatInputDate(startDate)}
-													onChange={(event) =>
-														setStartDate(parseDateInput(event.target.value))
-													}
-												/>
-											</div>
-											<div>
-												<label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
-													End Date
-												</label>
-												<Input
-													type="date"
-													value={formatInputDate(endDate)}
-													onChange={(event) =>
-														setEndDate(parseDateInput(event.target.value))
-													}
-												/>
-											</div>
-										</div>
-
-										<div>
-											<label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
-												Due Date
-											</label>
-											<Input
-												type="date"
-												value={formatInputDate(dueDate)}
-												onChange={(event) =>
-													setDueDate(parseDateInput(event.target.value))
-												}
-											/>
-										</div>
-
-										{showTimeInputs && (
-											<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-												<div>
-													<label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
-														Start Time
-													</label>
-													<Input
-														type="time"
-														value={startTime}
-														onChange={(event) =>
-															setStartTime(event.target.value)
-														}
-													/>
-												</div>
-												<div>
-													<label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
-														End Time
-													</label>
-													<Input
-														type="time"
-														value={endTime}
-														onChange={(event) => setEndTime(event.target.value)}
-													/>
-												</div>
-											</div>
-										)}
-
-										<div className="flex items-center gap-3">
-											<input
-												type="checkbox"
-												checked={scheduleForLater}
-												onChange={(event) =>
-													setScheduleForLater(event.target.checked)
-												}
-												className="h-4 w-4 rounded border-gray-300 dark:border-white/10 text-blue-600 dark:text-indigo-500"
-											/>
-											<label className="text-sm text-gray-900 dark:text-white">
-												Scheduled for later
-											</label>
-										</div>
-									</div>
-
-									<div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/10 rounded-xl p-6 shadow-sm">
-										<div className="flex items-center justify-between mb-6">
-											<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-												{calendarDate.toLocaleDateString("en-US", {
-													month: "long",
-													year: "numeric",
-												})}
-											</h3>
-											<div className="flex gap-2">
-												<Button
-													intent="outline"
-													size="sm"
-													onClick={() => handleCalendarNavigation("prev")}
-												>
-													<svg
-														className="w-4 h-4 mr-1"
-														fill="none"
-														stroke="currentColor"
-														viewBox="0 0 24 24"
-													>
-														<path
-															strokeLinecap="round"
-															strokeLinejoin="round"
-															strokeWidth="2"
-															d="M15 19l-7-7 7-7"
-														/>
-													</svg>
-												</Button>
-												<Button
-													intent="outline"
-													size="sm"
-													onClick={() => handleCalendarNavigation("next")}
-												>
-													<svg
-														className="w-4 h-4 ml-1"
-														fill="none"
-														stroke="currentColor"
-														viewBox="0 0 24 24"
-													>
-														<path
-															strokeLinecap="round"
-															strokeLinejoin="round"
-															strokeWidth="2"
-															d="M9 5l7 7-7 7"
-														/>
-													</svg>
-												</Button>
-											</div>
-										</div>
-
-										<div className="grid grid-cols-7 gap-1">
-											{["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(
-												(day) => (
-													<div
-														key={day}
-														className="text-center text-xs font-medium text-gray-500 dark:text-gray-400 py-3 border-b border-gray-100 dark:border-white/5"
-													>
-														{day}
-													</div>
-												)
-											)}
-
-											{getCalendarDays(calendarDate).map((day, index) => {
-												const isCurrentMonth = day !== null;
-												const today = new Date();
-												const isToday =
-													isCurrentMonth &&
-													day === today.getDate() &&
-													calendarDate.getMonth() === today.getMonth() &&
-													calendarDate.getFullYear() === today.getFullYear();
-
-												let isStart = false;
-												let isEnd = false;
-												let isDue = false;
-
-												if (day && startDate) {
-													const start = new Date(startDate);
-													isStart =
-														day === start.getDate() &&
-														calendarDate.getMonth() === start.getMonth() &&
-														calendarDate.getFullYear() === start.getFullYear();
-												}
-
-												if (day && endDate) {
-													const end = new Date(endDate);
-													isEnd =
-														day === end.getDate() &&
-														calendarDate.getMonth() === end.getMonth() &&
-														calendarDate.getFullYear() === end.getFullYear();
-												}
-
-												if (day && dueDate) {
-													const due = new Date(dueDate);
-													isDue =
-														day === due.getDate() &&
-														calendarDate.getMonth() === due.getMonth() &&
-														calendarDate.getFullYear() === due.getFullYear();
-												}
-
-												const hasEvent = isStart || isEnd || isDue;
-
+						{/* Project Information Section */}
+						<div className="space-y-8">
+							<Card className="shadow-sm border-gray-200/60 dark:border-white/10">
+								<CardHeader className="pb-4">
+									<CardTitle className="text-xl font-semibold text-gray-900 dark:text-white">
+										Project Information
+									</CardTitle>
+								</CardHeader>
+								<CardContent className="space-y-6">
+									<FieldGroup className="sm:col-span-4">
+										<form.Field
+											name="title"
+											children={(field) => {
+												const isInvalid =
+													field.state.meta.isTouched &&
+													field.state.meta.errors.length > 0;
 												return (
-													<div
-														key={index}
-														onClick={() => handleDateClick(day)}
-														className={`relative h-10 flex items-center justify-center text-sm transition-all duration-200 ${
-															isCurrentMonth
-																? "text-gray-900 dark:text-white " +
-																	(hasEvent
-																		? "bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 font-medium"
-																		: "hover:bg-blue-50 dark:hover:bg-blue-900/30 cursor-pointer")
-																: "text-gray-300 dark:text-gray-600"
-														}${
-															isToday && !hasEvent
-																? " bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-lg font-medium"
-																: ""
-														}`}
-														title={
-															isStart
-																? "Project Start"
-																: isEnd
-																	? "Project End"
-																	: isDue
-																		? "Due Date"
-																		: isCurrentMonth
-																			? "Click to set date"
-																			: ""
-														}
-													>
-														{day ?? ""}
-														{hasEvent && (
-															<div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-white rounded-full" />
+													<Field data-invalid={isInvalid}>
+														<FieldLabel htmlFor={field.name}>
+															Project Title *
+														</FieldLabel>
+														<Input
+															id={field.name}
+															name={field.name}
+															value={field.state.value}
+															onBlur={field.handleBlur}
+															onChange={(e) =>
+																field.handleChange(e.target.value)
+															}
+															aria-invalid={isInvalid}
+															placeholder="e.g., Workshop & Festival"
+															disabled={isLoading}
+														/>
+														{isInvalid && (
+															<FieldError errors={field.state.meta.errors} />
 														)}
-													</div>
+													</Field>
 												);
-											})}
-										</div>
+											}}
+										/>
+									</FieldGroup>
 
-										<div className="flex items-center justify-center gap-6 mt-4 pt-4 border-t border-gray-200 dark:border-white/10 text-xs text-gray-500 dark:text-gray-400">
-											{startDate && (
-												<span>Start: {formatDisplayDate(startDate)}</span>
-											)}
-											{endDate && (
-												<span>End: {formatDisplayDate(endDate)}</span>
-											)}
-											{dueDate && (
-												<span>Due: {formatDisplayDate(dueDate)}</span>
-											)}
+									<FieldGroup className="col-span-full">
+										<form.Field
+											name="instructions"
+											children={(field) => {
+												const isInvalid =
+													field.state.meta.isTouched &&
+													field.state.meta.errors.length > 0;
+												return (
+													<Field data-invalid={isInvalid}>
+														<FieldLabel htmlFor={field.name}>
+															Instructions
+														</FieldLabel>
+														<Textarea
+															id={field.name}
+															name={field.name}
+															value={field.state.value}
+															onBlur={field.handleBlur}
+															onChange={(e) =>
+																field.handleChange(e.target.value)
+															}
+															aria-invalid={isInvalid}
+															rows={4}
+															placeholder="Describe any special instructions or context for this project"
+															disabled={isLoading}
+														/>
+														{isInvalid && (
+															<FieldError errors={field.state.meta.errors} />
+														)}
+													</Field>
+												);
+											}}
+										/>
+									</FieldGroup>
+
+									<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+										<div>
+											<span className="block text-sm font-medium text-gray-900 dark:text-white">
+												Project Number
+											</span>
+											<p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+												Automatically assigned after creation
+											</p>
 										</div>
 									</div>
-								</div>
-							</CardContent>
-						</Card>
+
+									<div className="flex items-center gap-3 pt-4 border-t border-gray-200 dark:border-white/10">
+										<form.Field
+											name="invoiceReminderEnabled"
+											children={(field) => (
+												<>
+													<Checkbox
+														id="invoiceReminder"
+														checked={field.state.value}
+														onCheckedChange={(checked) =>
+															field.handleChange(!!checked)
+														}
+														disabled={isLoading}
+													/>
+													<Label
+														htmlFor="invoiceReminder"
+														className="text-sm text-gray-900 dark:text-white"
+													>
+														Remind me to invoice when I close the project
+													</Label>
+												</>
+											)}
+										/>
+									</div>
+								</CardContent>
+							</Card>
+
+							{/* Schedule & Project Details */}
+							<Card className="shadow-sm border-gray-200/60 dark:border-white/10">
+								<CardHeader className="pb-4">
+									<CardTitle className="flex items-center gap-2 text-xl font-semibold text-gray-900 dark:text-white">
+										<CalendarIcon className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+										Schedule & Project Details
+									</CardTitle>
+								</CardHeader>
+								<CardContent className="space-y-6">
+									<div>
+										<label className="block text-sm font-medium text-gray-900 dark:text-white mb-3">
+											Project Type
+										</label>
+										<ToggleGroup
+											selectedKeys={projectTypeKeys}
+											onSelectionChange={handleProjectTypeChange}
+											selectionMode="single"
+											size="md"
+											className="w-fit"
+										>
+											<ToggleGroupItem id="one-off">
+												One-off Project
+											</ToggleGroupItem>
+											<ToggleGroupItem id="recurring">
+												Recurring Project
+											</ToggleGroupItem>
+										</ToggleGroup>
+									</div>
+
+									<div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+										<div className="space-y-6">
+											<DateFieldsSection form={form} isLoading={isLoading} />
+
+											{/* Time inputs for recurring projects */}
+											<form.Field
+												name="projectType"
+												children={(typeField) =>
+													typeField.state.value === "recurring" && (
+														<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+															<form.Field
+																name="startTime"
+																children={(field) => (
+																	<Field>
+																		<FieldLabel htmlFor={field.name}>
+																			Start Time
+																		</FieldLabel>
+																		<Input
+																			id={field.name}
+																			type="time"
+																			value={field.state.value}
+																			onChange={(e) =>
+																				field.handleChange(e.target.value)
+																			}
+																			disabled={isLoading}
+																		/>
+																	</Field>
+																)}
+															/>
+															<form.Field
+																name="endTime"
+																children={(field) => (
+																	<Field>
+																		<FieldLabel htmlFor={field.name}>
+																			End Time
+																		</FieldLabel>
+																		<Input
+																			id={field.name}
+																			type="time"
+																			value={field.state.value}
+																			onChange={(e) =>
+																				field.handleChange(e.target.value)
+																			}
+																			disabled={isLoading}
+																		/>
+																	</Field>
+																)}
+															/>
+														</div>
+													)
+												}
+											/>
+
+											<div className="flex items-center gap-3">
+												<form.Field
+													name="scheduleForLater"
+													children={(field) => (
+														<>
+															<Checkbox
+																id="scheduleForLater"
+																checked={field.state.value}
+																onCheckedChange={(checked) =>
+																	field.handleChange(!!checked)
+																}
+																disabled={isLoading}
+															/>
+															<Label
+																htmlFor="scheduleForLater"
+																className="text-sm text-gray-900 dark:text-white"
+															>
+																Scheduled for later
+															</Label>
+														</>
+													)}
+												/>
+											</div>
+										</div>
+
+										{/* Large Calendar Component */}
+										<CalendarWidget
+											form={form}
+											calendarDate={calendarDate}
+											handleCalendarNavigation={handleCalendarNavigation}
+											handleDateClick={handleDateClick}
+											formatDisplayDate={formatDisplayDate}
+											variant="default"
+										/>
+									</div>
+								</CardContent>
+							</Card>
+						</div>
 					</form>
 				</div>
 			</div>
@@ -1036,14 +1126,14 @@ export function ProjectOnboardingForm() {
 				buttons={[
 					{
 						label: isLoading ? "Saving..." : "Save as Draft",
-						onClick: () => handleFinalSave("draft"),
+						onClick: () => form.handleSubmit(),
 						intent: "outline",
 						disabled: isLoading,
 						position: "left",
 					},
 					{
 						label: isLoading ? "Creating..." : "Create Project",
-						onClick: () => handleFinalSave("create"),
+						onClick: () => form.handleSubmit(),
 						intent: "primary",
 						isLoading,
 						position: "right",
@@ -1053,3 +1143,5 @@ export function ProjectOnboardingForm() {
 		</>
 	);
 }
+
+ProjectOnboardingForm.displayName = "ProjectOnboardingForm";

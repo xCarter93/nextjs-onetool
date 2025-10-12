@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import {
 	ClientOnboardingForm,
-	ClientOnboardingFormRef,
 	ClientFormData,
 } from "@/components/client-onboarding-form";
 import { StickyFormFooter } from "@/components/sticky-form-footer";
@@ -14,7 +13,6 @@ import { StickyFormFooter } from "@/components/sticky-form-footer";
 export default function NewClientPage() {
 	const [isLoading, setIsLoading] = useState(false);
 	const [formErrors, setFormErrors] = useState<string[]>([]);
-	const formRef = useRef<ClientOnboardingFormRef>(null);
 	const router = useRouter();
 	const createClient = useMutation(api.clients.create);
 	const createContact = useMutation(api.clientContacts.create);
@@ -24,11 +22,14 @@ export default function NewClientPage() {
 		router.push("/clients");
 	};
 
-	const handleSave = async () => {
-		if (!formRef.current) return;
-
-		// Use the form's submit method directly
-		formRef.current.submit();
+	const handleSave = () => {
+		// Trigger form submission via the form element
+		const form = document.getElementById(
+			"client-onboarding-form"
+		) as HTMLFormElement;
+		if (form) {
+			form.requestSubmit();
+		}
 	};
 
 	const handleFormSubmit = async (formData: ClientFormData) => {
@@ -155,7 +156,6 @@ export default function NewClientPage() {
 				onSubmit={handleFormSubmit}
 				onCancel={handleCancel}
 				isLoading={isLoading}
-				ref={formRef}
 			/>
 
 			{/* Sticky Form Footer */}

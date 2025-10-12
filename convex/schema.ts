@@ -228,7 +228,6 @@ export default defineSchema({
 		// Dates
 		startDate: v.optional(v.number()),
 		endDate: v.optional(v.number()),
-		dueDate: v.optional(v.number()),
 
 		// Team
 		salespersonId: v.optional(v.id("users")),
@@ -354,6 +353,9 @@ export default defineSchema({
 			})
 		),
 
+		// Reference to the latest document version
+		latestDocumentId: v.optional(v.id("documents")),
+
 		publicToken: v.string(), // For client access
 	})
 		.index("by_org", ["orgId"])
@@ -449,10 +451,45 @@ export default defineSchema({
 		storageId: v.id("_storage"), // Reference to stored PDF
 		generatedAt: v.number(),
 		version: v.number(), // Version number for tracking PDF versions (starts at 1)
+
+		// Top-level BoldSign document ID for efficient querying
+		boldsignDocumentId: v.optional(v.string()),
+
+		// BoldSign integration fields
+		boldsign: v.optional(
+			v.object({
+				documentId: v.string(), // BoldSign document ID
+				status: v.union(
+					v.literal("Sent"),
+					v.literal("Viewed"),
+					v.literal("Signed"),
+					v.literal("Completed"),
+					v.literal("Declined"),
+					v.literal("Revoked"),
+					v.literal("Expired")
+				),
+				sentTo: v.array(
+					v.object({
+						name: v.string(),
+						email: v.string(),
+						signerType: v.string(), // "Signer" or "CC"
+					})
+				),
+				sentAt: v.optional(v.number()),
+				viewedAt: v.optional(v.number()),
+				signedAt: v.optional(v.number()),
+				completedAt: v.optional(v.number()),
+				declinedAt: v.optional(v.number()),
+				revokedAt: v.optional(v.number()),
+				expiredAt: v.optional(v.number()),
+				viewUrl: v.optional(v.string()), // Link to view document in BoldSign
+			})
+		),
 	})
 		.index("by_org", ["orgId"])
 		.index("by_document", ["documentType", "documentId"])
-		.index("by_document_version", ["documentType", "documentId", "version"]),
+		.index("by_document_version", ["documentType", "documentId", "version"])
+		.index("by_boldsign_documentId", ["boldsignDocumentId"]),
 
 	// Activities - for home route activity feed
 	activities: defineTable({
