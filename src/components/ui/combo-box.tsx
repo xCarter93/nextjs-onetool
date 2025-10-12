@@ -5,6 +5,7 @@ import { useState, useRef, useEffect } from "react";
 interface ComboBoxProps {
 	options: string[];
 	placeholder?: string;
+	value?: string;
 	onSelect?: (option: string | null) => void;
 	disabled?: boolean;
 }
@@ -12,12 +13,15 @@ interface ComboBoxProps {
 const ComboBox = ({
 	options = [],
 	placeholder = "Select an option...",
+	value,
 	onSelect,
 	disabled = false,
 }: ComboBoxProps) => {
-	const [inputValue, setInputValue] = useState<string>("");
+	const [inputValue, setInputValue] = useState<string>(value || "");
 	const [isOpen, setIsOpen] = useState<boolean>(false);
-	const [selectedOption, setSelectedOption] = useState<string | null>(null);
+	const [selectedOption, setSelectedOption] = useState<string | null>(
+		value || null
+	);
 	const [filteredOptions, setFilteredOptions] = useState<string[]>(options);
 	const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
 
@@ -38,6 +42,14 @@ const ComboBox = ({
 		// Reset option refs array
 		optionRefs.current = [];
 	}, [inputValue, options]);
+
+	// Update internal state when value prop changes
+	useEffect(() => {
+		if (value !== undefined) {
+			setInputValue(value);
+			setSelectedOption(value);
+		}
+	}, [value]);
 
 	// Scroll to highlighted option
 	useEffect(() => {

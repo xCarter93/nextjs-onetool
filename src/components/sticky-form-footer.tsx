@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { Button } from "@/components/ui/button";
+import { useSidebar } from "@/components/ui/sidebar";
 
 interface ButtonConfig {
 	label: string;
@@ -30,6 +30,7 @@ interface StickyFormFooterProps {
 	saveText?: string;
 	isLoading?: boolean;
 	className?: string;
+	fullWidth?: boolean;
 }
 
 export function StickyFormFooter({
@@ -40,7 +41,10 @@ export function StickyFormFooter({
 	saveText = "Save",
 	isLoading = false,
 	className = "",
+	fullWidth = false,
 }: StickyFormFooterProps) {
+	const sidebar = useSidebar();
+
 	// Use new button config if provided, otherwise fall back to legacy props
 	const buttonConfigs: ButtonConfig[] = buttons || [
 		...(onCancel
@@ -68,11 +72,20 @@ export function StickyFormFooter({
 
 	if (buttonConfigs.length === 0) return null;
 
+	// Calculate sidebar width based on state
+	const getSidebarWidth = () => {
+		if (!fullWidth || !sidebar || sidebar.isMobile) return "0px";
+		return sidebar.state === "expanded"
+			? "var(--sidebar-width, 18rem)"
+			: "var(--sidebar-width-icon, 3rem)";
+	};
+
 	return (
 		<div
-			className={`sticky bottom-0 z-40 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-lg ${className}`}
+			className={`${fullWidth ? "fixed right-0" : "sticky"} bottom-0 z-40 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-lg ${className} transition-[left] duration-200 ease-linear`}
+			style={fullWidth ? { left: getSidebarWidth() } : undefined}
 		>
-			<div className="w-full px-6">
+			<div className={fullWidth ? "w-full px-6" : "w-full px-6"}>
 				<div className="w-full">
 					<div className="flex items-center justify-between gap-x-3 py-4 flex-wrap">
 						{/* Left side buttons */}

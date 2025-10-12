@@ -1,14 +1,32 @@
+/* eslint-disable react/no-children-prop */
 "use client";
 
-import React, {
-	useState,
-	useCallback,
-	forwardRef,
-	useImperativeHandle,
-} from "react";
-import { ChevronDownIcon } from "@heroicons/react/16/solid";
+import React from "react";
+import { useForm } from "@tanstack/react-form";
+import * as z from "zod";
 import Accordion from "./ui/accordion";
 import { useToastOperations } from "@/hooks/use-toast";
+import {
+	Field,
+	FieldDescription,
+	FieldError,
+	FieldGroup,
+	FieldLabel,
+	FieldSet,
+	FieldLegend,
+} from "./ui/field";
+import { Input } from "./ui/input";
+import { Textarea } from "./ui/textarea";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "./ui/select";
+import { Checkbox } from "./ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
+import { Label } from "./ui/label";
 
 export interface ClientFormData {
 	// Company Information
@@ -101,12 +119,6 @@ interface ClientOnboardingFormProps {
 	isLoading?: boolean;
 }
 
-export interface ClientOnboardingFormRef {
-	submit: () => void;
-	validate: () => boolean;
-	getFormData: () => ClientFormData;
-}
-
 const initialFormData: ClientFormData = {
 	// Company Information
 	companyName: "",
@@ -161,7 +173,7 @@ const initialFormData: ClientFormData = {
 	communicationPreference: "",
 
 	// Opt-in preferences
-	emailOptIn: true, // Default to true for email
+	emailOptIn: true,
 	smsOptIn: false,
 };
 
@@ -193,162 +205,104 @@ const createEmptyProperty = (isPrimary = false) => ({
 	isPrimary,
 });
 
-export const ClientOnboardingForm = forwardRef<
-	ClientOnboardingFormRef,
-	ClientOnboardingFormProps
->(
-	(
-		{
-			title = "New Client Onboarding",
-			subtitle = "Let's gather comprehensive information to establish a complete client profile with all necessary details for effective relationship management.",
-			onSubmit,
-		},
-		ref
-	) => {
-		const [formData, setFormData] = useState<ClientFormData>(initialFormData);
-		const [errors, setErrors] = useState<Record<string, string>>({});
-		const toast = useToastOperations();
-
-		// Expose form methods via ref
-		useImperativeHandle(ref, () => ({
-			submit: handleSubmit,
-			validate: validateForm,
-			getFormData: () => formData,
-		}));
-
-		const updateField = useCallback(
-			(field: keyof ClientFormData, value: string | boolean | string[]) => {
-				setFormData((prev) => ({ ...prev, [field]: value }));
-				// Clear error when user starts typing
-				if (errors[field]) {
-					const newErrors = { ...errors };
-					delete newErrors[field];
-					setErrors(newErrors);
-				}
+// Zod validation schema
+const formSchema = z.object({
+	companyName: z.string().min(1, "Company name is required"),
+	status: z.string().refine((val) => val !== "", {
+		message: "Client status is required",
+	}),
+	industry: z.string(),
+	companyDescription: z.string(),
+	leadSource: z.string(),
+	contacts: z
+		.array(
+			z.object({
+				id: z.string(),
+				firstName: z.string(),
+				lastName: z.string(),
+				email: z.string(),
+				phone: z.string(),
+				jobTitle: z.string(),
+				role: z.string(),
+				department: z.string(),
+				isPrimary: z.boolean(),
+			})
+		)
+		.refine(
+			(contacts) => {
+				const primary = contacts.find((c) => c.isPrimary);
+				if (!primary) return false;
+				if (!primary.firstName.trim()) return false;
+				if (!primary.lastName.trim()) return false;
+				if (!primary.email.trim()) return false;
+				if (!/\S+@\S+\.\S+/.test(primary.email)) return false;
+				return true;
 			},
-			[errors]
-		);
-
-		const handleCheckboxChange = useCallback(
-			(service: string, checked: boolean) => {
-				setFormData((prev) => ({
-					...prev,
-					servicesNeeded: checked
-						? [...prev.servicesNeeded, service]
-						: prev.servicesNeeded.filter((s) => s !== service),
-				}));
+			{
+				message:
+					"Primary contact requires first name, last name, and a valid email",
+			}
+		),
+	properties: z
+		.array(
+			z.object({
+				id: z.string(),
+				propertyName: z.string(),
+				propertyType: z.string(),
+				squareFootage: z.string(),
+				streetAddress: z.string(),
+				city: z.string(),
+				region: z.string(),
+				postalCode: z.string(),
+				propertyDescription: z.string(),
+				isPrimary: z.boolean(),
+			})
+		)
+		.refine(
+			(properties) => {
+				const primary = properties.find((p) => p.isPrimary);
+				if (!primary) return false;
+				if (!primary.streetAddress.trim()) return false;
+				if (!primary.city.trim()) return false;
+				if (!primary.region.trim()) return false;
+				if (!primary.postalCode.trim()) return false;
+				return true;
 			},
-			[]
-		);
-
-		// Contact management functions
-		const addContact = useCallback(() => {
-			setFormData((prev) => ({
-				...prev,
-				contacts: [...prev.contacts, createEmptyContact(false)],
-			}));
-		}, []);
-
-		const removeContact = useCallback((contactId: string) => {
-			setFormData((prev) => ({
-				...prev,
-				contacts: prev.contacts.filter((c) => c.id !== contactId),
-			}));
-		}, []);
-
-		const updateContact = useCallback(
-			(contactId: string, field: string, value: string | boolean) => {
-				setFormData((prev) => ({
-					...prev,
-					contacts: prev.contacts.map((contact) =>
-						contact.id === contactId ? { ...contact, [field]: value } : contact
-					),
-				}));
-			},
-			[]
-		);
-
-		// Property management functions
-		const addProperty = useCallback(() => {
-			setFormData((prev) => ({
-				...prev,
-				properties: [...prev.properties, createEmptyProperty(false)],
-			}));
-		}, []);
-
-		const updateProperty = useCallback(
-			(propertyId: string, field: string, value: string | boolean) => {
-				setFormData((prev) => ({
-					...prev,
-					properties: prev.properties.map((property) =>
-						property.id === propertyId
-							? { ...property, [field]: value }
-							: property
-					),
-				}));
-			},
-			[]
-		);
-
-		const validateForm = (): boolean => {
-			const newErrors: Record<string, string> = {};
-
-			// Required fields
-			if (!formData.companyName.trim()) {
-				newErrors.companyName = "Company name is required";
+			{
+				message:
+					"Primary property requires street address, city, state/province, and postal code",
 			}
+		),
+	category: z.string(),
+	clientSize: z.string(),
+	clientType: z.string(),
+	isActive: z.string(),
+	projectDimensions: z.string(),
+	priorityLevel: z.string(),
+	tags: z.string(),
+	notes: z.string(),
+	servicesNeeded: z.array(z.string()),
+	communicationPreference: z.string(),
+	emailOptIn: z.boolean(),
+	smsOptIn: z.boolean(),
+});
 
-			if (!formData.status) {
-				newErrors.status = "Client status is required";
-			}
+export const ClientOnboardingForm: React.FC<ClientOnboardingFormProps> = ({
+	title = "New Client Onboarding",
+	subtitle = "Let's gather comprehensive information to establish a complete client profile with all necessary details for effective relationship management.",
+	onSubmit,
+	isLoading = false,
+}) => {
+	const toast = useToastOperations();
 
-			// Validate primary contact
-			const primaryContact = formData.contacts.find((c) => c.isPrimary);
-			if (!primaryContact) {
-				newErrors.contacts = "At least one primary contact is required";
-			} else {
-				if (!primaryContact.firstName.trim()) {
-					newErrors.contacts = "Primary contact first name is required";
-				}
-				if (!primaryContact.lastName.trim()) {
-					newErrors.contacts = "Primary contact last name is required";
-				}
-				if (!primaryContact.email.trim()) {
-					newErrors.contacts = "Primary contact email is required";
-				} else if (!/\S+@\S+\.\S+/.test(primaryContact.email)) {
-					newErrors.contacts = "Primary contact email must be valid";
-				}
-			}
-
-			// Validate primary property
-			const primaryProperty = formData.properties.find((p) => p.isPrimary);
-			if (!primaryProperty) {
-				newErrors.properties = "At least one primary property is required";
-			} else {
-				if (!primaryProperty.streetAddress.trim()) {
-					newErrors.properties = "Primary property street address is required";
-				}
-				if (!primaryProperty.city.trim()) {
-					newErrors.properties = "Primary property city is required";
-				}
-				if (!primaryProperty.region.trim()) {
-					newErrors.properties = "Primary property state/province is required";
-				}
-				if (!primaryProperty.postalCode.trim()) {
-					newErrors.properties = "Primary property ZIP/postal code is required";
-				}
-			}
-
-			setErrors(newErrors);
-			return Object.keys(newErrors).length === 0;
-		};
-
-		const handleSubmit = async (e?: React.FormEvent) => {
-			if (e) {
-				e.preventDefault();
-			}
-
-			if (!validateForm()) {
+	const form = useForm({
+		defaultValues: initialFormData,
+		onSubmit: async ({ value }) => {
+			// Validate with Zod
+			const result = formSchema.safeParse(value);
+			if (!result.success) {
+				const errors = result.error.flatten();
+				console.error("Validation errors:", errors);
 				toast.error(
 					"Validation Error",
 					"Please fix the errors in the form before submitting."
@@ -358,908 +312,1499 @@ export const ClientOnboardingForm = forwardRef<
 
 			try {
 				if (onSubmit) {
-					onSubmit(formData);
+					onSubmit(value);
 				}
 			} catch (error) {
-				console.error("Failed to create client:", error);
-				toast.error("Error", "Failed to create client. Please try again.");
+				console.error("Failed to submit form:", error);
+				toast.error("Error", "Failed to submit form. Please try again.");
 			}
-		};
+		},
+	});
 
-		// handleCancel function removed - handled by parent component
+	return (
+		<div className="w-full px-6">
+			<div className="w-full pt-8 pb-24">
+				{/* Header */}
+				<div className="mb-8">
+					<h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+						{title}
+					</h1>
+					<p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+						{subtitle}
+					</p>
+				</div>
 
-		return (
-			<div className="w-full px-6">
-				<div className="w-full pt-8 pb-24">
-					{/* Header */}
-					<div className="mb-8">
-						<h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
-							{title}
-						</h1>
-						<p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-							{subtitle}
-						</p>
-					</div>
-
-					<form onSubmit={handleSubmit}>
-						<div className="space-y-12">
-							{/* Company Information Section */}
-							<div className="grid grid-cols-1 gap-x-8 gap-y-10 border-b border-gray-200 dark:border-white/10 pb-12 md:grid-cols-3">
-								<div>
-									<h2 className="text-base/7 font-semibold text-gray-900 dark:text-white">
-										Company Information
-									</h2>
-									<p className="mt-1 text-sm/6 text-gray-600 dark:text-gray-400">
-										Basic information about the client company and how they
-										found us.
-									</p>
-								</div>
-
-								<div className="grid max-w-4xl grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6 md:col-span-2">
-									<div className="sm:col-span-4">
-										<label
-											htmlFor="company-name"
-											className="block text-sm/6 font-medium text-gray-900 dark:text-white"
-										>
-											Company name *
-										</label>
-										<div className="mt-2">
-											<input
-												id="company-name"
-												name="company-name"
-												type="text"
-												value={formData.companyName}
-												onChange={(e) =>
-													updateField("companyName", e.target.value)
-												}
-												autoComplete="organization"
-												className={`block w-full rounded-md bg-white dark:bg-white/5 px-3 py-1.5 text-base text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600 dark:focus:outline-indigo-500 sm:text-sm/6 ${errors.companyName ? "border-red-500 outline-red-500" : ""}`}
-												placeholder="e.g., ASMobbin"
-											/>
-											{errors.companyName && (
-												<p className="mt-1 text-sm text-red-600 dark:text-red-400">
-													{errors.companyName}
-												</p>
-											)}
-										</div>
-									</div>
-
-									<div className="sm:col-span-2">
-										<label
-											htmlFor="client-status"
-											className="block text-sm/6 font-medium text-gray-900 dark:text-white"
-										>
-											Client status *
-										</label>
-										<div className="mt-2 grid grid-cols-1">
-											<select
-												id="client-status"
-												name="client-status"
-												value={formData.status}
-												onChange={(e) => updateField("status", e.target.value)}
-												className={`col-start-1 row-start-1 w-full appearance-none rounded-md bg-white dark:bg-white/5 py-1.5 pr-8 pl-3 text-base text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600 dark:focus:outline-indigo-500 sm:text-sm/6 [&_option]:bg-white [&_option]:dark:bg-gray-800 ${errors.status ? "border-red-500 outline-red-500" : ""}`}
-											>
-												<option value="">Select status</option>
-												<option value="lead">Lead</option>
-												<option value="prospect">Prospect</option>
-												<option value="active">Active</option>
-												<option value="inactive">Inactive</option>
-												<option value="archived">Archived</option>
-											</select>
-											<ChevronDownIcon
-												aria-hidden="true"
-												className="pointer-events-none col-start-1 row-start-1 mr-2 size-5 self-center justify-self-end text-gray-400 sm:size-4"
-											/>
-											{errors.status && (
-												<p className="mt-1 text-sm text-red-600 dark:text-red-400">
-													{errors.status}
-												</p>
-											)}
-										</div>
-									</div>
-
-									<div className="sm:col-span-3">
-										<label
-											htmlFor="lead-source"
-											className="block text-sm/6 font-medium text-gray-900 dark:text-white"
-										>
-											Lead source
-										</label>
-										<div className="mt-2 grid grid-cols-1">
-											<select
-												id="lead-source"
-												name="lead-source"
-												value={formData.leadSource}
-												onChange={(e) =>
-													updateField("leadSource", e.target.value)
-												}
-												className="col-start-1 row-start-1 w-full appearance-none rounded-md bg-white dark:bg-white/5 py-1.5 pr-8 pl-3 text-base text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600 dark:focus:outline-indigo-500 sm:text-sm/6 [&_option]:bg-white [&_option]:dark:bg-gray-800"
-											>
-												<option value="">Select source</option>
-												<option value="word-of-mouth">Word Of Mouth</option>
-												<option value="website">Website</option>
-												<option value="social-media">Social Media</option>
-												<option value="referral">Referral</option>
-												<option value="advertising">Advertising</option>
-												<option value="trade-show">Trade Show</option>
-												<option value="cold-outreach">Cold Outreach</option>
-												<option value="other">Other</option>
-											</select>
-											<ChevronDownIcon
-												aria-hidden="true"
-												className="pointer-events-none col-start-1 row-start-1 mr-2 size-5 self-center justify-self-end text-gray-400 sm:size-4"
-											/>
-										</div>
-									</div>
-
-									<div className="sm:col-span-3">
-										<label
-											htmlFor="industry"
-											className="block text-sm/6 font-medium text-gray-900 dark:text-white"
-										>
-											Industry
-										</label>
-										<div className="mt-2">
-											<input
-												id="industry"
-												name="industry"
-												type="text"
-												value={formData.industry}
-												onChange={(e) =>
-													updateField("industry", e.target.value)
-												}
-												className="block w-full rounded-md bg-white dark:bg-white/5 px-3 py-1.5 text-base text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600 dark:focus:outline-indigo-500 sm:text-sm/6"
-												placeholder="e.g., Technology, Healthcare, Manufacturing"
-											/>
-										</div>
-									</div>
-
-									<div className="col-span-full">
-										<label
-											htmlFor="company-description"
-											className="block text-sm/6 font-medium text-gray-900 dark:text-white"
-										>
-											Company description
-										</label>
-										<div className="mt-2">
-											<textarea
-												id="company-description"
-												name="company-description"
-												rows={3}
-												value={formData.companyDescription}
-												onChange={(e) =>
-													updateField("companyDescription", e.target.value)
-												}
-												className="block w-full rounded-md bg-white dark:bg-white/5 px-3 py-1.5 text-base text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600 dark:focus:outline-indigo-500 sm:text-sm/6"
-												placeholder="Brief description of the company and what they do..."
-											/>
-										</div>
-									</div>
-								</div>
+				<form
+					id="client-onboarding-form"
+					onSubmit={(e) => {
+						e.preventDefault();
+						form.handleSubmit();
+					}}
+				>
+					<div className="space-y-12">
+						{/* Company Information Section */}
+						<div className="grid grid-cols-1 gap-x-8 gap-y-10 border-b border-gray-200 dark:border-white/10 pb-12 md:grid-cols-3">
+							<div>
+								<h2 className="text-base/7 font-semibold text-gray-900 dark:text-white">
+									Company Information
+								</h2>
+								<p className="mt-1 text-sm/6 text-gray-600 dark:text-gray-400">
+									Basic information about the client company and how they found
+									us.
+								</p>
 							</div>
 
-							{/* Contact Details Section with Accordion */}
-							<div className="grid grid-cols-1 gap-x-8 gap-y-10 border-b border-gray-200 dark:border-white/10 pb-12 md:grid-cols-3">
-								<div>
-									<h2 className="text-base/7 font-semibold text-gray-900 dark:text-white">
-										Contact Details
-									</h2>
-									<p className="mt-1 text-sm/6 text-gray-600 dark:text-gray-400">
-										Primary contact and additional contacts for this client.
-									</p>
-									{errors.contacts && (
-										<p className="mt-2 text-sm text-red-600 dark:text-red-400">
-											{errors.contacts}
-										</p>
-									)}
-								</div>
+							<div className="grid max-w-4xl grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6 md:col-span-2">
+								<FieldGroup className="sm:col-span-4">
+									<form.Field
+										name="companyName"
+										children={(field) => {
+											const isInvalid =
+												field.state.meta.isTouched &&
+												field.state.meta.errors.length > 0;
+											return (
+												<Field data-invalid={isInvalid}>
+													<FieldLabel htmlFor={field.name}>
+														Company name *
+													</FieldLabel>
+													<Input
+														id={field.name}
+														name={field.name}
+														value={field.state.value}
+														onBlur={field.handleBlur}
+														onChange={(e) => field.handleChange(e.target.value)}
+														aria-invalid={isInvalid}
+														placeholder="e.g., ASMobbin"
+														autoComplete="organization"
+														disabled={isLoading}
+													/>
+													{isInvalid && (
+														<FieldError errors={field.state.meta.errors} />
+													)}
+												</Field>
+											);
+										}}
+									/>
+								</FieldGroup>
 
-								<div className="grid max-w-4xl grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6 md:col-span-2">
-									<div className="col-span-full">
-										<Accordion
-											items={[
-												{
-													title: "Primary Contact (Required)",
-													content: (
-														<div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-6">
-															{formData.contacts
-																.filter((contact) => contact.isPrimary)
-																.map((contact) => (
-																	<React.Fragment key={contact.id}>
-																		<div className="sm:col-span-3">
-																			<label
-																				htmlFor={`${contact.id}-first-name`}
-																				className="block text-sm/6 font-medium text-gray-900 dark:text-white"
-																			>
-																				First name *
-																			</label>
-																			<div className="mt-1">
-																				<input
-																					id={`${contact.id}-first-name`}
-																					name={`${contact.id}-first-name`}
-																					type="text"
-																					value={contact.firstName}
-																					onChange={(e) =>
-																						updateContact(
-																							contact.id,
-																							"firstName",
-																							e.target.value
-																						)
-																					}
-																					autoComplete="given-name"
-																					className="block w-full rounded-md bg-white dark:bg-white/5 px-3 py-1.5 text-base text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600 dark:focus:outline-indigo-500 sm:text-sm/6"
-																				/>
-																			</div>
-																		</div>
-
-																		<div className="sm:col-span-3">
-																			<label
-																				htmlFor={`${contact.id}-last-name`}
-																				className="block text-sm/6 font-medium text-gray-900 dark:text-white"
-																			>
-																				Last name *
-																			</label>
-																			<div className="mt-1">
-																				<input
-																					id={`${contact.id}-last-name`}
-																					name={`${contact.id}-last-name`}
-																					type="text"
-																					value={contact.lastName}
-																					onChange={(e) =>
-																						updateContact(
-																							contact.id,
-																							"lastName",
-																							e.target.value
-																						)
-																					}
-																					autoComplete="family-name"
-																					className="block w-full rounded-md bg-white dark:bg-white/5 px-3 py-1.5 text-base text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600 dark:focus:outline-indigo-500 sm:text-sm/6"
-																				/>
-																			</div>
-																		</div>
-
-																		<div className="sm:col-span-4">
-																			<label
-																				htmlFor={`${contact.id}-email`}
-																				className="block text-sm/6 font-medium text-gray-900 dark:text-white"
-																			>
-																				Email address *
-																			</label>
-																			<div className="mt-1">
-																				<input
-																					id={`${contact.id}-email`}
-																					name={`${contact.id}-email`}
-																					type="email"
-																					value={contact.email}
-																					onChange={(e) =>
-																						updateContact(
-																							contact.id,
-																							"email",
-																							e.target.value
-																						)
-																					}
-																					autoComplete="email"
-																					className="block w-full rounded-md bg-white dark:bg-white/5 px-3 py-1.5 text-base text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600 dark:focus:outline-indigo-500 sm:text-sm/6"
-																				/>
-																			</div>
-																		</div>
-
-																		<div className="sm:col-span-3">
-																			<label
-																				htmlFor={`${contact.id}-phone`}
-																				className="block text-sm/6 font-medium text-gray-900 dark:text-white"
-																			>
-																				Phone number
-																			</label>
-																			<div className="mt-1">
-																				<input
-																					id={`${contact.id}-phone`}
-																					name={`${contact.id}-phone`}
-																					type="tel"
-																					value={contact.phone}
-																					onChange={(e) =>
-																						updateContact(
-																							contact.id,
-																							"phone",
-																							e.target.value
-																						)
-																					}
-																					autoComplete="tel"
-																					className="block w-full rounded-md bg-white dark:bg-white/5 px-3 py-1.5 text-base text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600 dark:focus:outline-indigo-500 sm:text-sm/6"
-																				/>
-																			</div>
-																		</div>
-
-																		<div className="sm:col-span-3">
-																			<label
-																				htmlFor={`${contact.id}-job-title`}
-																				className="block text-sm/6 font-medium text-gray-900 dark:text-white"
-																			>
-																				Job title
-																			</label>
-																			<div className="mt-1">
-																				<input
-																					id={`${contact.id}-job-title`}
-																					name={`${contact.id}-job-title`}
-																					type="text"
-																					value={contact.jobTitle}
-																					onChange={(e) =>
-																						updateContact(
-																							contact.id,
-																							"jobTitle",
-																							e.target.value
-																						)
-																					}
-																					autoComplete="organization-title"
-																					className="block w-full rounded-md bg-white dark:bg-white/5 px-3 py-1.5 text-base text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600 dark:focus:outline-indigo-500 sm:text-sm/6"
-																				/>
-																			</div>
-																		</div>
-																	</React.Fragment>
-																))}
-														</div>
-													),
-												},
-												...formData.contacts
-													.filter((contact) => !contact.isPrimary)
-													.map((contact, index) => ({
-														title: `Additional Contact #${index + 1} (Optional)`,
-														content: (
-															<div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-6">
-																<div className="sm:col-span-3">
-																	<label
-																		htmlFor={`${contact.id}-first-name`}
-																		className="block text-sm/6 font-medium text-gray-900 dark:text-white"
-																	>
-																		First name
-																	</label>
-																	<div className="mt-1">
-																		<input
-																			id={`${contact.id}-first-name`}
-																			name={`${contact.id}-first-name`}
-																			type="text"
-																			value={contact.firstName}
-																			onChange={(e) =>
-																				updateContact(
-																					contact.id,
-																					"firstName",
-																					e.target.value
-																				)
-																			}
-																			className="block w-full rounded-md bg-white dark:bg-white/5 px-3 py-1.5 text-base text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600 dark:focus:outline-indigo-500 sm:text-sm/6"
-																			placeholder="Optional"
-																		/>
-																	</div>
-																</div>
-
-																<div className="sm:col-span-3">
-																	<label
-																		htmlFor={`${contact.id}-last-name`}
-																		className="block text-sm/6 font-medium text-gray-900 dark:text-white"
-																	>
-																		Last name
-																	</label>
-																	<div className="mt-1">
-																		<input
-																			id={`${contact.id}-last-name`}
-																			name={`${contact.id}-last-name`}
-																			type="text"
-																			value={contact.lastName}
-																			onChange={(e) =>
-																				updateContact(
-																					contact.id,
-																					"lastName",
-																					e.target.value
-																				)
-																			}
-																			className="block w-full rounded-md bg-white dark:bg-white/5 px-3 py-1.5 text-base text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600 dark:focus:outline-indigo-500 sm:text-sm/6"
-																			placeholder="Optional"
-																		/>
-																	</div>
-																</div>
-
-																<div className="sm:col-span-3">
-																	<label
-																		htmlFor={`${contact.id}-role`}
-																		className="block text-sm/6 font-medium text-gray-900 dark:text-white"
-																	>
-																		Role/Title
-																	</label>
-																	<div className="mt-1">
-																		<input
-																			id={`${contact.id}-role`}
-																			name={`${contact.id}-role`}
-																			type="text"
-																			value={contact.role}
-																			onChange={(e) =>
-																				updateContact(
-																					contact.id,
-																					"role",
-																					e.target.value
-																				)
-																			}
-																			className="block w-full rounded-md bg-white dark:bg-white/5 px-3 py-1.5 text-base text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600 dark:focus:outline-indigo-500 sm:text-sm/6"
-																			placeholder="e.g., Manager, Director"
-																		/>
-																	</div>
-																</div>
-
-																<div className="sm:col-span-3">
-																	<label
-																		htmlFor={`${contact.id}-department`}
-																		className="block text-sm/6 font-medium text-gray-900 dark:text-white"
-																	>
-																		Department
-																	</label>
-																	<div className="mt-1">
-																		<input
-																			id={`${contact.id}-department`}
-																			name={`${contact.id}-department`}
-																			type="text"
-																			value={contact.department}
-																			onChange={(e) =>
-																				updateContact(
-																					contact.id,
-																					"department",
-																					e.target.value
-																				)
-																			}
-																			className="block w-full rounded-md bg-white dark:bg-white/5 px-3 py-1.5 text-base text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600 dark:focus:outline-indigo-500 sm:text-sm/6"
-																			placeholder="e.g., Billing Contact, Operations"
-																		/>
-																	</div>
-																</div>
-
-																<div className="sm:col-span-3">
-																	<label
-																		htmlFor={`${contact.id}-phone`}
-																		className="block text-sm/6 font-medium text-gray-900 dark:text-white"
-																	>
-																		Phone number
-																	</label>
-																	<div className="mt-1">
-																		<input
-																			id={`${contact.id}-phone`}
-																			name={`${contact.id}-phone`}
-																			type="tel"
-																			value={contact.phone}
-																			onChange={(e) =>
-																				updateContact(
-																					contact.id,
-																					"phone",
-																					e.target.value
-																				)
-																			}
-																			className="block w-full rounded-md bg-white dark:bg-white/5 px-3 py-1.5 text-base text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600 dark:focus:outline-indigo-500 sm:text-sm/6"
-																		/>
-																	</div>
-																</div>
-
-																<div className="sm:col-span-3">
-																	<label
-																		htmlFor={`${contact.id}-email`}
-																		className="block text-sm/6 font-medium text-gray-900 dark:text-white"
-																	>
-																		Email address
-																	</label>
-																	<div className="mt-1">
-																		<input
-																			id={`${contact.id}-email`}
-																			name={`${contact.id}-email`}
-																			type="email"
-																			value={contact.email}
-																			onChange={(e) =>
-																				updateContact(
-																					contact.id,
-																					"email",
-																					e.target.value
-																				)
-																			}
-																			className="block w-full rounded-md bg-white dark:bg-white/5 px-3 py-1.5 text-base text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600 dark:focus:outline-indigo-500 sm:text-sm/6"
-																		/>
-																	</div>
-																</div>
-
-																<div className="col-span-full mt-4 flex justify-between">
-																	<button
-																		type="button"
-																		onClick={addContact}
-																		className="flex items-center gap-2 text-sm font-medium text-blue-600 dark:text-indigo-400 hover:text-blue-500 dark:hover:text-indigo-300"
-																	>
-																		<svg
-																			className="h-4 w-4"
-																			fill="none"
-																			viewBox="0 0 24 24"
-																			strokeWidth="1.5"
-																			stroke="currentColor"
-																		>
-																			<path
-																				strokeLinecap="round"
-																				strokeLinejoin="round"
-																				d="M12 4.5v15m7.5-7.5h-15"
-																			/>
-																		</svg>
-																		Add another contact
-																	</button>
-																	{!contact.isPrimary && (
-																		<button
-																			type="button"
-																			onClick={() => removeContact(contact.id)}
-																			className="flex items-center gap-2 text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-500 dark:hover:text-red-300"
-																		>
-																			<svg
-																				className="h-4 w-4"
-																				fill="none"
-																				viewBox="0 0 24 24"
-																				strokeWidth="1.5"
-																				stroke="currentColor"
-																			>
-																				<path
-																					strokeLinecap="round"
-																					strokeLinejoin="round"
-																					d="M6 18L18 6M6 6l12 12"
-																				/>
-																			</svg>
-																			Remove contact
-																		</button>
-																	)}
-																</div>
-															</div>
-														),
-													})),
-											]}
-										/>
-										{formData.contacts.filter((c) => !c.isPrimary).length ===
-											0 && (
-											<div className="mt-4">
-												<button
-													type="button"
-													onClick={addContact}
-													className="flex items-center gap-2 text-sm font-medium text-blue-600 dark:text-indigo-400 hover:text-blue-500 dark:hover:text-indigo-300"
-												>
-													<svg
-														className="h-4 w-4"
-														fill="none"
-														viewBox="0 0 24 24"
-														strokeWidth="1.5"
-														stroke="currentColor"
+								<FieldGroup className="sm:col-span-2">
+									<form.Field
+										name="status"
+										children={(field) => {
+											const isInvalid =
+												field.state.meta.isTouched &&
+												field.state.meta.errors.length > 0;
+											return (
+												<Field data-invalid={isInvalid}>
+													<FieldLabel htmlFor={field.name}>
+														Client status *
+													</FieldLabel>
+													<Select
+														value={field.state.value}
+														onValueChange={(value) =>
+															field.handleChange(
+																value as ClientFormData["status"]
+															)
+														}
+														disabled={isLoading}
 													>
-														<path
-															strokeLinecap="round"
-															strokeLinejoin="round"
-															d="M12 4.5v15m7.5-7.5h-15"
-														/>
-													</svg>
-													Add additional contact
-												</button>
-											</div>
-										)}
-									</div>
-								</div>
-							</div>
+														<SelectTrigger aria-invalid={isInvalid}>
+															<SelectValue placeholder="Select status" />
+														</SelectTrigger>
+														<SelectContent>
+															<SelectItem value="lead">Lead</SelectItem>
+															<SelectItem value="prospect">Prospect</SelectItem>
+															<SelectItem value="active">Active</SelectItem>
+															<SelectItem value="inactive">Inactive</SelectItem>
+															<SelectItem value="archived">Archived</SelectItem>
+														</SelectContent>
+													</Select>
+													{isInvalid && (
+														<FieldError errors={field.state.meta.errors} />
+													)}
+												</Field>
+											);
+										}}
+									/>
+								</FieldGroup>
 
-							{/* Property Information Section with Accordion */}
-							<div className="grid grid-cols-1 gap-x-8 gap-y-10 border-b border-gray-200 dark:border-white/10 pb-12 md:grid-cols-3">
-								<div>
-									<h2 className="text-base/7 font-semibold text-gray-900 dark:text-white">
-										Property Information
-									</h2>
-									<p className="mt-1 text-sm/6 text-gray-600 dark:text-gray-400">
-										Details about properties or locations associated with this
-										client.
-									</p>
-									{errors.properties && (
-										<p className="mt-2 text-sm text-red-600 dark:text-red-400">
-											{errors.properties}
-										</p>
-									)}
-								</div>
-
-								<div className="grid max-w-4xl grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6 md:col-span-2">
-									<div className="col-span-full">
-										<Accordion
-											items={[
-												{
-													title: "Primary Property (Required)",
-													content: (
-														<div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-6">
-															{formData.properties
-																.filter((property) => property.isPrimary)
-																.map((property) => (
-																	<React.Fragment key={property.id}>
-																		<div className="col-span-full">
-																			<label
-																				htmlFor={`${property.id}-street-address`}
-																				className="block text-sm/6 font-medium text-gray-900 dark:text-white"
-																			>
-																				Street address *
-																			</label>
-																			<div className="mt-2">
-																				<input
-																					id={`${property.id}-street-address`}
-																					name={`${property.id}-street-address`}
-																					type="text"
-																					value={property.streetAddress}
-																					onChange={(e) =>
-																						updateProperty(
-																							property.id,
-																							"streetAddress",
-																							e.target.value
-																						)
-																					}
-																					autoComplete="street-address"
-																					className="block w-full rounded-md bg-white dark:bg-white/5 px-3 py-1.5 text-base text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600 dark:focus:outline-indigo-500 sm:text-sm/6"
-																				/>
-																			</div>
-																		</div>
-
-																		<div className="sm:col-span-2">
-																			<label
-																				htmlFor={`${property.id}-city`}
-																				className="block text-sm/6 font-medium text-gray-900 dark:text-white"
-																			>
-																				City *
-																			</label>
-																			<div className="mt-2">
-																				<input
-																					id={`${property.id}-city`}
-																					name={`${property.id}-city`}
-																					type="text"
-																					value={property.city}
-																					onChange={(e) =>
-																						updateProperty(
-																							property.id,
-																							"city",
-																							e.target.value
-																						)
-																					}
-																					autoComplete="address-level2"
-																					className="block w-full rounded-md bg-white dark:bg-white/5 px-3 py-1.5 text-base text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600 dark:focus:outline-indigo-500 sm:text-sm/6"
-																				/>
-																			</div>
-																		</div>
-
-																		<div className="sm:col-span-2">
-																			<label
-																				htmlFor={`${property.id}-region`}
-																				className="block text-sm/6 font-medium text-gray-900 dark:text-white"
-																			>
-																				State / Province *
-																			</label>
-																			<div className="mt-2">
-																				<input
-																					id={`${property.id}-region`}
-																					name={`${property.id}-region`}
-																					type="text"
-																					value={property.region}
-																					onChange={(e) =>
-																						updateProperty(
-																							property.id,
-																							"region",
-																							e.target.value
-																						)
-																					}
-																					autoComplete="address-level1"
-																					className="block w-full rounded-md bg-white dark:bg-white/5 px-3 py-1.5 text-base text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600 dark:focus:outline-indigo-500 sm:text-sm/6"
-																				/>
-																			</div>
-																		</div>
-
-																		<div className="sm:col-span-2">
-																			<label
-																				htmlFor={`${property.id}-postal-code`}
-																				className="block text-sm/6 font-medium text-gray-900 dark:text-white"
-																			>
-																				ZIP / Postal code *
-																			</label>
-																			<div className="mt-2">
-																				<input
-																					id={`${property.id}-postal-code`}
-																					name={`${property.id}-postal-code`}
-																					type="text"
-																					value={property.postalCode}
-																					onChange={(e) =>
-																						updateProperty(
-																							property.id,
-																							"postalCode",
-																							e.target.value
-																						)
-																					}
-																					autoComplete="postal-code"
-																					className="block w-full rounded-md bg-white dark:bg-white/5 px-3 py-1.5 text-base text-gray-900 dark:text-white outline-1 -outline-offset-1 outline-gray-300 dark:outline-white/10 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600 dark:focus:outline-indigo-500 sm:text-sm/6"
-																				/>
-																			</div>
-																		</div>
-																	</React.Fragment>
-																))}
-														</div>
-													),
-												},
-											]}
-										/>
-										{formData.properties.filter((p) => !p.isPrimary).length ===
-											0 && (
-											<div className="mt-4">
-												<button
-													type="button"
-													onClick={addProperty}
-													className="flex items-center gap-2 text-sm font-medium text-blue-600 dark:text-indigo-400 hover:text-blue-500 dark:hover:text-indigo-300"
-												>
-													<svg
-														className="h-4 w-4"
-														fill="none"
-														viewBox="0 0 24 24"
-														strokeWidth="1.5"
-														stroke="currentColor"
+								<FieldGroup className="sm:col-span-3">
+									<form.Field
+										name="leadSource"
+										children={(field) => {
+											const isInvalid =
+												field.state.meta.isTouched &&
+												field.state.meta.errors.length > 0;
+											return (
+												<Field data-invalid={isInvalid}>
+													<FieldLabel htmlFor={field.name}>
+														Lead source
+													</FieldLabel>
+													<Select
+														value={field.state.value}
+														onValueChange={(value) =>
+															field.handleChange(
+																value as ClientFormData["leadSource"]
+															)
+														}
+														disabled={isLoading}
 													>
-														<path
-															strokeLinecap="round"
-															strokeLinejoin="round"
-															d="M12 4.5v15m7.5-7.5h-15"
-														/>
-													</svg>
-													Add additional property
-												</button>
-											</div>
-										)}
-									</div>
-								</div>
+														<SelectTrigger aria-invalid={isInvalid}>
+															<SelectValue placeholder="Select source" />
+														</SelectTrigger>
+														<SelectContent>
+															<SelectItem value="word-of-mouth">
+																Word Of Mouth
+															</SelectItem>
+															<SelectItem value="website">Website</SelectItem>
+															<SelectItem value="social-media">
+																Social Media
+															</SelectItem>
+															<SelectItem value="referral">Referral</SelectItem>
+															<SelectItem value="advertising">
+																Advertising
+															</SelectItem>
+															<SelectItem value="trade-show">
+																Trade Show
+															</SelectItem>
+															<SelectItem value="cold-outreach">
+																Cold Outreach
+															</SelectItem>
+															<SelectItem value="other">Other</SelectItem>
+														</SelectContent>
+													</Select>
+													{isInvalid && (
+														<FieldError errors={field.state.meta.errors} />
+													)}
+												</Field>
+											);
+										}}
+									/>
+								</FieldGroup>
+
+								<FieldGroup className="sm:col-span-3">
+									<form.Field
+										name="industry"
+										children={(field) => {
+											const isInvalid =
+												field.state.meta.isTouched &&
+												field.state.meta.errors.length > 0;
+											return (
+												<Field data-invalid={isInvalid}>
+													<FieldLabel htmlFor={field.name}>Industry</FieldLabel>
+													<Input
+														id={field.name}
+														name={field.name}
+														value={field.state.value}
+														onBlur={field.handleBlur}
+														onChange={(e) => field.handleChange(e.target.value)}
+														aria-invalid={isInvalid}
+														placeholder="e.g., Technology, Healthcare, Manufacturing"
+														disabled={isLoading}
+													/>
+													{isInvalid && (
+														<FieldError errors={field.state.meta.errors} />
+													)}
+												</Field>
+											);
+										}}
+									/>
+								</FieldGroup>
+
+								<FieldGroup className="col-span-full">
+									<form.Field
+										name="companyDescription"
+										children={(field) => {
+											const isInvalid =
+												field.state.meta.isTouched &&
+												field.state.meta.errors.length > 0;
+											return (
+												<Field data-invalid={isInvalid}>
+													<FieldLabel htmlFor={field.name}>
+														Company description
+													</FieldLabel>
+													<Textarea
+														id={field.name}
+														name={field.name}
+														value={field.state.value}
+														onBlur={field.handleBlur}
+														onChange={(e) => field.handleChange(e.target.value)}
+														aria-invalid={isInvalid}
+														rows={3}
+														placeholder="Brief description of the company and what they do..."
+														disabled={isLoading}
+													/>
+													{isInvalid && (
+														<FieldError errors={field.state.meta.errors} />
+													)}
+												</Field>
+											);
+										}}
+									/>
+								</FieldGroup>
+							</div>
+						</div>
+
+						{/* Contact Details Section with Accordion */}
+						<div className="grid grid-cols-1 gap-x-8 gap-y-10 border-b border-gray-200 dark:border-white/10 pb-12 md:grid-cols-3">
+							<div>
+								<h2 className="text-base/7 font-semibold text-gray-900 dark:text-white">
+									Contact Details
+								</h2>
+								<p className="mt-1 text-sm/6 text-gray-600 dark:text-gray-400">
+									Primary contact and additional contacts for this client.
+								</p>
+								<form.Field
+									name="contacts"
+									mode="array"
+									children={(field) => {
+										const isInvalid =
+											field.state.meta.isTouched &&
+											field.state.meta.errors.length > 0;
+										return (
+											<>
+												{isInvalid && (
+													<p className="mt-2 text-sm text-red-600 dark:text-red-400">
+														{field.state.meta.errors.join(", ")}
+													</p>
+												)}
+											</>
+										);
+									}}
+								/>
 							</div>
 
-							{/* Service Requirements Section */}
-							<div className="grid grid-cols-1 gap-x-8 gap-y-10 md:grid-cols-3">
-								<div>
-									<h2 className="text-base/7 font-semibold text-gray-900 dark:text-white">
-										Service Requirements
-									</h2>
-									<p className="mt-1 text-sm/6 text-gray-600 dark:text-gray-400">
-										Select the services you&apos;re interested in and
-										communication preferences.
-									</p>
-								</div>
+							<div className="grid max-w-4xl grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6 md:col-span-2">
+								<div className="col-span-full">
+									<form.Field
+										name="contacts"
+										mode="array"
+										children={(contactsField) => {
+											const primaryContact = contactsField.state.value.find(
+												(c) => c.isPrimary
+											);
+											const additionalContacts =
+												contactsField.state.value.filter((c) => !c.isPrimary);
 
-								<div className="max-w-4xl space-y-10 md:col-span-2">
-									<fieldset>
-										<legend className="text-sm/6 font-semibold text-gray-900 dark:text-white">
-											Services needed
-										</legend>
-										<div className="mt-6 space-y-6">
-											{[
+											return (
+												<>
+													<Accordion
+														items={[
+															// Primary Contact
+															{
+																title: "Primary Contact (Required)",
+																content: (
+																	<div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-6">
+																		{primaryContact && (
+																			<React.Fragment key={primaryContact.id}>
+																				<FieldGroup className="sm:col-span-3">
+																					<form.Field
+																						name={`contacts[0].firstName`}
+																						children={(field) => {
+																							const isInvalid =
+																								field.state.meta.isTouched &&
+																								field.state.meta.errors.length >
+																									0;
+																							return (
+																								<Field data-invalid={isInvalid}>
+																									<FieldLabel
+																										htmlFor={field.name}
+																									>
+																										First name *
+																									</FieldLabel>
+																									<Input
+																										id={field.name}
+																										name={field.name}
+																										value={field.state.value}
+																										onBlur={field.handleBlur}
+																										onChange={(e) =>
+																											field.handleChange(
+																												e.target.value
+																											)
+																										}
+																										aria-invalid={isInvalid}
+																										autoComplete="given-name"
+																										disabled={isLoading}
+																									/>
+																									{isInvalid && (
+																										<FieldError
+																											errors={
+																												field.state.meta.errors
+																											}
+																										/>
+																									)}
+																								</Field>
+																							);
+																						}}
+																					/>
+																				</FieldGroup>
+
+																				<FieldGroup className="sm:col-span-3">
+																					<form.Field
+																						name={`contacts[0].lastName`}
+																						children={(field) => {
+																							const isInvalid =
+																								field.state.meta.isTouched &&
+																								field.state.meta.errors.length >
+																									0;
+																							return (
+																								<Field data-invalid={isInvalid}>
+																									<FieldLabel
+																										htmlFor={field.name}
+																									>
+																										Last name *
+																									</FieldLabel>
+																									<Input
+																										id={field.name}
+																										name={field.name}
+																										value={field.state.value}
+																										onBlur={field.handleBlur}
+																										onChange={(e) =>
+																											field.handleChange(
+																												e.target.value
+																											)
+																										}
+																										aria-invalid={isInvalid}
+																										autoComplete="family-name"
+																										disabled={isLoading}
+																									/>
+																									{isInvalid && (
+																										<FieldError
+																											errors={
+																												field.state.meta.errors
+																											}
+																										/>
+																									)}
+																								</Field>
+																							);
+																						}}
+																					/>
+																				</FieldGroup>
+
+																				<FieldGroup className="sm:col-span-4">
+																					<form.Field
+																						name={`contacts[0].email`}
+																						children={(field) => {
+																							const isInvalid =
+																								field.state.meta.isTouched &&
+																								field.state.meta.errors.length >
+																									0;
+																							return (
+																								<Field data-invalid={isInvalid}>
+																									<FieldLabel
+																										htmlFor={field.name}
+																									>
+																										Email address *
+																									</FieldLabel>
+																									<Input
+																										id={field.name}
+																										name={field.name}
+																										type="email"
+																										value={field.state.value}
+																										onBlur={field.handleBlur}
+																										onChange={(e) =>
+																											field.handleChange(
+																												e.target.value
+																											)
+																										}
+																										aria-invalid={isInvalid}
+																										autoComplete="email"
+																										disabled={isLoading}
+																									/>
+																									{isInvalid && (
+																										<FieldError
+																											errors={
+																												field.state.meta.errors
+																											}
+																										/>
+																									)}
+																								</Field>
+																							);
+																						}}
+																					/>
+																				</FieldGroup>
+
+																				<FieldGroup className="sm:col-span-3">
+																					<form.Field
+																						name={`contacts[0].phone`}
+																						children={(field) => {
+																							const isInvalid =
+																								field.state.meta.isTouched &&
+																								field.state.meta.errors.length >
+																									0;
+																							return (
+																								<Field data-invalid={isInvalid}>
+																									<FieldLabel
+																										htmlFor={field.name}
+																									>
+																										Phone number
+																									</FieldLabel>
+																									<Input
+																										id={field.name}
+																										name={field.name}
+																										type="tel"
+																										value={field.state.value}
+																										onBlur={field.handleBlur}
+																										onChange={(e) =>
+																											field.handleChange(
+																												e.target.value
+																											)
+																										}
+																										aria-invalid={isInvalid}
+																										autoComplete="tel"
+																										disabled={isLoading}
+																									/>
+																									{isInvalid && (
+																										<FieldError
+																											errors={
+																												field.state.meta.errors
+																											}
+																										/>
+																									)}
+																								</Field>
+																							);
+																						}}
+																					/>
+																				</FieldGroup>
+
+																				<FieldGroup className="sm:col-span-3">
+																					<form.Field
+																						name={`contacts[0].jobTitle`}
+																						children={(field) => {
+																							const isInvalid =
+																								field.state.meta.isTouched &&
+																								field.state.meta.errors.length >
+																									0;
+																							return (
+																								<Field data-invalid={isInvalid}>
+																									<FieldLabel
+																										htmlFor={field.name}
+																									>
+																										Job title
+																									</FieldLabel>
+																									<Input
+																										id={field.name}
+																										name={field.name}
+																										value={field.state.value}
+																										onBlur={field.handleBlur}
+																										onChange={(e) =>
+																											field.handleChange(
+																												e.target.value
+																											)
+																										}
+																										aria-invalid={isInvalid}
+																										autoComplete="organization-title"
+																										disabled={isLoading}
+																									/>
+																									{isInvalid && (
+																										<FieldError
+																											errors={
+																												field.state.meta.errors
+																											}
+																										/>
+																									)}
+																								</Field>
+																							);
+																						}}
+																					/>
+																				</FieldGroup>
+																			</React.Fragment>
+																		)}
+																	</div>
+																),
+															},
+															// Additional Contacts
+															...additionalContacts.map((contact, idx) => {
+																const actualIndex = idx + 1;
+																return {
+																	title: `Additional Contact #${actualIndex} (Optional)`,
+																	content: (
+																		<div
+																			key={contact.id}
+																			className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-6"
+																		>
+																			<FieldGroup className="sm:col-span-3">
+																				<form.Field
+																					name={`contacts[${actualIndex}].firstName`}
+																					children={(field) => {
+																						const isInvalid =
+																							field.state.meta.isTouched &&
+																							field.state.meta.errors.length >
+																								0;
+																						return (
+																							<Field data-invalid={isInvalid}>
+																								<FieldLabel
+																									htmlFor={field.name}
+																								>
+																									First name
+																								</FieldLabel>
+																								<Input
+																									id={field.name}
+																									name={field.name}
+																									value={field.state.value}
+																									onBlur={field.handleBlur}
+																									onChange={(e) =>
+																										field.handleChange(
+																											e.target.value
+																										)
+																									}
+																									aria-invalid={isInvalid}
+																									placeholder="Optional"
+																									disabled={isLoading}
+																								/>
+																								{isInvalid && (
+																									<FieldError
+																										errors={
+																											field.state.meta.errors
+																										}
+																									/>
+																								)}
+																							</Field>
+																						);
+																					}}
+																				/>
+																			</FieldGroup>
+
+																			<FieldGroup className="sm:col-span-3">
+																				<form.Field
+																					name={`contacts[${actualIndex}].lastName`}
+																					children={(field) => {
+																						const isInvalid =
+																							field.state.meta.isTouched &&
+																							field.state.meta.errors.length >
+																								0;
+																						return (
+																							<Field data-invalid={isInvalid}>
+																								<FieldLabel
+																									htmlFor={field.name}
+																								>
+																									Last name
+																								</FieldLabel>
+																								<Input
+																									id={field.name}
+																									name={field.name}
+																									value={field.state.value}
+																									onBlur={field.handleBlur}
+																									onChange={(e) =>
+																										field.handleChange(
+																											e.target.value
+																										)
+																									}
+																									aria-invalid={isInvalid}
+																									placeholder="Optional"
+																									disabled={isLoading}
+																								/>
+																								{isInvalid && (
+																									<FieldError
+																										errors={
+																											field.state.meta.errors
+																										}
+																									/>
+																								)}
+																							</Field>
+																						);
+																					}}
+																				/>
+																			</FieldGroup>
+
+																			<FieldGroup className="sm:col-span-3">
+																				<form.Field
+																					name={`contacts[${actualIndex}].role`}
+																					children={(field) => {
+																						const isInvalid =
+																							field.state.meta.isTouched &&
+																							field.state.meta.errors.length >
+																								0;
+																						return (
+																							<Field data-invalid={isInvalid}>
+																								<FieldLabel
+																									htmlFor={field.name}
+																								>
+																									Role/Title
+																								</FieldLabel>
+																								<Input
+																									id={field.name}
+																									name={field.name}
+																									value={field.state.value}
+																									onBlur={field.handleBlur}
+																									onChange={(e) =>
+																										field.handleChange(
+																											e.target.value
+																										)
+																									}
+																									aria-invalid={isInvalid}
+																									placeholder="e.g., Manager, Director"
+																									disabled={isLoading}
+																								/>
+																								{isInvalid && (
+																									<FieldError
+																										errors={
+																											field.state.meta.errors
+																										}
+																									/>
+																								)}
+																							</Field>
+																						);
+																					}}
+																				/>
+																			</FieldGroup>
+
+																			<FieldGroup className="sm:col-span-3">
+																				<form.Field
+																					name={`contacts[${actualIndex}].department`}
+																					children={(field) => {
+																						const isInvalid =
+																							field.state.meta.isTouched &&
+																							field.state.meta.errors.length >
+																								0;
+																						return (
+																							<Field data-invalid={isInvalid}>
+																								<FieldLabel
+																									htmlFor={field.name}
+																								>
+																									Department
+																								</FieldLabel>
+																								<Input
+																									id={field.name}
+																									name={field.name}
+																									value={field.state.value}
+																									onBlur={field.handleBlur}
+																									onChange={(e) =>
+																										field.handleChange(
+																											e.target.value
+																										)
+																									}
+																									aria-invalid={isInvalid}
+																									placeholder="e.g., Billing Contact, Operations"
+																									disabled={isLoading}
+																								/>
+																								{isInvalid && (
+																									<FieldError
+																										errors={
+																											field.state.meta.errors
+																										}
+																									/>
+																								)}
+																							</Field>
+																						);
+																					}}
+																				/>
+																			</FieldGroup>
+
+																			<FieldGroup className="sm:col-span-3">
+																				<form.Field
+																					name={`contacts[${actualIndex}].phone`}
+																					children={(field) => {
+																						const isInvalid =
+																							field.state.meta.isTouched &&
+																							field.state.meta.errors.length >
+																								0;
+																						return (
+																							<Field data-invalid={isInvalid}>
+																								<FieldLabel
+																									htmlFor={field.name}
+																								>
+																									Phone number
+																								</FieldLabel>
+																								<Input
+																									id={field.name}
+																									name={field.name}
+																									type="tel"
+																									value={field.state.value}
+																									onBlur={field.handleBlur}
+																									onChange={(e) =>
+																										field.handleChange(
+																											e.target.value
+																										)
+																									}
+																									aria-invalid={isInvalid}
+																									disabled={isLoading}
+																								/>
+																								{isInvalid && (
+																									<FieldError
+																										errors={
+																											field.state.meta.errors
+																										}
+																									/>
+																								)}
+																							</Field>
+																						);
+																					}}
+																				/>
+																			</FieldGroup>
+
+																			<FieldGroup className="sm:col-span-3">
+																				<form.Field
+																					name={`contacts[${actualIndex}].email`}
+																					children={(field) => {
+																						const isInvalid =
+																							field.state.meta.isTouched &&
+																							field.state.meta.errors.length >
+																								0;
+																						return (
+																							<Field data-invalid={isInvalid}>
+																								<FieldLabel
+																									htmlFor={field.name}
+																								>
+																									Email address
+																								</FieldLabel>
+																								<Input
+																									id={field.name}
+																									name={field.name}
+																									type="email"
+																									value={field.state.value}
+																									onBlur={field.handleBlur}
+																									onChange={(e) =>
+																										field.handleChange(
+																											e.target.value
+																										)
+																									}
+																									aria-invalid={isInvalid}
+																									disabled={isLoading}
+																								/>
+																								{isInvalid && (
+																									<FieldError
+																										errors={
+																											field.state.meta.errors
+																										}
+																									/>
+																								)}
+																							</Field>
+																						);
+																					}}
+																				/>
+																			</FieldGroup>
+
+																			<div className="col-span-full mt-4 flex justify-between">
+																				<button
+																					type="button"
+																					onClick={() =>
+																						contactsField.pushValue(
+																							createEmptyContact(false)
+																						)
+																					}
+																					className="flex items-center gap-2 text-sm font-medium text-blue-600 dark:text-indigo-400 hover:text-blue-500 dark:hover:text-indigo-300"
+																					disabled={isLoading}
+																				>
+																					<svg
+																						className="h-4 w-4"
+																						fill="none"
+																						viewBox="0 0 24 24"
+																						strokeWidth="1.5"
+																						stroke="currentColor"
+																					>
+																						<path
+																							strokeLinecap="round"
+																							strokeLinejoin="round"
+																							d="M12 4.5v15m7.5-7.5h-15"
+																						/>
+																					</svg>
+																					Add another contact
+																				</button>
+																				<button
+																					type="button"
+																					onClick={() =>
+																						contactsField.removeValue(
+																							actualIndex
+																						)
+																					}
+																					className="flex items-center gap-2 text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-500 dark:hover:text-red-300"
+																					disabled={isLoading}
+																				>
+																					<svg
+																						className="h-4 w-4"
+																						fill="none"
+																						viewBox="0 0 24 24"
+																						strokeWidth="1.5"
+																						stroke="currentColor"
+																					>
+																						<path
+																							strokeLinecap="round"
+																							strokeLinejoin="round"
+																							d="M6 18L18 6M6 6l12 12"
+																						/>
+																					</svg>
+																					Remove contact
+																				</button>
+																			</div>
+																		</div>
+																	),
+																};
+															}),
+														]}
+													/>
+													{additionalContacts.length === 0 && (
+														<div className="mt-4">
+															<button
+																type="button"
+																onClick={() =>
+																	contactsField.pushValue(
+																		createEmptyContact(false)
+																	)
+																}
+																className="flex items-center gap-2 text-sm font-medium text-blue-600 dark:text-indigo-400 hover:text-blue-500 dark:hover:text-indigo-300"
+																disabled={isLoading}
+															>
+																<svg
+																	className="h-4 w-4"
+																	fill="none"
+																	viewBox="0 0 24 24"
+																	strokeWidth="1.5"
+																	stroke="currentColor"
+																>
+																	<path
+																		strokeLinecap="round"
+																		strokeLinejoin="round"
+																		d="M12 4.5v15m7.5-7.5h-15"
+																	/>
+																</svg>
+																Add additional contact
+															</button>
+														</div>
+													)}
+												</>
+											);
+										}}
+									/>
+								</div>
+							</div>
+						</div>
+
+						{/* Property Information Section with Accordion */}
+						<div className="grid grid-cols-1 gap-x-8 gap-y-10 border-b border-gray-200 dark:border-white/10 pb-12 md:grid-cols-3">
+							<div>
+								<h2 className="text-base/7 font-semibold text-gray-900 dark:text-white">
+									Property Information
+								</h2>
+								<p className="mt-1 text-sm/6 text-gray-600 dark:text-gray-400">
+									Details about properties or locations associated with this
+									client.
+								</p>
+								<form.Field
+									name="properties"
+									mode="array"
+									children={(field) => {
+										const isInvalid =
+											field.state.meta.isTouched &&
+											field.state.meta.errors.length > 0;
+										return (
+											<>
+												{isInvalid && (
+													<p className="mt-2 text-sm text-red-600 dark:text-red-400">
+														{field.state.meta.errors.join(", ")}
+													</p>
+												)}
+											</>
+										);
+									}}
+								/>
+							</div>
+
+							<div className="grid max-w-4xl grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6 md:col-span-2">
+								<div className="col-span-full">
+									<form.Field
+										name="properties"
+										mode="array"
+										children={(propertiesField) => {
+											const primaryProperty = propertiesField.state.value.find(
+												(p) => p.isPrimary
+											);
+											const additionalProperties =
+												propertiesField.state.value.filter((p) => !p.isPrimary);
+
+											return (
+												<>
+													<Accordion
+														items={[
+															// Primary Property
+															{
+																title: "Primary Property (Required)",
+																content: (
+																	<div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-6">
+																		{primaryProperty && (
+																			<React.Fragment key={primaryProperty.id}>
+																				<FieldGroup className="col-span-full">
+																					<form.Field
+																						name={`properties[0].streetAddress`}
+																						children={(field) => {
+																							const isInvalid =
+																								field.state.meta.isTouched &&
+																								field.state.meta.errors.length >
+																									0;
+																							return (
+																								<Field data-invalid={isInvalid}>
+																									<FieldLabel
+																										htmlFor={field.name}
+																									>
+																										Street address *
+																									</FieldLabel>
+																									<Input
+																										id={field.name}
+																										name={field.name}
+																										value={field.state.value}
+																										onBlur={field.handleBlur}
+																										onChange={(e) =>
+																											field.handleChange(
+																												e.target.value
+																											)
+																										}
+																										aria-invalid={isInvalid}
+																										autoComplete="street-address"
+																										disabled={isLoading}
+																									/>
+																									{isInvalid && (
+																										<FieldError
+																											errors={
+																												field.state.meta.errors
+																											}
+																										/>
+																									)}
+																								</Field>
+																							);
+																						}}
+																					/>
+																				</FieldGroup>
+
+																				<FieldGroup className="sm:col-span-2">
+																					<form.Field
+																						name={`properties[0].city`}
+																						children={(field) => {
+																							const isInvalid =
+																								field.state.meta.isTouched &&
+																								field.state.meta.errors.length >
+																									0;
+																							return (
+																								<Field data-invalid={isInvalid}>
+																									<FieldLabel
+																										htmlFor={field.name}
+																									>
+																										City *
+																									</FieldLabel>
+																									<Input
+																										id={field.name}
+																										name={field.name}
+																										value={field.state.value}
+																										onBlur={field.handleBlur}
+																										onChange={(e) =>
+																											field.handleChange(
+																												e.target.value
+																											)
+																										}
+																										aria-invalid={isInvalid}
+																										autoComplete="address-level2"
+																										disabled={isLoading}
+																									/>
+																									{isInvalid && (
+																										<FieldError
+																											errors={
+																												field.state.meta.errors
+																											}
+																										/>
+																									)}
+																								</Field>
+																							);
+																						}}
+																					/>
+																				</FieldGroup>
+
+																				<FieldGroup className="sm:col-span-2">
+																					<form.Field
+																						name={`properties[0].region`}
+																						children={(field) => {
+																							const isInvalid =
+																								field.state.meta.isTouched &&
+																								field.state.meta.errors.length >
+																									0;
+																							return (
+																								<Field data-invalid={isInvalid}>
+																									<FieldLabel
+																										htmlFor={field.name}
+																									>
+																										State / Province *
+																									</FieldLabel>
+																									<Input
+																										id={field.name}
+																										name={field.name}
+																										value={field.state.value}
+																										onBlur={field.handleBlur}
+																										onChange={(e) =>
+																											field.handleChange(
+																												e.target.value
+																											)
+																										}
+																										aria-invalid={isInvalid}
+																										autoComplete="address-level1"
+																										disabled={isLoading}
+																									/>
+																									{isInvalid && (
+																										<FieldError
+																											errors={
+																												field.state.meta.errors
+																											}
+																										/>
+																									)}
+																								</Field>
+																							);
+																						}}
+																					/>
+																				</FieldGroup>
+
+																				<FieldGroup className="sm:col-span-2">
+																					<form.Field
+																						name={`properties[0].postalCode`}
+																						children={(field) => {
+																							const isInvalid =
+																								field.state.meta.isTouched &&
+																								field.state.meta.errors.length >
+																									0;
+																							return (
+																								<Field data-invalid={isInvalid}>
+																									<FieldLabel
+																										htmlFor={field.name}
+																									>
+																										ZIP / Postal code *
+																									</FieldLabel>
+																									<Input
+																										id={field.name}
+																										name={field.name}
+																										value={field.state.value}
+																										onBlur={field.handleBlur}
+																										onChange={(e) =>
+																											field.handleChange(
+																												e.target.value
+																											)
+																										}
+																										aria-invalid={isInvalid}
+																										autoComplete="postal-code"
+																										disabled={isLoading}
+																									/>
+																									{isInvalid && (
+																										<FieldError
+																											errors={
+																												field.state.meta.errors
+																											}
+																										/>
+																									)}
+																								</Field>
+																							);
+																						}}
+																					/>
+																				</FieldGroup>
+																			</React.Fragment>
+																		)}
+																	</div>
+																),
+															},
+															// Additional Properties
+															...additionalProperties.map((property, idx) => {
+																const actualIndex = idx + 1;
+																return {
+																	title: `Additional Property #${actualIndex} (Optional)`,
+																	content: (
+																		<div
+																			key={property.id}
+																			className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-6"
+																		>
+																			<FieldGroup className="col-span-full">
+																				<form.Field
+																					name={`properties[${actualIndex}].streetAddress`}
+																					children={(field) => {
+																						const isInvalid =
+																							field.state.meta.isTouched &&
+																							field.state.meta.errors.length >
+																								0;
+																						return (
+																							<Field data-invalid={isInvalid}>
+																								<FieldLabel
+																									htmlFor={field.name}
+																								>
+																									Street address
+																								</FieldLabel>
+																								<Input
+																									id={field.name}
+																									name={field.name}
+																									value={field.state.value}
+																									onBlur={field.handleBlur}
+																									onChange={(e) =>
+																										field.handleChange(
+																											e.target.value
+																										)
+																									}
+																									aria-invalid={isInvalid}
+																									placeholder="Optional"
+																									disabled={isLoading}
+																								/>
+																								{isInvalid && (
+																									<FieldError
+																										errors={
+																											field.state.meta.errors
+																										}
+																									/>
+																								)}
+																							</Field>
+																						);
+																					}}
+																				/>
+																			</FieldGroup>
+
+																			<FieldGroup className="sm:col-span-2">
+																				<form.Field
+																					name={`properties[${actualIndex}].city`}
+																					children={(field) => {
+																						const isInvalid =
+																							field.state.meta.isTouched &&
+																							field.state.meta.errors.length >
+																								0;
+																						return (
+																							<Field data-invalid={isInvalid}>
+																								<FieldLabel
+																									htmlFor={field.name}
+																								>
+																									City
+																								</FieldLabel>
+																								<Input
+																									id={field.name}
+																									name={field.name}
+																									value={field.state.value}
+																									onBlur={field.handleBlur}
+																									onChange={(e) =>
+																										field.handleChange(
+																											e.target.value
+																										)
+																									}
+																									aria-invalid={isInvalid}
+																									placeholder="Optional"
+																									disabled={isLoading}
+																								/>
+																								{isInvalid && (
+																									<FieldError
+																										errors={
+																											field.state.meta.errors
+																										}
+																									/>
+																								)}
+																							</Field>
+																						);
+																					}}
+																				/>
+																			</FieldGroup>
+
+																			<FieldGroup className="sm:col-span-2">
+																				<form.Field
+																					name={`properties[${actualIndex}].region`}
+																					children={(field) => {
+																						const isInvalid =
+																							field.state.meta.isTouched &&
+																							field.state.meta.errors.length >
+																								0;
+																						return (
+																							<Field data-invalid={isInvalid}>
+																								<FieldLabel
+																									htmlFor={field.name}
+																								>
+																									State / Province
+																								</FieldLabel>
+																								<Input
+																									id={field.name}
+																									name={field.name}
+																									value={field.state.value}
+																									onBlur={field.handleBlur}
+																									onChange={(e) =>
+																										field.handleChange(
+																											e.target.value
+																										)
+																									}
+																									aria-invalid={isInvalid}
+																									placeholder="Optional"
+																									disabled={isLoading}
+																								/>
+																								{isInvalid && (
+																									<FieldError
+																										errors={
+																											field.state.meta.errors
+																										}
+																									/>
+																								)}
+																							</Field>
+																						);
+																					}}
+																				/>
+																			</FieldGroup>
+
+																			<FieldGroup className="sm:col-span-2">
+																				<form.Field
+																					name={`properties[${actualIndex}].postalCode`}
+																					children={(field) => {
+																						const isInvalid =
+																							field.state.meta.isTouched &&
+																							field.state.meta.errors.length >
+																								0;
+																						return (
+																							<Field data-invalid={isInvalid}>
+																								<FieldLabel
+																									htmlFor={field.name}
+																								>
+																									ZIP / Postal code
+																								</FieldLabel>
+																								<Input
+																									id={field.name}
+																									name={field.name}
+																									value={field.state.value}
+																									onBlur={field.handleBlur}
+																									onChange={(e) =>
+																										field.handleChange(
+																											e.target.value
+																										)
+																									}
+																									aria-invalid={isInvalid}
+																									placeholder="Optional"
+																									disabled={isLoading}
+																								/>
+																								{isInvalid && (
+																									<FieldError
+																										errors={
+																											field.state.meta.errors
+																										}
+																									/>
+																								)}
+																							</Field>
+																						);
+																					}}
+																				/>
+																			</FieldGroup>
+
+																			<div className="col-span-full mt-4 flex justify-between">
+																				<button
+																					type="button"
+																					onClick={() =>
+																						propertiesField.pushValue(
+																							createEmptyProperty(false)
+																						)
+																					}
+																					className="flex items-center gap-2 text-sm font-medium text-blue-600 dark:text-indigo-400 hover:text-blue-500 dark:hover:text-indigo-300"
+																					disabled={isLoading}
+																				>
+																					<svg
+																						className="h-4 w-4"
+																						fill="none"
+																						viewBox="0 0 24 24"
+																						strokeWidth="1.5"
+																						stroke="currentColor"
+																					>
+																						<path
+																							strokeLinecap="round"
+																							strokeLinejoin="round"
+																							d="M12 4.5v15m7.5-7.5h-15"
+																						/>
+																					</svg>
+																					Add another property
+																				</button>
+																				<button
+																					type="button"
+																					onClick={() =>
+																						propertiesField.removeValue(
+																							actualIndex
+																						)
+																					}
+																					className="flex items-center gap-2 text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-500 dark:hover:text-red-300"
+																					disabled={isLoading}
+																				>
+																					<svg
+																						className="h-4 w-4"
+																						fill="none"
+																						viewBox="0 0 24 24"
+																						strokeWidth="1.5"
+																						stroke="currentColor"
+																					>
+																						<path
+																							strokeLinecap="round"
+																							strokeLinejoin="round"
+																							d="M6 18L18 6M6 6l12 12"
+																						/>
+																					</svg>
+																					Remove property
+																				</button>
+																			</div>
+																		</div>
+																	),
+																};
+															}),
+														]}
+													/>
+													{additionalProperties.length === 0 && (
+														<div className="mt-4">
+															<button
+																type="button"
+																onClick={() =>
+																	propertiesField.pushValue(
+																		createEmptyProperty(false)
+																	)
+																}
+																className="flex items-center gap-2 text-sm font-medium text-blue-600 dark:text-indigo-400 hover:text-blue-500 dark:hover:text-indigo-300"
+																disabled={isLoading}
+															>
+																<svg
+																	className="h-4 w-4"
+																	fill="none"
+																	viewBox="0 0 24 24"
+																	strokeWidth="1.5"
+																	stroke="currentColor"
+																>
+																	<path
+																		strokeLinecap="round"
+																		strokeLinejoin="round"
+																		d="M12 4.5v15m7.5-7.5h-15"
+																	/>
+																</svg>
+																Add additional property
+															</button>
+														</div>
+													)}
+												</>
+											);
+										}}
+									/>
+								</div>
+							</div>
+						</div>
+
+						{/* Service Requirements Section */}
+						<div className="grid grid-cols-1 gap-x-8 gap-y-10 md:grid-cols-3">
+							<div>
+								<h2 className="text-base/7 font-semibold text-gray-900 dark:text-white">
+									Service Requirements
+								</h2>
+								<p className="mt-1 text-sm/6 text-gray-600 dark:text-gray-400">
+									Select the services you&apos;re interested in and
+									communication preferences.
+								</p>
+							</div>
+
+							<div className="max-w-4xl space-y-10 md:col-span-2">
+								<FieldSet>
+									<FieldLegend variant="label">Services needed</FieldLegend>
+									<form.Field
+										name="servicesNeeded"
+										mode="array"
+										children={(field) => {
+											const services = [
 												{
-													id: "property-management",
 													value: "property-management",
 													label: "Property Management",
 													description:
 														"Comprehensive property management services including maintenance and tenant relations.",
 												},
 												{
-													id: "maintenance",
 													value: "maintenance",
 													label: "Maintenance Services",
 													description:
 														"Regular maintenance, repairs, and emergency response services.",
 												},
 												{
-													id: "consulting",
 													value: "consulting",
 													label: "Consulting Services",
 													description:
 														"Strategic consulting for property optimization and investment planning.",
 												},
-											].map((service) => (
-												<div key={service.id} className="flex gap-3">
-													<div className="flex h-6 shrink-0 items-center">
-														<div className="group grid size-4 grid-cols-1">
-															<input
-																id={service.id}
-																name="services"
-																type="checkbox"
-																value={service.value}
-																checked={formData.servicesNeeded.includes(
-																	service.value
-																)}
-																onChange={(e) =>
-																	handleCheckboxChange(
-																		service.value,
-																		e.target.checked
-																	)
-																}
-																className="col-start-1 row-start-1 appearance-none rounded-sm border border-gray-300 dark:border-white/10 bg-white dark:bg-white/5 checked:border-blue-600 dark:checked:border-indigo-500 checked:bg-blue-600 dark:checked:bg-indigo-500 indeterminate:border-blue-600 dark:indeterminate:border-indigo-500 indeterminate:bg-blue-600 dark:indeterminate:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:focus-visible:outline-indigo-500"
-															/>
-															<svg
-																fill="none"
-																viewBox="0 0 14 14"
-																className="pointer-events-none col-start-1 row-start-1 size-3.5 self-center justify-self-center stroke-white"
-															>
-																<path
-																	d="M3 8L6 11L11 3.5"
-																	strokeWidth={2}
-																	strokeLinecap="round"
-																	strokeLinejoin="round"
-																	className="opacity-0 group-has-checked:opacity-100"
-																/>
-															</svg>
-														</div>
-													</div>
-													<div className="text-sm/6">
-														<label
-															htmlFor={service.id}
-															className="font-medium text-gray-900 dark:text-white"
-														>
-															{service.label}
-														</label>
-														<p className="text-gray-600 dark:text-gray-400">
-															{service.description}
-														</p>
-													</div>
-												</div>
-											))}
-										</div>
-									</fieldset>
+											];
 
-									<fieldset>
-										<legend className="text-sm/6 font-semibold text-gray-900 dark:text-white">
-											Communication preferences
-										</legend>
-										<p className="mt-1 text-sm/6 text-gray-600 dark:text-gray-400">
-											How would you like to receive updates and notifications?
-										</p>
-										<div className="mt-6 space-y-6">
-											{[
-												{
-													id: "comm-email",
-													value: "email",
-													label: "Email only",
-												},
-												{
-													id: "comm-phone",
-													value: "phone",
-													label: "Phone calls for urgent matters",
-												},
-												{
-													id: "comm-both",
-													value: "both",
-													label: "Both email and phone",
-												},
-											].map((option) => (
-												<div
-													key={option.id}
-													className="flex items-center gap-x-3"
-												>
-													<input
-														id={option.id}
-														name="communication"
-														type="radio"
-														value={option.value}
-														checked={
-															formData.communicationPreference === option.value
-														}
-														onChange={(e) =>
-															updateField(
-																"communicationPreference",
-																e.target.value
+											return (
+												<FieldGroup className="gap-6">
+													{services.map((service) => {
+														const isChecked = field.state.value.includes(
+															service.value
+														);
+														return (
+															<Field
+																key={service.value}
+																orientation="horizontal"
+															>
+																<Checkbox
+																	id={service.value}
+																	checked={isChecked}
+																	onCheckedChange={(checked) => {
+																		if (checked) {
+																			field.pushValue(service.value);
+																		} else {
+																			const index = field.state.value.indexOf(
+																				service.value
+																			);
+																			if (index > -1) {
+																				field.removeValue(index);
+																			}
+																		}
+																	}}
+																	disabled={isLoading}
+																/>
+																<FieldLabel htmlFor={service.value}>
+																	<div className="text-sm/6">
+																		<div className="font-medium text-gray-900 dark:text-white">
+																			{service.label}
+																		</div>
+																		<p className="text-gray-600 dark:text-gray-400">
+																			{service.description}
+																		</p>
+																	</div>
+																</FieldLabel>
+															</Field>
+														);
+													})}
+												</FieldGroup>
+											);
+										}}
+									/>
+								</FieldSet>
+
+								<FieldSet>
+									<FieldLegend variant="label">
+										Communication preferences
+									</FieldLegend>
+									<FieldDescription>
+										How would you like to receive updates and notifications?
+									</FieldDescription>
+									<form.Field
+										name="communicationPreference"
+										children={(field) => {
+											return (
+												<Field>
+													<RadioGroup
+														value={field.state.value}
+														onValueChange={(value) =>
+															field.handleChange(
+																value as ClientFormData["communicationPreference"]
 															)
 														}
-														className="relative size-4 appearance-none rounded-full border border-gray-300 dark:border-white/10 bg-white dark:bg-white/5 before:absolute before:inset-1 before:rounded-full before:bg-white checked:border-blue-600 dark:checked:border-indigo-500 checked:bg-blue-600 dark:checked:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:focus-visible:outline-indigo-500"
-													/>
-													<label
-														htmlFor={option.id}
-														className="block text-sm/6 font-medium text-gray-900 dark:text-white"
+														disabled={isLoading}
 													>
-														{option.label}
-													</label>
-												</div>
-											))}
-										</div>
-									</fieldset>
-								</div>
+														<div className="flex items-center gap-3">
+															<RadioGroupItem value="email" id="comm-email" />
+															<Label htmlFor="comm-email">Email only</Label>
+														</div>
+														<div className="flex items-center gap-3">
+															<RadioGroupItem value="phone" id="comm-phone" />
+															<Label htmlFor="comm-phone">
+																Phone calls for urgent matters
+															</Label>
+														</div>
+														<div className="flex items-center gap-3">
+															<RadioGroupItem value="both" id="comm-both" />
+															<Label htmlFor="comm-both">
+																Both email and phone
+															</Label>
+														</div>
+													</RadioGroup>
+												</Field>
+											);
+										}}
+									/>
+								</FieldSet>
 							</div>
 						</div>
-					</form>
-				</div>
+					</div>
+				</form>
 			</div>
-		);
-	}
-);
+		</div>
+	);
+};
 
 ClientOnboardingForm.displayName = "ClientOnboardingForm";
