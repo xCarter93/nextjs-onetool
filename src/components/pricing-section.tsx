@@ -105,64 +105,54 @@ const AnimatedNumber: React.FC<AnimatedNumberProps> = ({
 
 const plans = [
 	{
-		name: "Starter",
+		name: "Free",
 		description:
-			"Great for small businesses and startups looking to get started with field service management",
-		price: 12,
-		yearlyPrice: 99,
+			"Perfect for individuals and small teams getting started with project management",
+		price: 0,
+		yearlyPrice: 0,
 		buttonText: "Get started",
 		buttonVariant: "outline" as const,
 		features: [
-			{ text: "Up to 10 clients", icon: <Briefcase size={20} /> },
-			{ text: "Up to 10GB storage", icon: <Database size={20} /> },
-			{ text: "Limited analytics", icon: <Server size={20} /> },
+			{ text: "Limited Clients (10)", icon: <Briefcase size={20} /> },
+			{
+				text: "Limited Active Projects per client (3)",
+				icon: <Database size={20} />,
+			},
+			{ text: "5 E-signature requests per month", icon: <Server size={20} /> },
 		],
 		includes: [
 			"Free includes:",
-			"Unlimited projects",
-			"Custom templates & quotes",
-			"2-factor authentication",
+			"No Custom SKU creation",
+			"No Organization Documents",
+			"Standard Support - 72 Hour SLAs",
 		],
 	},
 	{
 		name: "Business",
 		description:
-			"Best value for growing businesses that need more advanced features",
-		price: 48,
-		yearlyPrice: 399,
+			"Best value for growing businesses that need advanced features and unlimited access",
+		price: 120,
+		yearlyPrice: 1200,
 		buttonText: "Get started",
 		buttonVariant: "default" as const,
 		popular: true,
 		features: [
-			{ text: "Unlimited clients", icon: <Briefcase size={20} /> },
-			{ text: "Storage (250MB/file)", icon: <Database size={20} /> },
-			{ text: "100 workspace command runs", icon: <Server size={20} /> },
+			{ text: "Unlimited Clients", icon: <Briefcase size={20} /> },
+			{
+				text: "Unlimited Active Projects per Client",
+				icon: <Database size={20} />,
+			},
+			{
+				text: "Unlimited E-signature requests per month",
+				icon: <Server size={20} />,
+			},
 		],
 		includes: [
-			"Everything in Starter, plus:",
-			"Advanced scheduling",
-			"Payment processing",
-			"Priority support",
-		],
-	},
-	{
-		name: "Enterprise",
-		description:
-			"Advanced plan with enhanced security and unlimited access for large teams",
-		price: 96,
-		yearlyPrice: 899,
-		buttonText: "Get started",
-		buttonVariant: "outline" as const,
-		features: [
-			{ text: "Unlimited clients", icon: <Briefcase size={20} /> },
-			{ text: "Unlimited storage", icon: <Database size={20} /> },
-			{ text: "Unlimited workspaces", icon: <Server size={20} /> },
-		],
-		includes: [
-			"Everything in Business, plus:",
-			"Custom integrations",
-			"Dedicated account manager",
-			"24/7 priority support",
+			"Everything in Free, plus:",
+			"Custom SKU Creation",
+			"Unlimited Saved Organization Documents",
+			"AI Import for Existing Clients/Projects",
+			"Priority Support - 24 hour SLAs",
 		],
 	},
 ];
@@ -313,7 +303,7 @@ export default function PricingSection() {
 				<PricingSwitch onSwitch={togglePricingPeriod} />
 			</TimelineContent>
 
-			<div className="grid md:grid-cols-3 max-w-7xl gap-4 py-6 mx-auto">
+			<div className="grid md:grid-cols-2 max-w-5xl gap-6 py-6 mx-auto">
 				{plans.map((plan, index) => (
 					<TimelineContent
 						key={plan.name}
