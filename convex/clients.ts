@@ -316,6 +316,141 @@ export const create = mutation({
 });
 
 /**
+ * Bulk create clients from CSV import
+ */
+export const bulkCreate = mutation({
+	args: {
+		clients: v.array(
+			v.object({
+				// Company Information
+				companyName: v.string(),
+				industry: v.optional(v.string()),
+				companyDescription: v.optional(v.string()),
+
+				// Status and Classification
+				status: v.union(
+					v.literal("lead"),
+					v.literal("prospect"),
+					v.literal("active"),
+					v.literal("inactive"),
+					v.literal("archived")
+				),
+				leadSource: v.optional(
+					v.union(
+						v.literal("word-of-mouth"),
+						v.literal("website"),
+						v.literal("social-media"),
+						v.literal("referral"),
+						v.literal("advertising"),
+						v.literal("trade-show"),
+						v.literal("cold-outreach"),
+						v.literal("other")
+					)
+				),
+
+				// Custom Categories
+				category: v.optional(
+					v.union(
+						v.literal("design"),
+						v.literal("development"),
+						v.literal("consulting"),
+						v.literal("maintenance"),
+						v.literal("marketing"),
+						v.literal("other")
+					)
+				),
+				clientSize: v.optional(
+					v.union(
+						v.literal("small"),
+						v.literal("medium"),
+						v.literal("large"),
+						v.literal("enterprise")
+					)
+				),
+				clientType: v.optional(
+					v.union(
+						v.literal("new-client"),
+						v.literal("existing-client"),
+						v.literal("partner"),
+						v.literal("vendor"),
+						v.literal("contractor")
+					)
+				),
+				isActive: v.optional(v.boolean()),
+				priorityLevel: v.optional(
+					v.union(
+						v.literal("low"),
+						v.literal("medium"),
+						v.literal("high"),
+						v.literal("urgent")
+					)
+				),
+				projectDimensions: v.optional(v.string()),
+
+				// Communication preferences
+				communicationPreference: v.optional(
+					v.union(v.literal("email"), v.literal("phone"), v.literal("both"))
+				),
+				emailOptIn: v.boolean(),
+				smsOptIn: v.boolean(),
+
+				// Services
+				servicesNeeded: v.optional(v.array(v.string())),
+
+				// Metadata
+				tags: v.optional(v.array(v.string())),
+				notes: v.optional(v.string()),
+			})
+		),
+	},
+	handler: async (
+		ctx,
+		args
+	): Promise<Array<{ success: boolean; id?: ClientId; error?: string }>> => {
+		const results: Array<{
+			success: boolean;
+			id?: ClientId;
+			error?: string;
+		}> = [];
+
+		for (const clientData of args.clients) {
+			try {
+				// Validate required fields
+				if (!clientData.companyName || !clientData.companyName.trim()) {
+					results.push({
+						success: false,
+						error: "Company name is required",
+					});
+					continue;
+				}
+
+				// Create the client
+				const clientId = await createClientWithOrg(ctx, clientData);
+
+				// Get the created client for activity logging
+				const client = await ctx.db.get(clientId);
+				if (client) {
+					await ActivityHelpers.clientCreated(ctx, client as ClientDocument);
+				}
+
+				results.push({
+					success: true,
+					id: clientId,
+				});
+			} catch (error) {
+				results.push({
+					success: false,
+					error:
+						error instanceof Error ? error.message : "Unknown error occurred",
+				});
+			}
+		}
+
+		return results;
+	},
+});
+
+/**
  * Update a client with type-safe partial updates
  */
 export const update = mutation({
