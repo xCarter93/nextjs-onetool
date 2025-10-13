@@ -38,7 +38,7 @@ import type { Id as StorageId } from "../../../../../convex/_generated/dataModel
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useEffect, useState, useMemo } from "react";
 import { DocumentSelectionModal } from "@/components/document-selection-modal";
-import { SendForSignatureModal } from "@/components/send-for-signature-modal";
+import { SendEmailPopover } from "@/components/send-email-popover";
 import { SignatureProgressBar } from "@/components/signature-progress-bar";
 import Accordion from "@/components/ui/accordion";
 
@@ -156,8 +156,8 @@ export default function QuoteDetailPage() {
 	// Document selection modal state
 	const [showDocumentModal, setShowDocumentModal] = useState(false);
 
-	// Signature modal state
-	const [showSignatureModal, setShowSignatureModal] = useState(false);
+	// Signature popover state
+	const [sendEmailPopoverOpen, setSendEmailPopoverOpen] = useState(false);
 	const [isSendingForSignature, setIsSendingForSignature] = useState(false);
 
 	// Get the currently selected version's URL (or latest if none selected)
@@ -567,7 +567,7 @@ export default function QuoteDetailPage() {
 				message,
 			});
 			toast.success("Sent!", "Quote sent for signature via BoldSign");
-			setShowSignatureModal(false);
+			setSendEmailPopoverOpen(false);
 		} catch (error) {
 			const message = error instanceof Error ? error.message : "Unknown error";
 			toast.error("Send failed", message);
@@ -1339,7 +1339,7 @@ export default function QuoteDetailPage() {
 						label: "Send to Client",
 						intent: "outline",
 						icon: <Mail className="h-4 w-4" />,
-						onClick: () => setShowSignatureModal(true),
+						onClick: () => setSendEmailPopoverOpen(true),
 						position: "right" as const,
 					},
 					{
@@ -1369,6 +1369,7 @@ export default function QuoteDetailPage() {
 						position: "right" as const,
 					},
 				]}
+				fullWidth
 			/>
 
 			{/* Document Selection Modal */}
@@ -1378,14 +1379,17 @@ export default function QuoteDetailPage() {
 				onConfirm={(selectedIds) => handleGeneratePdf(selectedIds)}
 			/>
 
-			{/* Send for Signature Modal */}
-			<SendForSignatureModal
-				isOpen={showSignatureModal}
-				onClose={() => setShowSignatureModal(false)}
+			{/* Send Email Popover - positioned at bottom right of screen to align with footer button */}
+			<SendEmailPopover
+				isOpen={sendEmailPopoverOpen}
+				onOpenChange={setSendEmailPopoverOpen}
 				onConfirm={handleSendForSignature}
 				primaryContact={primaryContact}
-				isLoading={isSendingForSignature}
-			/>
+				quoteNumber={quote?.quoteNumber || quote?._id.slice(-6)}
+				documentVersion={latestDocument?.version}
+			>
+				<div className="fixed bottom-4 right-6 pointer-events-none" />
+			</SendEmailPopover>
 		</div>
 	);
 }
