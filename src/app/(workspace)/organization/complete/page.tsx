@@ -10,8 +10,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Users, Building2, Globe } from "lucide-react";
+import { Users, Building2, Globe, Upload, Check } from "lucide-react";
 import { api } from "../../../../../convex/_generated/api";
+import { CsvUploadZone } from "@/components/csv-upload-zone";
+import { CsvMappingPreview } from "@/components/csv-mapping-preview";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import type {
+	EntityType,
+	CsvAnalysisResult,
+	FieldMapping,
+	ImportResult,
+} from "@/types/csv-import";
 import Image from "next/image";
 
 interface FormData {
@@ -30,11 +40,25 @@ interface FormData {
 	logoInvertInDarkMode: boolean;
 }
 
+interface CsvImportState {
+	file: File | null;
+	fileContent: string | null;
+	entityType: EntityType;
+	isAnalyzing: boolean;
+	analysisResult: CsvAnalysisResult | null;
+	mappings: FieldMapping[];
+	isImporting: boolean;
+	importResult: ImportResult | null;
+	skipImport: boolean;
+}
+
 export default function CompleteOrganizationMetadata() {
 	const { user } = useUser();
 	const { organization: clerkOrganization } = useOrganization();
 	const router = useRouter();
 	const completeMetadata = useMutation(api.organizations.completeMetadata);
+	const bulkCreateClients = useMutation(api.clients.bulkCreate);
+	const bulkCreateProjects = useMutation(api.projects.bulkCreate);
 	const organization = useQuery(api.organizations.get);
 	const needsCompletion = useQuery(api.organizations.needsMetadataCompletion);
 	const toast = useToast();
@@ -56,6 +80,18 @@ export default function CompleteOrganizationMetadata() {
 		smsEnabled: false,
 		monthlyRevenueTarget: 0,
 		logoInvertInDarkMode: true,
+	});
+
+	const [csvImportState, setCsvImportState] = useState<CsvImportState>({
+		file: null,
+		fileContent: null,
+		entityType: "clients",
+		isAnalyzing: false,
+		analysisResult: null,
+		mappings: [],
+		isImporting: false,
+		importResult: null,
+		skipImport: false,
 	});
 
 	// Redirect if metadata is already complete
@@ -102,6 +138,17 @@ export default function CompleteOrganizationMetadata() {
 						? "complete"
 						: "upcoming",
 		},
+		{
+			id: "4",
+			name: "Import Data",
+			description: "Import existing clients or projects (optional)",
+			status:
+				currentStep === 4
+					? "current"
+					: currentStep > 4
+						? "complete"
+						: "upcoming",
+		},
 	];
 
 	const companySizeOptions = [
@@ -144,7 +191,7 @@ export default function CompleteOrganizationMetadata() {
 			return;
 		}
 
-		if (currentStep < 3) {
+		if (currentStep < 4) {
 			setCurrentStep(currentStep + 1);
 		}
 	};
@@ -167,6 +214,213 @@ export default function CompleteOrganizationMetadata() {
 	const invertPreviewStyles = formData.logoInvertInDarkMode
 		? "invert brightness-0"
 		: "";
+
+	// CSV Import Handlers
+	const handleFileSelect = async (file: File, content: string) => {
+		setCsvImportState((prev) => ({
+			...prev,
+			file,
+			fileContent: content,
+			isAnalyzing: true,
+			analysisResult: null,
+			mappings: [],
+		}));
+
+		try {
+			// Call API to analyze CSV
+			const response = await fetch("/api/analyze-csv", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					csvContent: content,
+					entityType: csvImportState.entityType,
+				}),
+			});
+
+			if (!response.ok) {
+				throw new Error("Failed to analyze CSV");
+			}
+
+			const analysisResult: CsvAnalysisResult = await response.json();
+
+			setCsvImportState((prev) => ({
+				...prev,
+				isAnalyzing: false,
+				analysisResult,
+				mappings: analysisResult.detectedFields,
+			}));
+		} catch (error) {
+			console.error("Error analyzing CSV:", error);
+			toast.error(
+				"Analysis Failed",
+				error instanceof Error ? error.message : "Failed to analyze CSV file"
+			);
+			setCsvImportState((prev) => ({
+				...prev,
+				isAnalyzing: false,
+			}));
+		}
+	};
+
+	const handleMappingChange = (csvColumn: string, newSchemaField: string) => {
+		setCsvImportState((prev) => ({
+			...prev,
+			mappings: prev.mappings.map((m) =>
+				m.csvColumn === csvColumn ? { ...m, schemaField: newSchemaField } : m
+			),
+		}));
+	};
+
+	const handleImportData = async () => {
+		if (!csvImportState.fileContent || !csvImportState.analysisResult) {
+			return;
+		}
+
+		setCsvImportState((prev) => ({ ...prev, isImporting: true }));
+		setError(null);
+
+		try {
+			// Parse CSV with papaparse
+			const Papa = (await import("papaparse")).default;
+			const parseResult = Papa.parse(csvImportState.fileContent, {
+				header: true,
+				skipEmptyLines: true,
+				dynamicTyping: true,
+			});
+
+			const rows = parseResult.data as Record<string, unknown>[];
+
+			// Helper function to transform values based on data type
+			const transformValue = (value: unknown, dataType: string): unknown => {
+				if (value === null || value === undefined || value === "") {
+					return undefined;
+				}
+
+				const strValue = String(value).trim();
+
+				switch (dataType) {
+					case "boolean":
+						// Handle various boolean representations
+						return (
+							strValue.toLowerCase() === "true" ||
+							strValue === "1" ||
+							strValue === "yes"
+						);
+
+					case "number":
+						const num = Number(strValue);
+						return isNaN(num) ? undefined : num;
+
+					case "array":
+						// Handle semicolon or comma-separated values
+						if (typeof value === "string") {
+							return strValue
+								.split(/[;,]/)
+								.map((v) => v.trim())
+								.filter((v) => v.length > 0);
+						}
+						return Array.isArray(value) ? value : [value];
+
+					default:
+						return strValue;
+				}
+			};
+
+			// Map CSV rows to schema format with type transformation
+			const mappedData = rows.map((row) => {
+				const mapped: Record<string, unknown> = {};
+
+				csvImportState.mappings.forEach((mapping) => {
+					const value = row[mapping.csvColumn];
+					if (value !== null && value !== undefined && value !== "") {
+						const transformedValue = transformValue(value, mapping.dataType);
+						if (transformedValue !== undefined) {
+							mapped[mapping.schemaField] = transformedValue;
+						}
+					}
+				});
+
+				// Apply defaults from analysis (these are already the correct type)
+				Object.entries(
+					csvImportState.analysisResult!.suggestedDefaults
+				).forEach(([key, value]) => {
+					if (!(key in mapped)) {
+						// Transform default values too
+						const mapping = csvImportState.mappings.find(
+							(m) => m.schemaField === key
+						);
+						if (mapping && typeof value === "string") {
+							mapped[key] = transformValue(value, mapping.dataType);
+						} else {
+							mapped[key] = value;
+						}
+					}
+				});
+
+				return mapped;
+			});
+
+			// Call appropriate bulk create mutation
+			let result;
+			if (csvImportState.entityType === "clients") {
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				result = await bulkCreateClients({ clients: mappedData as any });
+			} else {
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				result = await bulkCreateProjects({ projects: mappedData as any });
+			}
+
+			const successCount = result.filter((r) => r.success).length;
+			const failureCount = result.filter((r) => !r.success).length;
+
+			setCsvImportState((prev) => ({
+				...prev,
+				isImporting: false,
+				importResult: {
+					successCount,
+					failureCount,
+					items: result.map((r, idx) => ({
+						success: r.success,
+						id: r.id,
+						error: r.error,
+						rowIndex: idx,
+					})),
+				},
+			}));
+
+			if (failureCount === 0) {
+				toast.success(
+					"Import Successful",
+					`Successfully imported ${successCount} ${csvImportState.entityType}`
+				);
+			} else {
+				toast.warning(
+					"Import Partially Complete",
+					`Imported ${successCount} ${csvImportState.entityType}, ${failureCount} failed`
+				);
+			}
+		} catch (error) {
+			console.error("Error importing data:", error);
+			toast.error(
+				"Import Failed",
+				error instanceof Error ? error.message : "Failed to import data"
+			);
+			setCsvImportState((prev) => ({
+				...prev,
+				isImporting: false,
+			}));
+		}
+	};
+
+	const handleCompleteSetup = async () => {
+		// First complete metadata
+		await handleCompleteMetadata();
+
+		// Then navigate to home
+		router.push("/home");
+	};
 
 	const handleCompleteMetadata = async () => {
 		setError(null);
@@ -210,7 +464,7 @@ export default function CompleteOrganizationMetadata() {
 				logoInvertInDarkMode: formData.logoInvertInDarkMode,
 			});
 
-			router.push("/home");
+			// Don't redirect here - let handleCompleteSetup do it
 		} catch (err) {
 			console.error("Failed to complete organization metadata:", err);
 			setError(
@@ -564,12 +818,220 @@ export default function CompleteOrganizationMetadata() {
 				</Button>
 				<button
 					type="button"
-					onClick={handleCompleteMetadata}
+					onClick={handleNext}
 					disabled={isLoading}
-					className="group inline-flex items-center gap-2 text-sm font-semibold text-white transition-all duration-200 px-4 py-2 rounded-lg bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
+					className="group inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-all duration-200 px-4 py-2 rounded-lg bg-primary/10 hover:bg-primary/15 ring-1 ring-primary/30 hover:ring-primary/40 shadow-sm hover:shadow-md backdrop-blur-sm"
 				>
-					{isLoading ? "Saving..." : "Complete Setup"}
+					Next Step
 				</button>
+			</div>
+		</div>
+	);
+
+	const renderStep4 = () => (
+		<div className="space-y-8">
+			<div>
+				<div className="flex items-center gap-3 mb-3">
+					<div className="w-1.5 h-6 bg-gradient-to-b from-primary to-primary/60 rounded-full" />
+					<h2 className="text-2xl font-semibold text-foreground tracking-tight">
+						Import Existing Data
+					</h2>
+				</div>
+				<p className="text-muted-foreground ml-5 leading-relaxed">
+					Optionally import your existing clients or projects from a CSV file.
+					Our AI will help map your data to the correct fields.
+				</p>
+			</div>
+
+			{/* Entity Type Selection */}
+			<div>
+				<label className="block text-sm font-semibold text-foreground mb-4 tracking-wide">
+					What type of data are you importing?
+				</label>
+				<RadioGroup
+					value={csvImportState.entityType}
+					onValueChange={(value) =>
+						setCsvImportState((prev) => ({
+							...prev,
+							entityType: value as EntityType,
+							analysisResult: null,
+							mappings: [],
+						}))
+					}
+					className="grid grid-cols-2 gap-4"
+				>
+					<div>
+						<RadioGroupItem
+							value="clients"
+							id="clients"
+							className="peer sr-only"
+						/>
+						<Label
+							htmlFor="clients"
+							className="flex flex-col items-center justify-between rounded-lg border-2 border-border bg-background p-4 hover:bg-muted/30 peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5 cursor-pointer transition-all"
+						>
+							<Users className="mb-3 h-6 w-6 text-muted-foreground peer-data-[state=checked]:text-primary" />
+							<div className="text-center">
+								<div className="font-semibold text-sm">Clients</div>
+								<div className="text-xs text-muted-foreground mt-1">
+									Import client/customer data
+								</div>
+							</div>
+						</Label>
+					</div>
+					<div>
+						<RadioGroupItem
+							value="projects"
+							id="projects"
+							className="peer sr-only"
+						/>
+						<Label
+							htmlFor="projects"
+							className="flex flex-col items-center justify-between rounded-lg border-2 border-border bg-background p-4 hover:bg-muted/30 peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5 cursor-pointer transition-all"
+						>
+							<Building2 className="mb-3 h-6 w-6 text-muted-foreground peer-data-[state=checked]:text-primary" />
+							<div className="text-center">
+								<div className="font-semibold text-sm">Projects</div>
+								<div className="text-xs text-muted-foreground mt-1">
+									Import project data
+								</div>
+							</div>
+						</Label>
+					</div>
+				</RadioGroup>
+			</div>
+
+			{/* CSV Upload */}
+			<div>
+				<label className="block text-sm font-semibold text-foreground mb-4 tracking-wide">
+					Upload CSV File
+				</label>
+				<CsvUploadZone onFileSelect={handleFileSelect} maxSizeMB={5} />
+			</div>
+
+			{/* AI Analysis Loading */}
+			{csvImportState.isAnalyzing && (
+				<div className="p-6 bg-muted/30 border border-border rounded-lg">
+					<div className="flex items-center gap-3">
+						<div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+						<div>
+							<p className="text-sm font-medium text-foreground">
+								AI is analyzing your data...
+							</p>
+							<p className="text-xs text-muted-foreground mt-1">
+								This may take a moment
+							</p>
+						</div>
+					</div>
+				</div>
+			)}
+
+			{/* Mapping Preview */}
+			{csvImportState.analysisResult && csvImportState.mappings.length > 0 && (
+				<div>
+					<label className="block text-sm font-semibold text-foreground mb-4 tracking-wide">
+						Review & Adjust Field Mappings
+					</label>
+					<CsvMappingPreview
+						entityType={csvImportState.entityType}
+						mappings={csvImportState.mappings}
+						validation={csvImportState.analysisResult.validation}
+						onMappingChange={handleMappingChange}
+					/>
+				</div>
+			)}
+
+			{/* Import Result */}
+			{csvImportState.importResult && (
+				<div className="p-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
+					<div className="flex items-start gap-3">
+						<Check className="w-5 h-5 text-green-600 mt-0.5" />
+						<div>
+							<p className="text-sm font-semibold text-green-800 dark:text-green-200">
+								Import Complete
+							</p>
+							<p className="text-xs text-green-700 dark:text-green-300 mt-1">
+								Successfully imported {csvImportState.importResult.successCount}{" "}
+								{csvImportState.entityType}
+								{csvImportState.importResult.failureCount > 0 &&
+									` (${csvImportState.importResult.failureCount} failed)`}
+							</p>
+						</div>
+					</div>
+				</div>
+			)}
+
+			{/* Error Display */}
+			{error && (
+				<div className="p-4 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg">
+					<p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+				</div>
+			)}
+
+			{/* Action Buttons */}
+			<div className="flex justify-between pt-6">
+				<Button
+					intent="secondary"
+					onClick={handlePrevious}
+					isDisabled={
+						isLoading ||
+						csvImportState.isAnalyzing ||
+						csvImportState.isImporting
+					}
+					className="px-6 py-2.5 shadow-md hover:shadow-lg transition-shadow"
+				>
+					Previous
+				</Button>
+
+				<div className="flex gap-3">
+					{/* Skip & Continue Button */}
+					<button
+						type="button"
+						onClick={handleCompleteSetup}
+						disabled={isLoading}
+						className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-all duration-200 px-4 py-2"
+					>
+						Skip & Continue
+					</button>
+
+					{/* Import Data Button */}
+					{csvImportState.analysisResult && !csvImportState.importResult && (
+						<button
+							type="button"
+							onClick={handleImportData}
+							disabled={
+								isLoading ||
+								csvImportState.isImporting ||
+								!csvImportState.analysisResult?.validation.isValid
+							}
+							className="group inline-flex items-center gap-2 text-sm font-semibold text-white transition-all duration-200 px-4 py-2 rounded-lg bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
+						>
+							{csvImportState.isImporting ? (
+								<>
+									<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+									Importing...
+								</>
+							) : (
+								<>
+									<Upload className="w-4 h-4" />
+									Import Data
+								</>
+							)}
+						</button>
+					)}
+
+					{/* Complete Setup Button (shown after import or if no file uploaded) */}
+					{(csvImportState.importResult || !csvImportState.file) && (
+						<button
+							type="button"
+							onClick={handleCompleteSetup}
+							disabled={isLoading}
+							className="group inline-flex items-center gap-2 text-sm font-semibold text-white transition-all duration-200 px-4 py-2 rounded-lg bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
+						>
+							{isLoading ? "Completing..." : "Complete Setup"}
+						</button>
+					)}
+				</div>
 			</div>
 		</div>
 	);
@@ -582,6 +1044,8 @@ export default function CompleteOrganizationMetadata() {
 				return renderStep2();
 			case 3:
 				return renderStep3();
+			case 4:
+				return renderStep4();
 			default:
 				return renderStep1();
 		}
@@ -623,7 +1087,7 @@ export default function CompleteOrganizationMetadata() {
 
 	return (
 		<div className="relative p-4 sm:p-6 lg:p-8 min-h-screen flex flex-col">
-			<div className="flex-1 flex flex-col py-8 max-w-4xl mx-auto w-full">
+			<div className="flex-1 flex flex-col py-8 mx-auto w-full">
 				{/* Enhanced Header */}
 				<div className="mb-10">
 					<div className="flex items-center gap-3 mb-3">

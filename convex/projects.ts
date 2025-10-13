@@ -296,6 +296,134 @@ export const create = mutation({
 });
 
 /**
+ * Bulk create projects from CSV import
+ */
+export const bulkCreate = mutation({
+	args: {
+		projects: v.array(
+			v.object({
+				clientId: v.optional(v.id("clients")),
+				clientName: v.optional(v.string()), // For lookup if clientId not provided
+				title: v.string(),
+				description: v.optional(v.string()),
+				instructions: v.optional(v.string()),
+				projectNumber: v.optional(v.string()),
+				status: v.union(
+					v.literal("planned"),
+					v.literal("in-progress"),
+					v.literal("completed"),
+					v.literal("cancelled")
+				),
+				projectType: v.union(v.literal("one-off"), v.literal("recurring")),
+				startDate: v.optional(v.number()),
+				endDate: v.optional(v.number()),
+				salespersonId: v.optional(v.id("users")),
+				assignedUserIds: v.optional(v.array(v.id("users"))),
+				invoiceReminderEnabled: v.optional(v.boolean()),
+				scheduleForLater: v.optional(v.boolean()),
+			})
+		),
+	},
+	handler: async (
+		ctx,
+		args
+	): Promise<Array<{ success: boolean; id?: ProjectId; error?: string }>> => {
+		const results: Array<{
+			success: boolean;
+			id?: ProjectId;
+			error?: string;
+		}> = [];
+
+		const userOrgId = await getCurrentUserOrgId(ctx);
+
+		for (const projectData of args.projects) {
+			try {
+				// Validate required fields
+				if (!projectData.title || !projectData.title.trim()) {
+					results.push({
+						success: false,
+						error: "Project title is required",
+					});
+					continue;
+				}
+
+				// Resolve clientId if clientName is provided instead
+				let clientId = projectData.clientId;
+				if (!clientId && projectData.clientName) {
+					const clients = await ctx.db
+						.query("clients")
+						.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
+						.collect();
+
+					const matchedClient = clients.find(
+						(c) =>
+							c.companyName.toLowerCase() ===
+							projectData.clientName!.toLowerCase()
+					);
+
+					if (matchedClient) {
+						clientId = matchedClient._id;
+					} else {
+						results.push({
+							success: false,
+							error: `Client "${projectData.clientName}" not found`,
+						});
+						continue;
+					}
+				}
+
+				if (!clientId) {
+					results.push({
+						success: false,
+						error: "Client ID or client name is required",
+					});
+					continue;
+				}
+
+				// Validate dates if provided
+				if (
+					projectData.startDate &&
+					projectData.endDate &&
+					projectData.startDate > projectData.endDate
+				) {
+					results.push({
+						success: false,
+						error: "Start date cannot be after end date",
+					});
+					continue;
+				}
+
+				// Create the project
+				const { clientName, ...projectCreateData } = projectData;
+				const projectId = await createProjectWithOrg(ctx, {
+					...projectCreateData,
+					clientId,
+				});
+
+				// Get the created project for activity logging
+				const project = await ctx.db.get(projectId);
+				if (project) {
+					await ActivityHelpers.projectCreated(ctx, project as ProjectDocument);
+				}
+
+				results.push({
+					success: true,
+					id: projectId,
+				});
+			} catch (error) {
+				results.push({
+					success: false,
+					error:
+						error instanceof Error ? error.message : "Unknown error occurred",
+				});
+			}
+		}
+
+		return results;
+	},
+});
+
+/**
  * Update a project
  */
 export const update = mutation({
