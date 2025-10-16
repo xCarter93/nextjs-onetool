@@ -78,16 +78,26 @@ export default function Page() {
 				transition={{ duration: 0.5, delay: 0.3 }}
 			>
 				{/* Main Content Area */}
-				<div className="xl:col-span-7 space-y-6">
+				<div className="xl:col-span-7 space-y-6 lg:space-y-8">
+					{/* Getting Started Section */}
 					<motion.div
 						transition={{ type: "spring", stiffness: 300, damping: 30 }}
 					>
 						<GettingStarted />
 					</motion.div>
+
+					{/* Tasks Section - Now integrated into main content */}
+					<motion.div
+						initial={{ opacity: 0, y: 20 }}
+						animate={{ opacity: 1, y: 0 }}
+						transition={{ duration: 0.5, delay: 0.5 }}
+					>
+						<HomeTaskList />
+					</motion.div>
 				</div>
 
 				{/* Enhanced Sidebar */}
-				<div className="xl:col-span-5 space-y-6">
+				<div className="xl:col-span-5 space-y-6 lg:space-y-8">
 					<motion.div
 						initial={{ opacity: 0, x: 20 }}
 						animate={{ opacity: 1, x: 0 }}
@@ -109,16 +119,6 @@ export default function Page() {
 						<ActivityFeed />
 					</motion.div>
 				</div>
-			</motion.div>
-
-			{/* Tasks Section */}
-			<motion.div
-				className="mt-8 lg:mt-12"
-				initial={{ opacity: 0, y: 20 }}
-				animate={{ opacity: 1, y: 0 }}
-				transition={{ duration: 0.5, delay: 0.6 }}
-			>
-				<HomeTaskList />
 			</motion.div>
 		</motion.div>
 	);

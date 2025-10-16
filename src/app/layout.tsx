@@ -4,6 +4,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import ConvexClientProvider from "@/providers/ConvexClientProvider";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { ToastProvider } from "@/hooks/use-toast";
+import { ConfirmDialogProvider } from "@/hooks/use-confirm-dialog";
 import "./globals.css";
 import { env } from "@/env";
 
@@ -42,7 +43,7 @@ export default function RootLayout({
 					<ConvexClientProvider>
 						<ThemeProvider>
 							<ToastProvider position="top-right" maxToasts={5}>
-								{children}
+								<ConfirmDialogProvider>{children}</ConfirmDialogProvider>
 							</ToastProvider>
 						</ThemeProvider>
 					</ConvexClientProvider>

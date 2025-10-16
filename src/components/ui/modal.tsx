@@ -1,4 +1,4 @@
-import React, { ReactNode, useEffect } from "react";
+import React, { ReactNode, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
@@ -20,6 +20,9 @@ const Modal: React.FC<ModalProps> = ({
 	size = "md",
 	animation = "scale",
 }) => {
+	const modalRef = useRef<HTMLDivElement>(null);
+	const previousActiveElement = useRef<HTMLElement | null>(null);
+
 	// Animation variants based on animation type
 	const getModalVariants = (animationType: string) => {
 		switch (animationType) {
@@ -130,6 +133,39 @@ const Modal: React.FC<ModalProps> = ({
 	};
 
 	const modalVariants = getModalVariants(animation);
+
+	// Handle focus trap and accessibility
+	useEffect(() => {
+		if (isOpen) {
+			// Store the currently focused element
+			previousActiveElement.current = document.activeElement as HTMLElement;
+
+			// Focus the modal after a short delay to ensure it's rendered
+			const focusTimeout = setTimeout(() => {
+				const modalElement = modalRef.current;
+				if (modalElement) {
+					// Try to focus the first focusable element or the modal itself
+					const focusableElements = modalElement.querySelectorAll<HTMLElement>(
+						'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+					);
+					if (focusableElements.length > 0) {
+						focusableElements[0].focus();
+					} else {
+						modalElement.focus();
+					}
+				}
+			}, 100);
+
+			return () => {
+				clearTimeout(focusTimeout);
+				// Restore focus to the previously focused element
+				if (previousActiveElement.current) {
+					previousActiveElement.current.focus();
+				}
+			};
+		}
+	}, [isOpen]);
+
 	// Handle body scroll and pointer events
 	useEffect(() => {
 		if (isOpen) {
@@ -149,7 +185,7 @@ const Modal: React.FC<ModalProps> = ({
 		}
 	}, [isOpen]);
 
-	// Handle escape key - only when modal is open
+	// Handle escape key and focus trap
 	useEffect(() => {
 		if (!isOpen) return; // Early return if modal is closed
 
@@ -159,11 +195,46 @@ const Modal: React.FC<ModalProps> = ({
 			}
 		};
 
-		// Add listener only when modal is open
+		const handleTab = (event: KeyboardEvent) => {
+			if (event.key !== "Tab") return;
+
+			const modalElement = modalRef.current;
+			if (!modalElement) return;
+
+			const focusableElements = modalElement.querySelectorAll<HTMLElement>(
+				'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+			);
+
+			if (focusableElements.length === 0) return;
+
+			const firstElement = focusableElements[0];
+			const lastElement = focusableElements[focusableElements.length - 1];
+
+			// Trap focus within modal
+			if (event.shiftKey) {
+				// Shift + Tab
+				if (document.activeElement === firstElement) {
+					event.preventDefault();
+					lastElement.focus();
+				}
+			} else {
+				// Tab
+				if (document.activeElement === lastElement) {
+					event.preventDefault();
+					firstElement.focus();
+				}
+			}
+		};
+
+		// Add listeners only when modal is open
 		document.addEventListener("keydown", handleEscape);
+		document.addEventListener("keydown", handleTab);
 
 		// Cleanup when modal closes or component unmounts
-		return () => document.removeEventListener("keydown", handleEscape);
+		return () => {
+			document.removeEventListener("keydown", handleEscape);
+			document.removeEventListener("keydown", handleTab);
+		};
 	}, [isOpen, onClose]);
 
 	if (!isOpen) return null;
@@ -201,6 +272,7 @@ const Modal: React.FC<ModalProps> = ({
 
 					{/* Modal Content */}
 					<motion.div
+						ref={modalRef}
 						className={cn(
 							"relative rounded-lg shadow-xl w-full mx-4 max-h-[90vh] overflow-auto",
 							"bg-white dark:bg-gray-900",
@@ -211,6 +283,10 @@ const Modal: React.FC<ModalProps> = ({
 						initial="hidden"
 						animate="visible"
 						exit="exit"
+						role="dialog"
+						aria-modal="true"
+						aria-labelledby={title ? "modal-title" : undefined}
+						tabIndex={-1}
 					>
 						{title && (
 							<div
@@ -220,6 +296,7 @@ const Modal: React.FC<ModalProps> = ({
 								)}
 							>
 								<h3
+									id="modal-title"
 									className={cn(
 										"text-lg font-semibold",
 										"text-gray-900 dark:text-white"
@@ -229,6 +306,7 @@ const Modal: React.FC<ModalProps> = ({
 								</h3>
 								<button
 									onClick={onClose}
+									aria-label="Close dialog"
 									className={cn(
 										"p-1 rounded-md transition-colors",
 										"text-gray-400 hover:text-gray-600",

@@ -80,7 +80,7 @@ export function DocumentSelectionModal({
 							Upload documents in Settings → Documents to use them in quotes
 						</p>
 						<a
-							href="/organization/documents"
+							href="/organization/profile?tab=documents"
 							target="_blank"
 							rel="noopener noreferrer"
 						>

@@ -125,6 +125,14 @@ export default function QuoteDetailPage() {
 		api.clientContacts.getPrimaryContact,
 		quote?.clientId ? { clientId: quote.clientId } : "skip"
 	);
+	const allContacts = useQuery(
+		api.clientContacts.listByClient,
+		quote?.clientId ? { clientId: quote.clientId } : "skip"
+	);
+	const primaryProperty = useQuery(
+		api.clientProperties.getPrimaryProperty,
+		quote?.clientId ? { clientId: quote.clientId } : "skip"
+	);
 	const documentsWithSignatures = useQuery(
 		api.documents.getAllDocumentsWithSignatures,
 		quote ? { documentType: "quote", documentId: quote._id } : "skip"
@@ -158,7 +166,6 @@ export default function QuoteDetailPage() {
 
 	// Signature popover state
 	const [sendEmailPopoverOpen, setSendEmailPopoverOpen] = useState(false);
-	const [isSendingForSignature, setIsSendingForSignature] = useState(false);
 
 	// Get the currently selected version's URL (or latest if none selected)
 	const selectedDocument = useMemo(() => {
@@ -557,7 +564,6 @@ export default function QuoteDetailPage() {
 			return;
 		}
 
-		setIsSendingForSignature(true);
 		try {
 			await sendForSignature({
 				quoteId,
@@ -571,8 +577,6 @@ export default function QuoteDetailPage() {
 		} catch (error) {
 			const message = error instanceof Error ? error.message : "Unknown error";
 			toast.error("Send failed", message);
-		} finally {
-			setIsSendingForSignature(false);
 		}
 	};
 
@@ -627,74 +631,292 @@ export default function QuoteDetailPage() {
 													<Building2 className="h-5 w-5" />
 													Client and Project Details
 												</div>
-												<Button intent="outline" size="sm">
-													<Edit className="h-4 w-4" />
-												</Button>
+												<div className="flex gap-2">
+													{project && (
+														<Button
+															intent="outline"
+															size="sm"
+															onClick={() =>
+																router.push(`/projects/${project._id}`)
+															}
+														>
+															<FolderOpen className="h-4 w-4 mr-1" />
+															View Project
+														</Button>
+													)}
+													{client && (
+														<Button
+															intent="outline"
+															size="sm"
+															onClick={() =>
+																router.push(`/clients/${client._id}`)
+															}
+														>
+															<Edit className="h-4 w-4 mr-1" />
+															View Client
+														</Button>
+													)}
+												</div>
 											</CardTitle>
 										</CardHeader>
 										<CardContent>
-											<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+											<div className="space-y-8">
 												{/* Client Information */}
-												<div className="lg:col-span-2 space-y-4">
-													{client ? (
-														<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-															<div className="space-y-4">
+												{client ? (
+													<div className="space-y-6">
+														{/* Company Header */}
+														<div className="border-b border-gray-200 dark:border-gray-700 pb-4">
+															<div className="flex items-start justify-between">
 																<div>
-																	<p className="text-sm font-medium text-gray-900 dark:text-white">
+																	<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
 																		{client.companyName}
-																	</p>
-																	<p className="text-sm text-gray-600 dark:text-gray-400">
+																	</h3>
+																	<p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
 																		{client.industry || "No industry specified"}
 																	</p>
+																	{client.companyDescription && (
+																		<p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
+																			{client.companyDescription}
+																		</p>
+																	)}
 																</div>
-																{/* Client contact info would come from clientContacts table */}
-																<div className="text-sm text-gray-500 dark:text-gray-400">
-																	Contact details available in client profile
-																</div>
-															</div>
-															<div>
-																{/* Address would come from clientProperties table */}
-																<div className="text-sm text-gray-500 dark:text-gray-400">
-																	Address details available in client profile
-																</div>
+																{client.status && (
+																	<Badge
+																		variant={
+																			client.status === "active"
+																				? "default"
+																				: "outline"
+																		}
+																	>
+																		{client.status}
+																	</Badge>
+																)}
 															</div>
 														</div>
-													) : (
-														<div className="p-4 border-2 border-dashed border-gray-300 dark:border-white/20 rounded-lg text-center">
-															<p className="text-sm text-gray-500 dark:text-gray-400">
-																Client information not available
-															</p>
-														</div>
-													)}
-												</div>
-												{/* Associated Project */}
-												<div className="lg:col-span-1">
-													<div className="border-l border-gray-200 dark:border-gray-700 pl-6 lg:border-l-0 lg:pl-0 lg:border-t lg:pt-6">
-														<div className="flex items-center gap-2 mb-3">
-															<FolderOpen className="h-4 w-4 text-gray-400" />
-															<span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-																Associated Project:
-															</span>
-														</div>
-														{project ? (
+
+														{/* Contact & Property Grid */}
+														<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+															{/* Primary Contact */}
 															<div>
-																<p className="text-sm font-medium text-gray-900 dark:text-white">
-																	{project.title}
-																</p>
-																<p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-																	{project.description ||
-																		"No description available"}
-																</p>
+																<h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+																	<Mail className="h-4 w-4" />
+																	Primary Contact
+																</h4>
+																{primaryContact ? (
+																	<div className="space-y-2">
+																		<p className="text-sm font-medium text-gray-900 dark:text-white">
+																			{primaryContact.firstName}{" "}
+																			{primaryContact.lastName}
+																		</p>
+																		{primaryContact.jobTitle && (
+																			<p className="text-xs text-gray-600 dark:text-gray-400">
+																				{primaryContact.jobTitle}
+																			</p>
+																		)}
+																		{primaryContact.email && (
+																			<p className="text-sm text-gray-600 dark:text-gray-400">
+																				<a
+																					href={`mailto:${primaryContact.email}`}
+																					className="hover:text-blue-600 dark:hover:text-blue-400"
+																				>
+																					{primaryContact.email}
+																				</a>
+																			</p>
+																		)}
+																		{primaryContact.phone && (
+																			<p className="text-sm text-gray-600 dark:text-gray-400">
+																				<a
+																					href={`tel:${primaryContact.phone}`}
+																					className="hover:text-blue-600 dark:hover:text-blue-400"
+																				>
+																					{primaryContact.phone}
+																				</a>
+																			</p>
+																		)}
+																		{primaryContact.department && (
+																			<p className="text-xs text-gray-500 dark:text-gray-500">
+																				{primaryContact.department}
+																			</p>
+																		)}
+																	</div>
+																) : (
+																	<p className="text-sm text-gray-500 dark:text-gray-400">
+																		No primary contact set
+																	</p>
+																)}
+																{allContacts && allContacts.length > 1 && (
+																	<p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
+																		+{allContacts.length - 1} additional contact
+																		{allContacts.length > 2 ? "s" : ""}
+																	</p>
+																)}
 															</div>
-														) : (
+
+															{/* Primary Property/Address */}
 															<div>
-																<p className="text-sm text-gray-500 dark:text-gray-400">
-																	No project linked
-																</p>
+																<h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+																	<Building2 className="h-4 w-4" />
+																	Primary Location
+																</h4>
+																{primaryProperty ? (
+																	<div className="space-y-2">
+																		{primaryProperty.propertyName && (
+																			<p className="text-sm font-medium text-gray-900 dark:text-white">
+																				{primaryProperty.propertyName}
+																			</p>
+																		)}
+																		<div className="text-sm text-gray-600 dark:text-gray-400">
+																			<p>{primaryProperty.streetAddress}</p>
+																			<p>
+																				{primaryProperty.city},{" "}
+																				{primaryProperty.state}{" "}
+																				{primaryProperty.zipCode}
+																			</p>
+																			{primaryProperty.country && (
+																				<p>{primaryProperty.country}</p>
+																			)}
+																		</div>
+																		{primaryProperty.propertyType && (
+																			<Badge
+																				variant="outline"
+																				className="text-xs"
+																			>
+																				{primaryProperty.propertyType}
+																			</Badge>
+																		)}
+																		{primaryProperty.squareFootage && (
+																			<p className="text-xs text-gray-500 dark:text-gray-500">
+																				{primaryProperty.squareFootage.toLocaleString()}{" "}
+																				sq ft
+																			</p>
+																		)}
+																	</div>
+																) : (
+																	<p className="text-sm text-gray-500 dark:text-gray-400">
+																		No property address set
+																	</p>
+																)}
+															</div>
+														</div>
+
+														{/* Additional Client Details */}
+														{(client.category ||
+															client.clientSize ||
+															client.priorityLevel) && (
+															<div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+																<div className="flex flex-wrap gap-2">
+																	{client.category && (
+																		<Badge
+																			variant="secondary"
+																			className="text-xs"
+																		>
+																			{client.category}
+																		</Badge>
+																	)}
+																	{client.clientSize && (
+																		<Badge
+																			variant="secondary"
+																			className="text-xs"
+																		>
+																			{client.clientSize}
+																		</Badge>
+																	)}
+																	{client.priorityLevel && (
+																		<Badge
+																			variant={
+																				client.priorityLevel === "urgent" ||
+																				client.priorityLevel === "high"
+																					? "destructive"
+																					: "secondary"
+																			}
+																			className="text-xs"
+																		>
+																			{client.priorityLevel} priority
+																		</Badge>
+																	)}
+																</div>
 															</div>
 														)}
 													</div>
-												</div>
+												) : (
+													<div className="p-6 border-2 border-dashed border-gray-300 dark:border-white/20 rounded-lg text-center">
+														<Building2 className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+														<p className="text-sm text-gray-500 dark:text-gray-400">
+															Client information not available
+														</p>
+													</div>
+												)}
+
+												{/* Associated Project */}
+												{project && (
+													<div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+														<div className="flex items-start justify-between mb-4">
+															<h4 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+																<FolderOpen className="h-4 w-4" />
+																Associated Project
+															</h4>
+															{project.status && (
+																<Badge
+																	variant={
+																		project.status === "in-progress"
+																			? "default"
+																			: project.status === "completed"
+																				? "secondary"
+																				: "outline"
+																	}
+																>
+																	{project.status}
+																</Badge>
+															)}
+														</div>
+														<div className="space-y-3">
+															<div>
+																<p className="text-base font-medium text-gray-900 dark:text-white">
+																	{project.title}
+																</p>
+																{project.projectNumber && (
+																	<p className="text-xs text-gray-500 dark:text-gray-500">
+																		Project #{project.projectNumber}
+																	</p>
+																)}
+															</div>
+															{project.description && (
+																<p className="text-sm text-gray-600 dark:text-gray-400">
+																	{project.description}
+																</p>
+															)}
+															<div className="flex flex-wrap gap-4 text-xs text-gray-500 dark:text-gray-500">
+																{project.startDate && (
+																	<div className="flex items-center gap-1">
+																		<Clock className="h-3 w-3" />
+																		<span>
+																			Start:{" "}
+																			{new Date(
+																				project.startDate
+																			).toLocaleDateString()}
+																		</span>
+																	</div>
+																)}
+																{project.endDate && (
+																	<div className="flex items-center gap-1">
+																		<Clock className="h-3 w-3" />
+																		<span>
+																			End:{" "}
+																			{new Date(
+																				project.endDate
+																			).toLocaleDateString()}
+																		</span>
+																	</div>
+																)}
+																{project.projectType && (
+																	<Badge variant="outline" className="text-xs">
+																		{project.projectType}
+																	</Badge>
+																)}
+															</div>
+														</div>
+													</div>
+												)}
 											</div>
 										</CardContent>
 									</Card>

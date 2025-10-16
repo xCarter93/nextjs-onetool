@@ -30,7 +30,7 @@ const ConfirmationModalView: React.FC = () => {
 	return (
 		<div className="space-y-4">
 			<div className="flex flex-wrap gap-3">
-				<Button onPress={() => setIsDeleteOpen(true)} intent="danger">
+				<Button onPress={() => setIsDeleteOpen(true)} intent="destructive">
 					Delete Item
 				</Button>
 				<Button
@@ -112,7 +112,7 @@ const ConfirmationModalView: React.FC = () => {
 						<Button onPress={() => setIsDeleteOpen(false)} intent="secondary">
 							Cancel
 						</Button>
-						<Button onPress={handleDelete} intent="danger">
+						<Button onPress={handleDelete} intent="destructive">
 							Delete
 						</Button>
 					</div>
