@@ -122,7 +122,10 @@ const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({
 					<Button onPress={onClose} intent="secondary">
 						Cancel
 					</Button>
-					<Button onPress={onConfirm} intent={isArchive ? "warning" : "danger"}>
+					<Button
+						onPress={onConfirm}
+						intent={isArchive ? "warning" : "destructive"}
+					>
 						{isArchive ? `Archive ${itemType}` : `Delete ${itemType}`}
 					</Button>
 				</div>

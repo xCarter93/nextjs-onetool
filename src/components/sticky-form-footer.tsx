@@ -10,7 +10,6 @@ interface ButtonConfig {
 		| "outline"
 		| "secondary"
 		| "warning"
-		| "danger"
 		| "plain"
 		| "success"
 		| "destructive";

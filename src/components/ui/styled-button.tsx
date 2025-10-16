@@ -11,7 +11,6 @@ export interface StyledButtonProps {
 		| "outline"
 		| "secondary"
 		| "warning"
-		| "danger"
 		| "success"
 		| "destructive"
 		| "plain";
@@ -57,8 +56,6 @@ export function StyledButton({
 			success:
 				"text-green-600 hover:text-green-700 bg-green-50 hover:bg-green-100 ring-green-200 hover:ring-green-300 dark:text-green-400 dark:hover:text-green-300 dark:bg-green-950 dark:hover:bg-green-900 dark:ring-green-800 dark:hover:ring-green-700",
 			destructive:
-				"text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 ring-red-200 hover:ring-red-300 dark:text-red-400 dark:hover:text-red-300 dark:bg-red-950 dark:hover:bg-red-900 dark:ring-red-800 dark:hover:ring-red-700",
-			danger:
 				"text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 ring-red-200 hover:ring-red-300 dark:text-red-400 dark:hover:text-red-300 dark:bg-red-950 dark:hover:bg-red-900 dark:ring-red-800 dark:hover:ring-red-700",
 			warning:
 				"text-amber-600 hover:text-amber-700 bg-amber-50 hover:bg-amber-100 ring-amber-200 hover:ring-amber-300 dark:text-amber-400 dark:hover:text-amber-300 dark:bg-amber-950 dark:hover:bg-amber-900 dark:ring-amber-800 dark:hover:ring-amber-700",

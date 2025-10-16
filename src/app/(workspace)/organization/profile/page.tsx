@@ -24,6 +24,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import SelectService from "@/components/choice-set";
 import { useToast } from "@/hooks/use-toast";
+import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
+import { logError, getUserFriendlyErrorMessage } from "@/lib/error-logger";
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 
@@ -971,6 +973,7 @@ export default function OrganizationProfilePage() {
 // Documents Tab Component
 function DocumentsTab() {
 	const toast = useToast();
+	const { confirm: confirmDialog } = useConfirmDialog();
 	const [isUploading, setIsUploading] = useState(false);
 	const [isDragging, setIsDragging] = useState(false);
 	const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1020,9 +1023,15 @@ function DocumentsTab() {
 				fileInputRef.current.value = "";
 			}
 		} catch (error) {
-			console.error(error);
-			const message = error instanceof Error ? error.message : "Unknown error";
-			toast.error("Upload failed", message);
+			// Log error securely to error reporting service
+			logError(error, {
+				action: "upload_organization_document",
+				metadata: { fileName: file.name, fileSize: file.size },
+			});
+
+			// Show user-friendly error message
+			const userMessage = getUserFriendlyErrorMessage(error);
+			toast.error("Upload failed", userMessage);
 		} finally {
 			setIsUploading(false);
 		}
@@ -1054,19 +1063,45 @@ function DocumentsTab() {
 	};
 
 	const handleClick = () => {
+		if (isUploading) return;
 		fileInputRef.current?.click();
 	};
 
+	const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+		if (isUploading) return;
+		if (e.key === "Enter" || e.key === " ") {
+			e.preventDefault();
+			fileInputRef.current?.click();
+		}
+	};
+
 	const handleDelete = async (id: Id<"organizationDocuments">) => {
-		if (!confirm("Are you sure you want to delete this document?")) return;
+		// Open accessible confirmation modal
+		const confirmed = await confirmDialog({
+			title: "Delete Document",
+			message:
+				"This action cannot be undone. This will permanently delete the document and remove all associated data.",
+			confirmLabel: "Delete Document",
+			cancelLabel: "Cancel",
+			variant: "destructive",
+		});
+
+		// User cancelled - exit early
+		if (!confirmed) return;
 
 		try {
 			await removeDocument({ id });
 			toast.success("Document deleted", "The document has been removed");
 		} catch (error) {
-			console.error(error);
-			const message = error instanceof Error ? error.message : "Unknown error";
-			toast.error("Delete failed", message);
+			// Log error securely to error reporting service
+			logError(error, {
+				action: "delete_organization_document",
+				metadata: { documentId: id },
+			});
+
+			// Show generic user-friendly error message
+			const userMessage = getUserFriendlyErrorMessage(error);
+			toast.error("Delete failed", userMessage);
 		}
 	};
 
@@ -1087,22 +1122,27 @@ function DocumentsTab() {
 			{/* Compact Upload Section */}
 			<div
 				onClick={handleClick}
+				onKeyDown={handleKeyDown}
 				onDragOver={handleDragOver}
 				onDragLeave={handleDragLeave}
 				onDrop={handleDrop}
+				tabIndex={isUploading ? -1 : 0}
+				role="button"
+				aria-disabled={isUploading}
 				className={`
-					relative flex items-center gap-4 max-w-2xl
-					px-6 py-4
-					border-2 border-dashed rounded-xl
-					cursor-pointer
-					transition-all duration-200 ease-in-out
-					${
-						isDragging
-							? "border-primary bg-primary/5 dark:bg-primary/10 scale-[1.02]"
-							: "border-border dark:border-border bg-muted/30 dark:bg-muted/20 hover:bg-muted/50 dark:hover:bg-muted/30 hover:border-primary/50"
-					}
-					${isUploading ? "opacity-50 cursor-not-allowed" : ""}
-				`}
+				relative flex items-center gap-4 max-w-2xl
+				px-6 py-4
+				border-2 border-dashed rounded-xl
+				cursor-pointer
+				transition-all duration-200 ease-in-out
+				focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2
+				${
+					isDragging
+						? "border-primary bg-primary/5 dark:bg-primary/10 scale-[1.02]"
+						: "border-border dark:border-border bg-muted/30 dark:bg-muted/20 hover:bg-muted/50 dark:hover:bg-muted/30 hover:border-primary/50"
+				}
+				${isUploading ? "opacity-50 cursor-not-allowed" : ""}
+			`}
 			>
 				<input
 					ref={fileInputRef}
