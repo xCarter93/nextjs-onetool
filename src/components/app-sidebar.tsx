@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
 	AudioWaveform,
 	Command,
@@ -94,15 +94,15 @@ const data = {
 				},
 				{
 					title: "Business Info",
-					url: "/organization/profile/business",
+					url: "/organization/profile?tab=business",
 				},
 				{
 					title: "Documents",
-					url: "/organization/documents",
+					url: "/organization/profile?tab=documents",
 				},
 				{
 					title: "Preferences",
-					url: "/organization/profile/preferences",
+					url: "/organization/profile?tab=preferences",
 				},
 			],
 		},
@@ -111,6 +111,7 @@ const data = {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 	const pathname = usePathname();
+	const searchParams = useSearchParams();
 	const taskStats = useQuery(api.tasks.getStats, {});
 	const tasksDueToday = taskStats?.todayTasks ?? 0;
 
@@ -151,12 +152,37 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
 	// Create navigation items with dynamic isActive property
 	const navigationItems = data.navMain.map((item) => {
-		const subItems = item.items?.map((subItem) => ({
-			...subItem,
-			isActive:
-				pathname === subItem.url ||
-				(subItem.url !== item.url && pathname.startsWith(`${subItem.url}/`)),
-		}));
+		const subItems = item.items?.map((subItem) => {
+			// For URLs with search params, we need to compare both pathname and params
+			const [subItemPath, subItemParams] = subItem.url.split("?");
+			const currentPath = pathname;
+			const currentParams = searchParams.toString();
+
+			let isSubItemActive = false;
+
+			if (subItemParams) {
+				// URL has search params (like ?tab=business)
+				isSubItemActive =
+					currentPath === subItemPath && currentParams === subItemParams;
+			} else {
+				// No search params in the URL - should match only when current page has no params either
+				// Special case: for organization/profile, only match when there are no search params
+				if (subItem.url === "/organization/profile") {
+					isSubItemActive = pathname === subItem.url && currentParams === "";
+				} else {
+					// Use original logic for other routes
+					isSubItemActive =
+						pathname === subItem.url ||
+						(subItem.url !== item.url &&
+							pathname.startsWith(`${subItem.url}/`));
+				}
+			}
+
+			return {
+				...subItem,
+				isActive: isSubItemActive,
+			};
+		});
 
 		const isActive =
 			isNavItemActive(item.url, item.title) ||

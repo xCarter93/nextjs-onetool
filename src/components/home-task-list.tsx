@@ -355,7 +355,7 @@ export function HomeTaskList() {
 							<TaskSheet
 								mode="create"
 								trigger={
-									<div className="group inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-all duration-200 rounded-lg backdrop-blur-sm">
+									<div className="group inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-all duration-200 rounded-lg">
 										<Plus className="h-4 w-4" />
 										Add Task
 										<span
@@ -424,7 +424,7 @@ export function HomeTaskList() {
 									<TaskSheet
 										mode="create"
 										trigger={
-											<div className="group inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-all duration-200 rounded-lg backdrop-blur-sm">
+											<div className="group inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-all duration-200 rounded-lg">
 												<Plus className="h-4 w-4" />
 												Create Your First Task
 												<span

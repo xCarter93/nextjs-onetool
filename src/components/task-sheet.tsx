@@ -5,7 +5,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import { StyledButton } from "@/components/ui/styled-button";
 import { Input } from "@/components/ui/input";
 import {
 	Sheet,
@@ -167,8 +167,8 @@ export function TaskSheet({
 		}
 	};
 
-	const handleSubmit = async (e: React.FormEvent) => {
-		e.preventDefault();
+	const handleSubmit = async (e?: React.FormEvent) => {
+		e?.preventDefault();
 
 		if (!formData.title.trim()) {
 			toastError("Task title is required");
@@ -517,22 +517,24 @@ export function TaskSheet({
 				<SheetClose intent="outline" isDisabled={isSubmitting}>
 					Cancel
 				</SheetClose>
-				<Button
-					onClick={handleSubmit}
-					isPending={isSubmitting}
-					isDisabled={
+				<StyledButton
+					onClick={() => handleSubmit()}
+					intent="primary"
+					isLoading={isSubmitting}
+					disabled={
 						isSubmitting || !formData.title.trim() || !formData.clientId
 					}
+					label={
+						isSubmitting
+							? isEditMode
+								? "Updating..."
+								: "Creating..."
+							: isEditMode
+								? "Update Task"
+								: "Create Task"
+					}
 					className="min-w-[120px]"
-				>
-					{isSubmitting
-						? isEditMode
-							? "Updating..."
-							: "Creating..."
-						: isEditMode
-							? "Update Task"
-							: "Create Task"}
-				</Button>
+				/>
 			</SheetFooter>
 		</SheetContent>
 	);

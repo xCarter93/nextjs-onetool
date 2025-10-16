@@ -1,20 +1,38 @@
 "use client";
 
-import React from "react";
-import { useParams, useRouter } from "next/navigation";
+import React, { useState, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { OrganizationProfile, useOrganization } from "@clerk/nextjs";
 import { useMutation, useQuery } from "convex/react";
-import { Users, Building2, Globe, AlertTriangle } from "lucide-react";
+import {
+	Users,
+	Building2,
+	Globe,
+	AlertTriangle,
+	FileText,
+	Upload,
+	Trash2,
+	Download,
+	Eye,
+} from "lucide-react";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import SelectService from "@/components/choice-set";
 import { useToast } from "@/hooks/use-toast";
-import { api } from "../../../../../../convex/_generated/api";
+import { api } from "../../../../../convex/_generated/api";
+import type { Id } from "../../../../../convex/_generated/dataModel";
 
-const TAB_VALUES = ["overview", "business", "preferences"] as const;
+const TAB_VALUES = [
+	"overview",
+	"business",
+	"preferences",
+	"documents",
+] as const;
 type TabValue = (typeof TAB_VALUES)[number];
 
 const companySizeOptions = [
@@ -99,8 +117,8 @@ const isTabValue = (value: string): value is TabValue =>
 	TAB_VALUES.includes(value as TabValue);
 
 export default function OrganizationProfilePage() {
-	const params = useParams<{ rest?: string[] }>();
 	const router = useRouter();
+	const searchParams = useSearchParams();
 	const { organization: clerkOrganization } = useOrganization();
 	const toast = useToast();
 
@@ -118,17 +136,10 @@ export default function OrganizationProfilePage() {
 	const [savingPreferences, setSavingPreferences] = React.useState(false);
 	const lastOrganizationId = React.useRef<string | null>(null);
 
-	const restSegments = Array.isArray(params?.rest) ? params.rest : [];
-	const requestedTab = restSegments.length > 0 ? restSegments[0] : "overview";
-	const activeTab: TabValue = isTabValue(requestedTab)
-		? requestedTab
-		: "overview";
-
-	React.useEffect(() => {
-		if (requestedTab && !isTabValue(requestedTab)) {
-			router.replace("/organization/profile");
-		}
-	}, [requestedTab, router]);
+	// Get active tab from search params
+	const tabParam = searchParams.get("tab");
+	const activeTab: TabValue =
+		tabParam && isTabValue(tabParam) ? tabParam : "overview";
 
 	React.useEffect(() => {
 		const currentOrgId = organization?._id ?? null;
@@ -144,12 +155,16 @@ export default function OrganizationProfilePage() {
 			if (!isTabValue(value)) {
 				return;
 			}
-			const basePath = "/organization/profile";
-			if (value === "overview") {
-				router.push(basePath);
-			} else {
-				router.push(`${basePath}/${value}`);
+			// Use search params for tab navigation
+			const params = new URLSearchParams();
+			if (value !== "overview") {
+				params.set("tab", value);
 			}
+			const newUrl =
+				params.toString() === ""
+					? "/organization/profile"
+					: `/organization/profile?${params.toString()}`;
+			router.push(newUrl);
 		},
 		[router]
 	);
@@ -440,12 +455,14 @@ export default function OrganizationProfilePage() {
 						<TabsTrigger value="overview">Overview</TabsTrigger>
 						<TabsTrigger value="business">Business Info</TabsTrigger>
 						<TabsTrigger value="preferences">Preferences</TabsTrigger>
+						<TabsTrigger value="documents">Documents</TabsTrigger>
 					</TabsList>
 
 					<div className="mt-8 space-y-8">
 						<TabsContent value="overview">
 							<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-2xl p-8 shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50">
 								<OrganizationProfile
+									routing="hash"
 									appearance={{
 										elements: {
 											rootBox: "w-full text-foreground",
@@ -940,9 +957,338 @@ export default function OrganizationProfilePage() {
 								</div>
 							</div>
 						</TabsContent>
+
+						<TabsContent value="documents">
+							<DocumentsTab />
+						</TabsContent>
 					</div>
 				</Tabs>
 			</div>
 		</div>
+	);
+}
+
+// Documents Tab Component
+function DocumentsTab() {
+	const toast = useToast();
+	const [isUploading, setIsUploading] = useState(false);
+	const [isDragging, setIsDragging] = useState(false);
+	const fileInputRef = useRef<HTMLInputElement>(null);
+
+	const documents = useQuery(api.organizationDocuments.list);
+	const generateUploadUrl = useMutation(
+		api.organizationDocuments.generateUploadUrl
+	);
+	const createDocument = useMutation(api.organizationDocuments.create);
+	const removeDocument = useMutation(api.organizationDocuments.remove);
+
+	const handleFileUpload = async (file: File) => {
+		if (file.type !== "application/pdf") {
+			toast.error("Invalid file type", "Please upload a PDF file");
+			return;
+		}
+
+		const maxSize = 10 * 1024 * 1024; // 10MB
+		if (file.size > maxSize) {
+			toast.error("File too large", "Maximum file size is 10MB");
+			return;
+		}
+
+		setIsUploading(true);
+		try {
+			const uploadUrl = await generateUploadUrl({});
+
+			const res = await fetch(uploadUrl, {
+				method: "POST",
+				headers: { "Content-Type": "application/pdf" },
+				body: file,
+			});
+
+			if (!res.ok) throw new Error("Failed to upload");
+
+			const { storageId } = await res.json();
+
+			await createDocument({
+				name: file.name.replace(".pdf", ""),
+				storageId,
+				fileSize: file.size,
+			});
+
+			toast.success("Document uploaded", "Your document is ready");
+
+			if (fileInputRef.current) {
+				fileInputRef.current.value = "";
+			}
+		} catch (error) {
+			console.error(error);
+			const message = error instanceof Error ? error.message : "Unknown error";
+			toast.error("Upload failed", message);
+		} finally {
+			setIsUploading(false);
+		}
+	};
+
+	const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+		const file = e.target.files?.[0];
+		if (!file) return;
+		await handleFileUpload(file);
+	};
+
+	const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+		e.preventDefault();
+		setIsDragging(true);
+	};
+
+	const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+		e.preventDefault();
+		setIsDragging(false);
+	};
+
+	const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+		e.preventDefault();
+		setIsDragging(false);
+
+		const file = e.dataTransfer.files?.[0];
+		if (!file) return;
+		await handleFileUpload(file);
+	};
+
+	const handleClick = () => {
+		fileInputRef.current?.click();
+	};
+
+	const handleDelete = async (id: Id<"organizationDocuments">) => {
+		if (!confirm("Are you sure you want to delete this document?")) return;
+
+		try {
+			await removeDocument({ id });
+			toast.success("Document deleted", "The document has been removed");
+		} catch (error) {
+			console.error(error);
+			const message = error instanceof Error ? error.message : "Unknown error";
+			toast.error("Delete failed", message);
+		}
+	};
+
+	return (
+		<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-2xl p-8 shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50 space-y-8">
+			<div>
+				<div className="flex items-center gap-3 mb-3">
+					<div className="w-1.5 h-6 bg-gradient-to-b from-primary to-primary/60 rounded-full" />
+					<h2 className="text-2xl font-semibold text-foreground tracking-tight">
+						Organization Documents
+					</h2>
+				</div>
+				<p className="text-muted-foreground ml-5 leading-relaxed">
+					Upload custom documents that can be appended to quotes and invoices.
+				</p>
+			</div>
+
+			{/* Compact Upload Section */}
+			<div
+				onClick={handleClick}
+				onDragOver={handleDragOver}
+				onDragLeave={handleDragLeave}
+				onDrop={handleDrop}
+				className={`
+					relative flex items-center gap-4 max-w-2xl
+					px-6 py-4
+					border-2 border-dashed rounded-xl
+					cursor-pointer
+					transition-all duration-200 ease-in-out
+					${
+						isDragging
+							? "border-primary bg-primary/5 dark:bg-primary/10 scale-[1.02]"
+							: "border-border dark:border-border bg-muted/30 dark:bg-muted/20 hover:bg-muted/50 dark:hover:bg-muted/30 hover:border-primary/50"
+					}
+					${isUploading ? "opacity-50 cursor-not-allowed" : ""}
+				`}
+			>
+				<input
+					ref={fileInputRef}
+					type="file"
+					accept="application/pdf"
+					onChange={handleUpload}
+					disabled={isUploading}
+					className="hidden"
+				/>
+
+				<div
+					className={`
+						flex items-center justify-center w-12 h-12 rounded-lg flex-shrink-0
+						transition-colors duration-200
+						${isDragging ? "bg-primary/20 dark:bg-primary/30" : "bg-muted dark:bg-muted/60"}
+					`}
+				>
+					<Upload
+						className={`
+							w-6 h-6 transition-colors duration-200
+							${isDragging ? "text-primary" : "text-muted-foreground"}
+						`}
+					/>
+				</div>
+
+				<div className="flex-1 min-w-0">
+					{isUploading ? (
+						<div className="flex items-center gap-2">
+							<span className="inline-block w-4 h-4 border-2 border-muted-foreground/30 border-t-primary rounded-full animate-spin" />
+							<span className="font-medium text-foreground">
+								Uploading document...
+							</span>
+						</div>
+					) : (
+						<>
+							<p className="font-medium text-foreground">
+								<span className="text-primary hover:underline">
+									Click to upload
+								</span>{" "}
+								or drag and drop
+							</p>
+							<p className="text-sm text-muted-foreground">
+								PDF files only (max 10MB)
+							</p>
+						</>
+					)}
+				</div>
+
+				{isDragging && (
+					<div className="absolute inset-0 bg-primary/5 dark:bg-primary/10 rounded-xl pointer-events-none" />
+				)}
+			</div>
+
+			{/* Documents Grid */}
+			{documents === undefined ? (
+				<div className="text-center py-12">
+					<div className="animate-pulse space-y-4">
+						<div className="h-8 bg-muted rounded w-1/3 mx-auto"></div>
+						<div className="h-4 bg-muted rounded w-1/2 mx-auto"></div>
+					</div>
+				</div>
+			) : documents.length === 0 ? (
+				<div className="text-center py-12 px-4 border-2 border-dashed border-border dark:border-border/60 rounded-xl bg-muted/20">
+					<FileText className="h-12 w-12 text-muted-foreground/60 mx-auto mb-4" />
+					<p className="text-foreground font-medium mb-1">
+						No documents uploaded yet
+					</p>
+					<p className="text-sm text-muted-foreground">
+						Upload your first document to get started
+					</p>
+				</div>
+			) : (
+				<div>
+					<div className="flex items-center justify-between mb-4">
+						<p className="text-sm text-muted-foreground">
+							{documents.length} document{documents.length !== 1 ? "s" : ""}{" "}
+							uploaded
+						</p>
+					</div>
+					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+						{documents.map((doc) => (
+							<DocumentCard
+								key={doc._id}
+								document={doc}
+								onDelete={() => handleDelete(doc._id)}
+							/>
+						))}
+					</div>
+				</div>
+			)}
+		</div>
+	);
+}
+
+// Document Card Component
+interface DocumentCardProps {
+	document: {
+		_id: Id<"organizationDocuments">;
+		name: string;
+		description?: string;
+		uploadedAt: number;
+		fileSize?: number;
+	};
+	onDelete: () => void;
+}
+
+function DocumentCard({ document, onDelete }: DocumentCardProps) {
+	const documentUrl = useQuery(api.organizationDocuments.getDocumentUrl, {
+		id: document._id,
+	});
+
+	const formatFileSize = (bytes?: number) => {
+		if (!bytes) return "";
+		if (bytes < 1024) return `${bytes} B`;
+		if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+		return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+	};
+
+	return (
+		<Card className="group bg-card dark:bg-card/80 backdrop-blur-sm border border-border dark:border-border/60 hover:border-primary/50 shadow-sm hover:shadow-md dark:shadow-black/20 ring-1 ring-border/20 dark:ring-border/30 transition-all duration-200">
+			<CardContent className="p-4">
+				<div className="flex items-start gap-3 mb-3">
+					<div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 dark:bg-primary/20 flex-shrink-0 group-hover:bg-primary/15 dark:group-hover:bg-primary/25 transition-colors">
+						<FileText className="h-5 w-5 text-primary" />
+					</div>
+					<div className="flex-1 min-w-0">
+						<h3 className="font-semibold text-sm truncate text-foreground mb-1">
+							{document.name}
+						</h3>
+						<div className="flex items-center gap-2 text-xs text-muted-foreground">
+							<span>{new Date(document.uploadedAt).toLocaleDateString()}</span>
+							{document.fileSize && (
+								<>
+									<span>•</span>
+									<span>{formatFileSize(document.fileSize)}</span>
+								</>
+							)}
+						</div>
+					</div>
+				</div>
+
+				{document.description && (
+					<p className="text-xs text-muted-foreground mb-3 line-clamp-2">
+						{document.description}
+					</p>
+				)}
+
+				<div className="flex gap-1.5 pt-2 border-t border-border/50">
+					{documentUrl && (
+						<>
+							<a
+								href={documentUrl}
+								target="_blank"
+								rel="noopener noreferrer"
+								className="flex-1"
+							>
+								<Button
+									intent="outline"
+									size="sm"
+									className="w-full h-8 text-xs hover:bg-primary/10 hover:text-primary hover:border-primary/50"
+								>
+									<Eye className="h-3 w-3 mr-1.5" />
+									View
+								</Button>
+							</a>
+							<a href={documentUrl} download={`${document.name}.pdf`}>
+								<Button
+									intent="outline"
+									size="sm"
+									className="h-8 px-2 hover:bg-primary/10 hover:text-primary hover:border-primary/50"
+								>
+									<Download className="h-3 w-3" />
+								</Button>
+							</a>
+						</>
+					)}
+					<Button
+						intent="outline"
+						size="sm"
+						onClick={onDelete}
+						className="h-8 px-2 hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-600 dark:hover:text-red-400 hover:border-red-300 dark:hover:border-red-900"
+					>
+						<Trash2 className="h-3 w-3" />
+					</Button>
+				</div>
+			</CardContent>
+		</Card>
 	);
 }

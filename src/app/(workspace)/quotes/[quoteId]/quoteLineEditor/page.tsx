@@ -17,6 +17,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { StyledButton } from "@/components/ui/styled-button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -477,15 +478,14 @@ export default function QuoteLineEditorPage() {
 						</div>
 					</div>
 					<div className="flex items-center gap-3">
-						<Button
+						<StyledButton
 							intent="primary"
 							size="sm"
-							onPress={handleSaveQuote}
-							isDisabled={!hasChanges}
-						>
-							<Save className="h-4 w-4 mr-2" />
-							Save Changes
-						</Button>
+							onClick={handleSaveQuote}
+							disabled={!hasChanges}
+							icon={<Save className="h-4 w-4" />}
+							label="Save Changes"
+						/>
 					</div>
 				</div>
 
