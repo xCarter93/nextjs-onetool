@@ -16,17 +16,11 @@ export default function FeatureBento() {
 						<div className="relative flex h-full flex-col overflow-hidden rounded-[calc(var(--radius-lg)+1px)] max-lg:rounded-t-[calc(2rem+1px)] lg:rounded-tl-[calc(2rem+1px)]">
 							<Image
 								alt="Field service team managing client relationships"
-								src="https://tailwindcss.com/plus-assets/img/component-images/bento-01-performance.png"
+								src="/ClientList.webp"
 								width={400}
 								height={320}
-								className="h-80 w-full object-cover object-left dark:hidden"
-							/>
-							<Image
-								alt="Field service team managing client relationships"
-								src="https://tailwindcss.com/plus-assets/img/component-images/dark-bento-01-performance.png"
-								width={400}
-								height={320}
-								className="h-80 w-full object-cover object-left not-dark:hidden"
+								className="h-80 w-full object-cover"
+								style={{ objectPosition: "20% center" }}
 							/>
 							<div className="p-10 pt-4">
 								<h3 className="text-sm/4 font-semibold text-blue-600 dark:text-blue-400">
@@ -49,17 +43,10 @@ export default function FeatureBento() {
 						<div className="relative flex h-full flex-col overflow-hidden rounded-[calc(var(--radius-lg)+1px)] lg:rounded-tr-[calc(2rem+1px)]">
 							<Image
 								alt="Project management and tracking dashboard"
-								src="https://tailwindcss.com/plus-assets/img/component-images/bento-01-releases.png"
+								src="/Projects.webp"
 								width={400}
 								height={320}
-								className="h-80 w-full object-cover object-left lg:object-right dark:hidden"
-							/>
-							<Image
-								alt="Project management and tracking dashboard"
-								src="https://tailwindcss.com/plus-assets/img/component-images/dark-bento-01-releases.png"
-								width={400}
-								height={320}
-								className="h-80 w-full object-cover object-left not-dark:hidden lg:object-right"
+								className="h-80 w-full object-cover"
 							/>
 							<div className="p-10 pt-4">
 								<h3 className="text-sm/4 font-semibold text-blue-600 dark:text-blue-400">
@@ -82,17 +69,10 @@ export default function FeatureBento() {
 						<div className="relative flex h-full flex-col overflow-hidden rounded-[calc(var(--radius-lg)+1px)] lg:rounded-bl-[calc(2rem+1px)]">
 							<Image
 								alt="Professional quote and invoice creation interface"
-								src="https://tailwindcss.com/plus-assets/img/component-images/bento-01-speed.png"
+								src="/QuotePage.webp"
 								width={400}
 								height={320}
-								className="h-80 w-full object-cover object-left dark:hidden"
-							/>
-							<Image
-								alt="Professional quote and invoice creation interface"
-								src="https://tailwindcss.com/plus-assets/img/component-images/dark-bento-01-speed.png"
-								width={400}
-								height={320}
-								className="h-80 w-full object-cover object-left not-dark:hidden"
+								className="h-80 w-full object-cover"
 							/>
 							<div className="p-10 pt-4">
 								<h3 className="text-sm/4 font-semibold text-blue-600 dark:text-blue-400">
@@ -115,17 +95,10 @@ export default function FeatureBento() {
 						<div className="relative flex h-full flex-col overflow-hidden rounded-[calc(var(--radius-lg)+1px)]">
 							<Image
 								alt="Task scheduling and calendar management interface"
-								src="https://tailwindcss.com/plus-assets/img/component-images/bento-01-integrations.png"
+								src="/TaskList.webp"
 								width={400}
 								height={320}
-								className="h-80 w-full object-cover dark:hidden"
-							/>
-							<Image
-								alt="Task scheduling and calendar management interface"
-								src="https://tailwindcss.com/plus-assets/img/component-images/dark-bento-01-integrations.png"
-								width={400}
-								height={320}
-								className="h-80 w-full object-cover not-dark:hidden"
+								className="h-80 w-full object-cover"
 							/>
 							<div className="p-10 pt-4">
 								<h3 className="text-sm/4 font-semibold text-blue-600 dark:text-blue-400">
