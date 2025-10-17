@@ -5,13 +5,111 @@ import { motion } from "motion/react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 
+interface UnsplashImage {
+	id: string;
+	alt: string;
+	url: string;
+	downloadLocation?: string;
+	photographer?: {
+		name: string;
+		username: string;
+		profileUrl?: string;
+	};
+	photoUrl?: string;
+}
+
+interface UnsplashResponse {
+	photos: UnsplashImage[];
+	fetchedAt: string;
+	isFallback?: boolean;
+}
+
+// Default fallback images
+const DEFAULT_IMAGES: UnsplashImage[] = [
+	{
+		id: "fallback-1",
+		alt: "Field service team collaboration",
+		url: "https://images.unsplash.com/photo-1557804506-669a67965ba0?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&h=528&q=80",
+	},
+	{
+		id: "fallback-2",
+		alt: "Professional working on tablet",
+		url: "https://images.unsplash.com/photo-1485217988980-11786ced9454?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&h=528&q=80",
+	},
+	{
+		id: "fallback-3",
+		alt: "Team meeting and planning",
+		url: "https://images.unsplash.com/photo-1559136555-9303baea8ebd?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&crop=focalpoint&fp-x=.4&w=396&h=528&q=80",
+	},
+	{
+		id: "fallback-4",
+		alt: "Modern office workspace",
+		url: "https://images.unsplash.com/photo-1670272504528-790c24957dda?ixlib=rb-4.0.3&ixid=MnwxMjA3fDF8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&crop=left&w=400&h=528&q=80",
+	},
+	{
+		id: "fallback-5",
+		alt: "Technology and innovation",
+		url: "https://images.unsplash.com/photo-1670272505284-8faba1c31f7d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDF8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&h=528&q=80",
+	},
+];
+
 export default function HeroSection() {
 	const [mounted, setMounted] = useState(false);
 	const { resolvedTheme } = useTheme();
+	const [images, setImages] = useState<UnsplashImage[]>(DEFAULT_IMAGES);
+
+	// Fetch images from Unsplash API
+	const fetchImages = async () => {
+		try {
+			console.log("Fetching images from /api/unsplash...");
+			const response = await fetch("/api/unsplash");
+
+			if (!response.ok) {
+				const errorText = await response.text();
+				console.error(`API error: ${response.status} - ${errorText}`);
+				throw new Error(`Failed to fetch images: ${response.statusText}`);
+			}
+
+			const data: UnsplashResponse = await response.json();
+			console.log("Successfully fetched images:", data.photos.length);
+			setImages(data.photos);
+
+			// Track downloads for Unsplash attribution requirements
+			if (!data.isFallback) {
+				data.photos.forEach((photo) => {
+					if (photo.downloadLocation) {
+						// Track download in background (non-blocking)
+						fetch(photo.downloadLocation).catch(() => {
+							// Silently fail if tracking doesn't work
+						});
+					}
+				});
+			}
+		} catch (error) {
+			console.error("Error fetching Unsplash images:", error);
+			// Keep using current images or fallback to defaults
+			setImages(DEFAULT_IMAGES);
+		}
+	};
 
 	useEffect(() => {
 		setMounted(true);
 	}, []);
+
+	// Fetch images on mount and every hour
+	useEffect(() => {
+		if (!mounted) return;
+
+		// Initial fetch
+		fetchImages();
+
+		// Refresh every hour (3600000 ms)
+		const interval = setInterval(() => {
+			fetchImages();
+		}, 3600000);
+
+		return () => clearInterval(interval);
+	}, [mounted]);
 
 	// Prevent hydration mismatch by not rendering until theme is resolved
 	if (!mounted || !resolvedTheme) {
@@ -120,11 +218,12 @@ export default function HeroSection() {
 											}}
 										>
 											<Image
-												alt="Field service team collaboration"
-												src="https://images.unsplash.com/photo-1557804506-669a67965ba0?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&h=528&q=80"
+												alt={images[0]?.alt || "Small business"}
+												src={images[0]?.url || DEFAULT_IMAGES[0].url}
 												width={176}
 												height={264}
 												className="aspect-2/3 w-full rounded-xl bg-gray-900/5 object-cover shadow-lg hover:shadow-2xl dark:bg-gray-700/5 transition-all duration-300"
+												key={images[0]?.id}
 											/>
 											<div className="pointer-events-none absolute inset-0 rounded-xl ring-1 ring-gray-900/10 ring-inset dark:ring-white/10" />
 											<div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300" />
@@ -161,11 +260,12 @@ export default function HeroSection() {
 											}}
 										>
 											<Image
-												alt="Professional working on tablet"
-												src="https://images.unsplash.com/photo-1485217988980-11786ced9454?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&h=528&q=80"
+												alt={images[1]?.alt || "Small business"}
+												src={images[1]?.url || DEFAULT_IMAGES[1].url}
 												width={176}
 												height={264}
 												className="aspect-2/3 w-full rounded-xl bg-gray-900/5 object-cover shadow-lg hover:shadow-2xl dark:bg-gray-700/5 transition-all duration-300"
+												key={images[1]?.id}
 											/>
 											<div className="pointer-events-none absolute inset-0 rounded-xl ring-1 ring-gray-900/10 ring-inset dark:ring-white/10" />
 											<div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300" />
@@ -200,11 +300,12 @@ export default function HeroSection() {
 											}}
 										>
 											<Image
-												alt="Team meeting and planning"
-												src="https://images.unsplash.com/photo-1559136555-9303baea8ebd?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&crop=focalpoint&fp-x=.4&w=396&h=528&q=80"
+												alt={images[2]?.alt || "Small business"}
+												src={images[2]?.url || DEFAULT_IMAGES[2].url}
 												width={176}
 												height={264}
 												className="aspect-2/3 w-full rounded-xl bg-gray-900/5 object-cover shadow-lg hover:shadow-2xl dark:bg-gray-700/5 transition-all duration-300"
+												key={images[2]?.id}
 											/>
 											<div className="pointer-events-none absolute inset-0 rounded-xl ring-1 ring-gray-900/10 ring-inset dark:ring-white/10" />
 											<div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300" />
@@ -241,11 +342,12 @@ export default function HeroSection() {
 											}}
 										>
 											<Image
-												alt="Modern office workspace"
-												src="https://images.unsplash.com/photo-1670272504528-790c24957dda?ixlib=rb-4.0.3&ixid=MnwxMjA3fDF8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&crop=left&w=400&h=528&q=80"
+												alt={images[3]?.alt || "Small business"}
+												src={images[3]?.url || DEFAULT_IMAGES[3].url}
 												width={176}
 												height={264}
 												className="aspect-2/3 w-full rounded-xl bg-gray-900/5 object-cover shadow-lg hover:shadow-2xl dark:bg-gray-700/5 transition-all duration-300"
+												key={images[3]?.id}
 											/>
 											<div className="pointer-events-none absolute inset-0 rounded-xl ring-1 ring-gray-900/10 ring-inset dark:ring-white/10" />
 											<div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300" />
@@ -280,11 +382,12 @@ export default function HeroSection() {
 											}}
 										>
 											<Image
-												alt="Technology and innovation"
-												src="https://images.unsplash.com/photo-1670272505284-8faba1c31f7d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDF8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&h=528&q=80"
+												alt={images[4]?.alt || "Small business"}
+												src={images[4]?.url || DEFAULT_IMAGES[4].url}
 												width={176}
 												height={264}
 												className="aspect-2/3 w-full rounded-xl bg-gray-900/5 object-cover shadow-lg hover:shadow-2xl dark:bg-gray-700/5 transition-all duration-300"
+												key={images[4]?.id}
 											/>
 											<div className="pointer-events-none absolute inset-0 rounded-xl ring-1 ring-gray-900/10 ring-inset dark:ring-white/10" />
 											<div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300" />

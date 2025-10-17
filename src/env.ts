@@ -8,6 +8,9 @@ export const env = createEnv({
 		BOLDSIGN_API_KEY: z.string().min(1),
 		BOLDSIGN_WEBHOOK_SECRET: z.string().optional(),
 		OPENAI_API_KEY: z.string().min(1),
+		UNSPLASH_ACCESS_KEY: z.string().min(1),
+		UNSPLASH_SECRET_KEY: z.string().min(1),
+		UNSPLASH_APP_ID: z.string().min(1),
 	},
 	client: {
 		NEXT_PUBLIC_CONVEX_URL: z.string().min(1),
