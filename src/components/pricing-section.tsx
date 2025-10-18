@@ -181,7 +181,7 @@ const PricingSwitch = ({ onSwitch }: { onSwitch: (value: string) => void }) => {
 					{selected === "0" && (
 						<motion.span
 							layoutId={"switch"}
-							className="absolute top-0 left-0 sm:h-12 h-10 w-full rounded-full border-4 shadow-sm shadow-blue-600 border-blue-600 bg-gradient-to-t from-blue-500 via-blue-400 to-blue-600"
+							className="absolute top-0 left-0 sm:h-12 h-10 w-full rounded-full border-4 shadow-sm shadow-primary border-primary bg-gradient-to-t from-primary via-primary/80 to-primary"
 							transition={{ type: "spring", stiffness: 500, damping: 30 }}
 						/>
 					)}
@@ -200,13 +200,13 @@ const PricingSwitch = ({ onSwitch }: { onSwitch: (value: string) => void }) => {
 					{selected === "1" && (
 						<motion.span
 							layoutId={"switch"}
-							className="absolute top-0 left-0 sm:h-12 h-10 w-full rounded-full border-4 shadow-sm shadow-blue-600 border-blue-600 bg-gradient-to-t from-blue-500 via-blue-400 to-blue-600"
+							className="absolute top-0 left-0 sm:h-12 h-10 w-full rounded-full border-4 shadow-sm shadow-primary border-primary bg-gradient-to-t from-primary via-primary/80 to-primary"
 							transition={{ type: "spring", stiffness: 500, damping: 30 }}
 						/>
 					)}
 					<span className="relative flex items-center gap-2">
 						Yearly
-						<span className="rounded-full bg-blue-50 dark:bg-blue-950 px-2 py-0.5 text-xs font-medium text-blue-600 dark:text-blue-400">
+						<span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
 							Save 20%
 						</span>
 					</span>
@@ -253,14 +253,14 @@ export default function PricingSection() {
 
 	return (
 		<div
-			className="not-prose relative flex w-full flex-col gap-16 overflow-hidden px-4 py-24 text-center sm:px-8 min-h-screen mx-auto"
+			className="not-prose relative flex w-full flex-col gap-16 overflow-hidden bg-white px-4 py-24 text-center sm:px-8 min-h-screen mx-auto dark:bg-gray-900"
 			ref={pricingRef}
 		>
 			{/* Background gradient effects for visual appeal */}
 			<div className="absolute inset-0 -z-10 overflow-hidden">
-				<div className="absolute -top-[10%] left-[50%] h-[40%] w-[60%] -translate-x-1/2 rounded-full bg-blue-600/10 blur-3xl" />
-				<div className="absolute -bottom-[10%] -right-[10%] h-[40%] w-[40%] rounded-full bg-blue-600/5 blur-3xl" />
-				<div className="absolute -bottom-[10%] -left-[10%] h-[40%] w-[40%] rounded-full bg-blue-600/5 blur-3xl" />
+				<div className="absolute -top-[10%] left-[50%] h-[40%] w-[60%] -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
+				<div className="absolute -bottom-[10%] -right-[10%] h-[40%] w-[40%] rounded-full bg-primary/5 blur-3xl" />
+				<div className="absolute -bottom-[10%] -left-[10%] h-[40%] w-[40%] rounded-full bg-primary/5 blur-3xl" />
 			</div>
 
 			<div className="text-center mb-6 max-w-3xl mx-auto">
@@ -277,7 +277,7 @@ export default function PricingSection() {
 						animationNum={1}
 						timelineRef={pricingRef}
 						customVariants={revealVariants}
-						className="border border-dashed border-blue-500 px-2 py-1 rounded-xl bg-blue-100 dark:bg-blue-950 capitalize inline-block"
+						className="border border-dashed border-primary px-2 py-1 rounded-xl bg-primary/10 capitalize inline-block"
 					>
 						business
 					</TimelineContent>
@@ -316,9 +316,7 @@ export default function PricingSection() {
 						<Card
 							className={cn(
 								"relative border-border h-full",
-								plan.popular
-									? "ring-2 ring-blue-500 bg-blue-50/50 dark:bg-blue-950/30"
-									: "bg-card"
+								plan.popular ? "ring-2 ring-primary bg-primary/5" : "bg-card"
 							)}
 						>
 							<CardHeader className="text-left">
@@ -328,7 +326,7 @@ export default function PricingSection() {
 									</h3>
 									{plan.popular && (
 										<div className="">
-											<span className="bg-blue-500 text-white px-3 py-1 rounded-full text-sm font-medium">
+											<span className="bg-primary text-white px-3 py-1 rounded-full text-sm font-medium">
 												Popular
 											</span>
 										</div>
@@ -386,8 +384,8 @@ export default function PricingSection() {
 									<ul className="space-y-2 font-semibold">
 										{plan.includes.slice(1).map((feature, featureIndex) => (
 											<li key={featureIndex} className="flex items-center">
-												<span className="h-6 w-6 bg-green-50 dark:bg-green-950 border border-blue-500 rounded-full grid place-content-center mt-0.5 mr-3">
-													<CheckCheck className="h-4 w-4 text-blue-500" />
+												<span className="h-6 w-6 bg-primary/10 border border-primary rounded-full grid place-content-center mt-0.5 mr-3">
+													<CheckCheck className="h-4 w-4 text-primary" />
 												</span>
 												<span className="text-sm text-muted-foreground">
 													{feature}
