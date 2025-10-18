@@ -27,6 +27,7 @@ type Quote = {
 	subtotal: number;
 	discountEnabled?: boolean;
 	discountAmount?: number;
+	discountType?: "percentage" | "fixed";
 	taxEnabled?: boolean;
 	taxAmount?: number;
 	total: number;
@@ -58,12 +59,12 @@ const styles = StyleSheet.create({
 	page: {
 		flexDirection: "column",
 		backgroundColor: "#FFFFFF",
-		padding: 40,
+		padding: 28,
 		fontSize: 11,
 		fontFamily: "Helvetica",
 	},
 	logoSection: {
-		marginBottom: 24,
+		marginBottom: 16,
 		alignItems: "flex-start",
 	},
 	logoContainer: {
@@ -79,8 +80,8 @@ const styles = StyleSheet.create({
 	header: {
 		flexDirection: "row",
 		justifyContent: "space-between",
-		marginBottom: 40,
-		paddingBottom: 20,
+		marginBottom: 24,
+		paddingBottom: 12,
 		borderBottomWidth: 2,
 		borderBottomColor: "#000000",
 	},
@@ -110,7 +111,7 @@ const styles = StyleSheet.create({
 		fontSize: 20,
 		fontWeight: "bold",
 		color: "#000000",
-		marginBottom: 12,
+		marginBottom: 8,
 	},
 	date: {
 		fontSize: 10,
@@ -121,13 +122,13 @@ const styles = StyleSheet.create({
 		borderWidth: 1,
 		borderColor: "#E5E7EB",
 		borderRadius: 4,
-		padding: 14,
+		padding: 10,
 		minWidth: 200,
 	},
 	metaRow: {
 		flexDirection: "row",
 		justifyContent: "space-between",
-		marginBottom: 6,
+		marginBottom: 4,
 	},
 	metaLabel: {
 		fontSize: 10,
@@ -140,9 +141,9 @@ const styles = StyleSheet.create({
 		marginLeft: 16,
 	},
 	billToSection: {
-		marginTop: 12,
-		marginBottom: 32,
-		padding: 16,
+		marginTop: 8,
+		marginBottom: 16,
+		padding: 12,
 		backgroundColor: "#F9FAFB",
 		borderRadius: 4,
 	},
@@ -150,7 +151,7 @@ const styles = StyleSheet.create({
 		fontSize: 11,
 		fontWeight: "bold",
 		color: "#1F2937",
-		marginBottom: 10,
+		marginBottom: 8,
 		textTransform: "uppercase",
 		letterSpacing: 0.5,
 	},
@@ -160,8 +161,8 @@ const styles = StyleSheet.create({
 		lineHeight: 1.6,
 	},
 	itemsTable: {
-		marginTop: 16,
-		marginBottom: 32,
+		marginTop: 12,
+		marginBottom: 16,
 		borderWidth: 1,
 		borderColor: "#E5E7EB",
 		borderRadius: 4,
@@ -169,15 +170,15 @@ const styles = StyleSheet.create({
 	tableHeader: {
 		flexDirection: "row",
 		backgroundColor: "#1F2937",
-		paddingVertical: 12,
-		paddingHorizontal: 14,
+		paddingVertical: 10,
+		paddingHorizontal: 12,
 	},
 	tableRow: {
 		flexDirection: "row",
 		borderBottomWidth: 1,
 		borderBottomColor: "#E5E7EB",
-		paddingVertical: 12,
-		paddingHorizontal: 14,
+		paddingVertical: 10,
+		paddingHorizontal: 12,
 		backgroundColor: "#FFFFFF",
 	},
 	tableCell: {
@@ -205,21 +206,21 @@ const styles = StyleSheet.create({
 	totalsSection: {
 		flexDirection: "row",
 		justifyContent: "flex-end",
-		marginTop: 20,
-		marginBottom: 24,
+		marginTop: 12,
+		marginBottom: 16,
 	},
 	totalsContainer: {
 		width: 260,
 		borderWidth: 1,
 		borderColor: "#E5E7EB",
 		borderRadius: 4,
-		padding: 16,
+		padding: 12,
 		backgroundColor: "#F9FAFB",
 	},
 	totalRow: {
 		flexDirection: "row",
 		justifyContent: "space-between",
-		paddingVertical: 6,
+		paddingVertical: 4,
 	},
 	totalLabel: {
 		fontSize: 11,
@@ -233,11 +234,11 @@ const styles = StyleSheet.create({
 	grandTotalRow: {
 		flexDirection: "row",
 		justifyContent: "space-between",
-		paddingVertical: 10,
-		paddingTop: 12,
+		paddingVertical: 8,
+		paddingTop: 10,
 		borderTopWidth: 2,
 		borderTopColor: "#1F2937",
-		marginTop: 8,
+		marginTop: 6,
 	},
 	grandTotalLabel: {
 		fontSize: 14,
@@ -250,9 +251,9 @@ const styles = StyleSheet.create({
 		color: "#000000",
 	},
 	termsSection: {
-		marginTop: 8,
-		marginBottom: 20,
-		padding: 16,
+		marginTop: 6,
+		marginBottom: 12,
+		padding: 12,
 		backgroundColor: "#F9FAFB",
 		borderRadius: 4,
 		borderLeftWidth: 3,
@@ -264,7 +265,7 @@ const styles = StyleSheet.create({
 		lineHeight: 1.6,
 	},
 	signatureSection: {
-		marginTop: 60,
+		marginTop: 32,
 		flexDirection: "row",
 		justifyContent: "space-between",
 		gap: 40,
@@ -357,7 +358,7 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({
 				</View>
 
 				{/* Bill To Section */}
-				<View style={styles.billToSection}>
+				<View style={styles.billToSection} wrap={false}>
 					<Text style={styles.sectionTitle}>Bill To:</Text>
 					<View style={styles.billToContent}>
 						{client ? (
@@ -372,7 +373,7 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({
 				</View>
 
 				{/* Items Table */}
-				<View style={styles.itemsTable}>
+				<View style={styles.itemsTable} wrap={false}>
 					<View style={styles.tableHeader}>
 						<Text style={[styles.tableHeaderCell, styles.tableCellDescription]}>
 							Description
@@ -412,7 +413,7 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({
 				</View>
 
 				{/* Totals */}
-				<View style={styles.totalsSection}>
+				<View style={styles.totalsSection} wrap={false}>
 					<View style={styles.totalsContainer}>
 						<View style={styles.totalRow}>
 							<Text style={styles.totalLabel}>Subtotal:</Text>
@@ -424,7 +425,9 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({
 							<View style={styles.totalRow}>
 								<Text style={styles.totalLabel}>Discount:</Text>
 								<Text style={styles.totalValue}>
-									- {formatCurrency(quote.discountAmount)}
+									{quote.discountType === "percentage"
+										? `-${quote.discountAmount}%`
+										: `- ${formatCurrency(quote.discountAmount)}`}
 								</Text>
 							</View>
 						) : null}
@@ -447,20 +450,20 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({
 
 				{/* Terms & Client Message */}
 				{quote.terms ? (
-					<View style={styles.termsSection}>
+					<View style={styles.termsSection} wrap={false}>
 						<Text style={styles.sectionTitle}>Terms & Conditions:</Text>
 						<Text style={styles.termsContent}>{quote.terms}</Text>
 					</View>
 				) : null}
 				{quote.clientMessage ? (
-					<View style={styles.termsSection}>
+					<View style={styles.termsSection} wrap={false}>
 						<Text style={styles.sectionTitle}>Message to Client:</Text>
 						<Text style={styles.termsContent}>{quote.clientMessage}</Text>
 					</View>
 				) : null}
 
 				{/* Signature Section with BoldSign text tags */}
-				<View style={styles.signatureSection}>
+				<View style={styles.signatureSection} wrap={false}>
 					<View style={{ width: "45%" }}>
 						<Text style={{ fontSize: 10, color: "#1F2937", marginBottom: 5 }}>
 							Signature:
