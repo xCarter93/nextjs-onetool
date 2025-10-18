@@ -80,6 +80,7 @@ export function RoundedPieChart() {
 						<ChartTooltip
 							cursor={false}
 							content={<ChartTooltipContent nameKey="visitors" hideLabel />}
+							wrapperStyle={{ opacity: 1, zIndex: 1000 }}
 						/>
 						<Pie
 							data={chartData}
@@ -147,6 +148,7 @@ export function RoundedPieChartCore({
 				<ChartTooltip
 					cursor={false}
 					content={<ChartTooltipContent nameKey={valueKey} hideLabel />}
+					wrapperStyle={{ opacity: 1, zIndex: 1000 }}
 				/>
 				<Pie
 					data={prepared}

@@ -231,17 +231,32 @@ export const getHomeStats = query({
 			.reduce((sum, invoice) => sum + invoice.total, 0);
 
 		// Calculate revenue goal progress
+		// Include both paid invoices and approved quotes from completed projects
 		const monthlyTarget = organization?.monthlyRevenueTarget || 50000; // Default target
-		const currentRevenue = invoicesThisMonth
+		const paidInvoicesRevenue = invoicesThisMonth
 			.filter((invoice) => invoice.status === "paid")
 			.reduce((sum, invoice) => sum + invoice.total, 0);
+		const currentRevenue = paidInvoicesRevenue + projectsValue;
 		const currentPercentage = Math.round(
 			(currentRevenue / monthlyTarget) * 100
 		);
 
-		const lastMonthRevenue = invoicesLastMonth
+		// Calculate last month's revenue including completed projects
+		const completedProjectsLastMonthIds = new Set(
+			completedProjectsLastMonth.map((p) => p._id)
+		);
+		const lastMonthProjectsValue = allQuotes
+			.filter(
+				(quote) =>
+					quote.status === "approved" &&
+					quote.projectId &&
+					completedProjectsLastMonthIds.has(quote.projectId)
+			)
+			.reduce((sum, quote) => sum + quote.total, 0);
+		const lastMonthPaidInvoices = invoicesLastMonth
 			.filter((invoice) => invoice.status === "paid")
 			.reduce((sum, invoice) => sum + invoice.total, 0);
+		const lastMonthRevenue = lastMonthPaidInvoices + lastMonthProjectsValue;
 		const lastMonthPercentage = Math.round(
 			(lastMonthRevenue / monthlyTarget) * 100
 		);
@@ -450,10 +465,43 @@ export const getRevenueGoalProgress = query({
 			)
 			.collect();
 
-		const currentRevenue = paidInvoices.reduce(
+		const paidInvoicesRevenue = paidInvoices.reduce(
 			(sum, invoice) => sum + invoice.total,
 			0
 		);
+
+		// Get completed projects this month
+		const completedProjectsThisMonth = await ctx.db
+			.query("projects")
+			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
+			.filter((q) =>
+				q.and(
+					q.eq(q.field("status"), "completed"),
+					q.gte(q.field("_creationTime"), startOfThisMonth)
+				)
+			)
+			.collect();
+
+		// Get approved quotes for completed projects
+		const completedProjectIds = new Set(
+			completedProjectsThisMonth.map((p) => p._id)
+		);
+		const allQuotes = await ctx.db
+			.query("quotes")
+			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
+			.collect();
+
+		const completedProjectsValue = allQuotes
+			.filter(
+				(quote) =>
+					quote.status === "approved" &&
+					quote.projectId &&
+					completedProjectIds.has(quote.projectId)
+			)
+			.reduce((sum, quote) => sum + quote.total, 0);
+
+		// Combine paid invoices and completed project values
+		const currentRevenue = paidInvoicesRevenue + completedProjectsValue;
 		const percentage = Math.round((currentRevenue / monthlyTarget) * 100);
 
 		// Consider "on track" if we're at least at the expected percentage for this point in the month
