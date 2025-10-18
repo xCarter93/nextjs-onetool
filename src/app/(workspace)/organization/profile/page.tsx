@@ -15,12 +15,17 @@ import {
 	Trash2,
 	Download,
 	Eye,
+	Edit,
+	Plus,
+	Check,
+	X,
 } from "lucide-react";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
+import { StyledButton } from "@/components/ui/styled-button";
 import { Card, CardContent } from "@/components/ui/card";
 import SelectService from "@/components/choice-set";
 import { useToast } from "@/hooks/use-toast";
@@ -34,6 +39,7 @@ const TAB_VALUES = [
 	"business",
 	"preferences",
 	"documents",
+	"skus",
 ] as const;
 type TabValue = (typeof TAB_VALUES)[number];
 
@@ -458,6 +464,7 @@ export default function OrganizationProfilePage() {
 						<TabsTrigger value="business">Business Info</TabsTrigger>
 						<TabsTrigger value="preferences">Preferences</TabsTrigger>
 						<TabsTrigger value="documents">Documents</TabsTrigger>
+						<TabsTrigger value="skus">SKUs</TabsTrigger>
 					</TabsList>
 
 					<div className="mt-8 space-y-8">
@@ -963,6 +970,10 @@ export default function OrganizationProfilePage() {
 						<TabsContent value="documents">
 							<DocumentsTab />
 						</TabsContent>
+
+						<TabsContent value="skus">
+							<SKUsTab />
+						</TabsContent>
 					</div>
 				</Tabs>
 			</div>
@@ -1330,5 +1341,444 @@ function DocumentCard({ document, onDelete }: DocumentCardProps) {
 				</div>
 			</CardContent>
 		</Card>
+	);
+}
+
+// SKU Type - will be generated after Convex schema update
+type SKUDoc = {
+	_id: Id<"skus">;
+	_creationTime: number;
+	orgId: Id<"organizations">;
+	name: string;
+	unit: string;
+	rate: number;
+	cost?: number;
+	isActive: boolean;
+	createdAt: number;
+	updatedAt: number;
+};
+
+// SKUs Tab Component
+function SKUsTab() {
+	const toast = useToast();
+	const { confirm: confirmDialog } = useConfirmDialog();
+	const [isEditing, setIsEditing] = useState(false);
+	const [isSaving, setIsSaving] = useState(false);
+	const [editingSKU, setEditingSKU] = useState<Id<"skus"> | null>(null);
+	const [skuForm, setSKUForm] = useState({
+		name: "",
+		unit: "",
+		rate: "",
+		cost: "",
+	});
+
+	const skus = useQuery(api.skus.listAll);
+	const createSKU = useMutation(api.skus.create);
+	const updateSKU = useMutation(api.skus.update);
+	const removeSKU = useMutation(api.skus.remove);
+
+	const resetForm = () => {
+		setSKUForm({
+			name: "",
+			unit: "",
+			rate: "",
+			cost: "",
+		});
+		setEditingSKU(null);
+	};
+
+	const closeForm = () => {
+		resetForm();
+		setIsEditing(false);
+		setIsSaving(false);
+	};
+
+	const handleCreate = () => {
+		resetForm();
+		setIsEditing(true);
+	};
+
+	const handleEdit = (sku: SKUDoc) => {
+		if (!sku) return;
+		setSKUForm({
+			name: sku.name,
+			unit: sku.unit,
+			rate: sku.rate.toString(),
+			cost: sku.cost !== undefined ? sku.cost.toString() : "",
+		});
+		setEditingSKU(sku._id);
+		setIsEditing(true);
+	};
+
+	const handleSave = async () => {
+		// Prevent duplicate submissions
+		if (isSaving) return;
+
+		if (!skuForm.name.trim()) {
+			toast.warning("Name required", "Please enter a SKU name");
+			return;
+		}
+
+		if (!skuForm.unit.trim()) {
+			toast.warning("Unit required", "Please enter a unit");
+			return;
+		}
+
+		const rate = parseFloat(skuForm.rate);
+		if (isNaN(rate) || rate < 0) {
+			toast.warning("Invalid rate", "Please enter a valid rate");
+			return;
+		}
+
+		const cost = skuForm.cost.trim() ? parseFloat(skuForm.cost) : undefined;
+		if (cost !== undefined && (isNaN(cost) || cost < 0)) {
+			toast.warning("Invalid cost", "Please enter a valid cost");
+			return;
+		}
+
+		try {
+			setIsSaving(true);
+			if (editingSKU) {
+				await updateSKU({
+					id: editingSKU,
+					name: skuForm.name.trim(),
+					unit: skuForm.unit.trim(),
+					rate,
+					cost,
+				});
+				toast.success("SKU updated", "SKU has been successfully updated");
+			} else {
+				await createSKU({
+					name: skuForm.name.trim(),
+					unit: skuForm.unit.trim(),
+					rate,
+					cost,
+				});
+				toast.success("SKU created", "SKU has been successfully created");
+			}
+			closeForm();
+		} catch (error) {
+			logError(error, {
+				action: editingSKU ? "update_sku" : "create_sku",
+				metadata: { skuForm },
+			});
+			const userMessage = getUserFriendlyErrorMessage(error);
+			toast.error(editingSKU ? "Update failed" : "Create failed", userMessage);
+		} finally {
+			setIsSaving(false);
+		}
+	};
+
+	const handleDelete = async (id: Id<"skus">) => {
+		const confirmed = await confirmDialog({
+			title: "Delete SKU",
+			message:
+				"Are you sure you want to delete this SKU? It will be marked as inactive and won't appear in new quotes.",
+			confirmLabel: "Delete SKU",
+			cancelLabel: "Cancel",
+			variant: "destructive",
+		});
+
+		if (!confirmed) return;
+
+		try {
+			await removeSKU({ id });
+			toast.success("SKU deleted", "The SKU has been removed");
+		} catch (error) {
+			logError(error, {
+				action: "delete_sku",
+				metadata: { skuId: id },
+			});
+			const userMessage = getUserFriendlyErrorMessage(error);
+			toast.error("Delete failed", userMessage);
+		}
+	};
+
+	const formatCurrency = (amount: number) => {
+		return new Intl.NumberFormat("en-US", {
+			style: "currency",
+			currency: "USD",
+			minimumFractionDigits: 2,
+			maximumFractionDigits: 2,
+		}).format(amount);
+	};
+
+	const calculateMargin = (rate: number, cost?: number) => {
+		if (cost === undefined || rate === 0) return null;
+		return ((rate - cost) / rate) * 100;
+	};
+
+	return (
+		<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-2xl p-8 shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50 space-y-6">
+			{/* Header */}
+			<div className="flex items-center justify-between">
+				<div>
+					<div className="flex items-center gap-3 mb-2">
+						<div className="w-1.5 h-6 bg-gradient-to-b from-primary to-primary/60 rounded-full" />
+						<h2 className="text-2xl font-semibold text-foreground tracking-tight">
+							SKUs (Stock Keeping Units)
+						</h2>
+					</div>
+					<p className="text-muted-foreground ml-5 leading-relaxed">
+						Create reusable SKUs with predefined rates and costs to quickly add
+						line items to quotes.
+					</p>
+				</div>
+				{!isEditing && skus && skus.length > 0 && (
+					<Button intent="outline" size="sm" onPress={handleCreate}>
+						<Plus className="h-4 w-4 mr-2" />
+						Add SKU
+					</Button>
+				)}
+			</div>
+
+			{/* SKUs Table */}
+			{skus === undefined ? (
+				<div className="text-center py-12">
+					<div className="animate-pulse space-y-4">
+						<div className="h-8 bg-muted rounded w-1/3 mx-auto"></div>
+						<div className="h-4 bg-muted rounded w-1/2 mx-auto"></div>
+					</div>
+				</div>
+			) : skus.length === 0 && !isEditing ? (
+				<div className="text-center py-16 px-4 border-2 border-dashed border-border dark:border-border/60 rounded-xl bg-muted/20">
+					<Building2 className="h-16 w-16 text-muted-foreground/60 mx-auto mb-4" />
+					<p className="text-lg font-semibold text-foreground mb-2">
+						No SKUs created yet
+					</p>
+					<p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto">
+						Create your first SKU to streamline your quote creation process with
+						reusable line items.
+					</p>
+					<StyledButton
+						intent="primary"
+						size="lg"
+						onClick={handleCreate}
+						icon={<Plus className="h-5 w-5" />}
+						label="Create Your First SKU"
+					/>
+				</div>
+			) : (
+				<div className="border border-border dark:border-border/60 rounded-xl overflow-hidden">
+					<div className="overflow-x-auto">
+						<table className="w-full">
+							<thead className="bg-muted/50 border-b border-border">
+								<tr>
+									<th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+										Name
+									</th>
+									<th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+										Unit
+									</th>
+									<th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+										Rate
+									</th>
+									<th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+										Cost
+									</th>
+									<th className="text-center px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+										Margin
+									</th>
+									<th className="text-center px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+										Status
+									</th>
+									<th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+										Actions
+									</th>
+								</tr>
+							</thead>
+							<tbody className="divide-y divide-border dark:divide-border/60 bg-card">
+								{/* Editing Row */}
+								{isEditing && (
+									<tr className="bg-blue-50/50 dark:bg-blue-900/10 border-l-4 border-l-blue-500">
+										<td className="px-4 py-3">
+											<Input
+												value={skuForm.name}
+												onChange={(e) =>
+													setSKUForm((prev) => ({
+														...prev,
+														name: e.target.value,
+													}))
+												}
+												placeholder="Enter SKU name..."
+												className="w-full"
+												autoFocus
+											/>
+										</td>
+										<td className="px-4 py-3">
+											<Input
+												value={skuForm.unit}
+												onChange={(e) =>
+													setSKUForm((prev) => ({
+														...prev,
+														unit: e.target.value,
+													}))
+												}
+												placeholder="hour, day, item"
+												className="w-full"
+											/>
+										</td>
+										<td className="px-4 py-3">
+											<Input
+												type="number"
+												value={skuForm.rate}
+												onChange={(e) =>
+													setSKUForm((prev) => ({
+														...prev,
+														rate: e.target.value,
+													}))
+												}
+												placeholder="0.00"
+												min="0"
+												step="0.01"
+												className="w-full text-right"
+											/>
+										</td>
+										<td className="px-4 py-3">
+											<Input
+												type="number"
+												value={skuForm.cost}
+												onChange={(e) =>
+													setSKUForm((prev) => ({
+														...prev,
+														cost: e.target.value,
+													}))
+												}
+												placeholder="0.00"
+												min="0"
+												step="0.01"
+												className="w-full text-right"
+											/>
+										</td>
+										<td className="px-4 py-3 text-center">
+											<span className="text-xs text-muted-foreground">-</span>
+										</td>
+										<td className="px-4 py-3 text-center">
+											<span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
+												{editingSKU ? "Editing" : "New"}
+											</span>
+										</td>
+										<td className="px-4 py-3">
+											<div className="flex gap-1 justify-end">
+												<Button
+													intent="outline"
+													size="sq-sm"
+													onPress={handleSave}
+													isDisabled={isSaving}
+													aria-label={isSaving ? "Saving..." : "Save SKU"}
+													className="bg-green-50 dark:bg-green-950/30 hover:bg-green-100 dark:hover:bg-green-900/40 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800"
+												>
+													<Check className="h-3 w-3" />
+												</Button>
+												<Button
+													intent="outline"
+													size="sq-sm"
+													onPress={closeForm}
+													isDisabled={isSaving}
+													aria-label="Cancel"
+													className="hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-600 dark:hover:text-red-400"
+												>
+													<X className="h-3 w-3" />
+												</Button>
+											</div>
+										</td>
+									</tr>
+								)}
+
+								{/* Existing SKUs */}
+								{skus.map((sku: SKUDoc) => {
+									const margin = calculateMargin(sku.rate, sku.cost);
+									return (
+										<tr
+											key={sku._id}
+											className={`hover:bg-muted/30 transition-colors ${
+												!sku.isActive ? "opacity-50" : ""
+											}`}
+										>
+											<td className="px-4 py-3 text-sm font-medium text-foreground">
+												{sku.name}
+											</td>
+											<td className="px-4 py-3 text-sm text-muted-foreground">
+												{sku.unit}
+											</td>
+											<td className="px-4 py-3 text-sm text-right font-medium text-foreground">
+												{formatCurrency(sku.rate)}
+											</td>
+											<td className="px-4 py-3 text-sm text-right text-muted-foreground">
+												{sku.cost !== undefined
+													? formatCurrency(sku.cost)
+													: "-"}
+											</td>
+											<td className="px-4 py-3 text-sm text-center">
+												{margin !== null ? (
+													<span
+														className={`font-medium ${
+															margin >= 0
+																? "text-green-600 dark:text-green-400"
+																: "text-red-600 dark:text-red-400"
+														}`}
+													>
+														{margin.toFixed(1)}%
+													</span>
+												) : (
+													<span className="text-muted-foreground">-</span>
+												)}
+											</td>
+											<td className="px-4 py-3 text-center">
+												{sku.isActive ? (
+													<span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
+														Active
+													</span>
+												) : (
+													<span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-900/30 text-gray-800 dark:text-gray-300">
+														Inactive
+													</span>
+												)}
+											</td>
+											<td className="px-4 py-3">
+												<div className="flex gap-1 justify-end">
+													<Button
+														intent="outline"
+														size="sq-sm"
+														onPress={() => handleEdit(sku)}
+														aria-label="Edit SKU"
+														className="hover:bg-primary/10 hover:text-primary"
+													>
+														<Edit className="h-3 w-3" />
+													</Button>
+													{sku.isActive && (
+														<Button
+															intent="outline"
+															size="sq-sm"
+															onPress={() => handleDelete(sku._id)}
+															aria-label="Delete SKU"
+															className="hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-600 dark:hover:text-red-400"
+														>
+															<Trash2 className="h-3 w-3" />
+														</Button>
+													)}
+												</div>
+											</td>
+										</tr>
+									);
+								})}
+							</tbody>
+						</table>
+					</div>
+				</div>
+			)}
+
+			{/* Footer with count - only show when not editing and have SKUs */}
+			{skus && skus.length > 0 && !isEditing && (
+				<div className="flex items-center justify-between text-sm text-muted-foreground pt-2">
+					<p>
+						{skus.filter((s: SKUDoc) => s.isActive).length} active SKU
+						{skus.filter((s: SKUDoc) => s.isActive).length !== 1
+							? "s"
+							: ""} • {skus.length} total
+					</p>
+				</div>
+			)}
+		</div>
 	);
 }

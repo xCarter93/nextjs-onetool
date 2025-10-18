@@ -32,6 +32,7 @@ import {
 	X,
 	Eye,
 } from "lucide-react";
+import { SKUSelector } from "@/components/sku-selector";
 
 type LineItem = {
 	_id: Id<"quoteLineItems"> | string; // Allow temp IDs for new items
@@ -906,12 +907,26 @@ function LineItemRow({
 				className={`bg-blue-50/50 dark:bg-blue-900/10 border-l-4 border-l-blue-500 ${item.isNew ? "bg-yellow-50/50 dark:bg-yellow-900/10" : ""}`}
 			>
 				<TableCell>
-					<Input
-						value={editedItem.description}
-						onChange={(e) => handleFieldChange("description", e.target.value)}
-						placeholder="Enter description..."
-						className="w-full"
-					/>
+					<div className="flex gap-2">
+						<Input
+							value={editedItem.description}
+							onChange={(e) => handleFieldChange("description", e.target.value)}
+							placeholder="Enter description..."
+							className="flex-1"
+						/>
+						<SKUSelector
+							onSelect={(sku) => {
+								setEditedItem((prev) => ({
+									...prev,
+									description: sku.name,
+									unit: sku.unit,
+									rate: sku.rate,
+									cost: sku.cost || 0,
+								}));
+							}}
+							disabled={false}
+						/>
+					</div>
 				</TableCell>
 				<TableCell>
 					<Input
