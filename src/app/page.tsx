@@ -1,5 +1,6 @@
 import HeroSection from "@/components/hero-section";
-import FeatureBento from "@/components/feature-bento";
+import FeatureSection from "@/components/feature-section";
+import FAQSection from "@/components/faq-section";
 import PricingSection from "@/components/pricing-section";
 import GlowLine from "@/components/glowline";
 import AppNavbar from "@/components/app-navbar";
@@ -26,9 +27,24 @@ export default function Home() {
 				/>
 			</div>
 
-			{/* Feature Bento Section */}
+			{/* Features Section */}
 			<section id="features">
-				<FeatureBento />
+				<FeatureSection />
+			</section>
+
+			{/* Blue glowline separator */}
+			<div className="relative w-full">
+				<GlowLine
+					orientation="horizontal"
+					position="50%"
+					color="blue"
+					className="opacity-60"
+				/>
+			</div>
+
+			{/* FAQ Section */}
+			<section id="faq">
+				<FAQSection />
 			</section>
 
 			{/* Blue glowline separator */}
