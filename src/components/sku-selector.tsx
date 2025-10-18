@@ -142,22 +142,25 @@ export function SKUSelector({ onSelect, disabled = false }: SKUSelectorProps) {
 													)}
 												</div>
 											</div>
-											{sku.cost !== undefined && sku.rate > 0 && (
-												<div className="flex-shrink-0">
-													<span
-														className={`text-xs font-medium ${
-															((sku.rate - sku.cost) / sku.rate) * 100 >= 0
-																? "text-green-600 dark:text-green-400"
-																: "text-red-600 dark:text-red-400"
-														}`}
-													>
-														{(((sku.rate - sku.cost) / sku.rate) * 100).toFixed(
-															1
-														)}
-														% margin
-													</span>
-												</div>
-											)}
+											{sku.cost !== undefined &&
+												sku.rate > 0 &&
+												(() => {
+													const marginPct =
+														((sku.rate - sku.cost) / sku.rate) * 100;
+													return (
+														<div className="flex-shrink-0">
+															<span
+																className={`text-xs font-medium ${
+																	marginPct >= 0
+																		? "text-green-600 dark:text-green-400"
+																		: "text-red-600 dark:text-red-400"
+																}`}
+															>
+																{marginPct.toFixed(1)}% margin
+															</span>
+														</div>
+													);
+												})()}
 										</div>
 									</button>
 								))}

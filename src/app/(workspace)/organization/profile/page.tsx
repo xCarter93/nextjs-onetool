@@ -1363,6 +1363,7 @@ function SKUsTab() {
 	const toast = useToast();
 	const { confirm: confirmDialog } = useConfirmDialog();
 	const [isEditing, setIsEditing] = useState(false);
+	const [isSaving, setIsSaving] = useState(false);
 	const [editingSKU, setEditingSKU] = useState<Id<"skus"> | null>(null);
 	const [skuForm, setSKUForm] = useState({
 		name: "",
@@ -1389,6 +1390,7 @@ function SKUsTab() {
 	const closeForm = () => {
 		resetForm();
 		setIsEditing(false);
+		setIsSaving(false);
 	};
 
 	const handleCreate = () => {
@@ -1409,6 +1411,9 @@ function SKUsTab() {
 	};
 
 	const handleSave = async () => {
+		// Prevent duplicate submissions
+		if (isSaving) return;
+
 		if (!skuForm.name.trim()) {
 			toast.warning("Name required", "Please enter a SKU name");
 			return;
@@ -1432,6 +1437,7 @@ function SKUsTab() {
 		}
 
 		try {
+			setIsSaving(true);
 			if (editingSKU) {
 				await updateSKU({
 					id: editingSKU,
@@ -1458,6 +1464,8 @@ function SKUsTab() {
 			});
 			const userMessage = getUserFriendlyErrorMessage(error);
 			toast.error(editingSKU ? "Update failed" : "Create failed", userMessage);
+		} finally {
+			setIsSaving(false);
 		}
 	};
 
@@ -1656,7 +1664,8 @@ function SKUsTab() {
 													intent="outline"
 													size="sq-sm"
 													onPress={handleSave}
-													aria-label="Save SKU"
+													isDisabled={isSaving}
+													aria-label={isSaving ? "Saving..." : "Save SKU"}
 													className="bg-green-50 dark:bg-green-950/30 hover:bg-green-100 dark:hover:bg-green-900/40 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800"
 												>
 													<Check className="h-3 w-3" />
@@ -1665,6 +1674,7 @@ function SKUsTab() {
 													intent="outline"
 													size="sq-sm"
 													onPress={closeForm}
+													isDisabled={isSaving}
 													aria-label="Cancel"
 													className="hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-600 dark:hover:text-red-400"
 												>
