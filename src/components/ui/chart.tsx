@@ -143,7 +143,12 @@ function ChartTooltipContent({
 
 		if (labelFormatter) {
 			return (
-				<div className={cn("font-medium", labelClassName)}>
+				<div
+					className={cn(
+						"font-medium text-gray-900 dark:text-white",
+						labelClassName
+					)}
+				>
 					{labelFormatter(value, payload)}
 				</div>
 			);
@@ -153,7 +158,16 @@ function ChartTooltipContent({
 			return null;
 		}
 
-		return <div className={cn("font-medium", labelClassName)}>{value}</div>;
+		return (
+			<div
+				className={cn(
+					"font-medium text-gray-900 dark:text-white",
+					labelClassName
+				)}
+			>
+				{value}
+			</div>
+		);
 	}, [
 		label,
 		labelFormatter,
@@ -173,7 +187,10 @@ function ChartTooltipContent({
 	return (
 		<div
 			className={cn(
-				"border-border/50 bg-background grid min-w-[8rem] items-start gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs shadow-xl",
+				"grid min-w-[8rem] items-start gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs shadow-xl",
+				"!bg-white dark:!bg-slate-900",
+				"border-gray-200 dark:border-slate-700",
+				"!opacity-100",
 				className
 			)}
 		>
@@ -232,12 +249,12 @@ function ChartTooltipContent({
 										>
 											<div className="grid gap-1.5">
 												{nestLabel ? tooltipLabel : null}
-												<span className="text-muted-foreground">
+												<span className="text-gray-900 dark:text-white">
 													{itemConfig?.label || item.name}
 												</span>
 											</div>
 											{item.value && (
-												<span className="text-foreground font-mono font-medium tabular-nums">
+												<span className="text-gray-900 dark:text-white font-mono font-medium tabular-nums">
 													{item.value.toLocaleString()}
 												</span>
 											)}
