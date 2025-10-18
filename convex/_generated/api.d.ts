@@ -35,6 +35,7 @@ import type * as organizations from "../organizations.js";
 import type * as projects from "../projects.js";
 import type * as quoteLineItems from "../quoteLineItems.js";
 import type * as quotes from "../quotes.js";
+import type * as skus from "../skus.js";
 import type * as tasks from "../tasks.js";
 import type * as users from "../users.js";
 
@@ -69,6 +70,7 @@ declare const fullApi: ApiFromModules<{
   projects: typeof projects;
   quoteLineItems: typeof quoteLineItems;
   quotes: typeof quotes;
+  skus: typeof skus;
   tasks: typeof tasks;
   users: typeof users;
 }>;

@@ -599,4 +599,24 @@ export default defineSchema({
 	})
 		.index("by_org", ["orgId"])
 		.index("by_org_uploaded", ["orgId", "uploadedAt"]),
+
+	// SKUs - reusable stock keeping units for quotes
+	skus: defineTable({
+		orgId: v.id("organizations"),
+
+		// SKU details
+		name: v.string(), // Acts as description when used in quotes
+		unit: v.string(), // Default unit (e.g., "hour", "item", "day")
+		rate: v.number(), // Default price/rate
+		cost: v.optional(v.number()), // Optional cost for margin calculation
+
+		// Status
+		isActive: v.boolean(), // Allow soft deletion
+
+		// Tracking
+		createdAt: v.number(),
+		updatedAt: v.number(),
+	})
+		.index("by_org", ["orgId"])
+		.index("by_org_active", ["orgId", "isActive"]),
 });
