@@ -42,6 +42,7 @@ import {
 	Trash2,
 	RotateCcw,
 	Archive,
+	Upload,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
@@ -49,6 +50,8 @@ import { useMutation } from "convex/react";
 import { useState } from "react";
 import type { Id } from "../../../../convex/_generated/dataModel";
 import DeleteConfirmationModal from "@/components/ui/delete-confirmation-modal";
+import { StyledButton } from "@/components/ui/styled-button";
+import { CsvImportModal } from "@/components/csv-import-modal";
 
 type Client = {
 	id: string;
@@ -202,6 +205,7 @@ export default function ClientsPage() {
 	const router = useRouter();
 	const toast = useToast();
 	const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+	const [importModalOpen, setImportModalOpen] = useState(false);
 	const [clientToDelete, setClientToDelete] = useState<{
 		id: string;
 		name: string;
@@ -390,19 +394,29 @@ export default function ClientsPage() {
 						</p>
 					</div>
 				</div>
-				<button
-					onClick={() => router.push("/clients/new")}
-					className="group inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-all duration-200 px-4 py-2 rounded-lg bg-primary/10 hover:bg-primary/15 ring-1 ring-primary/30 hover:ring-primary/40 shadow-sm hover:shadow-md backdrop-blur-sm"
-				>
-					<Plus className="h-4 w-4" />
-					Add Client
-					<span
-						aria-hidden="true"
-						className="group-hover:translate-x-1 transition-transform duration-200"
+				<div className="flex gap-2">
+					<StyledButton
+						intent="outline"
+						size="sm"
+						onClick={() => setImportModalOpen(true)}
 					>
-						→
-					</span>
-				</button>
+						<Upload className="h-4 w-4" />
+						Import Clients
+					</StyledButton>
+					<button
+						onClick={() => router.push("/clients/new")}
+						className="group inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-all duration-200 px-4 py-2 rounded-lg bg-primary/10 hover:bg-primary/15 ring-1 ring-primary/30 hover:ring-primary/40 shadow-sm hover:shadow-md backdrop-blur-sm"
+					>
+						<Plus className="h-4 w-4" />
+						Add Client
+						<span
+							aria-hidden="true"
+							className="group-hover:translate-x-1 transition-transform duration-200"
+						>
+							→
+						</span>
+					</button>
+				</div>
 			</div>
 
 			<div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -705,6 +719,19 @@ export default function ClientsPage() {
 					isArchive={true}
 				/>
 			)}
+
+			{/* Import Clients Modal */}
+			<CsvImportModal
+				isOpen={importModalOpen}
+				onClose={() => setImportModalOpen(false)}
+				onComplete={() => {
+					setImportModalOpen(false);
+					toast.success(
+						"Clients Imported",
+						"Your clients have been successfully imported."
+					);
+				}}
+			/>
 		</div>
 	);
 }
