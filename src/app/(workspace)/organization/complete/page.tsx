@@ -10,12 +10,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Users, Building2, Globe, Upload, Check } from "lucide-react";
+import { Users, Building2, Globe, Upload } from "lucide-react";
 import { api } from "../../../../../convex/_generated/api";
-import { CsvUploadZone } from "@/components/csv-upload-zone";
-import { CsvMappingPreview } from "@/components/csv-mapping-preview";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
+import { CsvImportStep } from "@/components/csv-import-step";
+import { StyledButton } from "@/components/ui/styled-button";
 import type {
 	EntityType,
 	CsvAnalysisResult,
@@ -830,143 +828,27 @@ export default function CompleteOrganizationMetadata() {
 
 	const renderStep4 = () => (
 		<div className="space-y-8">
-			<div>
-				<div className="flex items-center gap-3 mb-3">
-					<div className="w-1.5 h-6 bg-gradient-to-b from-primary to-primary/60 rounded-full" />
-					<h2 className="text-2xl font-semibold text-foreground tracking-tight">
-						Import Existing Data
-					</h2>
-				</div>
-				<p className="text-muted-foreground ml-5 leading-relaxed">
-					Optionally import your existing clients or projects from a CSV file.
-					Our AI will help map your data to the correct fields.
-				</p>
-			</div>
-
-			{/* Entity Type Selection */}
-			<div>
-				<label className="block text-sm font-semibold text-foreground mb-4 tracking-wide">
-					What type of data are you importing?
-				</label>
-				<RadioGroup
-					value={csvImportState.entityType}
-					onValueChange={(value) =>
-						setCsvImportState((prev) => ({
-							...prev,
-							entityType: value as EntityType,
-							analysisResult: null,
-							mappings: [],
-						}))
-					}
-					className="grid grid-cols-2 gap-4"
-				>
-					<div>
-						<RadioGroupItem
-							value="clients"
-							id="clients"
-							className="peer sr-only"
-						/>
-						<Label
-							htmlFor="clients"
-							className="flex flex-col items-center justify-between rounded-lg border-2 border-border bg-background p-4 hover:bg-muted/30 peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5 cursor-pointer transition-all"
-						>
-							<Users className="mb-3 h-6 w-6 text-muted-foreground peer-data-[state=checked]:text-primary" />
-							<div className="text-center">
-								<div className="font-semibold text-sm">Clients</div>
-								<div className="text-xs text-muted-foreground mt-1">
-									Import client/customer data
-								</div>
-							</div>
-						</Label>
-					</div>
-					<div>
-						<RadioGroupItem
-							value="projects"
-							id="projects"
-							className="peer sr-only"
-						/>
-						<Label
-							htmlFor="projects"
-							className="flex flex-col items-center justify-between rounded-lg border-2 border-border bg-background p-4 hover:bg-muted/30 peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5 cursor-pointer transition-all"
-						>
-							<Building2 className="mb-3 h-6 w-6 text-muted-foreground peer-data-[state=checked]:text-primary" />
-							<div className="text-center">
-								<div className="font-semibold text-sm">Projects</div>
-								<div className="text-xs text-muted-foreground mt-1">
-									Import project data
-								</div>
-							</div>
-						</Label>
-					</div>
-				</RadioGroup>
-			</div>
-
-			{/* CSV Upload */}
-			<div>
-				<label className="block text-sm font-semibold text-foreground mb-4 tracking-wide">
-					Upload CSV File
-				</label>
-				<CsvUploadZone onFileSelect={handleFileSelect} maxSizeMB={5} />
-			</div>
-
-			{/* AI Analysis Loading */}
-			{csvImportState.isAnalyzing && (
-				<div className="p-6 bg-muted/30 border border-border rounded-lg">
-					<div className="flex items-center gap-3">
-						<div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-						<div>
-							<p className="text-sm font-medium text-foreground">
-								AI is analyzing your data...
-							</p>
-							<p className="text-xs text-muted-foreground mt-1">
-								This may take a moment
-							</p>
-						</div>
-					</div>
-				</div>
-			)}
-
-			{/* Mapping Preview */}
-			{csvImportState.analysisResult && csvImportState.mappings.length > 0 && (
-				<div>
-					<label className="block text-sm font-semibold text-foreground mb-4 tracking-wide">
-						Review & Adjust Field Mappings
-					</label>
-					<CsvMappingPreview
-						entityType={csvImportState.entityType}
-						mappings={csvImportState.mappings}
-						validation={csvImportState.analysisResult.validation}
-						onMappingChange={handleMappingChange}
-					/>
-				</div>
-			)}
-
-			{/* Import Result */}
-			{csvImportState.importResult && (
-				<div className="p-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
-					<div className="flex items-start gap-3">
-						<Check className="w-5 h-5 text-green-600 mt-0.5" />
-						<div>
-							<p className="text-sm font-semibold text-green-800 dark:text-green-200">
-								Import Complete
-							</p>
-							<p className="text-xs text-green-700 dark:text-green-300 mt-1">
-								Successfully imported {csvImportState.importResult.successCount}{" "}
-								{csvImportState.entityType}
-								{csvImportState.importResult.failureCount > 0 &&
-									` (${csvImportState.importResult.failureCount} failed)`}
-							</p>
-						</div>
-					</div>
-				</div>
-			)}
-
-			{/* Error Display */}
-			{error && (
-				<div className="p-4 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg">
-					<p className="text-sm text-red-800 dark:text-red-200">{error}</p>
-				</div>
-			)}
+			{/* CSV Import Step Component */}
+			<CsvImportStep
+				entityType={csvImportState.entityType}
+				onEntityTypeChange={(value) =>
+					setCsvImportState((prev) => ({
+						...prev,
+						entityType: value,
+						analysisResult: null,
+						mappings: [],
+					}))
+				}
+				isAnalyzing={csvImportState.isAnalyzing}
+				onFileSelect={handleFileSelect}
+				analysisResult={csvImportState.analysisResult}
+				mappings={csvImportState.mappings}
+				onMappingChange={handleMappingChange}
+				importResult={csvImportState.importResult}
+				error={error}
+				showTitle={true}
+				disabledEntityTypes={["projects"]}
+			/>
 
 			{/* Action Buttons */}
 			<div className="flex justify-between pt-6">
@@ -996,15 +878,11 @@ export default function CompleteOrganizationMetadata() {
 
 					{/* Import Data Button */}
 					{csvImportState.analysisResult && !csvImportState.importResult && (
-						<button
-							type="button"
+						<StyledButton
+							intent="primary"
 							onClick={handleImportData}
-							disabled={
-								isLoading ||
-								csvImportState.isImporting ||
-								!csvImportState.analysisResult?.validation.isValid
-							}
-							className="group inline-flex items-center gap-2 text-sm font-semibold text-white transition-all duration-200 px-4 py-2 rounded-lg bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
+							isLoading={csvImportState.isImporting}
+							disabled={!csvImportState.analysisResult?.validation.isValid}
 						>
 							{csvImportState.isImporting ? (
 								<>
@@ -1017,19 +895,18 @@ export default function CompleteOrganizationMetadata() {
 									Import Data
 								</>
 							)}
-						</button>
+						</StyledButton>
 					)}
 
 					{/* Complete Setup Button (shown after import or if no file uploaded) */}
 					{(csvImportState.importResult || !csvImportState.file) && (
-						<button
-							type="button"
+						<StyledButton
+							intent="primary"
 							onClick={handleCompleteSetup}
-							disabled={isLoading}
-							className="group inline-flex items-center gap-2 text-sm font-semibold text-white transition-all duration-200 px-4 py-2 rounded-lg bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
+							isLoading={isLoading}
 						>
 							{isLoading ? "Completing..." : "Complete Setup"}
-						</button>
+						</StyledButton>
 					)}
 				</div>
 			</div>
