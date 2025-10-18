@@ -4,6 +4,7 @@ import Image from "next/image";
 import { motion } from "motion/react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
+import { StyledButton } from "@/components/ui/styled-button";
 
 interface UnsplashImage {
 	id: string;
@@ -179,18 +180,25 @@ export default function HeroSection() {
 										operations so you can focus on growing your business.
 									</p>
 									<div className="mt-10 flex items-center gap-x-6">
-										<a
-											href="#"
-											className="rounded-md bg-blue-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-blue-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:bg-blue-500 dark:hover:bg-blue-400 dark:focus-visible:outline-blue-500"
+										<StyledButton
+											intent="primary"
+											size="lg"
+											onClick={() => {
+												// Handle Start Free Trial action
+											}}
 										>
 											Start Free Trial
-										</a>
-										<a
-											href="#"
-											className="text-sm/6 font-semibold text-gray-900 dark:text-white"
+										</StyledButton>
+										<StyledButton
+											intent="outline"
+											size="lg"
+											showArrow={true}
+											onClick={() => {
+												// Handle Watch Demo action
+											}}
 										>
-											Watch Demo <span aria-hidden="true">→</span>
-										</a>
+											Watch Demo
+										</StyledButton>
 									</div>
 								</div>
 								<div className="mt-14 flex justify-end gap-8 sm:-mt-44 sm:justify-start sm:pl-20 lg:mt-0 lg:pl-0">

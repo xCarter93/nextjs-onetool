@@ -6,17 +6,9 @@ import { useRouter } from "next/navigation";
 import { SignInButton, SignUpButton, SignedIn, SignedOut } from "@clerk/nextjs";
 import GlowLine from "@/components/glowline";
 import { ThemeSwitcher } from "@/components/theme-switcher";
+import { StyledButton } from "@/components/ui/styled-button";
 
-// Type definitions
-interface ButtonProps {
-	asChild?: boolean;
-	className?: string;
-	variant?: "default" | "ghost" | "glass";
-	size?: "default" | "sm" | "icon";
-	children?: React.ReactNode;
-	onClick?: () => void;
-}
-
+// Type definitions for Navigation components
 interface NavigationMenuProps {
 	children: React.ReactNode;
 	className?: string;
@@ -80,51 +72,6 @@ const Logo: React.FC = () => (
 		/>
 	</div>
 );
-
-const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-	(
-		{
-			asChild = false,
-			className = "",
-			variant = "default",
-			size = "default",
-			children,
-			...props
-		},
-		ref
-	) => {
-		const Comp = asChild ? "span" : "button";
-		const baseClasses =
-			"inline-flex items-center justify-center rounded-xl text-sm font-medium ring-offset-background transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 backdrop-blur-sm";
-
-		const variantClasses: Record<string, string> = {
-			default:
-				"bg-gray-900 dark:bg-white text-gray-100 dark:text-gray-900 border border-gray-800 dark:border-gray-300 hover:bg-gray-800 dark:hover:bg-gray-100 hover:border-gray-700 dark:hover:border-gray-400 shadow-lg hover:shadow-xl",
-			ghost:
-				"hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white backdrop-blur-sm",
-			glass:
-				"bg-white/80 dark:bg-gray-800/80 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-500 shadow-2xl hover:shadow-3xl backdrop-blur-md",
-		};
-
-		const sizeClasses: Record<string, string> = {
-			default: "h-10 px-4 py-2",
-			sm: "h-9 rounded-lg px-3",
-			icon: "h-10 w-10",
-		};
-
-		const elementProps = props as React.HTMLAttributes<HTMLElement>;
-		return (
-			<Comp
-				className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
-				ref={ref}
-				{...elementProps}
-			>
-				{children}
-			</Comp>
-		);
-	}
-);
-Button.displayName = "Button";
 
 const NavigationMenu: React.FC<NavigationMenuProps> = ({
 	children,
@@ -223,39 +170,37 @@ function AppNavBar() {
 							<SignedOut>
 								<div className="flex items-center gap-3">
 									<SignInButton mode="modal" forceRedirectUrl="/home">
-										<Button variant="ghost" size="sm">
+										<StyledButton intent="outline" size="sm">
 											Sign In
-										</Button>
+										</StyledButton>
 									</SignInButton>
 									<SignUpButton mode="modal" forceRedirectUrl="/home">
-										<Button variant="glass" size="sm">
+										<StyledButton intent="primary" size="sm">
 											Sign Up
-										</Button>
+										</StyledButton>
 									</SignUpButton>
 								</div>
 							</SignedOut>
 							<SignedIn>
-								<Button
-									variant="glass"
+								<StyledButton
+									intent="primary"
 									size="sm"
 									onClick={() => router.push("/home")}
 								>
 									Go To Dashboard
-								</Button>
+								</StyledButton>
 							</SignedIn>
 						</div>
 
 						{/* Mobile menu button */}
 						<div className="md:hidden">
-							<Button
-								variant="ghost"
-								size="icon"
-								className="group text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
+							<button
+								className="group text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 inline-flex items-center justify-center rounded-lg p-2 transition-all duration-200"
 								onClick={() => setIsMenuOpen(!isMenuOpen)}
 								aria-expanded={isMenuOpen}
 							>
 								<MenuIcon />
-							</Button>
+							</button>
 						</div>
 					</div>
 				</div>
@@ -293,20 +238,28 @@ function AppNavBar() {
 								<SignedOut>
 									<div className="space-y-2">
 										<SignInButton mode="modal" forceRedirectUrl="/home">
-											<Button variant="ghost" size="sm" className="w-full">
+											<StyledButton
+												intent="outline"
+												size="sm"
+												className="w-full"
+											>
 												Sign In
-											</Button>
+											</StyledButton>
 										</SignInButton>
 										<SignUpButton mode="modal" forceRedirectUrl="/home">
-											<Button variant="glass" size="sm" className="w-full">
+											<StyledButton
+												intent="primary"
+												size="sm"
+												className="w-full"
+											>
 												Sign Up
-											</Button>
+											</StyledButton>
 										</SignUpButton>
 									</div>
 								</SignedOut>
 								<SignedIn>
-									<Button
-										variant="glass"
+									<StyledButton
+										intent="primary"
 										size="sm"
 										className="w-full"
 										onClick={() => {
@@ -315,7 +268,7 @@ function AppNavBar() {
 										}}
 									>
 										Go To Dashboard
-									</Button>
+									</StyledButton>
 								</SignedIn>
 							</div>
 						</div>
