@@ -11,6 +11,7 @@ export const env = createEnv({
 		UNSPLASH_ACCESS_KEY: z.string().min(1),
 		UNSPLASH_SECRET_KEY: z.string().min(1),
 		UNSPLASH_APP_ID: z.string().min(1),
+		CLERK_ISSUER_DOMAIN: z.string().min(1),
 	},
 	client: {
 		NEXT_PUBLIC_CONVEX_URL: z.string().min(1),

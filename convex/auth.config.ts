@@ -1,7 +1,7 @@
 export default {
 	providers: [
 		{
-			domain: "https://grateful-mole-74.clerk.accounts.dev",
+			domain: process.env.CLERK_ISSUER_DOMAIN,
 			applicationID: "convex",
 		},
 	],
