@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from "react";
 import { motion } from "motion/react";
 import { useTheme } from "next-themes";
 import { TimelineContent } from "@/components/timeline-animation";
+import { StyledButton } from "@/components/ui/styled-button";
 
 // Utility function for conditional class names
 function cn(...classes: (string | undefined | null | false)[]): string {
@@ -355,16 +356,16 @@ export default function PricingSection() {
 							</CardHeader>
 
 							<CardContent className="pt-0">
-								<button
-									className={cn(
-										"w-full mb-6 p-4 text-xl rounded-xl transition-all duration-300",
-										plan.popular
-											? "bg-gradient-to-t from-blue-500 to-blue-600 shadow-lg shadow-blue-500 border border-blue-400 text-white hover:shadow-xl"
-											: "bg-gradient-to-t from-gray-800 to-gray-900 shadow-lg shadow-gray-800/20 border border-gray-700 text-white hover:shadow-xl"
-									)}
+								<StyledButton
+									intent={plan.popular ? "primary" : "secondary"}
+									size="lg"
+									className="w-full mb-6"
+									onClick={() => {
+										// Handle plan selection
+									}}
 								>
 									{plan.buttonText}
-								</button>
+								</StyledButton>
 								<ul className="space-y-2 font-semibold py-5">
 									{plan.features.map((feature, featureIndex) => (
 										<li key={featureIndex} className="flex items-center">
