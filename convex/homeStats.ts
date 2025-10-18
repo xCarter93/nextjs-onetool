@@ -177,9 +177,18 @@ export const getHomeStats = query({
 		const projectsChange =
 			completedProjectsThisMonth.length - completedProjectsLastMonth.length;
 
-		// For project value, we'll use a base calculation since we don't have actual project values in schema
-		// This could be enhanced by linking to invoices or quotes
-		const projectsValue = completedProjectsThisMonth.length * 5000; // Placeholder calculation
+		// Calculate project value by summing approved quotes for completed projects
+		const completedProjectIds = new Set(
+			completedProjectsThisMonth.map((p) => p._id)
+		);
+		const projectsValue = allQuotes
+			.filter(
+				(quote) =>
+					quote.status === "approved" &&
+					quote.projectId &&
+					completedProjectIds.has(quote.projectId)
+			)
+			.reduce((sum, quote) => sum + quote.total, 0);
 
 		// Calculate approved quotes statistics
 		const approvedQuotesThisMonth = allQuotes.filter(
@@ -469,18 +478,18 @@ export const getRevenueGoalProgress = query({
  * Get clients created this month for daily chart visualization
  */
 export const getClientsCreatedThisMonth = query({
-    args: {},
-    handler: async (
-        ctx
-    ): Promise<
-        Array<{
-            date: string; // YYYY-MM-DD format
-            count: number;
-            _creationTime: number;
-            clientType?: string;
-            status?: "lead" | "prospect" | "active" | "inactive" | "archived";
-        }>
-    > => {
+	args: {},
+	handler: async (
+		ctx
+	): Promise<
+		Array<{
+			date: string; // YYYY-MM-DD format
+			count: number;
+			_creationTime: number;
+			clientType?: string;
+			status?: "lead" | "prospect" | "active" | "inactive" | "archived";
+		}>
+	> => {
 		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
 		if (!userOrgId) {
 			return [];
@@ -501,14 +510,14 @@ export const getClientsCreatedThisMonth = query({
 
 		// Return the raw data with creation timestamps
 		// Frontend will handle grouping by day
-        return clientsThisMonth.map((client: Doc<"clients">) => ({
-            date: new Date(client._creationTime).toISOString().split("T")[0], // YYYY-MM-DD
-            count: 1, // Each client counts as 1
-            _creationTime: client._creationTime,
-            clientType: client.clientType ?? undefined,
-            status: client.status,
-        }));
-    },
+		return clientsThisMonth.map((client: Doc<"clients">) => ({
+			date: new Date(client._creationTime).toISOString().split("T")[0], // YYYY-MM-DD
+			count: 1, // Each client counts as 1
+			_creationTime: client._creationTime,
+			clientType: client.clientType ?? undefined,
+			status: client.status,
+		}));
+	},
 });
 
 /**
