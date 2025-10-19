@@ -56,6 +56,9 @@ interface ChartSectionProps {
 	xAxisKey?: string;
 	dataKeys?: string[];
 	chartId: string;
+	referenceLineValue?: number;
+	referenceLineLabel?: string;
+	referenceLineColor?: string;
 }
 
 const ChartSection: React.FC<ChartSectionProps> = ({
@@ -64,6 +67,9 @@ const ChartSection: React.FC<ChartSectionProps> = ({
 	xAxisKey = "date",
 	dataKeys,
 	chartId,
+	referenceLineValue,
+	referenceLineLabel,
+	referenceLineColor,
 }) => {
 	return (
 		<div className="mt-4">
@@ -78,6 +84,9 @@ const ChartSection: React.FC<ChartSectionProps> = ({
 				showCard={false}
 				chartId={chartId}
 				className="w-full"
+				referenceLineValue={referenceLineValue}
+				referenceLineLabel={referenceLineLabel}
+				referenceLineColor={referenceLineColor}
 			/>
 		</div>
 	);
