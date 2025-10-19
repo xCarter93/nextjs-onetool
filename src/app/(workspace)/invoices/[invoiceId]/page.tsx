@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useQuery, useMutation, useConvex } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,10 +23,8 @@ import {
 	Building2,
 	Edit,
 	FolderOpen,
-	Check,
 	Mail,
 	MoreHorizontal,
-	Clock,
 	CheckCircle,
 	XCircle,
 } from "lucide-react";
@@ -35,8 +33,6 @@ import { pdf } from "@react-pdf/renderer";
 import InvoicePDF from "@/components/InvoicePDF";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import type { Id as StorageId } from "../../../../../convex/_generated/dataModel";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { useState, useMemo } from "react";
 
 type InvoiceStatus = "draft" | "sent" | "paid" | "overdue" | "cancelled";
 
@@ -93,7 +89,6 @@ export default function InvoiceDetailPage() {
 	const router = useRouter();
 	const params = useParams();
 	const toast = useToast();
-	const convex = useConvex();
 	const invoiceId = params.invoiceId as Id<"invoices">;
 
 	// Fetch invoice data from Convex
@@ -282,12 +277,10 @@ export default function InvoiceDetailPage() {
 	);
 
 	const handleGeneratePdf = async () => {
+		let loadingId;
 		try {
 			if (!invoice || !lineItems) return;
-			const loadingId = toast.loading(
-				"Generating PDF",
-				"Rendering and uploading…"
-			);
+			loadingId = toast.loading("Generating PDF", "Rendering and uploading…");
 
 			// Generate invoice PDF
 			const element = (
@@ -331,6 +324,9 @@ export default function InvoiceDetailPage() {
 			toast.removeToast(loadingId);
 			toast.success("PDF generated", "Your invoice PDF is ready.");
 		} catch (error) {
+			if (loadingId) {
+				toast.removeToast(loadingId);
+			}
 			console.error(error);
 			const message = error instanceof Error ? error.message : "Unknown error";
 			toast.error("PDF generation failed", message);
@@ -899,17 +895,18 @@ export default function InvoiceDetailPage() {
 						onClick: handleGeneratePdf,
 						position: "right" as const,
 					},
-					{
-						label: "Cancel Invoice",
-						intent: "outline",
-						icon: <XCircle className="h-4 w-4" />,
-						onClick: () => handleStatusChange("cancelled"),
-						position: "right" as const,
-						className:
-							currentStatus === "cancelled"
-								? "hidden"
-								: "text-red-600 hover:text-red-700",
-					},
+					// Conditionally include Cancel Invoice button
+					...(currentStatus !== "cancelled"
+						? [
+								{
+									label: "Cancel Invoice",
+									intent: "outline" as const,
+									icon: <XCircle className="h-4 w-4" />,
+									onClick: () => handleStatusChange("cancelled"),
+									position: "right" as const,
+								},
+							]
+						: []),
 					{
 						label: "More",
 						intent: "outline",

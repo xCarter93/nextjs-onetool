@@ -36,7 +36,6 @@ import {
 	ChevronLeft,
 	ChevronRight,
 	Receipt,
-	DollarSign,
 	Clock,
 	ExternalLink,
 	Plus,
@@ -276,21 +275,11 @@ export default function InvoicesPage() {
 		table.setPageSize(pageSize);
 	}, [pageSize, table]);
 
-	React.useEffect(() => {
-		table.getColumn("invoiceNumber")?.setFilterValue(query);
-		table.getColumn("clientName")?.setFilterValue(query);
-		table.getColumn("status")?.setFilterValue(query);
-	}, [query, table]);
-
 	// Calculate stats
 	const totalOpen = React.useMemo(
 		() =>
-			data.filter(
-				(inv) =>
-					inv.status === "draft" ||
-					inv.status === "sent" ||
-					(inv.status === "sent" && inv.dueDate < Date.now())
-			).length,
+			data.filter((inv) => inv.status === "draft" || inv.status === "sent")
+				.length,
 		[data]
 	);
 
