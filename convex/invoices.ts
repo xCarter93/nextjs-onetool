@@ -68,8 +68,7 @@ async function validateClientAccess(
 	clientId: Id<"clients">,
 	existingOrgId?: Id<"organizations">
 ): Promise<void> {
-	const userOrgId =
-		existingOrgId ?? (await getCurrentUserOrgId(ctx));
+	const userOrgId = existingOrgId ?? (await getCurrentUserOrgId(ctx));
 	const client = await ctx.db.get(clientId);
 
 	if (!client) {
@@ -522,15 +521,42 @@ export const getOverdue = query({
 });
 
 /**
+ * Generate next invoice number for organization
+ */
+export const generateInvoiceNumber = mutation({
+	args: {},
+	handler: async (ctx): Promise<string> => {
+		const userOrgId = await getCurrentUserOrgId(ctx);
+
+		// Get all invoices for this organization
+		const orgInvoices = await ctx.db
+			.query("invoices")
+			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
+			.collect();
+
+		// Find the maximum invoice number
+		const maxNumber = orgInvoices.reduce((max, inv) => {
+			const match = inv.invoiceNumber.match(/INV-(\d{6})/);
+			if (match) {
+				const num = parseInt(match[1]);
+				return num > max ? num : max;
+			}
+			return max;
+		}, 0);
+
+		// Return next number with proper padding
+		return `INV-${String(maxNumber + 1).padStart(6, "0")}`;
+	},
+});
+
+/**
  * Create invoice from quote
  */
-// TODO: Candidate for deletion if confirmed unused.
 export const createFromQuote = mutation({
 	args: {
 		quoteId: v.id("quotes"),
-		invoiceNumber: v.string(),
-		issuedDate: v.number(),
-		dueDate: v.number(),
+		issuedDate: v.optional(v.number()),
+		dueDate: v.optional(v.number()),
 	},
 	handler: async (ctx, args): Promise<InvoiceId> => {
 		// Get and validate quote
@@ -549,20 +575,41 @@ export const createFromQuote = mutation({
 			throw new Error("Only approved quotes can be converted to invoices");
 		}
 
+		// Generate invoice number automatically
+		const orgInvoices = await ctx.db
+			.query("invoices")
+			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
+			.collect();
+
+		const maxNumber = orgInvoices.reduce((max, inv) => {
+			const match = inv.invoiceNumber.match(/INV-(\d{6})/);
+			if (match) {
+				const num = parseInt(match[1]);
+				return num > max ? num : max;
+			}
+			return max;
+		}, 0);
+
+		const invoiceNumber = `INV-${String(maxNumber + 1).padStart(6, "0")}`;
+
+		// Set default dates if not provided
+		const issuedDate = args.issuedDate || Date.now();
+		const dueDate = args.dueDate || Date.now() + 30 * 24 * 60 * 60 * 1000; // 30 days default
+
 		// Create invoice from quote
 		const invoiceId = await ctx.db.insert("invoices", {
 			orgId: userOrgId,
 			clientId: quote.clientId,
 			projectId: quote.projectId,
 			quoteId: args.quoteId,
-			invoiceNumber: args.invoiceNumber,
+			invoiceNumber,
 			status: "draft",
 			subtotal: quote.subtotal,
 			discountAmount: quote.discountAmount,
 			taxAmount: quote.taxAmount,
 			total: quote.total,
-			issuedDate: args.issuedDate,
-			dueDate: args.dueDate,
+			issuedDate,
+			dueDate,
 			publicToken: generatePublicToken(),
 		});
 

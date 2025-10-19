@@ -142,6 +142,7 @@ export default function QuoteDetailPage() {
 	const updateQuote = useMutation(api.quotes.update);
 	const generateUploadUrl = useMutation(api.documents.generateUploadUrl);
 	const createDocument = useMutation(api.documents.create);
+	const createInvoiceFromQuote = useMutation(api.invoices.createFromQuote);
 
 	// Actions
 	const sendForSignature = useAction(
@@ -1574,11 +1575,42 @@ export default function QuoteDetailPage() {
 					{
 						label: "Convert to Invoice",
 						intent: "primary",
-						onClick: () => {
-							// Handle conversion to invoice
-							console.log("Convert to invoice");
+						onClick: async () => {
+							// Only allow conversion if quote is approved
+							if (quote?.status !== "approved") {
+								toast.error(
+									"Cannot Convert",
+									"Only approved quotes can be converted to invoices"
+								);
+								return;
+							}
+
+							try {
+								const loadingId = toast.loading(
+									"Creating Invoice",
+									"Converting quote to invoice..."
+								);
+								const invoiceId = await createInvoiceFromQuote({
+									quoteId,
+									issuedDate: Date.now(),
+									dueDate: Date.now() + 30 * 24 * 60 * 60 * 1000, // 30 days default
+								});
+								toast.removeToast(loadingId);
+								toast.success(
+									"Invoice Created",
+									"Quote converted to invoice successfully"
+								);
+								router.push(`/invoices/${invoiceId}`);
+							} catch (error) {
+								const message =
+									error instanceof Error
+										? error.message
+										: "Failed to convert quote";
+								toast.error("Conversion Failed", message);
+							}
 						},
 						position: "right" as const,
+						isDisabled: quote?.status !== "approved",
 					},
 					{
 						label: "More",
