@@ -257,13 +257,23 @@ export default function HomeStatsReal() {
 
 	// New clients by status for the pie chart
 	const statusBarData = React.useMemo(() => {
-		const order = ["lead", "prospect", "active", "inactive", "archived"] as const;
+		const order = [
+			"lead",
+			"prospect",
+			"active",
+			"inactive",
+			"archived",
+		] as const;
 		const map = new Map<string, number>(order.map((k) => [k, 0]));
-		for (const d of (clientsThisMonth as ClientCreatedData[] | undefined) || []) {
+		for (const d of (clientsThisMonth as ClientCreatedData[] | undefined) ||
+			[]) {
 			const status = d.status ?? "lead";
 			map.set(status, (map.get(status) || 0) + d.count);
 		}
-		return Array.from(map.entries()).map(([status, clients]) => ({ status, clients }));
+		return Array.from(map.entries()).map(([status, clients]) => ({
+			status,
+			clients,
+		}));
 	}, [clientsThisMonth]);
 
 	const statusConfig: ChartConfig = React.useMemo(
@@ -418,7 +428,12 @@ export default function HomeStatsReal() {
 							className={`group relative backdrop-blur-md transition-all duration-200 hover:shadow-lg dark:hover:shadow-black/70 border-t-4 border-t-primary overflow-hidden ring-1 ring-border/20 dark:ring-border/40 py-0 ${
 								item.isLoading ? "animate-pulse" : ""
 							} ${
-								isTotalClients || isProjects || isQuotes || isInvoices || isRevenue || isTasks
+								isTotalClients ||
+								isProjects ||
+								isQuotes ||
+								isInvoices ||
+								isRevenue ||
+								isTasks
 									? "cursor-pointer hover:scale-[1.01]"
 									: ""
 							}`}
@@ -530,6 +545,13 @@ export default function HomeStatsReal() {
 											showCard={false}
 											chartId={chartConfig.chartId}
 											className="w-full"
+											referenceLineValue={
+												isRevenue ? homeStats?.revenueGoal.target : undefined
+											}
+											referenceLineLabel={isRevenue ? "Target" : undefined}
+											referenceLineColor={
+												isRevenue ? "hsl(142.1 76.2% 36.3%)" : undefined
+											}
 										/>
 									</div>
 								)}
@@ -568,10 +590,10 @@ export default function HomeStatsReal() {
 				})()}
 				metadata={(() => {
 					let peak = { date: "—", value: 0 } as { date: string; value: number };
-						clientsChartData.forEach((d) => {
-							const v = (d as Record<string, number>).clients ?? 0;
-							if (v > peak.value) peak = { date: d.date, value: v };
-						});
+					clientsChartData.forEach((d) => {
+						const v = (d as Record<string, number>).clients ?? 0;
+						if (v > peak.value) peak = { date: d.date, value: v };
+					});
 					return [
 						{
 							label: "Peak day",
@@ -590,19 +612,22 @@ export default function HomeStatsReal() {
 					dataKeys: ["clients"],
 					chartId: "clients-modal",
 				}}
-					secondaryTitle="New Clients by Status"
-					secondary={
-						<RoundedPieChartCore
-							data={statusBarData.map((d) => ({ name: d.status, value: d.clients }))}
-							config={statusConfig}
-							nameKey="name"
-							valueKey="value"
-							showCard={false}
-							id="clients-status-pie"
-						/>
-					}
-					sideBySide
-				/>
+				secondaryTitle="New Clients by Status"
+				secondary={
+					<RoundedPieChartCore
+						data={statusBarData.map((d) => ({
+							name: d.status,
+							value: d.clients,
+						}))}
+						config={statusConfig}
+						nameKey="name"
+						valueKey="value"
+						showCard={false}
+						id="clients-status-pie"
+					/>
+				}
+				sideBySide
+			/>
 
 			{/* Projects Modal */}
 			<ChartDetailModal
@@ -617,14 +642,26 @@ export default function HomeStatsReal() {
 				}
 				changeType={homeStats?.completedProjects.changeType}
 				statSummary={(() => {
-					const monthCount = (projectsThisMonth || []).reduce((s, d) => s + d.count, 0);
+					const monthCount = (projectsThisMonth || []).reduce(
+						(s, d) => s + d.count,
+						0
+					);
 					const daysPassed = new Date().getDate();
 					const avgPerDay = daysPassed ? monthCount / daysPassed : 0;
 					return [
 						{ label: "Completed this month", value: monthCount },
-						{ label: "Last month", value: homeStats?.completedProjects.previous ?? "—" },
+						{
+							label: "Last month",
+							value: homeStats?.completedProjects.previous ?? "—",
+						},
 						{ label: "Avg/day", value: avgPerDay.toFixed(1) },
-						{ label: "Total value", value: new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(homeStats?.completedProjects.totalValue ?? 0) },
+						{
+							label: "Total value",
+							value: new Intl.NumberFormat("en-US", {
+								style: "currency",
+								currency: "USD",
+							}).format(homeStats?.completedProjects.totalValue ?? 0),
+						},
 					];
 				})()}
 				metadata={(() => {
@@ -634,8 +671,14 @@ export default function HomeStatsReal() {
 						if (v > peak.value) peak = { date: d.date, value: v };
 					});
 					return [
-						{ label: "Peak day", value: peak.value > 0 ? `${peak.date} (${peak.value})` : "—" },
-						{ label: "Completed this month", value: homeStats?.completedProjects.current ?? "—" },
+						{
+							label: "Peak day",
+							value: peak.value > 0 ? `${peak.date} (${peak.value})` : "—",
+						},
+						{
+							label: "Completed this month",
+							value: homeStats?.completedProjects.current ?? "—",
+						},
 					];
 				})()}
 				chart={{
@@ -660,14 +703,26 @@ export default function HomeStatsReal() {
 				}
 				changeType={homeStats?.approvedQuotes.changeType}
 				statSummary={(() => {
-					const monthCount = (quotesThisMonth || []).reduce((s, d) => s + d.count, 0);
+					const monthCount = (quotesThisMonth || []).reduce(
+						(s, d) => s + d.count,
+						0
+					);
 					const daysPassed = new Date().getDate();
 					const avgPerDay = daysPassed ? monthCount / daysPassed : 0;
 					return [
 						{ label: "Approved this month", value: monthCount },
-						{ label: "Last month", value: homeStats?.approvedQuotes.previous ?? "—" },
+						{
+							label: "Last month",
+							value: homeStats?.approvedQuotes.previous ?? "—",
+						},
 						{ label: "Avg/day", value: avgPerDay.toFixed(1) },
-						{ label: "Total value", value: new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(homeStats?.approvedQuotes.totalValue ?? 0) },
+						{
+							label: "Total value",
+							value: new Intl.NumberFormat("en-US", {
+								style: "currency",
+								currency: "USD",
+							}).format(homeStats?.approvedQuotes.totalValue ?? 0),
+						},
 					];
 				})()}
 				metadata={(() => {
@@ -677,8 +732,14 @@ export default function HomeStatsReal() {
 						if (v > peak.value) peak = { date: d.date, value: v };
 					});
 					return [
-						{ label: "Peak day", value: peak.value > 0 ? `${peak.date} (${peak.value})` : "—" },
-						{ label: "Approved this month", value: homeStats?.approvedQuotes.current ?? "—" },
+						{
+							label: "Peak day",
+							value: peak.value > 0 ? `${peak.date} (${peak.value})` : "—",
+						},
+						{
+							label: "Approved this month",
+							value: homeStats?.approvedQuotes.current ?? "—",
+						},
 					];
 				})()}
 				chart={{
@@ -703,15 +764,33 @@ export default function HomeStatsReal() {
 				}
 				changeType={homeStats?.invoicesSent.changeType}
 				statSummary={(() => {
-					const monthCount = (invoicesThisMonth || []).reduce((s, d) => s + d.count, 0);
+					const monthCount = (invoicesThisMonth || []).reduce(
+						(s, d) => s + d.count,
+						0
+					);
 					const daysPassed = new Date().getDate();
 					const avgPerDay = daysPassed ? monthCount / daysPassed : 0;
 					return [
 						{ label: "Sent this month", value: monthCount },
-						{ label: "Last month", value: homeStats?.invoicesSent.previous ?? "—" },
+						{
+							label: "Last month",
+							value: homeStats?.invoicesSent.previous ?? "—",
+						},
 						{ label: "Avg/day", value: avgPerDay.toFixed(1) },
-						{ label: "Total value", value: new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(homeStats?.invoicesSent.totalValue ?? 0) },
-						{ label: "Outstanding", value: new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(homeStats?.invoicesSent.outstanding ?? 0) },
+						{
+							label: "Total value",
+							value: new Intl.NumberFormat("en-US", {
+								style: "currency",
+								currency: "USD",
+							}).format(homeStats?.invoicesSent.totalValue ?? 0),
+						},
+						{
+							label: "Outstanding",
+							value: new Intl.NumberFormat("en-US", {
+								style: "currency",
+								currency: "USD",
+							}).format(homeStats?.invoicesSent.outstanding ?? 0),
+						},
 					];
 				})()}
 				metadata={(() => {
@@ -721,8 +800,14 @@ export default function HomeStatsReal() {
 						if (v > peak.value) peak = { date: d.date, value: v };
 					});
 					return [
-						{ label: "Peak day", value: peak.value > 0 ? `${peak.date} (${peak.value})` : "—" },
-						{ label: "Sent this month", value: homeStats?.invoicesSent.current ?? "—" },
+						{
+							label: "Peak day",
+							value: peak.value > 0 ? `${peak.date} (${peak.value})` : "—",
+						},
+						{
+							label: "Sent this month",
+							value: homeStats?.invoicesSent.current ?? "—",
+						},
 					];
 				})()}
 				chart={{
@@ -749,26 +834,47 @@ export default function HomeStatsReal() {
 					!homeStats
 						? "neutral"
 						: homeStats.revenueGoal.changePercentage > 0
-						? "increase"
-						: homeStats.revenueGoal.changePercentage < 0
-						? "decrease"
-						: "neutral"
+							? "increase"
+							: homeStats.revenueGoal.changePercentage < 0
+								? "decrease"
+								: "neutral"
 				}
 				statSummary={(() => {
-					const monthRevenue = (revenueThisMonth || []).reduce((s, d) => s + d.count, 0);
+					const monthRevenue = (revenueThisMonth || []).reduce(
+						(s, d) => s + d.count,
+						0
+					);
 					const now = new Date();
-					const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+					const daysInMonth = new Date(
+						now.getFullYear(),
+						now.getMonth() + 1,
+						0
+					).getDate();
 					const dayOfMonth = now.getDate();
-					const expectedPercentage = Math.round((dayOfMonth / daysInMonth) * 100);
+					const expectedPercentage = Math.round(
+						(dayOfMonth / daysInMonth) * 100
+					);
 					const currentPercentage = homeStats?.revenueGoal.percentage ?? 0;
 					const onTrack = currentPercentage >= expectedPercentage;
 					return [
-						{ label: "Revenue this month", value: new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(monthRevenue) },
-						{ label: "Target", value: new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(homeStats?.revenueGoal.target ?? 0) },
+						{
+							label: "Revenue this month",
+							value: new Intl.NumberFormat("en-US", {
+								style: "currency",
+								currency: "USD",
+							}).format(monthRevenue),
+						},
+						{
+							label: "Target",
+							value: new Intl.NumberFormat("en-US", {
+								style: "currency",
+								currency: "USD",
+							}).format(homeStats?.revenueGoal.target ?? 0),
+						},
 						{ label: "Progress", value: `${currentPercentage}%` },
 						{ label: "On track", value: onTrack ? "Yes" : "No" },
 					];
-					})()}
+				})()}
 				metadata={(() => {
 					let peak = { date: "—", value: 0 } as { date: string; value: number };
 					revenueChartData.forEach((d) => {
@@ -776,7 +882,13 @@ export default function HomeStatsReal() {
 						if (v > peak.value) peak = { date: d.date, value: v };
 					});
 					return [
-						{ label: "Peak day", value: peak.value > 0 ? `${peak.date} (${new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(peak.value)})` : "—" },
+						{
+							label: "Peak day",
+							value:
+								peak.value > 0
+									? `${peak.date} (${new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(peak.value)})`
+									: "—",
+						},
 					];
 				})()}
 				chart={{
@@ -785,6 +897,9 @@ export default function HomeStatsReal() {
 					xAxisKey: "date",
 					dataKeys: ["revenue"],
 					chartId: "revenue-modal",
+					referenceLineValue: homeStats?.revenueGoal.target,
+					referenceLineLabel: `Target: ${new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", notation: "compact" }).format(homeStats?.revenueGoal.target ?? 0)}`,
+					referenceLineColor: "hsl(142.1 76.2% 36.3%)",
 				}}
 			/>
 
@@ -796,13 +911,22 @@ export default function HomeStatsReal() {
 				subtitle="Daily tasks created this month"
 				changeType="neutral"
 				statSummary={(() => {
-					const monthCount = (tasksThisMonth || []).reduce((s, d) => s + d.count, 0);
+					const monthCount = (tasksThisMonth || []).reduce(
+						(s, d) => s + d.count,
+						0
+					);
 					const daysPassed = new Date().getDate();
 					const avgPerDay = daysPassed ? monthCount / daysPassed : 0;
 					return [
 						{ label: "Created this month", value: monthCount },
-						{ label: "Due this week", value: homeStats?.pendingTasks.dueThisWeek ?? "—" },
-						{ label: "Current total", value: homeStats?.pendingTasks.total ?? "—" },
+						{
+							label: "Due this week",
+							value: homeStats?.pendingTasks.dueThisWeek ?? "—",
+						},
+						{
+							label: "Current total",
+							value: homeStats?.pendingTasks.total ?? "—",
+						},
 						{ label: "Avg/day", value: avgPerDay.toFixed(1) },
 					];
 				})()}
@@ -813,7 +937,10 @@ export default function HomeStatsReal() {
 						if (v > peak.value) peak = { date: d.date, value: v };
 					});
 					return [
-						{ label: "Peak day", value: peak.value > 0 ? `${peak.date} (${peak.value})` : "—" },
+						{
+							label: "Peak day",
+							value: peak.value > 0 ? `${peak.date} (${peak.value})` : "—",
+						},
 					];
 				})()}
 				chart={{
