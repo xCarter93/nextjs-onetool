@@ -1610,7 +1610,7 @@ export default function QuoteDetailPage() {
 							}
 						},
 						position: "right" as const,
-						isDisabled: quote?.status !== "approved",
+						disabled: quote?.status !== "approved",
 					},
 					{
 						label: "More",
