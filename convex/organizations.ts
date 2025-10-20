@@ -27,7 +27,7 @@ export const get = query({
 		try {
 			const userOrgId = await getCurrentUserOrgId(ctx);
 			return await ctx.db.get(userOrgId);
-	} catch {
+		} catch {
 			// User might not have an active organization
 			return null;
 		}
@@ -57,7 +57,7 @@ export const needsMetadataCompletion = query({
 				!organization.isMetadataComplete &&
 				organization.ownerUserId === user._id
 			);
-	} catch {
+		} catch {
 			// User might not have an active organization
 			return false;
 		}
@@ -315,6 +315,7 @@ export const update = mutation({
 		defaultReminderTiming: v.optional(v.number()),
 		smsEnabled: v.optional(v.boolean()),
 		monthlyRevenueTarget: v.optional(v.number()),
+		timezone: v.optional(v.string()), // IANA timezone (e.g., "America/New_York")
 	},
 	handler: async (ctx, args) => {
 		const user = await getCurrentUserOrThrow(ctx);
