@@ -78,6 +78,71 @@ export const DateUtils = {
 		const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
 		return timestamp > cutoff;
 	},
+
+	/**
+	 * Convert a timestamp to a local date string (YYYY-MM-DD) in the specified timezone
+	 * Falls back to UTC if no timezone is provided
+	 */
+	toLocalDateString(timestamp: number, timezone?: string): string {
+		const date = new Date(timestamp);
+
+		if (!timezone) {
+			// Fallback to UTC
+			return date.toISOString().split("T")[0];
+		}
+
+		try {
+			// Use Intl.DateTimeFormat to get the date in the specified timezone
+			const formatter = new Intl.DateTimeFormat("en-CA", {
+				timeZone: timezone,
+				year: "numeric",
+				month: "2-digit",
+				day: "2-digit",
+			});
+
+			// Format returns "YYYY-MM-DD" which is exactly what we need
+			return formatter.format(date);
+		} catch {
+			// If timezone is invalid, fall back to UTC
+			console.error(`Invalid timezone: ${timezone}, falling back to UTC`);
+			return date.toISOString().split("T")[0];
+		}
+	},
+
+	/**
+	 * Get start of month timestamp in a specific timezone
+	 * Note: This is a simplified approach that may not be perfectly accurate for all edge cases
+	 */
+	startOfMonthInTimezone(timezone?: string): number {
+		const now = new Date();
+
+		if (!timezone) {
+			// UTC
+			const startOfMonth = new Date(
+				Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0)
+			);
+			return startOfMonth.getTime();
+		}
+
+		try {
+			// This is a simplified approach - we'll use Date constructor with timezone context
+			const targetDate = new Date(
+				new Date().toLocaleString("en-US", { timeZone: timezone })
+			);
+			targetDate.setDate(1);
+			targetDate.setHours(0, 0, 0, 0);
+
+			return targetDate.getTime();
+		} catch {
+			console.error(
+				`Error calculating start of month for timezone: ${timezone}`
+			);
+			const startOfMonth = new Date(
+				Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0)
+			);
+			return startOfMonth.getTime();
+		}
+	},
 };
 
 /**

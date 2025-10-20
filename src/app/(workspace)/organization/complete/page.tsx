@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
+import { useAutoTimezone } from "@/hooks/use-auto-timezone";
 import { Users, Building2, Globe, Upload } from "lucide-react";
 import { api } from "../../../../../convex/_generated/api";
 import { CsvImportStep } from "@/components/csv-import-step";
@@ -60,6 +61,9 @@ export default function CompleteOrganizationMetadata() {
 	const organization = useQuery(api.organizations.get);
 	const needsCompletion = useQuery(api.organizations.needsMetadataCompletion);
 	const toast = useToast();
+
+	// Automatically detect and save timezone if not set
+	useAutoTimezone();
 
 	const [currentStep, setCurrentStep] = useState(1);
 	const [isLoading, setIsLoading] = useState(false);

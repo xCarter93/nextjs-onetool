@@ -8,9 +8,13 @@ import RevenueGoalSetter from "@/components/revenue-goal-setter";
 import { useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { motion } from "motion/react";
+import { useAutoTimezone } from "@/hooks/use-auto-timezone";
 
 export default function Page() {
 	const user = useQuery(api.users.current);
+
+	// Automatically detect and save timezone if not set
+	useAutoTimezone();
 
 	const formatDate = () => {
 		const now = new Date();

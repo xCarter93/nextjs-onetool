@@ -506,6 +506,10 @@ export const getClientsCreatedThisMonth = query({
 			return [];
 		}
 
+		// Get organization timezone
+		const organization = await ctx.db.get(userOrgId);
+		const timezone = organization?.timezone;
+
 		// Calculate start of current month
 		const now = new Date();
 		const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -519,10 +523,9 @@ export const getClientsCreatedThisMonth = query({
 			.filter((q) => q.gte(q.field("_creationTime"), startOfThisMonthTimestamp))
 			.collect();
 
-		// Return the raw data with creation timestamps
-		// Frontend will handle grouping by day
+		// Return the raw data with creation timestamps, using timezone-aware dates
 		return clientsThisMonth.map((client: Doc<"clients">) => ({
-			date: new Date(client._creationTime).toISOString().split("T")[0], // YYYY-MM-DD
+			date: DateUtils.toLocalDateString(client._creationTime, timezone),
 			count: 1, // Each client counts as 1
 			_creationTime: client._creationTime,
 			clientType: client.clientType ?? undefined,
@@ -551,6 +554,10 @@ export const getProjectsCompletedThisMonth = query({
 			return [];
 		}
 
+		// Get organization timezone
+		const organization = await ctx.db.get(userOrgId);
+		const timezone = organization?.timezone;
+
 		// Calculate start of current month
 		const now = new Date();
 		const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -570,7 +577,7 @@ export const getProjectsCompletedThisMonth = query({
 			.collect();
 
 		return projectsThisMonth.map((project) => ({
-			date: new Date(project.completedAt!).toISOString().split("T")[0],
+			date: DateUtils.toLocalDateString(project.completedAt!, timezone),
 			count: 1,
 			_creationTime: project.completedAt!,
 		}));
@@ -596,6 +603,10 @@ export const getQuotesApprovedThisMonth = query({
 			return [];
 		}
 
+		// Get organization timezone
+		const organization = await ctx.db.get(userOrgId);
+		const timezone = organization?.timezone;
+
 		// Calculate start of current month
 		const now = new Date();
 		const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -615,7 +626,7 @@ export const getQuotesApprovedThisMonth = query({
 			.collect();
 
 		return quotesThisMonth.map((quote) => ({
-			date: new Date(quote.approvedAt!).toISOString().split("T")[0],
+			date: DateUtils.toLocalDateString(quote.approvedAt!, timezone),
 			count: 1,
 			_creationTime: quote.approvedAt!,
 		}));
@@ -641,6 +652,10 @@ export const getInvoicesPaidThisMonth = query({
 			return [];
 		}
 
+		// Get organization timezone
+		const organization = await ctx.db.get(userOrgId);
+		const timezone = organization?.timezone;
+
 		// Calculate start of current month
 		const now = new Date();
 		const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -660,7 +675,7 @@ export const getInvoicesPaidThisMonth = query({
 			.collect();
 
 		return invoicesThisMonth.map((invoice) => ({
-			date: new Date(invoice.paidAt!).toISOString().split("T")[0],
+			date: DateUtils.toLocalDateString(invoice.paidAt!, timezone),
 			count: 1,
 			_creationTime: invoice.paidAt!,
 		}));
@@ -692,6 +707,10 @@ export const getRevenueThisMonth = query({
 			return [];
 		}
 
+		// Get organization timezone
+		const organization = await ctx.db.get(userOrgId);
+		const timezone = organization?.timezone;
+
 		// Calculate start of current month
 		const now = new Date();
 		const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -712,7 +731,7 @@ export const getRevenueThisMonth = query({
 
 		// Return only paid invoices
 		return paidInvoicesThisMonth.map((invoice) => ({
-			date: new Date(invoice.paidAt!).toISOString().split("T")[0],
+			date: DateUtils.toLocalDateString(invoice.paidAt!, timezone),
 			count: invoice.total, // Use the invoice total as the count for revenue
 			_creationTime: invoice.paidAt!,
 		}));
@@ -738,6 +757,10 @@ export const getTasksCreatedThisMonth = query({
 			return [];
 		}
 
+		// Get organization timezone
+		const organization = await ctx.db.get(userOrgId);
+		const timezone = organization?.timezone;
+
 		// Calculate start of current month
 		const now = new Date();
 		const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -752,7 +775,7 @@ export const getTasksCreatedThisMonth = query({
 			.collect();
 
 		return tasksThisMonth.map((task) => ({
-			date: new Date(task._creationTime).toISOString().split("T")[0],
+			date: DateUtils.toLocalDateString(task._creationTime, timezone),
 			count: 1,
 			_creationTime: task._creationTime,
 		}));

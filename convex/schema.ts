@@ -41,6 +41,7 @@ export default defineSchema({
 		defaultReminderTiming: v.optional(v.number()), // hours before
 		smsEnabled: v.optional(v.boolean()),
 		monthlyRevenueTarget: v.optional(v.number()), // Monthly Revenue target displayed on home page
+		timezone: v.optional(v.string()), // IANA timezone (e.g., "America/New_York")
 
 		// Metadata flags
 		isMetadataComplete: v.optional(v.boolean()), // Whether user completed additional onboarding
