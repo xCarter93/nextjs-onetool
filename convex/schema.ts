@@ -228,6 +228,7 @@ export default defineSchema({
 		// Dates
 		startDate: v.optional(v.number()),
 		endDate: v.optional(v.number()),
+		completedAt: v.optional(v.number()),
 
 		// Team
 		salespersonId: v.optional(v.id("users")),

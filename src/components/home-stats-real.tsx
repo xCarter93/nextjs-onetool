@@ -117,7 +117,7 @@ function getChartConfig(cardName: string) {
 			},
 			chartId: "quotes-monthly",
 		},
-		"Invoices Sent": {
+		"Invoices Paid": {
 			data: "invoices",
 			config: {
 				invoices: {
@@ -168,7 +168,7 @@ function getChartData(
 		"Total Clients": chartDataSets.clientsChartData,
 		"Projects Completed": chartDataSets.projectsChartData,
 		"Approved Quotes": chartDataSets.quotesChartData,
-		"Invoices Sent": chartDataSets.invoicesChartData,
+		"Invoices Paid": chartDataSets.invoicesChartData,
 		"Revenue Goal": chartDataSets.revenueChartData,
 		"Pending Tasks": chartDataSets.tasksChartData,
 	};
@@ -183,7 +183,7 @@ export default function HomeStatsReal() {
 		api.homeStats.getProjectsCompletedThisMonth
 	);
 	const quotesThisMonth = useQuery(api.homeStats.getQuotesApprovedThisMonth);
-	const invoicesThisMonth = useQuery(api.homeStats.getInvoicesSentThisMonth);
+	const invoicesThisMonth = useQuery(api.homeStats.getInvoicesPaidThisMonth);
 	const revenueThisMonth = useQuery(api.homeStats.getRevenueThisMonth);
 	const tasksThisMonth = useQuery(api.homeStats.getTasksCreatedThisMonth);
 
@@ -345,7 +345,7 @@ export default function HomeStatsReal() {
 			isLoading,
 		},
 		{
-			name: "Invoices Sent",
+			name: "Invoices Paid",
 			stat: isLoading ? "..." : homeStats.invoicesSent.current.toString(),
 			previousStat: isLoading
 				? "..."
@@ -409,7 +409,7 @@ export default function HomeStatsReal() {
 					const isTotalClients = item.name === "Total Clients";
 					const isProjects = item.name === "Projects Completed";
 					const isQuotes = item.name === "Approved Quotes";
-					const isInvoices = item.name === "Invoices Sent";
+					const isInvoices = item.name === "Invoices Paid";
 					const isRevenue = item.name === "Revenue Goal";
 					const isTasks = item.name === "Pending Tasks";
 					const chartConfig = getChartConfig(item.name);
@@ -755,8 +755,8 @@ export default function HomeStatsReal() {
 			<ChartDetailModal
 				isOpen={openInvoicesModal}
 				onClose={() => setOpenInvoicesModal(false)}
-				title="Invoices Sent — Monthly Trend"
-				subtitle="Daily invoices sent this month"
+				title="Invoices Paid — Monthly Trend"
+				subtitle="Daily invoices paid this month"
 				change={
 					homeStats
 						? `${homeStats.invoicesSent.changeType === "increase" ? "+" : homeStats.invoicesSent.changeType === "decrease" ? "-" : ""}${homeStats.invoicesSent.change}`
@@ -771,7 +771,7 @@ export default function HomeStatsReal() {
 					const daysPassed = new Date().getDate();
 					const avgPerDay = daysPassed ? monthCount / daysPassed : 0;
 					return [
-						{ label: "Sent this month", value: monthCount },
+						{ label: "Paid this month", value: monthCount },
 						{
 							label: "Last month",
 							value: homeStats?.invoicesSent.previous ?? "—",
@@ -805,7 +805,7 @@ export default function HomeStatsReal() {
 							value: peak.value > 0 ? `${peak.date} (${peak.value})` : "—",
 						},
 						{
-							label: "Sent this month",
+							label: "Paid this month",
 							value: homeStats?.invoicesSent.current ?? "—",
 						},
 					];

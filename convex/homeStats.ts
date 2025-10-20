@@ -163,16 +163,19 @@ export const getHomeStats = query({
 		const clientsChange = clientsThisMonth - clientsLastMonth;
 
 		// Calculate completed projects statistics
+		// Count all projects with status = 'completed' that were completed this month
 		const completedProjectsThisMonth = allProjects.filter(
 			(project) =>
 				project.status === "completed" &&
-				project._creationTime >= thisMonthStart
+				project.completedAt &&
+				project.completedAt >= thisMonthStart
 		);
 		const completedProjectsLastMonth = allProjects.filter(
 			(project) =>
 				project.status === "completed" &&
-				project._creationTime >= lastMonthStart &&
-				project._creationTime <= lastMonthEnd
+				project.completedAt &&
+				project.completedAt >= lastMonthStart &&
+				project.completedAt <= lastMonthEnd
 		);
 		const projectsChange =
 			completedProjectsThisMonth.length - completedProjectsLastMonth.length;
@@ -210,14 +213,19 @@ export const getHomeStats = query({
 			0
 		);
 
-		// Calculate invoice statistics
+		// Calculate invoice statistics - only paid invoices
 		const invoicesThisMonth = allInvoices.filter(
-			(invoice) => invoice.issuedDate >= thisMonthStart
+			(invoice) =>
+				invoice.status === "paid" &&
+				invoice.paidAt &&
+				invoice.paidAt >= thisMonthStart
 		);
 		const invoicesLastMonth = allInvoices.filter(
 			(invoice) =>
-				invoice.issuedDate >= lastMonthStart &&
-				invoice.issuedDate <= lastMonthEnd
+				invoice.status === "paid" &&
+				invoice.paidAt &&
+				invoice.paidAt >= lastMonthStart &&
+				invoice.paidAt <= lastMonthEnd
 		);
 		const invoicesChange = invoicesThisMonth.length - invoicesLastMonth.length;
 		const invoicesTotalValue = invoicesThisMonth.reduce(
@@ -525,6 +533,7 @@ export const getClientsCreatedThisMonth = query({
 
 /**
  * Get projects completed this month for daily chart visualization
+ * Uses completedAt timestamp to show when projects were marked as completed
  */
 export const getProjectsCompletedThisMonth = query({
 	args: {},
@@ -548,22 +557,22 @@ export const getProjectsCompletedThisMonth = query({
 		startOfThisMonth.setHours(0, 0, 0, 0);
 		const startOfThisMonthTimestamp = startOfThisMonth.getTime();
 
-		// Get all projects completed this month
+		// Get all projects with status = 'completed' that were completed this month
 		const projectsThisMonth = await ctx.db
 			.query("projects")
 			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
 			.filter((q) =>
 				q.and(
 					q.eq(q.field("status"), "completed"),
-					q.gte(q.field("_creationTime"), startOfThisMonthTimestamp)
+					q.gte(q.field("completedAt"), startOfThisMonthTimestamp)
 				)
 			)
 			.collect();
 
 		return projectsThisMonth.map((project) => ({
-			date: new Date(project._creationTime).toISOString().split("T")[0],
+			date: new Date(project.completedAt!).toISOString().split("T")[0],
 			count: 1,
-			_creationTime: project._creationTime,
+			_creationTime: project.completedAt!,
 		}));
 	},
 });
@@ -614,9 +623,9 @@ export const getQuotesApprovedThisMonth = query({
 });
 
 /**
- * Get invoices sent this month for daily chart visualization
+ * Get invoices paid this month for daily chart visualization
  */
-export const getInvoicesSentThisMonth = query({
+export const getInvoicesPaidThisMonth = query({
 	args: {},
 	handler: async (
 		ctx
@@ -638,20 +647,31 @@ export const getInvoicesSentThisMonth = query({
 		startOfThisMonth.setHours(0, 0, 0, 0);
 		const startOfThisMonthTimestamp = startOfThisMonth.getTime();
 
-		// Get all invoices sent this month
+		// Get all invoices with status = 'paid' this month
 		const invoicesThisMonth = await ctx.db
 			.query("invoices")
 			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
-			.filter((q) => q.gte(q.field("issuedDate"), startOfThisMonthTimestamp))
+			.filter((q) =>
+				q.and(
+					q.eq(q.field("status"), "paid"),
+					q.gte(q.field("paidAt"), startOfThisMonthTimestamp)
+				)
+			)
 			.collect();
 
 		return invoicesThisMonth.map((invoice) => ({
-			date: new Date(invoice.issuedDate).toISOString().split("T")[0],
+			date: new Date(invoice.paidAt!).toISOString().split("T")[0],
 			count: 1,
-			_creationTime: invoice.issuedDate,
+			_creationTime: invoice.paidAt!,
 		}));
 	},
 });
+
+/**
+ * @deprecated Use getInvoicesPaidThisMonth instead
+ * Backwards compatibility alias
+ */
+export const getInvoicesSentThisMonth = getInvoicesPaidThisMonth;
 
 /**
  * Get revenue received this month for daily chart visualization

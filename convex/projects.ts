@@ -484,6 +484,11 @@ export const update = mutation({
 		const isBeingCompleted =
 			filteredUpdates.status === "completed" && !wasCompleted;
 
+		// If being completed, set completion time
+		if (isBeingCompleted) {
+			filteredUpdates.completedAt = Date.now();
+		}
+
 		await updateProjectWithValidation(ctx, id, filteredUpdates);
 
 		// Get updated project for activity logging
