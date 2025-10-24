@@ -121,12 +121,7 @@ const plans = [
 			},
 			{ text: "5 E-signature requests per month", icon: <Server size={20} /> },
 		],
-		includes: [
-			"Free includes:",
-			"No Custom SKU creation",
-			"No Organization Documents",
-			"Standard Support - 72 Hour SLAs",
-		],
+		includes: [],
 	},
 	{
 		name: "Business",
@@ -206,7 +201,7 @@ const PricingSwitch = ({ onSwitch }: { onSwitch: (value: string) => void }) => {
 					)}
 					<span className="relative flex items-center gap-2">
 						Yearly
-						<span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+						<span className="rounded-full bg-white dark:bg-gray-900 px-2 py-0.5 text-xs font-medium text-primary border border-primary/20">
 							Save 20%
 						</span>
 					</span>
@@ -290,8 +285,8 @@ export default function PricingSection() {
 					customVariants={revealVariants}
 					className="sm:text-base text-sm text-muted-foreground sm:w-[70%] w-[80%] mx-auto"
 				>
-					Trusted by millions, We help teams all around the world. Explore which
-					option is right for you.
+					We help teams all around the world. Explore which option is right for
+					you.
 				</TimelineContent>
 			</div>
 
@@ -315,8 +310,10 @@ export default function PricingSection() {
 					>
 						<Card
 							className={cn(
-								"relative border-border h-full",
-								plan.popular ? "ring-2 ring-primary bg-primary/5" : "bg-card"
+								"relative h-full transition-all duration-300",
+								plan.popular
+									? "ring-2 ring-primary bg-primary/5 border-primary/20"
+									: "ring-1 ring-gray-300 dark:ring-gray-700 bg-gray-50/50 dark:bg-gray-800/30 border-gray-300 dark:border-gray-700 hover:ring-2 hover:ring-gray-400 dark:hover:ring-gray-600"
 							)}
 						>
 							<CardHeader className="text-left">
@@ -354,16 +351,18 @@ export default function PricingSection() {
 							</CardHeader>
 
 							<CardContent className="pt-0">
-								<StyledButton
-									intent={plan.popular ? "primary" : "secondary"}
-									size="lg"
-									className="w-full mb-6"
-									onClick={() => {
-										// Handle plan selection
-									}}
-								>
-									{plan.buttonText}
-								</StyledButton>
+								<div className="flex justify-center mb-6">
+									<StyledButton
+										intent={plan.popular ? "primary" : "secondary"}
+										size="lg"
+										className="px-12"
+										onClick={() => {
+											// Handle plan selection
+										}}
+									>
+										{plan.buttonText}
+									</StyledButton>
+								</div>
 								<ul className="space-y-2 font-semibold py-5">
 									{plan.features.map((feature, featureIndex) => (
 										<li key={featureIndex} className="flex items-center">
@@ -377,23 +376,25 @@ export default function PricingSection() {
 									))}
 								</ul>
 
-								<div className="space-y-3 pt-4 border-t border-border">
-									<h4 className="font-medium text-base text-foreground mb-3">
-										{plan.includes[0]}
-									</h4>
-									<ul className="space-y-2 font-semibold">
-										{plan.includes.slice(1).map((feature, featureIndex) => (
-											<li key={featureIndex} className="flex items-center">
-												<span className="h-6 w-6 bg-primary/10 border border-primary rounded-full grid place-content-center mt-0.5 mr-3">
-													<CheckCheck className="h-4 w-4 text-primary" />
-												</span>
-												<span className="text-sm text-muted-foreground">
-													{feature}
-												</span>
-											</li>
-										))}
-									</ul>
-								</div>
+								{plan.includes.length > 0 && (
+									<div className="space-y-3 pt-4 border-t border-border">
+										<h4 className="font-medium text-base text-foreground mb-3">
+											{plan.includes[0]}
+										</h4>
+										<ul className="space-y-2 font-semibold">
+											{plan.includes.slice(1).map((feature, featureIndex) => (
+												<li key={featureIndex} className="flex items-center">
+													<span className="h-6 w-6 bg-primary/10 border border-primary rounded-full grid place-content-center mt-0.5 mr-3">
+														<CheckCheck className="h-4 w-4 text-primary" />
+													</span>
+													<span className="text-sm text-muted-foreground">
+														{feature}
+													</span>
+												</li>
+											))}
+										</ul>
+									</div>
+								)}
 							</CardContent>
 						</Card>
 					</TimelineContent>

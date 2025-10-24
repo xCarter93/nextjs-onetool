@@ -78,7 +78,7 @@ export default function FeatureSection() {
 						Streamline operations
 					</h2>
 					<p className="mt-2 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl dark:text-white">
-						Everything you need to run your field service business
+						Every Business, Every Stage, OneTool.
 					</p>
 					<p className="mt-6 text-lg leading-8 text-gray-600 dark:text-gray-400">
 						From client management to invoicing, OneTool provides a complete

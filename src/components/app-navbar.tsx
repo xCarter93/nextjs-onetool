@@ -122,6 +122,7 @@ const NavigationMenuLink: React.FC<NavigationMenuLinkProps> = ({
 const navigationLinks = [
 	{ href: "#home", label: "Home" },
 	{ href: "#features", label: "Features" },
+	{ href: "#faq", label: "FAQ" },
 	{ href: "#pricing", label: "Pricing" },
 ];
 
