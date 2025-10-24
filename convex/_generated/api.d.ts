@@ -16,6 +16,7 @@ import type {
 import type * as activities from "../activities.js";
 import type * as boldsign from "../boldsign.js";
 import type * as boldsignActions from "../boldsignActions.js";
+import type * as calendar from "../calendar.js";
 import type * as clientContacts from "../clientContacts.js";
 import type * as clientProperties from "../clientProperties.js";
 import type * as clients from "../clients.js";
@@ -51,6 +52,7 @@ declare const fullApi: ApiFromModules<{
   activities: typeof activities;
   boldsign: typeof boldsign;
   boldsignActions: typeof boldsignActions;
+  calendar: typeof calendar;
   clientContacts: typeof clientContacts;
   clientProperties: typeof clientProperties;
   clients: typeof clients;
