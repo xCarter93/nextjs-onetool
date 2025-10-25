@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
 import { getCurrentUserOrgId } from "./lib/auth";
 import { ActivityHelpers } from "./lib/activities";
+import { AggregateHelpers } from "./lib/aggregates";
 import { DateUtils } from "./lib/shared";
 import { requireMembership } from "./lib/memberships";
 
@@ -285,10 +286,11 @@ export const create = mutation({
 
 		const projectId = await createProjectWithOrg(ctx, args);
 
-		// Get the created project for activity logging
+		// Get the created project for activity logging and aggregates
 		const project = await ctx.db.get(projectId);
 		if (project) {
 			await ActivityHelpers.projectCreated(ctx, project as ProjectDocument);
+			await AggregateHelpers.addProject(ctx, project as ProjectDocument);
 		}
 
 		return projectId;
@@ -491,9 +493,21 @@ export const update = mutation({
 
 		await updateProjectWithValidation(ctx, id, filteredUpdates);
 
-		// Get updated project for activity logging
+		// Get updated project for activity logging and aggregates
 		const project = await ctx.db.get(id);
 		if (project) {
+			// Update aggregates if status or completedAt changed
+			if (
+				filteredUpdates.status !== undefined ||
+				filteredUpdates.completedAt !== undefined
+			) {
+				await AggregateHelpers.updateProject(
+					ctx,
+					currentProject as ProjectDocument,
+					project as ProjectDocument
+				);
+			}
+
 			if (isBeingCompleted) {
 				await ActivityHelpers.projectCompleted(ctx, project as ProjectDocument);
 			} else {
@@ -535,7 +549,11 @@ export const remove = mutation({
 			);
 		}
 
-		await getProjectOrThrow(ctx, args.id); // Validate access
+		const project = await getProjectOrThrow(ctx, args.id); // Validate access
+
+		// Remove from aggregates before deleting
+		await AggregateHelpers.removeProject(ctx, project as ProjectDocument);
+
 		await ctx.db.delete(args.id);
 
 		return args.id;

@@ -6,7 +6,7 @@ import { getViewDateRange } from "@/lib/calendar-utils";
 import { CalendarMonthView } from "./calendar-month-view";
 import { CalendarWeekView } from "./calendar-week-view";
 import { CalendarDayView } from "./calendar-day-view";
-import { StyledButton } from "@/components/ui/styled-button";
+import { ButtonGroup } from "@/components/ui/button-group";
 import {
 	ChevronLeft,
 	ChevronRight,
@@ -14,6 +14,7 @@ import {
 	CalendarDays,
 	CalendarRange,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { format, addMonths, addWeeks, addDays } from "date-fns";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -125,6 +126,9 @@ export function CalendarContainer() {
 		}
 	};
 
+	const navButtonClass =
+		"inline-flex items-center gap-2 font-semibold transition-all duration-200 text-xs px-3 py-1.5 ring-1 shadow-sm hover:shadow-md backdrop-blur-sm";
+
 	return (
 		<div className="flex flex-col h-full">
 			{/* Calendar Header */}
@@ -133,62 +137,78 @@ export function CalendarContainer() {
 					{/* Title and Navigation */}
 					<div className="flex items-center gap-4">
 						<h1 className="text-2xl font-bold text-foreground">{getTitle()}</h1>
-						<div className="flex items-center gap-2">
-							<StyledButton
-								intent="outline"
-								size="sm"
+						<ButtonGroup>
+							<button
 								onClick={handlePrevious}
-								icon={<ChevronLeft className="w-4 h-4" />}
-								showArrow={false}
-							/>
-							<StyledButton
-								intent="outline"
-								size="sm"
+								aria-label="Previous"
+								className={cn(
+									navButtonClass,
+									"text-gray-600 hover:text-gray-700 bg-white hover:bg-gray-50 ring-gray-200 hover:ring-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:bg-gray-900 dark:hover:bg-gray-800 dark:ring-gray-700 dark:hover:ring-gray-600"
+								)}
+							>
+								<ChevronLeft className="w-4 h-4" />
+							</button>
+							<button
 								onClick={handleToday}
-								showArrow={false}
+								className={cn(
+									navButtonClass,
+									"text-gray-600 hover:text-gray-700 bg-white hover:bg-gray-50 ring-gray-200 hover:ring-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:bg-gray-900 dark:hover:bg-gray-800 dark:ring-gray-700 dark:hover:ring-gray-600"
+								)}
 							>
 								Today
-							</StyledButton>
-							<StyledButton
-								intent="outline"
-								size="sm"
+							</button>
+							<button
 								onClick={handleNext}
-								icon={<ChevronRight className="w-4 h-4" />}
-								showArrow={false}
-							/>
-						</div>
+								aria-label="Next"
+								className={cn(
+									navButtonClass,
+									"text-gray-600 hover:text-gray-700 bg-white hover:bg-gray-50 ring-gray-200 hover:ring-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:bg-gray-900 dark:hover:bg-gray-800 dark:ring-gray-700 dark:hover:ring-gray-600"
+								)}
+							>
+								<ChevronRight className="w-4 h-4" />
+							</button>
+						</ButtonGroup>
 					</div>
 
 					{/* View Switcher */}
-					<div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1">
-						<StyledButton
-							intent={view === "month" ? "primary" : "plain"}
-							size="sm"
+					<ButtonGroup>
+						<button
 							onClick={() => setView("month")}
-							icon={<CalendarRange className="w-4 h-4" />}
-							showArrow={false}
+							className={cn(
+								navButtonClass,
+								view === "month"
+									? "text-primary hover:text-primary/80 bg-primary/10 hover:bg-primary/15 ring-primary/30 hover:ring-primary/40"
+									: "text-gray-600 hover:text-gray-700 bg-transparent hover:bg-gray-50 ring-transparent hover:ring-gray-200 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:bg-gray-800 dark:hover:ring-gray-700"
+							)}
 						>
+							<CalendarRange className="w-4 h-4" />
 							Month
-						</StyledButton>
-						<StyledButton
-							intent={view === "week" ? "primary" : "plain"}
-							size="sm"
+						</button>
+						<button
 							onClick={() => setView("week")}
-							icon={<CalendarDays className="w-4 h-4" />}
-							showArrow={false}
+							className={cn(
+								navButtonClass,
+								view === "week"
+									? "text-primary hover:text-primary/80 bg-primary/10 hover:bg-primary/15 ring-primary/30 hover:ring-primary/40"
+									: "text-gray-600 hover:text-gray-700 bg-transparent hover:bg-gray-50 ring-transparent hover:ring-gray-200 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:bg-gray-800 dark:hover:ring-gray-700"
+							)}
 						>
+							<CalendarDays className="w-4 h-4" />
 							Week
-						</StyledButton>
-						<StyledButton
-							intent={view === "day" ? "primary" : "plain"}
-							size="sm"
+						</button>
+						<button
 							onClick={() => setView("day")}
-							icon={<Calendar className="w-4 h-4" />}
-							showArrow={false}
+							className={cn(
+								navButtonClass,
+								view === "day"
+									? "text-primary hover:text-primary/80 bg-primary/10 hover:bg-primary/15 ring-primary/30 hover:ring-primary/40"
+									: "text-gray-600 hover:text-gray-700 bg-transparent hover:bg-gray-50 ring-transparent hover:ring-gray-200 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:bg-gray-800 dark:hover:ring-gray-700"
+							)}
 						>
+							<Calendar className="w-4 h-4" />
 							Day
-						</StyledButton>
-					</div>
+						</button>
+					</ButtonGroup>
 				</div>
 
 				{/* Stats */}

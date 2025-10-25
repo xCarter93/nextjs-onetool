@@ -14,6 +14,9 @@ dependencies:
   '@clerk/nextjs':
     specifier: ^6.31.10
     version: 6.31.10(next@15.5.3)(react-dom@19.1.0)(react@19.1.0)
+  '@convex-dev/aggregate':
+    specifier: ^0.1.25
+    version: 0.1.25(convex@1.27.0)
   '@convex-dev/migrations':
     specifier: ^0.2.9
     version: 0.2.9(convex@1.27.0)
@@ -732,6 +735,14 @@ packages:
     engines: {node: '>=18.17.0'}
     dependencies:
       csstype: 3.1.3
+    dev: false
+
+  /@convex-dev/aggregate@0.1.25(convex@1.27.0):
+    resolution: {integrity: sha512-HNO4Ft/mNvVnnXT4W+CLCcD5LH0r8x8bY77w0CmdVx9GRmU3SaLICP87GQzonnHHalgTelq8HQB04RzdmygzqQ==}
+    peerDependencies:
+      convex: ~1.16.5 || >=1.17.0 <1.35.0
+    dependencies:
+      convex: 1.27.0(react@19.1.0)
     dev: false
 
   /@convex-dev/migrations@0.2.9(convex@1.27.0):

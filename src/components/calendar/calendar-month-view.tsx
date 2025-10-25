@@ -50,46 +50,49 @@ export function CalendarMonthView({
 			</div>
 
 			{/* Calendar Grid */}
-			<div className="flex-1 overflow-y-auto">
-				<div className="grid grid-rows-[repeat(auto-fill,minmax(120px,1fr))]">
-					{weeks.map((week, weekIndex) => (
-						<div
-							key={weekIndex}
-							className="grid grid-cols-7 border-b border-border last:border-b-0"
-						>
-							{week.map((dayCell) => {
-								const dayEvents = events.filter((event) =>
-									isEventOnDate(event, dayCell.date)
-								);
-								const projects = dayEvents.filter((e) => e.type === "project");
-								const tasks = dayEvents.filter((e) => e.type === "task");
+			<div
+				className="flex-1 grid grid-cols-7 auto-rows-fr"
+				style={{
+					gridTemplateRows: `repeat(${weeks.length}, 1fr)`,
+				}}
+			>
+				{weeks.map((week, weekIndex) => (
+					<React.Fragment key={weekIndex}>
+						{week.map((dayCell) => {
+							const dayEvents = events.filter((event) =>
+								isEventOnDate(event, dayCell.date)
+							);
+							const projects = dayEvents.filter((e) => e.type === "project");
+							const tasks = dayEvents.filter((e) => e.type === "task");
 
-								// Limit visible events to avoid overflow
-								const maxVisibleProjects = 2;
-								const maxVisibleTasks = 6;
-								const visibleProjects = projects.slice(0, maxVisibleProjects);
-								const visibleTasks = tasks.slice(0, maxVisibleTasks);
-								const hiddenCount =
-									projects.length -
-									visibleProjects.length +
-									(tasks.length - visibleTasks.length);
+							// Limit visible events to avoid overflow
+							const maxVisibleProjects = 2;
+							const maxVisibleTasks = 6;
+							const visibleProjects = projects.slice(0, maxVisibleProjects);
+							const visibleTasks = tasks.slice(0, maxVisibleTasks);
+							const hiddenCount =
+								projects.length -
+								visibleProjects.length +
+								(tasks.length - visibleTasks.length);
 
-								return (
-									<div
-										key={dayCell.date.toString()}
-										className={`
-											border-r border-border last:border-r-0 p-2
-											min-h-[120px] cursor-pointer
+							return (
+								<div
+									key={dayCell.date.toString()}
+									className={`
+											border-r border-b last:border-r-0
+											border-border
+											p-2 cursor-pointer
 											hover:bg-muted/50 transition-colors
+											flex flex-col
 											${dayCell.isToday ? "bg-primary/5" : ""}
 											${!dayCell.isCurrentMonth ? "bg-muted/20" : ""}
 										`}
-										onClick={() => handleDayClick(dayCell.date)}
-									>
-										{/* Day Number */}
-										<div className="flex items-center justify-between mb-1">
-											<span
-												className={`
+									onClick={() => handleDayClick(dayCell.date)}
+								>
+									{/* Day Number */}
+									<div className="flex items-center justify-between mb-1">
+										<span
+											className={`
 													text-sm font-medium
 													${
 														dayCell.isToday
@@ -99,61 +102,60 @@ export function CalendarMonthView({
 																: "text-muted-foreground"
 													}
 												`}
-											>
-												{format(dayCell.date, "d")}
+										>
+											{format(dayCell.date, "d")}
+										</span>
+										{dayEvents.length > 0 && (
+											<span className="text-xs text-muted-foreground">
+												{dayEvents.length}
 											</span>
-											{dayEvents.length > 0 && (
-												<span className="text-xs text-muted-foreground">
-													{dayEvents.length}
-												</span>
-											)}
-										</div>
-
-										{/* Events */}
-										<div className="space-y-1">
-											{/* Projects */}
-											{visibleProjects.map((project) => (
-												<div
-													key={project.id}
-													onClick={(e) => {
-														e.stopPropagation();
-														handleEventClick(project, dayCell.date);
-													}}
-												>
-													<CalendarEventBar event={project} isMultiDay={true} />
-												</div>
-											))}
-
-											{/* Tasks */}
-											{visibleTasks.length > 0 && (
-												<div className="flex flex-wrap gap-1">
-													{visibleTasks.map((task) => (
-														<div
-															key={task.id}
-															onClick={(e) => {
-																e.stopPropagation();
-																handleEventClick(task, dayCell.date);
-															}}
-														>
-															<CalendarEventIcon event={task} size="sm" />
-														</div>
-													))}
-												</div>
-											)}
-
-											{/* More Indicator */}
-											{hiddenCount > 0 && (
-												<div className="text-xs text-muted-foreground mt-1">
-													+{hiddenCount} more
-												</div>
-											)}
-										</div>
+										)}
 									</div>
-								);
-							})}
-						</div>
-					))}
-				</div>
+
+									{/* Events */}
+									<div className="space-y-1">
+										{/* Projects */}
+										{visibleProjects.map((project) => (
+											<div
+												key={project.id}
+												onClick={(e) => {
+													e.stopPropagation();
+													handleEventClick(project, dayCell.date);
+												}}
+											>
+												<CalendarEventBar event={project} isMultiDay={true} />
+											</div>
+										))}
+
+										{/* Tasks */}
+										{visibleTasks.length > 0 && (
+											<div className="flex flex-wrap gap-1">
+												{visibleTasks.map((task) => (
+													<div
+														key={task.id}
+														onClick={(e) => {
+															e.stopPropagation();
+															handleEventClick(task, dayCell.date);
+														}}
+													>
+														<CalendarEventIcon event={task} size="sm" />
+													</div>
+												))}
+											</div>
+										)}
+
+										{/* More Indicator */}
+										{hiddenCount > 0 && (
+											<div className="text-xs text-muted-foreground mt-1">
+												+{hiddenCount} more
+											</div>
+										)}
+									</div>
+								</div>
+							);
+						})}
+					</React.Fragment>
+				))}
 			</div>
 		</div>
 	);
