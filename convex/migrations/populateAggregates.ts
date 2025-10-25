@@ -1,4 +1,4 @@
-import { internalMutation } from "../_generated/server";
+import { internalMutation, MutationCtx } from "../_generated/server";
 import { AggregateHelpers } from "../lib/aggregates";
 
 /**
@@ -18,26 +18,34 @@ import { AggregateHelpers } from "../lib/aggregates";
  * 4. populateInvoiceAggregates
  */
 
-/**
- * Populate client aggregates with all existing clients
- * This should be run first
- */
-export const populateClientAggregates = internalMutation({
-	handler: async (ctx): Promise<{ processed: number; errors: string[] }> => {
-		const errors: string[] = [];
-		let processed = 0;
+// Helper functions
+async function populateClientAggregatesHelper(
+	ctx: MutationCtx
+): Promise<{ processed: number; errors: string[] }> {
+	const errors: string[] = [];
+	let processed = 0;
 
-		try {
-			console.log("Starting client aggregates population...");
-			const clients = await ctx.db.query("clients").collect();
-			console.log(`Found ${clients.length} clients to process`);
+	try {
+		console.log("Starting client aggregates population...");
+		let cursor: string | null = null;
+		let pageIndex = 0;
 
-			for (const client of clients) {
+		// Process clients in paginated batches
+		while (true) {
+			const page = await ctx.db
+				.query("clients")
+				.paginate({ numItems: 100, cursor });
+
+			console.log(
+				`Processing page ${pageIndex + 1} with ${page.page.length} clients`
+			);
+
+			for (const client of page.page) {
 				try {
 					await AggregateHelpers.addClient(ctx, client);
 					processed++;
 					if (processed % 100 === 0) {
-						console.log(`Processed ${processed}/${clients.length} clients`);
+						console.log(`Processed ${processed} clients`);
 					}
 				} catch (error) {
 					const errorMsg = `Failed to add client ${client._id}: ${error}`;
@@ -46,38 +54,53 @@ export const populateClientAggregates = internalMutation({
 				}
 			}
 
-			console.log(
-				`Client aggregates population completed: ${processed} processed, ${errors.length} errors`
-			);
-		} catch (error) {
-			const errorMsg = `Failed to populate client aggregates: ${error}`;
-			console.error(errorMsg);
-			errors.push(errorMsg);
+			// Move to next page if available
+			if (page.continueCursor === null) {
+				break;
+			}
+			cursor = page.continueCursor;
+			pageIndex++;
 		}
 
-		return { processed, errors };
-	},
-});
+		console.log(
+			`Client aggregates population completed: ${processed} processed, ${errors.length} errors`
+		);
+	} catch (error) {
+		const errorMsg = `Failed to populate client aggregates: ${error}`;
+		console.error(errorMsg);
+		errors.push(errorMsg);
+	}
 
-/**
- * Populate project aggregates with all existing projects
- */
-export const populateProjectAggregates = internalMutation({
-	handler: async (ctx): Promise<{ processed: number; errors: string[] }> => {
-		const errors: string[] = [];
-		let processed = 0;
+	return { processed, errors };
+}
 
-		try {
-			console.log("Starting project aggregates population...");
-			const projects = await ctx.db.query("projects").collect();
-			console.log(`Found ${projects.length} projects to process`);
+async function populateProjectAggregatesHelper(
+	ctx: MutationCtx
+): Promise<{ processed: number; errors: string[] }> {
+	const errors: string[] = [];
+	let processed = 0;
 
-			for (const project of projects) {
+	try {
+		console.log("Starting project aggregates population...");
+		let cursor: string | null = null;
+		let pageIndex = 0;
+
+		// Process projects in paginated batches
+		while (true) {
+			const page = await ctx.db
+				.query("projects")
+				.paginate({ numItems: 100, cursor });
+
+			console.log(
+				`Processing page ${pageIndex + 1} with ${page.page.length} projects`
+			);
+
+			for (const project of page.page) {
 				try {
 					await AggregateHelpers.addProject(ctx, project);
 					processed++;
 					if (processed % 100 === 0) {
-						console.log(`Processed ${processed}/${projects.length} projects`);
+						console.log(`Processed ${processed} projects`);
 					}
 				} catch (error) {
 					const errorMsg = `Failed to add project ${project._id}: ${error}`;
@@ -86,38 +109,53 @@ export const populateProjectAggregates = internalMutation({
 				}
 			}
 
-			console.log(
-				`Project aggregates population completed: ${processed} processed, ${errors.length} errors`
-			);
-		} catch (error) {
-			const errorMsg = `Failed to populate project aggregates: ${error}`;
-			console.error(errorMsg);
-			errors.push(errorMsg);
+			// Move to next page if available
+			if (page.continueCursor === null) {
+				break;
+			}
+			cursor = page.continueCursor;
+			pageIndex++;
 		}
 
-		return { processed, errors };
-	},
-});
+		console.log(
+			`Project aggregates population completed: ${processed} processed, ${errors.length} errors`
+		);
+	} catch (error) {
+		const errorMsg = `Failed to populate project aggregates: ${error}`;
+		console.error(errorMsg);
+		errors.push(errorMsg);
+	}
 
-/**
- * Populate quote aggregates with all existing quotes
- */
-export const populateQuoteAggregates = internalMutation({
-	handler: async (ctx): Promise<{ processed: number; errors: string[] }> => {
-		const errors: string[] = [];
-		let processed = 0;
+	return { processed, errors };
+}
 
-		try {
-			console.log("Starting quote aggregates population...");
-			const quotes = await ctx.db.query("quotes").collect();
-			console.log(`Found ${quotes.length} quotes to process`);
+async function populateQuoteAggregatesHelper(
+	ctx: MutationCtx
+): Promise<{ processed: number; errors: string[] }> {
+	const errors: string[] = [];
+	let processed = 0;
 
-			for (const quote of quotes) {
+	try {
+		console.log("Starting quote aggregates population...");
+		let cursor: string | null = null;
+		let pageIndex = 0;
+
+		// Process quotes in paginated batches
+		while (true) {
+			const page = await ctx.db
+				.query("quotes")
+				.paginate({ numItems: 100, cursor });
+
+			console.log(
+				`Processing page ${pageIndex + 1} with ${page.page.length} quotes`
+			);
+
+			for (const quote of page.page) {
 				try {
 					await AggregateHelpers.addQuote(ctx, quote);
 					processed++;
 					if (processed % 100 === 0) {
-						console.log(`Processed ${processed}/${quotes.length} quotes`);
+						console.log(`Processed ${processed} quotes`);
 					}
 				} catch (error) {
 					const errorMsg = `Failed to add quote ${quote._id}: ${error}`;
@@ -126,38 +164,53 @@ export const populateQuoteAggregates = internalMutation({
 				}
 			}
 
-			console.log(
-				`Quote aggregates population completed: ${processed} processed, ${errors.length} errors`
-			);
-		} catch (error) {
-			const errorMsg = `Failed to populate quote aggregates: ${error}`;
-			console.error(errorMsg);
-			errors.push(errorMsg);
+			// Move to next page if available
+			if (page.continueCursor === null) {
+				break;
+			}
+			cursor = page.continueCursor;
+			pageIndex++;
 		}
 
-		return { processed, errors };
-	},
-});
+		console.log(
+			`Quote aggregates population completed: ${processed} processed, ${errors.length} errors`
+		);
+	} catch (error) {
+		const errorMsg = `Failed to populate quote aggregates: ${error}`;
+		console.error(errorMsg);
+		errors.push(errorMsg);
+	}
 
-/**
- * Populate invoice aggregates with all existing invoices
- */
-export const populateInvoiceAggregates = internalMutation({
-	handler: async (ctx): Promise<{ processed: number; errors: string[] }> => {
-		const errors: string[] = [];
-		let processed = 0;
+	return { processed, errors };
+}
 
-		try {
-			console.log("Starting invoice aggregates population...");
-			const invoices = await ctx.db.query("invoices").collect();
-			console.log(`Found ${invoices.length} invoices to process`);
+async function populateInvoiceAggregatesHelper(
+	ctx: MutationCtx
+): Promise<{ processed: number; errors: string[] }> {
+	const errors: string[] = [];
+	let processed = 0;
 
-			for (const invoice of invoices) {
+	try {
+		console.log("Starting invoice aggregates population...");
+		let cursor: string | null = null;
+		let pageIndex = 0;
+
+		// Process invoices in paginated batches
+		while (true) {
+			const page = await ctx.db
+				.query("invoices")
+				.paginate({ numItems: 100, cursor });
+
+			console.log(
+				`Processing page ${pageIndex + 1} with ${page.page.length} invoices`
+			);
+
+			for (const invoice of page.page) {
 				try {
 					await AggregateHelpers.addInvoice(ctx, invoice);
 					processed++;
 					if (processed % 100 === 0) {
-						console.log(`Processed ${processed}/${invoices.length} invoices`);
+						console.log(`Processed ${processed} invoices`);
 					}
 				} catch (error) {
 					const errorMsg = `Failed to add invoice ${invoice._id}: ${error}`;
@@ -166,17 +219,53 @@ export const populateInvoiceAggregates = internalMutation({
 				}
 			}
 
-			console.log(
-				`Invoice aggregates population completed: ${processed} processed, ${errors.length} errors`
-			);
-		} catch (error) {
-			const errorMsg = `Failed to populate invoice aggregates: ${error}`;
-			console.error(errorMsg);
-			errors.push(errorMsg);
+			// Move to next page if available
+			if (page.continueCursor === null) {
+				break;
+			}
+			cursor = page.continueCursor;
+			pageIndex++;
 		}
 
-		return { processed, errors };
-	},
+		console.log(
+			`Invoice aggregates population completed: ${processed} processed, ${errors.length} errors`
+		);
+	} catch (error) {
+		const errorMsg = `Failed to populate invoice aggregates: ${error}`;
+		console.error(errorMsg);
+		errors.push(errorMsg);
+	}
+
+	return { processed, errors };
+}
+
+/**
+ * Populate client aggregates with all existing clients
+ * This should be run first
+ */
+export const populateClientAggregates = internalMutation({
+	handler: (ctx) => populateClientAggregatesHelper(ctx),
+});
+
+/**
+ * Populate project aggregates with all existing projects
+ */
+export const populateProjectAggregates = internalMutation({
+	handler: (ctx) => populateProjectAggregatesHelper(ctx),
+});
+
+/**
+ * Populate quote aggregates with all existing quotes
+ */
+export const populateQuoteAggregates = internalMutation({
+	handler: (ctx) => populateQuoteAggregatesHelper(ctx),
+});
+
+/**
+ * Populate invoice aggregates with all existing invoices
+ */
+export const populateInvoiceAggregates = internalMutation({
+	handler: (ctx) => populateInvoiceAggregatesHelper(ctx),
 });
 
 /**
@@ -194,10 +283,10 @@ export const populateAllAggregates = internalMutation({
 	}> => {
 		console.log("Starting full aggregates population...");
 
-		const clientsResult = await populateClientAggregates(ctx, {});
-		const projectsResult = await populateProjectAggregates(ctx, {});
-		const quotesResult = await populateQuoteAggregates(ctx, {});
-		const invoicesResult = await populateInvoiceAggregates(ctx, {});
+		const clientsResult = await populateClientAggregatesHelper(ctx);
+		const projectsResult = await populateProjectAggregatesHelper(ctx);
+		const quotesResult = await populateQuoteAggregatesHelper(ctx);
+		const invoicesResult = await populateInvoiceAggregatesHelper(ctx);
 
 		console.log("Full aggregates population completed!");
 		console.log(

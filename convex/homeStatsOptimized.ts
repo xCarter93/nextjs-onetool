@@ -52,6 +52,7 @@ export const getHomeStats = query({
 				target: 0,
 				previousPercentage: 0,
 				changePercentage: 0,
+				changeType: "neutral",
 			},
 			pendingTasks: {
 				total: 0,
@@ -94,6 +95,7 @@ export const getHomeStats = query({
 			lastMonthRevenue,
 			sentInvoicesValue,
 			overdueInvoicesValue,
+			sentInvoicesThisMonthValue,
 		] = await Promise.all([
 			// Total clients
 			clientCountsAggregate.count(ctx, { namespace: userOrgId }),
@@ -207,6 +209,15 @@ export const getHomeStats = query({
 				namespace: userOrgId,
 				bounds: { prefix: ["overdue"] },
 			}),
+
+			// Sent invoices total value this month
+			invoiceRevenueAggregate.sum(ctx, {
+				namespace: userOrgId,
+				bounds: {
+					lower: { key: ["sent", thisMonthStart], inclusive: true },
+					upper: { key: ["sent", now], inclusive: true },
+				},
+			}),
 		]);
 
 		// Calculate outstanding invoices total
@@ -221,16 +232,28 @@ export const getHomeStats = query({
 		const invoicesChange = invoicesThisMonth - invoicesLastMonth;
 
 		// Calculate revenue goal progress
-		const monthlyTarget = organization?.monthlyRevenueTarget || 50000;
+		const monthlyTarget = organization?.monthlyRevenueTarget ?? 50000;
 		const currentRevenueValue = currentRevenue || 0;
 		const lastMonthRevenueValue = lastMonthRevenue || 0;
-		const currentPercentage = Math.round(
-			(currentRevenueValue / monthlyTarget) * 100
-		);
-		const lastMonthPercentage = Math.round(
-			(lastMonthRevenueValue / monthlyTarget) * 100
-		);
-		const revenuePercentageChange = currentPercentage - lastMonthPercentage;
+
+		// Guard against division by zero
+		let currentPercentage: number;
+		let lastMonthPercentage: number;
+		let revenuePercentageChange: number;
+
+		if (monthlyTarget === 0) {
+			currentPercentage = 0;
+			lastMonthPercentage = 0;
+			revenuePercentageChange = 0;
+		} else {
+			currentPercentage = Math.round(
+				(currentRevenueValue / monthlyTarget) * 100
+			);
+			lastMonthPercentage = Math.round(
+				(lastMonthRevenueValue / monthlyTarget) * 100
+			);
+			revenuePercentageChange = currentPercentage - lastMonthPercentage;
+		}
 
 		// Get pending tasks (keeping this as-is for now since it's simpler)
 		const today = DateUtils.startOfDay(now);
@@ -259,9 +282,35 @@ export const getHomeStats = query({
 			return "neutral";
 		};
 
-		// Note: For project totalValue, we're using approved quotes this month
-		// If you need to link quotes to specific completed projects, you'll need
-		// to fetch the projects and their associated quotes
+		// Fetch actual completed projects this month to link with their quote values
+		const completedProjectsThisMonthRecords = await ctx.db
+			.query("projects")
+			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
+			.filter((q) =>
+				q.and(
+					q.eq(q.field("status"), "completed"),
+					q.gte(q.field("completedAt"), thisMonthStart),
+					q.lte(q.field("completedAt"), now)
+				)
+			)
+			.collect();
+
+		// Calculate total value from linked quotes for completed projects this month
+		let completedProjectsThisMonthValue = 0;
+		for (const project of completedProjectsThisMonthRecords) {
+			// Find approved quotes linked to this project
+			const quotes = await ctx.db
+				.query("quotes")
+				.withIndex("by_project", (q) => q.eq("projectId", project._id))
+				.filter((q) => q.eq(q.field("status"), "approved"))
+				.collect();
+
+			// Sum the quote values for this project
+			for (const quote of quotes) {
+				completedProjectsThisMonthValue += quote.total;
+			}
+		}
+
 		return {
 			totalClients: {
 				current: totalClients,
@@ -274,7 +323,7 @@ export const getHomeStats = query({
 				previous: completedProjectsLastMonth,
 				change: Math.abs(projectsChange),
 				changeType: getChangeType(projectsChange),
-				totalValue: quotesTotalValue || 0,
+				totalValue: completedProjectsThisMonthValue,
 			},
 			approvedQuotes: {
 				current: approvedQuotesThisMonth,
@@ -288,7 +337,9 @@ export const getHomeStats = query({
 				previous: invoicesLastMonth,
 				change: Math.abs(invoicesChange),
 				changeType: getChangeType(invoicesChange),
-				totalValue: currentRevenueValue,
+				// Fixed: totalValue now reflects sent invoices this month (matching field name)
+				// Previously was set to currentRevenueValue (paid invoices), causing semantic mismatch
+				totalValue: sentInvoicesThisMonthValue || 0,
 				outstanding: outstandingInvoices,
 			},
 			revenueGoal: {
@@ -296,7 +347,8 @@ export const getHomeStats = query({
 				current: currentRevenueValue,
 				target: monthlyTarget,
 				previousPercentage: lastMonthPercentage,
-				changePercentage: Math.abs(revenuePercentageChange),
+				changePercentage: revenuePercentageChange,
+				changeType: getChangeType(revenuePercentageChange),
 			},
 			pendingTasks: {
 				total: pendingTasks.length,

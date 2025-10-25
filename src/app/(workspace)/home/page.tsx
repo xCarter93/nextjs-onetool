@@ -91,6 +91,8 @@ export default function Page() {
 					<ButtonGroup>
 						<button
 							onClick={() => handleViewChange("dashboard")}
+							aria-pressed={viewMode === "dashboard"}
+							aria-label="Dashboard view"
 							className={cn(
 								"inline-flex items-center gap-2 font-semibold transition-all duration-200 text-xs px-3 py-1.5 ring-1 shadow-sm hover:shadow-md backdrop-blur-sm",
 								viewMode === "dashboard"
@@ -103,6 +105,8 @@ export default function Page() {
 						</button>
 						<button
 							onClick={() => handleViewChange("calendar")}
+							aria-pressed={viewMode === "calendar"}
+							aria-label="Calendar view"
 							className={cn(
 								"inline-flex items-center gap-2 font-semibold transition-all duration-200 text-xs px-3 py-1.5 ring-1 shadow-sm hover:shadow-md backdrop-blur-sm",
 								viewMode === "calendar"

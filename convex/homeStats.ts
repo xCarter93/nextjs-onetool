@@ -44,6 +44,7 @@ export interface HomeStats {
 		target: number;
 		previousPercentage: number;
 		changePercentage: number;
+		changeType: "increase" | "decrease" | "neutral";
 	};
 	pendingTasks: {
 		total: number;
@@ -92,6 +93,7 @@ export const getHomeStats = query({
 				target: 0,
 				previousPercentage: 0,
 				changePercentage: 0,
+				changeType: "neutral",
 			},
 			pendingTasks: {
 				total: 0,
@@ -311,6 +313,7 @@ export const getHomeStats = query({
 				target: monthlyTarget,
 				previousPercentage: lastMonthPercentage,
 				changePercentage: Math.abs(revenuePercentageChange),
+				changeType: getChangeType(revenuePercentageChange),
 			},
 			pendingTasks: {
 				total: pendingTasks.length,
