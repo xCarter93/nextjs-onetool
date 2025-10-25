@@ -11,8 +11,9 @@ import { useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { motion } from "motion/react";
 import { useAutoTimezone } from "@/hooks/use-auto-timezone";
-import { StyledButton } from "@/components/ui/styled-button";
+import { ButtonGroup } from "@/components/ui/button-group";
 import { LayoutDashboard, CalendarDays } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 type ViewMode = "dashboard" | "calendar";
 
@@ -87,26 +88,32 @@ export default function Page() {
 					</div>
 
 					{/* View Toggle */}
-					<div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1">
-						<StyledButton
-							intent={viewMode === "dashboard" ? "primary" : "plain"}
-							size="sm"
+					<ButtonGroup>
+						<button
 							onClick={() => handleViewChange("dashboard")}
-							icon={<LayoutDashboard className="w-4 h-4" />}
-							showArrow={false}
+							className={cn(
+								"inline-flex items-center gap-2 font-semibold transition-all duration-200 text-xs px-3 py-1.5 ring-1 shadow-sm hover:shadow-md backdrop-blur-sm",
+								viewMode === "dashboard"
+									? "text-primary hover:text-primary/80 bg-primary/10 hover:bg-primary/15 ring-primary/30 hover:ring-primary/40"
+									: "text-gray-600 hover:text-gray-700 bg-transparent hover:bg-gray-50 ring-transparent hover:ring-gray-200 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:bg-gray-800 dark:hover:ring-gray-700"
+							)}
 						>
+							<LayoutDashboard className="w-4 h-4" />
 							<span className="hidden sm:inline">Dashboard</span>
-						</StyledButton>
-						<StyledButton
-							intent={viewMode === "calendar" ? "primary" : "plain"}
-							size="sm"
+						</button>
+						<button
 							onClick={() => handleViewChange("calendar")}
-							icon={<CalendarDays className="w-4 h-4" />}
-							showArrow={false}
+							className={cn(
+								"inline-flex items-center gap-2 font-semibold transition-all duration-200 text-xs px-3 py-1.5 ring-1 shadow-sm hover:shadow-md backdrop-blur-sm",
+								viewMode === "calendar"
+									? "text-primary hover:text-primary/80 bg-primary/10 hover:bg-primary/15 ring-primary/30 hover:ring-primary/40"
+									: "text-gray-600 hover:text-gray-700 bg-transparent hover:bg-gray-50 ring-transparent hover:ring-gray-200 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:bg-gray-800 dark:hover:ring-gray-700"
+							)}
 						>
+							<CalendarDays className="w-4 h-4" />
 							<span className="hidden sm:inline">Calendar</span>
-						</StyledButton>
-					</div>
+						</button>
+					</ButtonGroup>
 				</div>
 				<h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground leading-tight tracking-tight">
 					{getWelcomeMessage()}

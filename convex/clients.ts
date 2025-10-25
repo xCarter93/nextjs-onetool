@@ -9,6 +9,7 @@ import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
 import { getCurrentUserOrgIdOptional, getCurrentUserOrgId } from "./lib/auth";
 import { ActivityHelpers } from "./lib/activities";
+import { AggregateHelpers } from "./lib/aggregates";
 
 /**
  * Client operations with embedded CRUD helpers
@@ -305,10 +306,11 @@ export const create = mutation({
 	handler: async (ctx, args): Promise<ClientId> => {
 		const clientId = await createClientWithOrg(ctx, args);
 
-		// Get the created client for activity logging
+		// Get the created client for activity logging and aggregates
 		const client = await ctx.db.get(clientId);
 		if (client) {
 			await ActivityHelpers.clientCreated(ctx, client as ClientDocument);
+			await AggregateHelpers.addClient(ctx, client as ClientDocument);
 		}
 
 		return clientId;
@@ -427,10 +429,11 @@ export const bulkCreate = mutation({
 				// Create the client
 				const clientId = await createClientWithOrg(ctx, clientData);
 
-				// Get the created client for activity logging
+				// Get the created client for activity logging and aggregates
 				const client = await ctx.db.get(clientId);
 				if (client) {
 					await ActivityHelpers.clientCreated(ctx, client as ClientDocument);
+					await AggregateHelpers.addClient(ctx, client as ClientDocument);
 				}
 
 				results.push({
@@ -740,6 +743,9 @@ async function permanentlyDeleteSystemHandler(
 	for (const task of tasks) {
 		await ctx.db.delete(task._id);
 	}
+
+	// Remove from aggregates before deleting
+	await AggregateHelpers.removeClient(ctx, client);
 
 	// Finally delete the client itself
 	await ctx.db.delete(args.id);

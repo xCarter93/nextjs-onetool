@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
 import { getCurrentUserOrgId } from "./lib/auth";
 import { ActivityHelpers } from "./lib/activities";
+import { AggregateHelpers } from "./lib/aggregates";
 import { generatePublicToken, BusinessUtils } from "./lib/shared";
 
 /**
@@ -360,7 +361,7 @@ export const create = mutation({
 
 		const quoteId = await createQuoteWithOrg(ctx, args);
 
-		// Get the created quote for activity logging
+		// Get the created quote for activity logging and aggregates
 		const quote = await ctx.db.get(quoteId);
 		if (quote) {
 			const client = await ctx.db.get(quote.clientId);
@@ -369,6 +370,7 @@ export const create = mutation({
 				quote as QuoteDocument,
 				client?.companyName || "Unknown Client"
 			);
+			await AggregateHelpers.addQuote(ctx, quote as QuoteDocument);
 		}
 
 		return quoteId;
@@ -482,9 +484,22 @@ export const update = mutation({
 
 		await updateQuoteWithValidation(ctx, id, filteredUpdates);
 
-		// Log appropriate activity based on status change
+		// Log appropriate activity based on status change and update aggregates
 		const updatedQuote = await ctx.db.get(id);
 		if (updatedQuote) {
+			// Update aggregates if relevant fields changed
+			if (
+				filteredUpdates.status !== undefined ||
+				filteredUpdates.approvedAt !== undefined ||
+				filteredUpdates.total !== undefined
+			) {
+				await AggregateHelpers.updateQuote(
+					ctx,
+					currentQuote as QuoteDocument,
+					updatedQuote as QuoteDocument
+				);
+			}
+
 			const client = await ctx.db.get(updatedQuote.clientId);
 			const clientName = client?.companyName || "Unknown Client";
 			if (
@@ -629,8 +644,9 @@ export const remove = mutation({
 			await ctx.db.delete(lineItem._id);
 		}
 
-		// Delete the quote
-		await getQuoteOrThrow(ctx, args.id); // Validate access
+		// Get quote and remove from aggregates before deleting
+		const quote = await getQuoteOrThrow(ctx, args.id); // Validate access
+		await AggregateHelpers.removeQuote(ctx, quote as QuoteDocument);
 		await ctx.db.delete(args.id);
 
 		return args.id;

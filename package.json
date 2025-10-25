@@ -12,6 +12,7 @@
     "@ai-sdk/openai": "^2.0.52",
     "@clerk/backend": "^2.13.0",
     "@clerk/nextjs": "^6.31.10",
+    "@convex-dev/aggregate": "^0.1.25",
     "@convex-dev/migrations": "^0.2.9",
     "@headlessui/react": "^2.2.7",
     "@heroicons/react": "^2.2.0",

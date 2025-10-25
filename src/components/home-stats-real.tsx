@@ -42,7 +42,8 @@ function processDataForChart(
 		count: number;
 		_creationTime: number;
 	}>,
-	dataKey: string
+	dataKey: string,
+	isCumulative: boolean = false
 ) {
 	// Generate complete date range from start of month to today
 	const now = new Date();
@@ -76,10 +77,25 @@ function processDataForChart(
 	);
 
 	// Create chart data with complete date range, filling zeros for missing dates
-	const chartData = allDates.map((date) => ({
-		date,
-		[dataKey]: groupedData[date] || 0,
-	}));
+	let cumulativeValue = 0;
+	const chartData = allDates.map((date) => {
+		const dailyValue = groupedData[date] || 0;
+
+		if (isCumulative) {
+			// For cumulative data (like revenue), add to running total
+			cumulativeValue += dailyValue;
+			return {
+				date,
+				[dataKey]: cumulativeValue,
+			};
+		} else {
+			// For non-cumulative data, use daily value
+			return {
+				date,
+				[dataKey]: dailyValue,
+			};
+		}
+	});
 
 	return chartData;
 }
@@ -198,22 +214,34 @@ export default function HomeStatsReal() {
 	// Process chart data for each type
 	const clientsChartData = processDataForChart(
 		clientsThisMonth || [],
-		"clients"
+		"clients",
+		false
 	);
 	const projectsChartData = processDataForChart(
 		projectsThisMonth || [],
-		"projects"
+		"projects",
+		false
 	);
-	const quotesChartData = processDataForChart(quotesThisMonth || [], "quotes");
+	const quotesChartData = processDataForChart(
+		quotesThisMonth || [],
+		"quotes",
+		false
+	);
 	const invoicesChartData = processDataForChart(
 		invoicesThisMonth || [],
-		"invoices"
+		"invoices",
+		false
 	);
 	const revenueChartData = processDataForChart(
 		revenueThisMonth || [],
-		"revenue"
+		"revenue",
+		true // Revenue should be cumulative
 	);
-	const tasksChartData = processDataForChart(tasksThisMonth || [], "tasks");
+	const tasksChartData = processDataForChart(
+		tasksThisMonth || [],
+		"tasks",
+		false
+	);
 
 	// Modal chart configs and datasets
 	const clientsAreaConfig: ChartConfig = React.useMemo(

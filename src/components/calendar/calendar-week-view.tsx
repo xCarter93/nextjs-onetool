@@ -74,64 +74,60 @@ export function CalendarWeekView({
 			</div>
 
 			{/* Week Grid */}
-			<div className="flex-1 overflow-y-auto">
-				<div className="grid grid-cols-7 h-full">
-					{weekDays.map((day) => {
-						const dayEvents = events.filter((event) =>
-							isEventOnDate(event, day)
-						);
-						const projects = dayEvents.filter((e) => e.type === "project");
-						const tasks = dayEvents.filter((e) => e.type === "task");
+			<div className="flex-1 grid grid-cols-7">
+				{weekDays.map((day) => {
+					const dayEvents = events.filter((event) => isEventOnDate(event, day));
+					const projects = dayEvents.filter((e) => e.type === "project");
+					const tasks = dayEvents.filter((e) => e.type === "task");
 
-						return (
-							<div
-								key={day.toString()}
-								className={`
-									border-r border-border last:border-r-0 p-2
-									min-h-[400px]
-									${isToday(day) ? "bg-primary/5" : ""}
-								`}
-							>
-								<div className="space-y-2">
-									{/* Projects */}
-									{projects.map((project) => (
-										<CalendarEventBar
-											key={project.id}
-											event={project}
-											onClick={() => handleEventClick(project, day)}
-											isMultiDay={
-												project.endDate
-													? !isSameDay(project.startDate, project.endDate)
-													: false
-											}
+					return (
+						<div
+							key={day.toString()}
+							className={`
+								border-r border-border last:border-r-0 p-2
+								flex flex-col
+								${isToday(day) ? "bg-primary/5" : ""}
+							`}
+						>
+							<div className="space-y-2">
+								{/* Projects */}
+								{projects.map((project) => (
+									<CalendarEventBar
+										key={project.id}
+										event={project}
+										onClick={() => handleEventClick(project, day)}
+										isMultiDay={
+											project.endDate
+												? !isSameDay(project.startDate, project.endDate)
+												: false
+										}
+									/>
+								))}
+
+								{/* Tasks */}
+								<div className="flex flex-wrap gap-1 mt-2">
+									{tasks.map((task) => (
+										<CalendarEventIcon
+											key={task.id}
+											event={task}
+											onClick={() => handleEventClick(task, day)}
+											size="md"
 										/>
 									))}
-
-									{/* Tasks */}
-									<div className="flex flex-wrap gap-1 mt-2">
-										{tasks.map((task) => (
-											<CalendarEventIcon
-												key={task.id}
-												event={task}
-												onClick={() => handleEventClick(task, day)}
-												size="md"
-											/>
-										))}
-									</div>
-
-									{/* Empty State */}
-									{dayEvents.length === 0 && (
-										<div className="h-20 flex items-center justify-center">
-											<span className="text-xs text-muted-foreground/30">
-												No events
-											</span>
-										</div>
-									)}
 								</div>
+
+								{/* Empty State */}
+								{dayEvents.length === 0 && (
+									<div className="h-20 flex items-center justify-center">
+										<span className="text-xs text-muted-foreground/30">
+											No events
+										</span>
+									</div>
+								)}
 							</div>
-						);
-					})}
-				</div>
+						</div>
+					);
+				})}
 			</div>
 		</div>
 	);

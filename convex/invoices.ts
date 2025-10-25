@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
 import { getCurrentUserOrgId } from "./lib/auth";
 import { ActivityHelpers } from "./lib/activities";
+import { AggregateHelpers } from "./lib/aggregates";
 import { generatePublicToken } from "./lib/shared";
 
 /**
@@ -269,7 +270,7 @@ export const create = mutation({
 
 		const invoiceId = await createInvoiceWithOrg(ctx, args);
 
-		// Get the created invoice for activity logging
+		// Get the created invoice for activity logging and aggregates
 		const invoice = await ctx.db.get(invoiceId);
 		if (invoice) {
 			const client = await ctx.db.get(invoice.clientId);
@@ -278,6 +279,7 @@ export const create = mutation({
 				invoice as InvoiceDocument,
 				client?.companyName || "Unknown Client"
 			);
+			await AggregateHelpers.addInvoice(ctx, invoice as InvoiceDocument);
 		}
 
 		return invoiceId;
@@ -338,9 +340,22 @@ export const update = mutation({
 
 		await ctx.db.patch(id, filteredUpdates);
 
-		// Log appropriate activity based on status change
+		// Log appropriate activity based on status change and update aggregates
 		const updatedInvoice = await ctx.db.get(id);
 		if (updatedInvoice) {
+			// Update aggregates if relevant fields changed
+			if (
+				filteredUpdates.status !== undefined ||
+				filteredUpdates.paidAt !== undefined ||
+				filteredUpdates.total !== undefined
+			) {
+				await AggregateHelpers.updateInvoice(
+					ctx,
+					currentInvoice as InvoiceDocument,
+					updatedInvoice as InvoiceDocument
+				);
+			}
+
 			const client = await ctx.db.get(updatedInvoice.clientId);
 			const clientName = client?.companyName || "Unknown Client";
 			if (
@@ -423,8 +438,9 @@ export const remove = mutation({
 			await ctx.db.delete(lineItem._id);
 		}
 
-		// Delete the invoice
-		await getInvoiceOrThrow(ctx, args.id); // Validate access
+		// Get invoice and remove from aggregates before deleting
+		const invoice = await getInvoiceOrThrow(ctx, args.id); // Validate access
+		await AggregateHelpers.removeInvoice(ctx, invoice as InvoiceDocument);
 		await ctx.db.delete(args.id);
 
 		return args.id;
@@ -631,7 +647,7 @@ export const createFromQuote = mutation({
 			});
 		}
 
-		// Log activity
+		// Log activity and add to aggregates
 		const invoice = await ctx.db.get(invoiceId);
 		if (invoice) {
 			const client = await ctx.db.get(invoice.clientId);
@@ -640,6 +656,7 @@ export const createFromQuote = mutation({
 				invoice as InvoiceDocument,
 				client?.companyName || "Unknown Client"
 			);
+			await AggregateHelpers.addInvoice(ctx, invoice as InvoiceDocument);
 		}
 
 		return invoiceId;
