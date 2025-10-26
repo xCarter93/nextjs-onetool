@@ -52,6 +52,8 @@ import type { Id } from "../../../../convex/_generated/dataModel";
 import DeleteConfirmationModal from "@/components/ui/delete-confirmation-modal";
 import { StyledButton } from "@/components/ui/styled-button";
 import { CsvImportModal } from "@/components/csv-import-modal";
+import { useCanPerformAction } from "@/hooks/use-feature-access";
+import { AlertCircle } from "lucide-react";
 
 type Client = {
 	id: string;
@@ -211,6 +213,22 @@ export default function ClientsPage() {
 		name: string;
 	} | null>(null);
 	const [activeTab, setActiveTab] = useState("active");
+
+	// Check if user can create new clients
+	const { canPerform, reason, currentUsage, limit } =
+		useCanPerformAction("create_client");
+
+	const handleAddClient = () => {
+		if (!canPerform) {
+			toast.toast({
+				title: "Upgrade Required",
+				description: reason || "You've reached your client limit",
+				variant: "destructive",
+			});
+			return;
+		}
+		router.push("/clients/new");
+	};
 
 	const archiveClient = useMutation(api.clients.archive);
 	const restoreClient = useMutation(api.clients.restore);
@@ -404,11 +422,21 @@ export default function ClientsPage() {
 						Import Clients
 					</StyledButton>
 					<button
-						onClick={() => router.push("/clients/new")}
-						className="group inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-all duration-200 px-4 py-2 rounded-lg bg-primary/10 hover:bg-primary/15 ring-1 ring-primary/30 hover:ring-primary/40 shadow-sm hover:shadow-md backdrop-blur-sm"
+						onClick={handleAddClient}
+						disabled={!canPerform}
+						className="group inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-all duration-200 px-4 py-2 rounded-lg bg-primary/10 hover:bg-primary/15 ring-1 ring-primary/30 hover:ring-primary/40 shadow-sm hover:shadow-md backdrop-blur-sm disabled:opacity-50 disabled:cursor-not-allowed"
+						title={!canPerform ? reason : undefined}
 					>
 						<Plus className="h-4 w-4" />
 						Add Client
+						{!canPerform &&
+							limit &&
+							limit !== "unlimited" &&
+							currentUsage !== undefined && (
+								<Badge variant="secondary" className="ml-1 text-xs">
+									{currentUsage}/{limit}
+								</Badge>
+							)}
 						<span
 							aria-hidden="true"
 							className="group-hover:translate-x-1 transition-transform duration-200"
@@ -510,8 +538,10 @@ export default function ClientsPage() {
 										and tracking activity.
 									</p>
 									<button
-										onClick={() => router.push("/clients/new")}
-										className="group inline-flex items-center gap-2 rounded-lg bg-primary/10 px-4 py-2 text-sm font-semibold text-primary shadow-sm transition-all duration-200 hover:bg-primary/15 hover:text-primary/80 hover:shadow-md ring-1 ring-primary/30 hover:ring-primary/40 backdrop-blur-sm"
+										onClick={handleAddClient}
+										disabled={!canPerform}
+										className="group inline-flex items-center gap-2 rounded-lg bg-primary/10 px-4 py-2 text-sm font-semibold text-primary shadow-sm transition-all duration-200 hover:bg-primary/15 hover:text-primary/80 hover:shadow-md ring-1 ring-primary/30 hover:ring-primary/40 backdrop-blur-sm disabled:opacity-50 disabled:cursor-not-allowed"
+										title={!canPerform ? reason : undefined}
 									>
 										<Plus className="h-4 w-4" />
 										Add Your First Client

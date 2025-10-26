@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/sidebar";
 import { api } from "../../convex/_generated/api";
 import { useQuery } from "convex/react";
+import { useFeatureAccess } from "@/hooks/use-feature-access";
 
 // This is sample data.
 const data = {
@@ -118,6 +119,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 	const searchParams = useSearchParams();
 	const taskStats = useQuery(api.tasks.getStats, {});
 	const tasksDueToday = taskStats?.todayTasks ?? 0;
+	const { hasOrganization } = useFeatureAccess();
 
 	// Function to determine if a navigation item should be active
 	const isNavItemActive = (navUrl: string, title: string) => {
@@ -192,10 +194,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 			isNavItemActive(item.url, item.title) ||
 			subItems?.some((subItem) => subItem.isActive);
 
+		// Determine if item should be disabled
+		// Users without an organization can only access Settings
+		const isDisabled =
+			!hasOrganization && item.title !== "Settings" && item.title !== "Home";
+
 		return {
 			...item,
 			items: subItems,
 			isActive,
+			disabled: isDisabled,
 			badgeCount:
 				item.title === "Tasks" && tasksDueToday > 0 ? tasksDueToday : undefined,
 			badgeVariant: item.title === "Tasks" ? ("alert" as const) : undefined,

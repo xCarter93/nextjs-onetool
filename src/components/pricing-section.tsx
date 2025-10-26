@@ -6,6 +6,9 @@ import { motion } from "motion/react";
 import { useTheme } from "next-themes";
 import { TimelineContent } from "@/components/timeline-animation";
 import { StyledButton } from "@/components/ui/styled-button";
+import { useAuth } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
 
 // Utility function for conditional class names
 function cn(...classes: (string | undefined | null | false)[]): string {
@@ -216,10 +219,45 @@ export default function PricingSection() {
 	const [mounted, setMounted] = useState(false);
 	const pricingRef = useRef<HTMLDivElement>(null);
 	const { resolvedTheme } = useTheme();
+	const { isLoaded, userId } = useAuth();
+	const router = useRouter();
+	const toast = useToast();
 
 	useEffect(() => {
 		setMounted(true);
 	}, []);
+
+	const handlePlanSelection = async (planName: string) => {
+		// Check if user is authenticated
+		if (!isLoaded) {
+			return;
+		}
+
+		if (!userId) {
+			// Redirect to sign-in with return to pricing
+			router.push("/sign-in?redirect_url=/pricing");
+			return;
+		}
+
+		// Handle plan selection based on plan type
+		if (planName === "Free") {
+			// User is authenticated and selecting free plan
+			toast.success("Already on Free Plan", "You're already on the free plan!");
+			router.push("/home");
+		} else if (planName === "Business") {
+			// User is authenticated and wants to upgrade
+			// This will be handled by Clerk's checkout flow
+			// For now, we'll show a message and redirect to home
+			// In production, you'd call Clerk's checkout API here
+			toast.info(
+				"Coming Soon",
+				"Business plan checkout coming soon! Contact support to upgrade."
+			);
+
+			// Example of how to trigger Clerk checkout (to be implemented):
+			// await clerk.checkout({ planId: 'onetool_business_plan' });
+		}
+	};
 
 	// Render nothing until the component is mounted and theme is resolved to prevent hydration mismatches
 	if (!mounted || !resolvedTheme) {
@@ -356,9 +394,8 @@ export default function PricingSection() {
 										intent={plan.popular ? "primary" : "secondary"}
 										size="lg"
 										className="px-12"
-										onClick={() => {
-											// Handle plan selection
-										}}
+										onClick={() => handlePlanSelection(plan.name)}
+										disabled={!isLoaded}
 									>
 										{plan.buttonText}
 									</StyledButton>

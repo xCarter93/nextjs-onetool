@@ -3,6 +3,7 @@
 import { ReactNode } from "react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeSwitcher } from "@/components/theme-switcher";
+import { PlanBadge } from "@/components/plan-badge";
 import {
 	SidebarInset,
 	SidebarProvider,
@@ -69,8 +70,9 @@ export function SidebarWithHeader({ children }: SidebarWithHeaderProps) {
 							</div>
 						</motion.div>
 
-						{/* Right Section - Theme Switcher */}
-						<div className="flex items-center gap-4">
+						{/* Right Section - Plan Badge & Theme Switcher */}
+						<div className="flex items-center gap-3">
+							<PlanBadge />
 							<motion.div
 								whileHover={{ scale: 1.05 }}
 								whileTap={{ scale: 0.95 }}

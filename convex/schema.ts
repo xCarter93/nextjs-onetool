@@ -32,9 +32,36 @@ export default defineSchema({
 			v.union(v.literal("1-10"), v.literal("10-100"), v.literal("100+"))
 		),
 
-		// Billing & subscription
+		// Clerk Billing & Subscription
+		clerkSubscriptionId: v.optional(v.string()), // Clerk subscription ID
+		clerkPlanId: v.optional(v.string()), // Clerk plan identifier
+		subscriptionStatus: v.optional(
+			v.union(
+				v.literal("active"),
+				v.literal("past_due"),
+				v.literal("canceled"),
+				v.literal("incomplete"),
+				v.literal("incomplete_expired"),
+				v.literal("trialing"),
+				v.literal("unpaid")
+			)
+		),
+		billingCycleStart: v.optional(v.number()), // Timestamp of current billing cycle start
+
+		// Usage tracking for limits
+		usageTracking: v.optional(
+			v.object({
+				clientsCount: v.number(),
+				esignaturesSentThisMonth: v.number(),
+				lastEsignatureReset: v.number(), // Timestamp of last monthly reset
+			})
+		),
+
+		// Legacy fields (keeping for backwards compatibility)
 		stripeCustomerId: v.optional(v.string()),
-		plan: v.union(v.literal("trial"), v.literal("pro"), v.literal("cancelled")),
+		plan: v.optional(
+			v.union(v.literal("trial"), v.literal("pro"), v.literal("cancelled"))
+		), // Deprecated: Use Clerk billing fields instead
 
 		// Default settings
 		defaultTaxRate: v.optional(v.number()),

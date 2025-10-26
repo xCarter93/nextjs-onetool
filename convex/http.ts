@@ -245,11 +245,29 @@ async function validateRequest(req: Request): Promise<WebhookEvent | null> {
 		"svix-timestamp": req.headers.get("svix-timestamp")!,
 		"svix-signature": req.headers.get("svix-signature")!,
 	};
-	const wh = new Webhook(process.env.CLERK_WEBHOOK_SECRET!);
+	const wh = new Webhook(process.env.CLERK_USER_WEBHOOK_SECRET!);
 	try {
 		return wh.verify(payloadString, svixHeaders) as unknown as WebhookEvent;
 	} catch (error) {
 		console.error("Error verifying webhook event", error);
+		return null;
+	}
+}
+
+async function validateBillingRequest(
+	req: Request
+): Promise<WebhookEvent | null> {
+	const payloadString = await req.text();
+	const svixHeaders = {
+		"svix-id": req.headers.get("svix-id")!,
+		"svix-timestamp": req.headers.get("svix-timestamp")!,
+		"svix-signature": req.headers.get("svix-signature")!,
+	};
+	const wh = new Webhook(process.env.CLERK_BILLING_WEBHOOK_SECRET!);
+	try {
+		return wh.verify(payloadString, svixHeaders) as unknown as WebhookEvent;
+	} catch (error) {
+		console.error("Error verifying billing webhook event", error);
 		return null;
 	}
 }
@@ -383,6 +401,155 @@ http.route({
 		}
 
 		return new Response("OK", { status: 200 });
+	}),
+});
+
+/**
+ * Clerk Billing Webhook Handler
+ *
+ * Handles Clerk billing events for subscriptions and payments:
+ * - paymentAttempt.created: Log new payment attempts
+ * - paymentAttempt.updated: Track payment status changes
+ * - subscription.created: Initialize new subscriptions
+ * - subscription.active: Activate premium features
+ * - subscription.updated: Sync subscription changes
+ * - subscription.pastDue: Handle payment failures
+ */
+http.route({
+	path: "/clerk-billing-webhook",
+	method: "POST",
+	handler: httpAction(async (ctx, request) => {
+		const event = await validateBillingRequest(request);
+		if (!event) {
+			return new Response("Error validating webhook", { status: 400 });
+		}
+
+		console.log("Received billing webhook event:", event.type);
+
+		// Type definitions for Clerk billing webhook data
+		interface BillingWebhookData {
+			id: string;
+			organization_id?: string;
+			user_id?: string;
+			amount?: number;
+			status?: string;
+			plan_id?: string;
+			plan?: { id: string };
+			current_period_start?: number;
+		}
+
+		switch (event.type) {
+			case "paymentAttempt.created": {
+				const data = event.data as BillingWebhookData;
+				await ctx.runMutation(
+					internal.billingWebhook.handlePaymentAttemptCreated,
+					{
+						paymentAttemptId: data.id,
+						organizationId: data.organization_id,
+						userId: data.user_id,
+						amount: data.amount,
+					}
+				);
+				break;
+			}
+
+			case "paymentAttempt.updated": {
+				const data = event.data as BillingWebhookData;
+				await ctx.runMutation(
+					internal.billingWebhook.handlePaymentAttemptUpdated,
+					{
+						paymentAttemptId: data.id,
+						status: data.status,
+						organizationId: data.organization_id,
+						userId: data.user_id,
+					}
+				);
+				break;
+			}
+
+			case "subscription.created": {
+				const data = event.data as BillingWebhookData;
+				if (!data.organization_id) {
+					console.error("No organization_id in subscription.created event");
+					break;
+				}
+				await ctx.runMutation(
+					internal.billingWebhook.handleSubscriptionCreated,
+					{
+						subscriptionId: data.id,
+						organizationId: data.organization_id,
+						planId: data.plan_id || data.plan?.id || "",
+						status: data.status || "active",
+						currentPeriodStart: data.current_period_start
+							? data.current_period_start * 1000
+							: undefined,
+					}
+				);
+				break;
+			}
+
+			case "subscription.active": {
+				const data = event.data as BillingWebhookData;
+				if (!data.organization_id) {
+					console.error("No organization_id in subscription.active event");
+					break;
+				}
+				await ctx.runMutation(
+					internal.billingWebhook.handleSubscriptionActive,
+					{
+						subscriptionId: data.id,
+						organizationId: data.organization_id,
+						planId: data.plan_id || data.plan?.id || "",
+						currentPeriodStart: data.current_period_start
+							? data.current_period_start * 1000
+							: undefined,
+					}
+				);
+				break;
+			}
+
+			case "subscription.updated": {
+				const data = event.data as BillingWebhookData;
+				if (!data.organization_id) {
+					console.error("No organization_id in subscription.updated event");
+					break;
+				}
+				await ctx.runMutation(
+					internal.billingWebhook.handleSubscriptionUpdated,
+					{
+						subscriptionId: data.id,
+						organizationId: data.organization_id,
+						planId: data.plan_id || data.plan?.id || "",
+						status: data.status || "active",
+						currentPeriodStart: data.current_period_start
+							? data.current_period_start * 1000
+							: undefined,
+					}
+				);
+				break;
+			}
+
+			case "subscription.pastDue": {
+				const data = event.data as BillingWebhookData;
+				if (!data.organization_id) {
+					console.error("No organization_id in subscription.pastDue event");
+					break;
+				}
+				await ctx.runMutation(
+					internal.billingWebhook.handleSubscriptionPastDue,
+					{
+						subscriptionId: data.id,
+						organizationId: data.organization_id,
+					}
+				);
+				break;
+			}
+
+			default:
+				console.log("Ignored billing webhook event:", event.type);
+		}
+
+		return new Response(null, { status: 200 });
 	}),
 });
 
