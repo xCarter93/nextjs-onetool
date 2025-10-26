@@ -122,8 +122,11 @@ export default function CreateOrganizationPage() {
 								spacingUnit: "1rem",
 							},
 						}}
-						afterCreateOrganizationUrl="/organization/complete"
+						routing="path"
+						path="/organization/new"
+						skipInvitationScreen={true}
 						hideSlug={true}
+						afterCreateOrganizationUrl="/organization/complete"
 					/>
 				</div>
 
