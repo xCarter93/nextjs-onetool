@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
-import { useUser, useOrganization } from "@clerk/nextjs";
+import React, { useMemo, useState, useEffect } from "react";
+import { useUser, useOrganization, useOrganizationList } from "@clerk/nextjs";
 import { useMutation, useQuery } from "convex/react";
 import { useRouter } from "next/navigation";
 import ProgressBar, { ProgressStep } from "@/components/progress-bar";
@@ -54,6 +54,11 @@ interface CsvImportState {
 export default function CompleteOrganizationMetadata() {
 	const { user } = useUser();
 	const { organization: clerkOrganization } = useOrganization();
+	const { setActive, userMemberships } = useOrganizationList({
+		userMemberships: {
+			infinite: true,
+		},
+	});
 	const router = useRouter();
 	const completeMetadata = useMutation(api.organizations.completeMetadata);
 	const bulkCreateClients = useMutation(api.clients.bulkCreate);
@@ -68,6 +73,7 @@ export default function CompleteOrganizationMetadata() {
 	const [currentStep, setCurrentStep] = useState(1);
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [hasActivated, setHasActivated] = useState(false);
 	const [formData, setFormData] = useState<FormData>({
 		email: user?.primaryEmailAddress?.emailAddress || "",
 		website: "",
@@ -95,6 +101,30 @@ export default function CompleteOrganizationMetadata() {
 		importResult: null,
 		skipImport: false,
 	});
+
+	// Auto-activate organization if user just created one but it's not active
+	useEffect(() => {
+		if (
+			!clerkOrganization &&
+			userMemberships?.data &&
+			userMemberships.data.length > 0 &&
+			setActive &&
+			!hasActivated
+		) {
+			const mostRecentOrg = userMemberships.data[0];
+			console.log(
+				"Auto-activating organization:",
+				mostRecentOrg.organization.name
+			);
+			setHasActivated(true);
+			setActive({ organization: mostRecentOrg.organization.id }).catch(
+				(error) => {
+					console.error("Failed to activate organization:", error);
+					setHasActivated(false);
+				}
+			);
+		}
+	}, [clerkOrganization, userMemberships, setActive, hasActivated]);
 
 	// Redirect if metadata is already complete
 	// Only redirect when we're sure the data has loaded (not undefined)
