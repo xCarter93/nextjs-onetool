@@ -131,23 +131,12 @@ export default function CompleteOrganizationMetadata() {
 		},
 		{
 			id: "3",
-			name: "Settings",
-			description: "Default settings for your organization",
+			name: "Import Data",
+			description: "Import existing clients or projects (optional)",
 			status:
 				currentStep === 3
 					? "current"
 					: currentStep > 3
-						? "complete"
-						: "upcoming",
-		},
-		{
-			id: "4",
-			name: "Import Data",
-			description: "Import existing clients or projects (optional)",
-			status:
-				currentStep === 4
-					? "current"
-					: currentStep > 4
 						? "complete"
 						: "upcoming",
 		},
@@ -193,7 +182,7 @@ export default function CompleteOrganizationMetadata() {
 			return;
 		}
 
-		if (currentStep < 4) {
+		if (currentStep < 3) {
 			setCurrentStep(currentStep + 1);
 		}
 	};
@@ -729,109 +718,6 @@ export default function CompleteOrganizationMetadata() {
 
 	const renderStep3 = () => (
 		<div className="space-y-8">
-			<div>
-				<div className="flex items-center gap-3 mb-3">
-					<div className="w-1.5 h-6 bg-gradient-to-b from-primary to-primary/60 rounded-full" />
-					<h2 className="text-2xl font-semibold text-foreground tracking-tight">
-						Default Settings
-					</h2>
-				</div>
-				<p className="text-muted-foreground ml-5 leading-relaxed">
-					Set up default preferences for your organization.
-				</p>
-			</div>
-
-			<div className="space-y-6">
-				<div>
-					<label className="block text-sm font-semibold text-foreground mb-3 tracking-wide">
-						Default Tax Rate (%)
-					</label>
-					<Input
-						value={formData.defaultTaxRate}
-						onChange={(e) =>
-							setFormData({
-								...formData,
-								defaultTaxRate: parseFloat(e.target.value) || 0,
-							})
-						}
-						className="w-full border-border dark:border-border bg-background dark:bg-background focus:bg-background dark:focus:bg-background transition-colors shadow-sm ring-1 ring-border/10"
-						placeholder="8.5"
-						type="number"
-						step="0.1"
-						min="0"
-						max="100"
-					/>
-				</div>
-
-				<div>
-					<label className="block text-sm font-semibold text-foreground mb-3 tracking-wide">
-						Invoice Reminder Timing (hours before due)
-					</label>
-					<Input
-						value={formData.defaultReminderTiming}
-						onChange={(e) =>
-							setFormData({
-								...formData,
-								defaultReminderTiming: parseInt(e.target.value) || 24,
-							})
-						}
-						className="w-full border-border dark:border-border bg-background dark:bg-background focus:bg-background dark:focus:bg-background transition-colors shadow-sm ring-1 ring-border/10"
-						placeholder="24"
-						type="number"
-						min="1"
-					/>
-				</div>
-
-				<div>
-					<label className="block text-sm font-semibold text-foreground mb-3 tracking-wide">
-						Monthly Revenue Target ($)
-					</label>
-					<Input
-						value={formData.monthlyRevenueTarget}
-						onChange={(e) =>
-							setFormData({
-								...formData,
-								monthlyRevenueTarget: parseInt(e.target.value) || 0,
-							})
-						}
-						className="w-full border-border dark:border-border bg-background dark:bg-background focus:bg-background dark:focus:bg-background transition-colors shadow-sm ring-1 ring-border/10"
-						placeholder="10000"
-						type="number"
-						min="0"
-					/>
-				</div>
-			</div>
-
-			{/* Error Display */}
-			{error && (
-				<div className="p-4 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg">
-					<p className="text-sm text-red-800 dark:text-red-200">{error}</p>
-				</div>
-			)}
-
-			<div className="flex justify-between pt-6">
-				<Button
-					intent="secondary"
-					onClick={handlePrevious}
-					isDisabled={isLoading}
-					className="px-6 py-2.5 shadow-md hover:shadow-lg transition-shadow"
-				>
-					Previous
-				</Button>
-				<button
-					type="button"
-					onClick={handleNext}
-					disabled={isLoading}
-					className="group inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-all duration-200 px-4 py-2 rounded-lg bg-primary/10 hover:bg-primary/15 ring-1 ring-primary/30 hover:ring-primary/40 shadow-sm hover:shadow-md backdrop-blur-sm"
-				>
-					Next Step
-				</button>
-			</div>
-		</div>
-	);
-
-	const renderStep4 = () => (
-		<div className="space-y-8">
 			{/* CSV Import Step Component */}
 			<CsvImportStep
 				entityType={csvImportState.entityType}
@@ -925,8 +811,6 @@ export default function CompleteOrganizationMetadata() {
 				return renderStep2();
 			case 3:
 				return renderStep3();
-			case 4:
-				return renderStep4();
 			default:
 				return renderStep1();
 		}
