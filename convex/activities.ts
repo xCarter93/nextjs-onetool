@@ -1,7 +1,7 @@
 import { query } from "./_generated/server";
 import { v } from "convex/values";
 import { Doc } from "./_generated/dataModel";
-import { getCurrentUserOrThrow, getCurrentUserOrgId } from "./lib/auth";
+import { getCurrentUser, getCurrentUserOrgId } from "./lib/auth";
 
 /**
  * Activity operations for activity feed
@@ -23,7 +23,10 @@ export const getRecent = query({
 		limit: v.optional(v.number()), // Max activities to fetch
 	},
 	handler: async (ctx, args): Promise<ActivityWithUser[]> => {
-		await getCurrentUserOrThrow(ctx);
+		const user = await getCurrentUser(ctx);
+		if (!user) {
+			return []; // Return empty array for new users who don't have a user record yet
+		}
 		const orgId = await getCurrentUserOrgId(ctx, { require: false });
 		if (!orgId) {
 			return [];
@@ -85,7 +88,10 @@ export const getByType = query({
 		limit: v.optional(v.number()),
 	},
 	handler: async (ctx, args): Promise<ActivityWithUser[]> => {
-		await getCurrentUserOrThrow(ctx);
+		const user = await getCurrentUser(ctx);
+		if (!user) {
+			return []; // Return empty array for new users who don't have a user record yet
+		}
 		const orgId = await getCurrentUserOrgId(ctx, { require: false });
 		if (!orgId) {
 			return [];
@@ -139,7 +145,10 @@ export const getByEntity = query({
 		limit: v.optional(v.number()),
 	},
 	handler: async (ctx, args): Promise<ActivityWithUser[]> => {
-		await getCurrentUserOrThrow(ctx);
+		const user = await getCurrentUser(ctx);
+		if (!user) {
+			return []; // Return empty array for new users who don't have a user record yet
+		}
 		const orgId = await getCurrentUserOrgId(ctx, { require: false });
 		if (!orgId) {
 			return [];
@@ -206,7 +215,10 @@ export const getCount = query({
 		),
 	},
 	handler: async (ctx, args): Promise<number> => {
-		await getCurrentUserOrThrow(ctx);
+		const user = await getCurrentUser(ctx);
+		if (!user) {
+			return 0; // Return 0 for new users who don't have a user record yet
+		}
 		const orgId = await getCurrentUserOrgId(ctx, { require: false });
 		if (!orgId) {
 			return 0;
