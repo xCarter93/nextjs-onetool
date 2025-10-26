@@ -123,7 +123,6 @@ export default function CreateOrganizationPage() {
 							},
 						}}
 						afterCreateOrganizationUrl="/organization/complete"
-						skipInvitationScreen={true}
 						hideSlug={true}
 					/>
 				</div>
