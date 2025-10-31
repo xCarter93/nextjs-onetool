@@ -1,10 +1,10 @@
-import HeroSection from "@/components/hero-section";
-import FeatureSection from "@/components/feature-section";
-import FAQSection from "@/components/faq-section";
-import PricingSection from "@/components/pricing-section";
-import GlowLine from "@/components/glowline";
-import AppNavbar from "@/components/app-navbar";
-import Footer from "@/components/footer";
+import HeroSection from "@/app/components/hero-section";
+import FeatureSection from "@/app/components/feature-section";
+import FAQSection from "@/app/components/faq-section";
+import PricingSection from "@/app/components/pricing-section";
+import GlowLine from "@/app/components/glowline";
+import AppNavbar from "@/app/components/app-navbar";
+import Footer from "@/app/components/footer";
 
 export default function Home() {
 	return (

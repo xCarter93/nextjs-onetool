@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, ClipboardList, Receipt } from "lucide-react";
-import { TaskSheet } from "@/components/task-sheet";
-import { ProjectViewEditForm } from "@/components/project-view-edit-form";
+import { TaskSheet } from "@/components/shared/task-sheet";
+import { ProjectViewEditForm } from "@/app/(workspace)/projects/components/project-view-edit-form";
 import {
 	Popover,
 	PopoverTrigger,

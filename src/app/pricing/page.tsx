@@ -1,4 +1,4 @@
-import PricingSection from "@/components/pricing-section";
+import PricingSection from "@/app/components/pricing-section";
 
 export default function PricingPage() {
 	return (

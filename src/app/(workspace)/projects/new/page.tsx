@@ -1,6 +1,6 @@
 "use client";
 
-import { ProjectOnboardingForm } from "@/components/project-onboarding-form";
+import { ProjectOnboardingForm } from "@/app/(workspace)/projects/components/project-onboarding-form";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import type { Id } from "../../../../../convex/_generated/dataModel";

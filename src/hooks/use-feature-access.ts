@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@clerk/nextjs";
+import { useAuth, useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { getPlanLimits } from "@/lib/plan-limits";
@@ -18,18 +18,33 @@ export interface FeatureAccess {
 /**
  * Hook to check user's feature access and plan limits
  *
- * Uses Clerk's has() method to check for premium_feature_access
- * and combines it with usage data from Convex
+ * Checks for premium access in two ways:
+ * 1. User's public metadata: has_premium_feature_access = true
+ * 2. User has the onetool_business_plan
+ *
+ * User has premium access if EITHER condition is true
  */
 export function useFeatureAccess(): FeatureAccess {
-	const { has, isLoaded } = useAuth();
+	const { has, isLoaded, orgId } = useAuth();
+	const { user, isLoaded: isUserLoaded } = useUser();
 	const usage = useQuery(api.usage.getCurrentUsage);
 
-	// Check if user has an organization and premium access
-	const hasOrganization = has ? has({ role: "org:member" }) : false;
-	const hasPremiumAccess = has
-		? has({ feature: "premium_feature_access" })
+	// Check if user has an organization - use orgId instead of role check
+	// This works for all roles (admin, member, owner, etc.)
+	const hasOrganization = !!orgId;
+
+	// Check for premium access in two ways:
+	// 1. Check if user has premium via public metadata
+	const hasPremiumViaMetadata =
+		user?.publicMetadata?.has_premium_feature_access === true;
+
+	// 2. Check if user has the business plan
+	const hasPremiumViaPlan = has
+		? has({ plan: "onetool_business_plan" })
 		: false;
+
+	// User has premium access if EITHER is true
+	const hasPremiumAccess = hasPremiumViaMetadata || hasPremiumViaPlan;
 
 	// Get plan limits based on premium access
 	const planLimits = getPlanLimits(hasPremiumAccess);
@@ -39,7 +54,7 @@ export function useFeatureAccess(): FeatureAccess {
 		hasPremiumAccess,
 		planLimits,
 		currentUsage: usage || null,
-		isLoading: !isLoaded || usage === undefined,
+		isLoading: !isLoaded || !isUserLoaded || usage === undefined,
 	};
 }
 

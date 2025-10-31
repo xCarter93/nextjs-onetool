@@ -17,7 +17,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { StyledButton } from "@/components/ui/styled-button";
+import { StyledButton } from "@/components/ui/styled/styled-button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -32,7 +32,7 @@ import {
 	X,
 	Eye,
 } from "lucide-react";
-import { SKUSelector } from "@/components/sku-selector";
+import { SKUSelector } from "@/components/shared/sku-selector";
 
 type LineItem = {
 	_id: Id<"quoteLineItems"> | string; // Allow temp IDs for new items

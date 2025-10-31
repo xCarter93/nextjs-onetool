@@ -50,8 +50,8 @@ import { useMutation } from "convex/react";
 import { useState } from "react";
 import type { Id } from "../../../../convex/_generated/dataModel";
 import DeleteConfirmationModal from "@/components/ui/delete-confirmation-modal";
-import { StyledButton } from "@/components/ui/styled-button";
-import { CsvImportModal } from "@/components/csv-import-modal";
+import { StyledButton } from "@/components/ui/styled/styled-button";
+import { CsvImportModal } from "@/app/(workspace)/clients/components/csv-import-modal";
 import { useCanPerformAction } from "@/hooks/use-feature-access";
 import { AlertCircle } from "lucide-react";
 

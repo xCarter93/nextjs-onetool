@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { SidebarWithHeader } from "@/components/sidebar-with-header";
+import { SidebarWithHeader } from "@/components/layout/sidebar-with-header";
 
 export default function WorkspaceLayout({ children }: { children: ReactNode }) {
 	return (

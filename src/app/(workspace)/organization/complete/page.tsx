@@ -4,8 +4,8 @@ import React, { useMemo, useState } from "react";
 import { useUser, useOrganization } from "@clerk/nextjs";
 import { useMutation, useQuery } from "convex/react";
 import { useRouter } from "next/navigation";
-import ProgressBar, { ProgressStep } from "@/components/progress-bar";
-import SelectService from "@/components/choice-set";
+import ProgressBar, { ProgressStep } from "@/components/shared/progress-bar";
+import SelectService from "@/components/shared/choice-set";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -13,8 +13,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useAutoTimezone } from "@/hooks/use-auto-timezone";
 import { Users, Building2, Globe, Upload } from "lucide-react";
 import { api } from "../../../../../convex/_generated/api";
-import { CsvImportStep } from "@/components/csv-import-step";
-import { StyledButton } from "@/components/ui/styled-button";
+import { CsvImportStep } from "@/app/(workspace)/clients/components/csv-import-step";
+import { StyledButton } from "@/components/ui/styled/styled-button";
 import type {
 	EntityType,
 	CsvAnalysisResult,

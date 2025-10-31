@@ -5,7 +5,7 @@ import ConvexClientProvider from "@/providers/ConvexClientProvider";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { ToastProvider } from "@/hooks/use-toast";
 import { ConfirmDialogProvider } from "@/hooks/use-confirm-dialog";
-import { DynamicTitle } from "@/components/dynamic-title";
+import { DynamicTitle } from "@/components/shared/dynamic-title";
 import "./globals.css";
 import { env } from "@/env";
 

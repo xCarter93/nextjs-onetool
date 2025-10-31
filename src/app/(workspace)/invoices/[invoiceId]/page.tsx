@@ -28,7 +28,7 @@ import {
 	CheckCircle,
 	XCircle,
 } from "lucide-react";
-import { StickyFormFooter } from "@/components/sticky-form-footer";
+import { StickyFormFooter } from "@/components/shared/sticky-form-footer";
 import { pdf } from "@react-pdf/renderer";
 import InvoicePDF from "@/components/InvoicePDF";
 import type { Id } from "../../../../../convex/_generated/dataModel";

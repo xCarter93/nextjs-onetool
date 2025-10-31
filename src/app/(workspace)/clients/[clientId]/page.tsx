@@ -28,10 +28,10 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { StickyFormFooter } from "@/components/sticky-form-footer";
-import { PropertyTable } from "@/components/property-table";
-import { ContactTable } from "@/components/contact-table";
-import { TaskSheet } from "@/components/task-sheet";
+import { StickyFormFooter } from "@/components/shared/sticky-form-footer";
+import { PropertyTable } from "@/app/(workspace)/clients/components/property-table";
+import { ContactTable } from "@/app/(workspace)/clients/components/contact-table";
+import { TaskSheet } from "@/components/shared/task-sheet";
 import {
 	Popover,
 	PopoverTrigger,

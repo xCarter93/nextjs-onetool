@@ -30,16 +30,16 @@ import {
 	History,
 	Clock,
 } from "lucide-react";
-import { StickyFormFooter } from "@/components/sticky-form-footer";
+import { StickyFormFooter } from "@/components/shared/sticky-form-footer";
 import { pdf } from "@react-pdf/renderer";
-import QuotePDF from "@/components/QuotePDF";
+import QuotePDF from "@/app/(workspace)/quotes/components/QuotePDF";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import type { Id as StorageId } from "../../../../../convex/_generated/dataModel";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useEffect, useState, useMemo } from "react";
-import { DocumentSelectionModal } from "@/components/document-selection-modal";
-import { SendEmailPopover } from "@/components/send-email-popover";
-import { SignatureProgressBar } from "@/components/signature-progress-bar";
+import { DocumentSelectionModal } from "@/app/(workspace)/quotes/components/document-selection-modal";
+import { SendEmailPopover } from "@/app/(workspace)/quotes/components/send-email-popover";
+import { SignatureProgressBar } from "@/app/(workspace)/quotes/components/signature-progress-bar";
 import Accordion from "@/components/ui/accordion";
 
 type QuoteStatus = "draft" | "sent" | "approved" | "declined" | "expired";

@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { StickyFormFooter } from "@/components/sticky-form-footer";
+import { StickyFormFooter } from "@/components/shared/sticky-form-footer";
 import {
 	MagnifyingGlassIcon,
 	UserIcon,

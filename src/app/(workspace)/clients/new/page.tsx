@@ -7,8 +7,8 @@ import { api } from "../../../../../convex/_generated/api";
 import {
 	ClientOnboardingForm,
 	ClientFormData,
-} from "@/components/client-onboarding-form";
-import { StickyFormFooter } from "@/components/sticky-form-footer";
+} from "@/app/(workspace)/clients/components/client-onboarding-form";
+import { StickyFormFooter } from "@/components/shared/sticky-form-footer";
 
 export default function NewClientPage() {
 	const [isLoading, setIsLoading] = useState(false);
