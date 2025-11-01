@@ -98,16 +98,16 @@ const data = {
 					url: "/organization/profile?tab=business",
 				},
 				{
+					title: "Preferences",
+					url: "/organization/profile?tab=preferences",
+				},
+				{
 					title: "Documents",
 					url: "/organization/profile?tab=documents",
 				},
 				{
 					title: "SKUs",
 					url: "/organization/profile?tab=skus",
-				},
-				{
-					title: "Preferences",
-					url: "/organization/profile?tab=preferences",
 				},
 			],
 		},

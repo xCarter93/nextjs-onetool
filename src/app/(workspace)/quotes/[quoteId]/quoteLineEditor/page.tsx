@@ -490,6 +490,21 @@ export default function QuoteLineEditorPage() {
 					</div>
 				</div>
 
+				{/* Unsaved Changes Notification */}
+				{hasChanges && (
+					<div className="mb-6 flex items-center gap-2.5 px-4 py-2.5 rounded-lg bg-yellow-100 dark:bg-yellow-900/40 border-2 border-yellow-400 dark:border-yellow-600 flex-shrink-0 shadow-md animate-pulse">
+						<div className="w-2.5 h-2.5 bg-yellow-500 rounded-full flex-shrink-0 animate-pulse" />
+						<div className="flex flex-col">
+							<p className="text-sm font-semibold text-yellow-900 dark:text-yellow-100 leading-tight">
+								Unsaved changes
+							</p>
+							<p className="text-xs font-medium text-yellow-800 dark:text-yellow-200 leading-tight">
+								Save or cancel your changes
+							</p>
+						</div>
+					</div>
+				)}
+
 				{/* Main Content */}
 				<div className="space-y-8">
 					{/* Line Items Editor */}
@@ -843,23 +858,6 @@ export default function QuoteLineEditorPage() {
 							</Card>
 						</div>
 					</div>
-
-					{/* Change Indicator */}
-					{hasChanges && (
-						<div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4">
-							<div className="flex items-start gap-3">
-								<div className="w-2 h-2 bg-yellow-400 rounded-full mt-2 flex-shrink-0" />
-								<div>
-									<p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
-										Unsaved Changes
-									</p>
-									<p className="text-xs text-yellow-700 dark:text-yellow-300 mt-1">
-										Remember to save your changes before leaving this page.
-									</p>
-								</div>
-							</div>
-						</div>
-					)}
 				</div>
 			</div>
 		</div>

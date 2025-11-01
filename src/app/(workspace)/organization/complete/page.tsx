@@ -6,7 +6,6 @@ import { useMutation, useQuery } from "convex/react";
 import { useRouter } from "next/navigation";
 import ProgressBar, { ProgressStep } from "@/components/shared/progress-bar";
 import SelectService from "@/components/shared/choice-set";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
@@ -661,13 +660,15 @@ export default function CompleteOrganizationMetadata() {
 			</div>
 
 			<div className="flex justify-end pt-6">
-				<button
+				<StyledButton
 					type="button"
 					onClick={handleNext}
-					className="group inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-all duration-200 px-4 py-2 rounded-lg bg-primary/10 hover:bg-primary/15 ring-1 ring-primary/30 hover:ring-primary/40 shadow-sm hover:shadow-md backdrop-blur-sm"
+					intent="primary"
+					size="md"
+					showArrow={false}
 				>
 					Next Step
-				</button>
+				</StyledButton>
 			</div>
 		</div>
 	);
@@ -698,20 +699,24 @@ export default function CompleteOrganizationMetadata() {
 			</div>
 
 			<div className="flex justify-between pt-6">
-				<Button
-					intent="secondary"
+				<StyledButton
+					type="button"
 					onClick={handlePrevious}
-					className="px-6 py-2.5 shadow-md hover:shadow-lg transition-shadow"
+					intent="secondary"
+					size="md"
+					showArrow={false}
 				>
 					Previous
-				</Button>
-				<button
+				</StyledButton>
+				<StyledButton
 					type="button"
 					onClick={handleNext}
-					className="group inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-all duration-200 px-4 py-2 rounded-lg bg-primary/10 hover:bg-primary/15 ring-1 ring-primary/30 hover:ring-primary/40 shadow-sm hover:shadow-md backdrop-blur-sm"
+					intent="primary"
+					size="md"
+					showArrow={false}
 				>
 					Next Step
-				</button>
+				</StyledButton>
 			</div>
 		</div>
 	);
@@ -742,18 +747,20 @@ export default function CompleteOrganizationMetadata() {
 
 			{/* Action Buttons */}
 			<div className="flex justify-between pt-6">
-				<Button
-					intent="secondary"
+				<StyledButton
+					type="button"
 					onClick={handlePrevious}
-					isDisabled={
+					intent="secondary"
+					size="md"
+					disabled={
 						isLoading ||
 						csvImportState.isAnalyzing ||
 						csvImportState.isImporting
 					}
-					className="px-6 py-2.5 shadow-md hover:shadow-lg transition-shadow"
+					showArrow={false}
 				>
 					Previous
-				</Button>
+				</StyledButton>
 
 				<div className="flex gap-3">
 					{/* Skip & Continue Button */}

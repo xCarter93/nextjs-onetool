@@ -26,8 +26,20 @@ import {
 	FileText,
 	ClipboardList,
 } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Textarea } from "@/components/ui/textarea";
+import {
+	StyledInput,
+	StyledSelect,
+	StyledSelectTrigger,
+	StyledSelectContent,
+	SelectValue,
+	SelectItem,
+	StyledCard,
+	StyledCardHeader,
+	StyledCardTitle,
+	StyledCardContent,
+} from "@/components/ui/styled";
+import { Label } from "@/components/ui/label";
 import { StickyFormFooter } from "@/components/shared/sticky-form-footer";
 import { PropertyTable } from "@/app/(workspace)/clients/components/property-table";
 import { ContactTable } from "@/app/(workspace)/clients/components/contact-table";
@@ -110,6 +122,21 @@ const STATUS_OPTIONS = [
 	"archived",
 ] as const;
 
+// Helper function to format communication preference
+function formatCommunicationPreference(pref?: string): string {
+	if (!pref) return "Not specified";
+	switch (pref) {
+		case "email":
+			return "Email only";
+		case "phone":
+			return "Phone calls for urgent matters";
+		case "both":
+			return "Both email and phone";
+		default:
+			return pref;
+	}
+}
+
 // Helper function to format phone number for display
 function formatPhoneNumber(phone?: string): string {
 	if (!phone) return "";
@@ -127,6 +154,7 @@ export default function ClientDetailPage() {
 	const [isTaskSheetOpen, setIsTaskSheetOpen] = useState(false);
 	const [form, setForm] = useState({
 		industry: "",
+		companyDescription: "",
 		status: "lead",
 		category: "",
 		clientSize: "",
@@ -134,6 +162,8 @@ export default function ClientDetailPage() {
 		emailOptIn: false,
 		smsOptIn: false,
 		priorityLevel: "",
+		projectDimensions: "",
+		communicationPreference: "" as "email" | "phone" | "both" | "",
 		tags: "",
 		notes: "",
 	});
@@ -168,6 +198,7 @@ export default function ClientDetailPage() {
 		if (client) {
 			setForm({
 				industry: client.industry || "",
+				companyDescription: client.companyDescription || "",
 				status: client.status,
 				category: client.category || "",
 				clientSize: client.clientSize || "",
@@ -175,6 +206,8 @@ export default function ClientDetailPage() {
 				emailOptIn: client.emailOptIn,
 				smsOptIn: client.smsOptIn,
 				priorityLevel: client.priorityLevel || "",
+				projectDimensions: client.projectDimensions || "",
+				communicationPreference: client.communicationPreference || "",
 				tags: (client.tags || []).join(", "),
 				notes: client.notes || "",
 			});
@@ -185,6 +218,7 @@ export default function ClientDetailPage() {
 		if (!client) return false;
 		return (
 			(form.industry || "") !== (client.industry || "") ||
+			(form.companyDescription || "") !== (client.companyDescription || "") ||
 			form.status !== client.status ||
 			(form.category || "") !== (client.category || "") ||
 			(form.clientSize || "") !== (client.clientSize || "") ||
@@ -192,6 +226,8 @@ export default function ClientDetailPage() {
 			form.emailOptIn !== client.emailOptIn ||
 			form.smsOptIn !== client.smsOptIn ||
 			(form.priorityLevel || "") !== (client.priorityLevel || "") ||
+			(form.projectDimensions || "") !== (client.projectDimensions || "") ||
+			(form.communicationPreference || "") !== (client.communicationPreference || "") ||
 			(form.tags || "") !== (client.tags || []).join(", ") ||
 			(form.notes || "") !== (client.notes || "")
 		);
@@ -202,6 +238,8 @@ export default function ClientDetailPage() {
 		const updates: Record<string, unknown> = {};
 		if ((form.industry || "") !== (client.industry || ""))
 			updates.industry = form.industry || undefined;
+		if ((form.companyDescription || "") !== (client.companyDescription || ""))
+			updates.companyDescription = form.companyDescription || undefined;
 		if (form.status !== client.status)
 			updates.status = form.status as typeof client.status;
 		if ((form.category || "") !== (client.category || ""))
@@ -215,6 +253,10 @@ export default function ClientDetailPage() {
 		if (form.smsOptIn !== client.smsOptIn) updates.smsOptIn = form.smsOptIn;
 		if ((form.priorityLevel || "") !== (client.priorityLevel || ""))
 			updates.priorityLevel = form.priorityLevel || undefined;
+		if ((form.projectDimensions || "") !== (client.projectDimensions || ""))
+			updates.projectDimensions = form.projectDimensions || undefined;
+		if ((form.communicationPreference || "") !== (client.communicationPreference || ""))
+			updates.communicationPreference = form.communicationPreference || undefined;
 		if ((form.tags || "") !== (client.tags || []).join(", "))
 			updates.tags = form.tags
 				? form.tags.split(/,\s*/).filter(Boolean)
@@ -262,6 +304,7 @@ export default function ClientDetailPage() {
 					setIsEditing(false);
 					setForm({
 						industry: client?.industry || "",
+						companyDescription: client?.companyDescription || "",
 						status: client?.status || "lead",
 						category: client?.category || "",
 						clientSize: client?.clientSize || "",
@@ -269,6 +312,8 @@ export default function ClientDetailPage() {
 						emailOptIn: client?.emailOptIn || false,
 						smsOptIn: client?.smsOptIn || false,
 						priorityLevel: client?.priorityLevel || "",
+						projectDimensions: client?.projectDimensions || "",
+						communicationPreference: client?.communicationPreference || "",
 						tags: (client?.tags || []).join(", "),
 						notes: client?.notes || "",
 					});
@@ -283,35 +328,6 @@ export default function ClientDetailPage() {
 				icon: <PencilIcon className="h-4 w-4" />,
 			});
 		}
-
-		// Right side buttons - Secondary actions
-		if (primaryContact?.email) {
-			buttons.push({
-				label: "Email Client",
-				onClick: () => {
-					if (primaryContact?.email) {
-						window.open(`mailto:${primaryContact.email}`, "_blank");
-						toast.info(
-							"Email Client",
-							`Opening email to ${primaryContact.firstName} ${primaryContact.lastName}`
-						);
-					}
-				},
-				intent: "outline" as const,
-				icon: <EnvelopeIcon className="h-4 w-4" />,
-				position: "right" as const,
-			});
-		}
-
-		buttons.push({
-			label: "More Actions",
-			onClick: () => {
-				toast.info("More Actions", "Additional actions menu coming soon!");
-			},
-			intent: "outline" as const,
-			icon: <PlusIcon className="h-4 w-4" />,
-			position: "right" as const,
-		});
 
 		return buttons;
 	};
@@ -374,28 +390,32 @@ export default function ClientDetailPage() {
 								<div className="flex items-center justify-center w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex-shrink-0">
 									<BuildingOffice2Icon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
 								</div>
-								<div className="flex-1 min-w-0">
+									<div className="flex-1 min-w-0">
 									<div className="flex items-center gap-3 flex-wrap">
 										<h1 className="text-3xl font-bold text-gray-900 dark:text-white">
 											{client.companyName}
 										</h1>
 										{isEditing ? (
-											<select
+											<StyledSelect
 												value={form.status}
-												onChange={(e) =>
+												onValueChange={(value) =>
 													setForm((prev) => ({
 														...prev,
-														status: e.target.value,
+														status: value as typeof form.status,
 													}))
 												}
-												className="rounded-md border border-gray-300 dark:border-white/10 bg-white dark:bg-white/5 px-3 py-1 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-indigo-500"
 											>
-												{STATUS_OPTIONS.map((status) => (
-													<option key={status} value={status}>
-														{formatStatus(status)}
-													</option>
-												))}
-											</select>
+												<StyledSelectTrigger className="w-auto">
+													<SelectValue />
+												</StyledSelectTrigger>
+												<StyledSelectContent>
+													{STATUS_OPTIONS.map((status) => (
+														<SelectItem key={status} value={status}>
+															{formatStatus(status)}
+														</SelectItem>
+													))}
+												</StyledSelectContent>
+											</StyledSelect>
 										) : (
 											<Badge
 												variant="secondary"
@@ -412,11 +432,6 @@ export default function ClientDetailPage() {
 											</Badge>
 										)}
 									</div>
-									{client.industry && (
-										<p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-											{client.industry}
-										</p>
-									)}
 								</div>
 							</div>
 
@@ -859,22 +874,133 @@ export default function ClientDetailPage() {
 							</div>
 						</div>
 
-						{isEditing && isDirty && (
-							<Alert className="mt-4 border border-yellow-300 bg-yellow-50 text-yellow-800 dark:border-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-200">
-								<AlertTitle className="text-sm font-semibold">
-									Unsaved changes
-								</AlertTitle>
-								<AlertDescription className="text-xs">
-									Save or cancel your changes.
-								</AlertDescription>
-							</Alert>
-						)}
 					</div>
 
 					{/* Two Column Layout */}
 					<div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
 						{/* Main Content - Left Column */}
 						<div className="xl:col-span-3 space-y-8">
+							{/* Client Information Section */}
+							<StyledCard>
+								<StyledCardHeader>
+									<StyledCardTitle className="text-xl">Client Information</StyledCardTitle>
+								</StyledCardHeader>
+								<StyledCardContent>
+									<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+										{/* Industry */}
+										{(client.industry || isEditing) && (
+											<div>
+												<Label className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1 block">
+													Industry
+												</Label>
+												{isEditing ? (
+													<StyledInput
+														value={form.industry}
+														onChange={(e) =>
+															setForm((prev) => ({
+																...prev,
+																industry: e.target.value,
+															}))
+														}
+														placeholder="e.g., Technology, Healthcare"
+													/>
+												) : client.industry ? (
+													<p className="text-sm text-gray-900 dark:text-white">
+														{client.industry}
+													</p>
+												) : null}
+											</div>
+										)}
+
+										{/* Lead Source */}
+										<div>
+											<Label className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1 block">
+												Lead Source
+											</Label>
+											<p className="text-sm text-gray-900 dark:text-white">
+												{formatLeadSource(client.leadSource)}
+											</p>
+										</div>
+
+										{/* Category */}
+										{client.category && !isEditing && (
+											<div>
+												<Label className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1 block">
+													Category
+												</Label>
+												<p className="text-sm text-gray-900 dark:text-white">
+													{formatCategory(client.category)}
+												</p>
+											</div>
+										)}
+
+										{/* Client Size */}
+										{client.clientSize && !isEditing && (
+											<div>
+												<Label className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1 block">
+													Size
+												</Label>
+												<p className="text-sm text-gray-900 dark:text-white">
+													{formatCategory(client.clientSize)}
+												</p>
+											</div>
+										)}
+
+										{/* Priority Level */}
+										{client.priorityLevel && !isEditing && (
+											<div>
+												<Label className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1 block">
+													Priority
+												</Label>
+												<p className="text-sm text-gray-900 dark:text-white">
+													{formatCategory(client.priorityLevel)}
+												</p>
+											</div>
+										)}
+
+										{/* Project Dimensions */}
+										{client.projectDimensions && !isEditing && (
+											<div>
+												<Label className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1 block">
+													Project Dimensions
+												</Label>
+												<p className="text-sm text-gray-900 dark:text-white">
+													{client.projectDimensions}
+												</p>
+											</div>
+										)}
+
+									</div>
+
+									{/* Company Description - Full Width */}
+									{(client.companyDescription || isEditing) && (
+										<div className="mt-6">
+											<Label className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1 block">
+												Company Description
+											</Label>
+											{isEditing ? (
+												<Textarea
+													value={form.companyDescription}
+													onChange={(e) =>
+														setForm((prev) => ({
+															...prev,
+															companyDescription: e.target.value,
+														}))
+													}
+													placeholder="Brief description of the company and what they do..."
+													className="w-full"
+													rows={3}
+												/>
+											) : client.companyDescription ? (
+												<p className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">
+													{client.companyDescription}
+												</p>
+											) : null}
+										</div>
+									)}
+								</StyledCardContent>
+							</StyledCard>
+
 							{/* Properties Section */}
 							<PropertyTable
 								clientId={clientId as Id<"clients">}
@@ -894,12 +1020,11 @@ export default function ClientDetailPage() {
 							/>
 
 							{/* Overview Section with Tabs */}
-							<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-xl shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50">
-								<Card className="bg-transparent border-none shadow-none ring-0">
-									<CardHeader>
-										<CardTitle className="text-xl">Overview</CardTitle>
-									</CardHeader>
-									<CardContent>
+							<StyledCard>
+								<StyledCardHeader>
+									<StyledCardTitle className="text-xl">Overview</StyledCardTitle>
+								</StyledCardHeader>
+								<StyledCardContent>
 										<Tabs defaultValue="projects" className="w-full">
 											<TabsList className="grid w-full grid-cols-4">
 												<TabsTrigger value="projects">
@@ -1112,19 +1237,17 @@ export default function ClientDetailPage() {
 												)}
 											</TabsContent>
 										</Tabs>
-									</CardContent>
-								</Card>
-							</div>
+								</StyledCardContent>
+							</StyledCard>
 							{/* Client Notes Card (moved under overview) */}
-							<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-xl shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50">
-								<Card className="bg-transparent border-none shadow-none ring-0">
-									<CardHeader>
-										<CardTitle className="text-lg">Client notes</CardTitle>
-										<p className="text-sm text-gray-600 dark:text-gray-400">
-											Internal notes visible only to your team
-										</p>
-									</CardHeader>
-									<CardContent>
+							<StyledCard>
+								<StyledCardHeader>
+									<StyledCardTitle className="text-lg">Client notes</StyledCardTitle>
+									<p className="text-sm text-gray-600 dark:text-gray-400">
+										Internal notes visible only to your team
+									</p>
+								</StyledCardHeader>
+								<StyledCardContent>
 										{isEditing ? (
 											<textarea
 												className="w-full min-h-[100px] px-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-md text-gray-900 dark:text-white"
@@ -1146,241 +1269,214 @@ export default function ClientDetailPage() {
 												</p>
 											</div>
 										)}
-									</CardContent>
-								</Card>
-							</div>
+									</StyledCardContent>
+								</StyledCard>
 						</div>
 
 						{/* Contact Info Sidebar - Right Column */}
 						<div className="xl:col-span-1">
 							<div className="sticky top-24 space-y-6">
 								{/* Contact Info Card */}
-								<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-xl shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50">
-									<Card className="bg-transparent border-none shadow-none ring-0">
-										<CardHeader>
-											<CardTitle className="text-lg">Contact info</CardTitle>
-										</CardHeader>
-										<CardContent className="space-y-4">
-											{primaryContact ? (
-												<>
-													<div className="flex justify-between">
-														<span className="text-sm text-gray-600 dark:text-gray-400">
-															Primary contact
-														</span>
-														<div className="flex items-center gap-2">
-															<span className="text-sm text-gray-900 dark:text-white">
-																{primaryContact.firstName}{" "}
-																{primaryContact.lastName}
-															</span>
-															<StarSolidIcon className="h-4 w-4 text-yellow-400" />
-														</div>
-													</div>
-													{primaryContact.phone && (
-														<div className="flex justify-between">
-															<span className="text-sm text-gray-600 dark:text-gray-400">
-																Phone
-															</span>
-															<span className="text-sm text-gray-900 dark:text-white">
-																{formatPhoneNumber(primaryContact.phone)}
-															</span>
-														</div>
-													)}
-													{primaryContact.email && (
-														<div className="flex justify-between">
-															<span className="text-sm text-gray-600 dark:text-gray-400">
-																Email
-															</span>
-															<span className="text-sm text-gray-900 dark:text-white">
-																{primaryContact.email}
-															</span>
-														</div>
-													)}
-													{primaryContact.jobTitle && (
-														<div className="flex justify-between">
-															<span className="text-sm text-gray-600 dark:text-gray-400">
-																Job Title
-															</span>
-															<span className="text-sm text-gray-900 dark:text-white">
-																{primaryContact.jobTitle}
-															</span>
-														</div>
-													)}
-												</>
-											) : (
-												<div className="text-center py-4">
-													<p className="text-sm text-gray-600 dark:text-gray-400">
-														No primary contact set
-													</p>
-												</div>
-											)}
-
-											<div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+								<StyledCard>
+									<StyledCardHeader>
+										<StyledCardTitle className="text-lg">Contact Info</StyledCardTitle>
+									</StyledCardHeader>
+									<StyledCardContent className="space-y-4">
+										{primaryContact ? (
+											<>
 												<div className="flex justify-between">
 													<span className="text-sm text-gray-600 dark:text-gray-400">
-														Lead Source
+														Primary contact
 													</span>
-													<span className="text-sm text-gray-900 dark:text-white">
-														{formatLeadSource(client.leadSource)}
-													</span>
+													<div className="flex items-center gap-2">
+														<span className="text-sm text-gray-900 dark:text-white">
+															{primaryContact.firstName}{" "}
+															{primaryContact.lastName}
+														</span>
+														<StarSolidIcon className="h-4 w-4 text-yellow-400" />
+													</div>
 												</div>
-												{client.category && (
-													<div className="flex justify-between mt-3">
+												{primaryContact.phone && (
+													<div className="flex justify-between">
 														<span className="text-sm text-gray-600 dark:text-gray-400">
-															Category
+															Phone
 														</span>
 														<span className="text-sm text-gray-900 dark:text-white">
-															{formatCategory(client.category)}
+															{formatPhoneNumber(primaryContact.phone)}
 														</span>
 													</div>
 												)}
-												{client.clientSize && (
-													<div className="flex justify-between mt-3">
+												{primaryContact.email && (
+													<div className="flex justify-between">
 														<span className="text-sm text-gray-600 dark:text-gray-400">
-															Size
+															Email
 														</span>
 														<span className="text-sm text-gray-900 dark:text-white">
-															{formatCategory(client.clientSize)}
+															{primaryContact.email}
 														</span>
 													</div>
 												)}
-												{client.priorityLevel && (
-													<div className="flex justify-between mt-3">
+												{primaryContact.jobTitle && (
+													<div className="flex justify-between">
 														<span className="text-sm text-gray-600 dark:text-gray-400">
-															Priority
+															Job Title
 														</span>
 														<span className="text-sm text-gray-900 dark:text-white">
-															{formatCategory(client.priorityLevel)}
+															{primaryContact.jobTitle}
 														</span>
 													</div>
 												)}
-												{client.isActive !== undefined && (
-													<div className="flex justify-between mt-3">
-														<span className="text-sm text-gray-600 dark:text-gray-400">
-															Active
-														</span>
-														<span className="text-sm text-gray-900 dark:text-white">
-															{client.isActive ? "Yes" : "No"}
-														</span>
-													</div>
-												)}
+											</>
+										) : (
+											<div className="text-center py-4">
+												<p className="text-sm text-gray-600 dark:text-gray-400">
+													No primary contact set
+												</p>
 											</div>
-										</CardContent>
-									</Card>
-								</div>
-
-								{/* Tags Card */}
-								<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-xl shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50">
-									<Card className="bg-transparent border-none shadow-none ring-0">
-										<CardHeader className="flex flex-row items-center justify-between">
-											<CardTitle className="text-lg">Tags</CardTitle>
-											<Button
-												intent="outline"
-												size="sm"
-												onClick={() => {
-													toast.info(
-														"Add Tag",
-														"Tag management functionality coming soon!"
-													);
-												}}
-											>
-												<PlusIcon className="h-4 w-4 mr-2" />
-												New Tag
-											</Button>
-										</CardHeader>
-										<CardContent>
+										)}
+										{/* Communication Preference */}
+										<div className="flex justify-between items-center pt-4 border-t border-gray-200 dark:border-white/10">
+											<span className="text-sm text-gray-600 dark:text-gray-400">
+												Communication Preference
+											</span>
 											{isEditing ? (
-												<Input
-													value={form.tags}
-													onChange={(e) =>
-														setForm((f) => ({ ...f, tags: e.target.value }))
-													}
-													placeholder="tag1, tag2"
-												/>
-											) : client.tags && client.tags.length > 0 ? (
-												<div className="flex flex-wrap gap-2">
-													{client.tags.map((tag, index) => (
-														<Badge
-															key={index}
-															variant="secondary"
-															className="text-xs"
-														>
-															{tag}
-														</Badge>
-													))}
+												<div className="flex-1 max-w-[200px] ml-4">
+													<StyledSelect
+														value={form.communicationPreference}
+														onValueChange={(value) =>
+															setForm((prev) => ({
+																...prev,
+																communicationPreference: value as "email" | "phone" | "both" | "",
+															}))
+														}
+													>
+														<StyledSelectTrigger className="h-8">
+															<SelectValue placeholder="Select" />
+														</StyledSelectTrigger>
+														<StyledSelectContent>
+															<SelectItem value="email">Email only</SelectItem>
+															<SelectItem value="phone">Phone calls for urgent matters</SelectItem>
+															<SelectItem value="both">Both email and phone</SelectItem>
+														</StyledSelectContent>
+													</StyledSelect>
 												</div>
 											) : (
-												<p className="text-sm text-gray-600 dark:text-gray-400 italic">
-													This client has no tags
-												</p>
+												<span className="text-sm text-gray-900 dark:text-white">
+													{client.communicationPreference
+														? formatCommunicationPreference(client.communicationPreference)
+														: "Not specified"}
+												</span>
 											)}
-										</CardContent>
-									</Card>
-								</div>
+										</div>
+									</StyledCardContent>
+								</StyledCard>
+
+								{/* Tags Card */}
+								<StyledCard>
+									<StyledCardHeader className="flex flex-row items-center justify-between">
+										<StyledCardTitle className="text-lg">Tags</StyledCardTitle>
+										<Button
+											intent="outline"
+											size="sm"
+											onClick={() => {
+												toast.info(
+													"Add Tag",
+													"Tag management functionality coming soon!"
+												);
+											}}
+										>
+											<PlusIcon className="h-4 w-4 mr-2" />
+											New Tag
+										</Button>
+									</StyledCardHeader>
+									<StyledCardContent>
+										{isEditing ? (
+											<StyledInput
+												value={form.tags}
+												onChange={(e) =>
+													setForm((f) => ({ ...f, tags: e.target.value }))
+												}
+												placeholder="tag1, tag2"
+											/>
+										) : client.tags && client.tags.length > 0 ? (
+											<div className="flex flex-wrap gap-2">
+												{client.tags.map((tag, index) => (
+													<Badge
+														key={index}
+														variant="secondary"
+														className="text-xs"
+													>
+														{tag}
+													</Badge>
+												))}
+											</div>
+										) : (
+											<p className="text-sm text-gray-600 dark:text-gray-400 italic">
+												This client has no tags
+											</p>
+										)}
+									</StyledCardContent>
+								</StyledCard>
 
 								{/* Last Client Communication */}
-								<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-xl shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50">
-									<Card className="bg-transparent border-none shadow-none ring-0">
-										<CardHeader>
-											<CardTitle className="text-lg">
-												Last client communication
-											</CardTitle>
-										</CardHeader>
-										<CardContent>
-											<p className="text-sm text-gray-600 dark:text-gray-400 italic">
-												You haven&apos;t sent any client communications yet
-											</p>
-										</CardContent>
-									</Card>
-								</div>
+								<StyledCard>
+									<StyledCardHeader>
+										<StyledCardTitle className="text-lg">
+											Last client communication
+										</StyledCardTitle>
+									</StyledCardHeader>
+									<StyledCardContent>
+										<p className="text-sm text-gray-600 dark:text-gray-400 italic">
+											You haven&apos;t sent any client communications yet
+										</p>
+									</StyledCardContent>
+								</StyledCard>
 
 								{/* Services Needed */}
 								{client.servicesNeeded && client.servicesNeeded.length > 0 && (
-									<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-xl shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50">
-										<Card className="bg-transparent border-none shadow-none ring-0">
-											<CardHeader>
-												<CardTitle className="text-lg">
-													Services needed
-												</CardTitle>
-											</CardHeader>
-											<CardContent>
-												<div className="space-y-2">
-													{client.servicesNeeded.map((service, index) => (
-														<div
-															key={index}
-															className="flex items-center gap-2"
-														>
-															<div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-															<span className="text-sm text-gray-900 dark:text-white">
-																{service}
-															</span>
-														</div>
-													))}
-												</div>
-											</CardContent>
-										</Card>
-									</div>
+									<StyledCard>
+										<StyledCardHeader>
+											<StyledCardTitle className="text-lg">
+												Services needed
+											</StyledCardTitle>
+										</StyledCardHeader>
+										<StyledCardContent>
+											<div className="space-y-2">
+												{client.servicesNeeded.map((service, index) => (
+													<div
+														key={index}
+														className="flex items-center gap-2"
+													>
+														<div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+														<span className="text-sm text-gray-900 dark:text-white">
+															{service}
+														</span>
+													</div>
+												))}
+											</div>
+										</StyledCardContent>
+									</StyledCard>
 								)}
 
 								{/* Billing History */}
-								<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-xl shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50">
-									<Card className="bg-transparent border-none shadow-none ring-0">
-										<CardHeader className="flex flex-row items-center justify-between">
-											<CardTitle className="text-lg">Billing summary</CardTitle>
-											<Button
-												intent="outline"
-												size="sm"
-												className="bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800"
-												onClick={() => {
-													toast.info(
-														"Create Invoice",
-														"Invoice creation functionality coming soon!"
-													);
-												}}
-											>
-												New Invoice
-											</Button>
-										</CardHeader>
-										<CardContent className="space-y-4">
+								<StyledCard>
+									<StyledCardHeader className="flex flex-row items-center justify-between">
+										<StyledCardTitle className="text-lg">Billing summary</StyledCardTitle>
+										<Button
+											intent="outline"
+											size="sm"
+											className="bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800"
+											onClick={() => {
+												toast.info(
+													"Create Invoice",
+													"Invoice creation functionality coming soon!"
+												);
+											}}
+										>
+											New Invoice
+										</Button>
+									</StyledCardHeader>
+									<StyledCardContent className="space-y-4">
 											{invoices && invoices.length > 0 ? (
 												<>
 													<div className="space-y-3">
@@ -1441,15 +1537,18 @@ export default function ClientDetailPage() {
 													</p>
 												</div>
 											)}
-										</CardContent>
-									</Card>
-								</div>
+										</StyledCardContent>
+									</StyledCard>
 							</div>
 						</div>
 					</div>
 				</div>
 			</div>
-			<StickyFormFooter buttons={getFooterButtons()} />
+			<StickyFormFooter
+				buttons={getFooterButtons()}
+				hasUnsavedChanges={isDirty}
+				isEditing={isEditing}
+			/>
 			<TaskSheet
 				isOpen={isTaskSheetOpen}
 				onOpenChange={setIsTaskSheetOpen}

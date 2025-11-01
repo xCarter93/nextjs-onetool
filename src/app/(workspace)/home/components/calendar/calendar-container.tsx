@@ -17,7 +17,7 @@ import {
 import { cn } from "@/lib/utils";
 import { format, addMonths, addWeeks, addDays } from "date-fns";
 import { useQuery } from "convex/react";
-import { api } from "../../../convex/_generated/api";
+import { api } from "../../../../../../convex/_generated/api";
 import { motion } from "motion/react";
 
 export function CalendarContainer() {

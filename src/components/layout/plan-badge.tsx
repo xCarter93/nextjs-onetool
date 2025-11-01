@@ -8,7 +8,7 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
-import { Button } from "@/components/ui/button";
+import { StyledButton } from "@/components/ui/styled/styled-button";
 import { Progress } from "@/components/ui/progress";
 import {
 	Crown,
@@ -145,13 +145,16 @@ export function PlanBadge() {
 						</div>
 
 						{/* Upgrade CTA */}
-						<Button
+						<StyledButton
 							onClick={handleUpgrade}
-							className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+							intent="primary"
+							size="md"
+							icon={<ArrowUpRight className="h-4 w-4" />}
+							className="w-full justify-center"
+							showArrow={false}
 						>
 							Upgrade to Business
-							<ArrowUpRight className="h-4 w-4 ml-2" />
-						</Button>
+						</StyledButton>
 					</div>
 				)}
 
@@ -162,16 +165,19 @@ export function PlanBadge() {
 							Create an organization to unlock OneTool features and start
 							managing your clients and projects.
 						</p>
-						<Button
+						<StyledButton
 							onClick={() => {
 								setOpen(false);
 								router.push("/organization/new");
 							}}
-							className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+							intent="primary"
+							size="md"
+							icon={<ArrowUpRight className="h-4 w-4" />}
+							className="w-full justify-center"
+							showArrow={false}
 						>
 							Create Organization
-							<ArrowUpRight className="h-4 w-4 ml-2" />
-						</Button>
+						</StyledButton>
 					</div>
 				)}
 
@@ -206,7 +212,7 @@ export function PlanBadge() {
 						</div>
 
 						{/* Manage Subscription Button */}
-						<Button
+						<StyledButton
 							onClick={() => {
 								// Link to Clerk account portal
 								window.open(
@@ -214,10 +220,13 @@ export function PlanBadge() {
 									"_blank"
 								);
 							}}
-							className="w-full border border-border bg-background hover:bg-accent"
+							intent="outline"
+							size="md"
+							className="w-full justify-center"
+							showArrow={false}
 						>
 							Manage Subscription
-						</Button>
+						</StyledButton>
 					</div>
 				)}
 			</PopoverContent>

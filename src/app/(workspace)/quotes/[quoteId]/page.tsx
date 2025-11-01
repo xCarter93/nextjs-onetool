@@ -18,7 +18,6 @@ import { useToast } from "@/hooks/use-toast";
 import {
 	FileText,
 	Mail,
-	MoreHorizontal,
 	Download,
 	Eye,
 	DollarSign,
@@ -35,7 +34,6 @@ import { pdf } from "@react-pdf/renderer";
 import QuotePDF from "@/app/(workspace)/quotes/components/QuotePDF";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import type { Id as StorageId } from "../../../../../convex/_generated/dataModel";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useEffect, useState, useMemo } from "react";
 import { DocumentSelectionModal } from "@/app/(workspace)/quotes/components/document-selection-modal";
 import { SendEmailPopover } from "@/app/(workspace)/quotes/components/send-email-popover";
@@ -610,14 +608,6 @@ export default function QuoteDetailPage() {
 							</div>
 						</div>
 
-						{isEditing && isDirty && (
-							<Alert className="mb-6">
-								<AlertTitle>Unsaved changes</AlertTitle>
-								<AlertDescription>
-									You have modified this quote. Save or cancel your changes.
-								</AlertDescription>
-							</Alert>
-						)}
 
 						{/* Two Column Layout */}
 						<div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
@@ -1513,6 +1503,8 @@ export default function QuoteDetailPage() {
 
 			{/* Sticky Footer with Action Buttons */}
 			<StickyFormFooter
+				hasUnsavedChanges={isDirty}
+				isEditing={isEditing}
 				buttons={[
 					// Left side buttons - Status actions
 					...(getStatusActions()
@@ -1520,7 +1512,7 @@ export default function QuoteDetailPage() {
 								{
 									label:
 										quote?.status === "draft"
-											? "Send Quote"
+											? "Mark as Sent"
 											: quote?.status === "sent"
 												? "Approve"
 												: quote?.status === "approved"
@@ -1611,16 +1603,6 @@ export default function QuoteDetailPage() {
 						},
 						position: "right" as const,
 						disabled: quote?.status !== "approved",
-					},
-					{
-						label: "More",
-						intent: "outline",
-						icon: <MoreHorizontal className="h-4 w-4" />,
-						onClick: () => {
-							// Handle more options
-							console.log("More options");
-						},
-						position: "right" as const,
 					},
 				]}
 				fullWidth

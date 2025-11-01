@@ -1,13 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
 import { StickyFormFooter } from "@/components/shared/sticky-form-footer";
 import {
@@ -15,7 +21,9 @@ import {
 	UserIcon,
 	DocumentTextIcon,
 } from "@heroicons/react/16/solid";
-import { ChevronDownIcon, FolderOpenIcon } from "@heroicons/react/24/outline";
+import { FolderOpenIcon } from "@heroicons/react/24/outline";
+import { CalendarIcon } from "lucide-react";
+import ComboBox from "@/components/ui/combo-box";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 
 interface Client {
@@ -42,26 +50,25 @@ export default function NewQuotePage() {
 	// Form state
 	const [selectedClient, setSelectedClient] = useState<Client | null>(null);
 	const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-	const [showClientDropdown, setShowClientDropdown] = useState(false);
-	const [showProjectDropdown, setShowProjectDropdown] = useState(false);
 	const [isLoading, setIsLoading] = useState(false);
 
 	// Form fields
 	const [quoteTitle, setQuoteTitle] = useState("");
-	const [quoteNumber, setQuoteNumber] = useState("");
-	const [validUntil, setValidUntil] = useState("");
+	const [validUntil, setValidUntil] = useState<Date | undefined>(undefined);
+	const [validUntilOpen, setValidUntilOpen] = useState(false);
 	const [clientMessage, setClientMessage] = useState("");
 	const [terms, setTerms] = useState(
 		"Payment due within 30 days of acceptance"
 	);
 
 	// Fetch data from Convex
-	const clients = useQuery(api.clients.list, {}) || [];
-	const projects =
-		useQuery(
-			api.projects.list,
-			selectedClient ? { clientId: selectedClient._id } : "skip"
-		) || [];
+	const clientsResult = useQuery(api.clients.list, {});
+	const clients = useMemo(() => clientsResult || [], [clientsResult]);
+	const projectsResult = useQuery(
+		api.projects.list,
+		selectedClient ? { clientId: selectedClient._id } : "skip"
+	);
+	const projects = useMemo(() => projectsResult || [], [projectsResult]);
 
 	// Get project from URL param
 	const projectFromParam = useQuery(
@@ -73,7 +80,7 @@ export default function NewQuotePage() {
 	const createQuote = useMutation(api.quotes.create);
 
 	// Set project and client from URL params
-	useState(() => {
+	useEffect(() => {
 		if (projectFromParam && !selectedProject) {
 			setSelectedProject(projectFromParam);
 			// Find and set the client for this project
@@ -82,17 +89,41 @@ export default function NewQuotePage() {
 				setSelectedClient(client);
 			}
 		}
-	});
+	}, [projectFromParam, clients, selectedProject, selectedClient]);
 
-	const handleClientSelect = (client: Client) => {
-		setSelectedClient(client);
-		setSelectedProject(null); // Reset project when client changes
-		setShowClientDropdown(false);
+	const clientOptions = useMemo(
+		() => clients.map((client) => client.companyName),
+		[clients]
+	);
+
+	const projectOptions = useMemo(
+		() => projects.map((project) => project.title),
+		[projects]
+	);
+
+	const handleClientSelect = (selection: string | null) => {
+		if (!selection) {
+			setSelectedClient(null);
+			setSelectedProject(null);
+			return;
+		}
+		const client = clients.find((item) => item.companyName === selection);
+		if (client) {
+			setSelectedClient(client);
+			setSelectedProject(null); // Reset project when client changes
+		}
 	};
 
-	const handleProjectSelect = (project: Project) => {
-		setSelectedProject(project);
-		setShowProjectDropdown(false);
+	const handleProjectSelect = (selection: string | null) => {
+		if (!projects) return;
+		if (!selection) {
+			setSelectedProject(null);
+			return;
+		}
+		const project = projects.find((item) => item.title === selection);
+		if (project) {
+			setSelectedProject(project);
+		}
 	};
 
 	const handleCreateQuote = async () => {
@@ -104,17 +135,24 @@ export default function NewQuotePage() {
 			return;
 		}
 
+		if (!selectedProject) {
+			toast.error(
+				"Missing Project",
+				"Please select a project before creating the quote."
+			);
+			return;
+		}
+
 		setIsLoading(true);
 		try {
 			const quoteData = {
 				clientId: selectedClient._id,
-				projectId: selectedProject?._id,
+				projectId: selectedProject._id,
 				title: quoteTitle || undefined,
-				quoteNumber: quoteNumber || undefined,
 				status: "draft" as const,
 				subtotal: 0, // Will be calculated from line items
 				total: 0, // Will be calculated from line items
-				validUntil: validUntil ? new Date(validUntil).getTime() : undefined,
+				validUntil: validUntil ? validUntil.getTime() : undefined,
 				clientMessage: clientMessage || undefined,
 				terms: terms || undefined,
 				pdfSettings: {
@@ -136,44 +174,6 @@ export default function NewQuotePage() {
 		}
 	};
 
-	const handleSaveAsDraft = async () => {
-		if (!selectedClient) {
-			toast.error("Missing Client", "Please select a client before saving.");
-			return;
-		}
-
-		setIsLoading(true);
-		try {
-			const quoteData = {
-				clientId: selectedClient._id,
-				projectId: selectedProject?._id,
-				title: quoteTitle || undefined,
-				quoteNumber: quoteNumber || undefined,
-				status: "draft" as const,
-				subtotal: 0,
-				total: 0,
-				validUntil: validUntil ? new Date(validUntil).getTime() : undefined,
-				clientMessage: clientMessage || undefined,
-				terms: terms || undefined,
-				pdfSettings: {
-					showQuantities: true,
-					showUnitPrices: true,
-					showLineItemTotals: true,
-					showTotals: true,
-				},
-			};
-
-			const quoteId = await createQuote(quoteData);
-			toast.success("Draft Saved", "Quote has been saved as a draft.");
-			router.push(`/quotes/${quoteId}`);
-		} catch (error) {
-			console.error("Failed to save quote:", error);
-			toast.error("Error", "Failed to save quote. Please try again.");
-		} finally {
-			setIsLoading(false);
-		}
-	};
-
 	const formatStatus = (status: string) => {
 		switch (status) {
 			case "in-progress":
@@ -187,6 +187,16 @@ export default function NewQuotePage() {
 			default:
 				return status;
 		}
+	};
+
+	const formatDisplayDate = (date?: Date | number) => {
+		if (!date) return "Not set";
+		const dateObj = typeof date === "number" ? new Date(date) : date;
+		return dateObj.toLocaleDateString("en-US", {
+			year: "numeric",
+			month: "long",
+			day: "numeric",
+		});
 	};
 
 	const getStatusColor = (status: string) => {
@@ -220,184 +230,105 @@ export default function NewQuotePage() {
 					</div>
 
 					<form className="space-y-8">
-						{/* Client Selection */}
-						<Card className="shadow-sm border-gray-200/60 dark:border-white/10">
-							<CardHeader className="pb-4">
-								<CardTitle className="flex items-center gap-2 text-xl font-semibold text-gray-900 dark:text-white">
-									<MagnifyingGlassIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-									Select Client
-								</CardTitle>
-							</CardHeader>
-							<CardContent>
-								<div className="relative">
-									<Button
-										intent="outline"
-										onClick={() => setShowClientDropdown(!showClientDropdown)}
-										className="w-full justify-between text-left h-12"
-									>
-										{selectedClient ? (
-											<span className="flex items-center gap-3">
-												<div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-sm text-white font-medium">
-													{selectedClient.companyName
-														.split(" ")
-														.map((n) => n[0])
-														.join("")}
-												</div>
-												<div>
-													<div className="font-medium text-gray-900 dark:text-white">
-														{selectedClient.companyName}
-													</div>
-													<div className="text-sm text-gray-500 dark:text-gray-400">
-														{selectedClient.industry || "No industry specified"}
-													</div>
-												</div>
-											</span>
-										) : (
-											<span className="text-gray-500 dark:text-gray-400">
-												Choose an existing client...
-											</span>
-										)}
-										<ChevronDownIcon className="h-4 w-4" />
-									</Button>
+						{/* Client and Project Selection */}
+						<div className="grid grid-cols-1 gap-6 lg:grid-cols-2 mb-8">
+							{/* Client Information Card */}
+							<Card className="shadow-sm border-gray-200/60 dark:border-white/10">
+								<CardHeader className="pb-4">
+									<CardTitle className="flex items-center gap-2 text-xl font-semibold text-gray-900 dark:text-white">
+										<MagnifyingGlassIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+										Client Information
+									</CardTitle>
+								</CardHeader>
+								<CardContent className="space-y-4">
+									<div className="grid gap-2">
+										<label className="text-sm text-gray-600 dark:text-gray-400 text-left">
+											Selected Client *
+										</label>
+										<ComboBox
+											options={clientOptions}
+											placeholder={
+												selectedClient?.companyName ?? "Select a client..."
+											}
+											onSelect={handleClientSelect}
+											disabled={isLoading}
+										/>
+									</div>
 
-									{showClientDropdown && (
-										<div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/10 rounded-lg shadow-lg z-10">
-											<div className="p-2 space-y-1 max-h-48 overflow-y-auto">
-												{clients.map((client) => (
-													<button
-														key={client._id}
-														type="button"
-														onClick={() => handleClientSelect(client)}
-														className="w-full p-3 text-left hover:bg-gray-50 dark:hover:bg-white/5 rounded-md transition-colors"
-													>
-														<div className="flex items-center gap-3">
-															<div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-sm text-white font-medium">
-																{client.companyName
-																	.split(" ")
-																	.map((n) => n[0])
-																	.join("")}
-															</div>
-															<div>
-																<div className="font-medium text-gray-900 dark:text-white">
-																	{client.companyName}
-																</div>
-																<div className="text-sm text-gray-500 dark:text-gray-400">
-																	{client.industry || "No industry specified"}
-																</div>
-															</div>
-														</div>
-													</button>
-												))}
+									{selectedClient && (
+										<div className="grid grid-cols-2 gap-4 text-sm">
+											<div>
+												<span className="text-gray-500 dark:text-gray-400">
+													Industry:
+												</span>
+												<div className="mt-1 text-gray-900 dark:text-white">
+													{selectedClient.industry || "No industry specified"}
+												</div>
 											</div>
 										</div>
 									)}
-								</div>
-							</CardContent>
-						</Card>
+								</CardContent>
+							</Card>
 
-						{/* Project Selection (Optional) */}
-						{selectedClient && (
+							{/* Project Selection Card */}
 							<Card className="shadow-sm border-gray-200/60 dark:border-white/10">
 								<CardHeader className="pb-4">
 									<CardTitle className="flex items-center gap-2 text-xl font-semibold text-gray-900 dark:text-white">
 										<FolderOpenIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
-										Link to Project (Optional)
+										Link to Project
 									</CardTitle>
 								</CardHeader>
-								<CardContent>
-									<div className="relative">
-										<Button
-											intent="outline"
-											onClick={() =>
-												setShowProjectDropdown(!showProjectDropdown)
+								<CardContent className="space-y-4">
+									<div className="grid gap-2">
+										<label className="text-sm text-gray-600 dark:text-gray-400 text-left">
+											Selected Project *
+										</label>
+										<ComboBox
+											options={projectOptions}
+											placeholder={
+												selectedProject
+													? selectedProject.title
+													: selectedClient
+														? projectOptions.length > 0
+															? "Select a project..."
+															: "No projects for this client"
+														: "Select a client first..."
 											}
-											className="w-full justify-between text-left h-12"
-										>
-											{selectedProject ? (
-												<span className="flex items-center gap-3">
-													<div className="w-8 h-8 bg-gradient-to-br from-green-500 to-blue-600 rounded-full flex items-center justify-center text-sm text-white font-medium">
-														P
-													</div>
-													<div>
-														<div className="font-medium text-gray-900 dark:text-white">
-															{selectedProject.title}
-														</div>
-														<div className="flex items-center gap-2">
-															<Badge
-																className={getStatusColor(
-																	selectedProject.status
-																)}
-															>
-																{formatStatus(selectedProject.status)}
-															</Badge>
-														</div>
-													</div>
-												</span>
-											) : (
-												<span className="text-gray-500 dark:text-gray-400">
-													Choose a project to link this quote...
-												</span>
-											)}
-											<ChevronDownIcon className="h-4 w-4" />
-										</Button>
+											onSelect={handleProjectSelect}
+											disabled={!selectedClient || projectOptions.length === 0 || isLoading}
+										/>
+									</div>
 
-										{showProjectDropdown && (
-											<div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/10 rounded-lg shadow-lg z-10">
-												<div className="p-2 space-y-1 max-h-48 overflow-y-auto">
-													{projects.length > 0 ? (
-														projects.map((project) => (
-															<button
-																key={project._id}
-																type="button"
-																onClick={() => handleProjectSelect(project)}
-																className="w-full p-3 text-left hover:bg-gray-50 dark:hover:bg-white/5 rounded-md transition-colors"
-															>
-																<div className="flex items-center gap-3">
-																	<div className="w-8 h-8 bg-gradient-to-br from-green-500 to-blue-600 rounded-full flex items-center justify-center text-sm text-white font-medium">
-																		P
-																	</div>
-																	<div>
-																		<div className="font-medium text-gray-900 dark:text-white">
-																			{project.title}
-																		</div>
-																		<div className="flex items-center gap-2">
-																			<Badge
-																				className={getStatusColor(
-																					project.status
-																				)}
-																			>
-																				{formatStatus(project.status)}
-																			</Badge>
-																		</div>
-																	</div>
-																</div>
-															</button>
-														))
-													) : (
-														<div className="p-3 text-center text-gray-500 dark:text-gray-400">
-															No projects found for this client
-														</div>
-													)}
-													<div className="border-t border-gray-200 dark:border-white/10 pt-2 mt-2">
-														<button
-															type="button"
-															onClick={() =>
-																router.push(
-																	`/projects/new?clientId=${selectedClient._id}`
-																)
-															}
-															className="w-full p-3 text-left text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-colors font-medium"
-														>
-															+ Create New Project
-														</button>
-													</div>
+									{selectedProject ? (
+										<div className="grid grid-cols-2 gap-4 text-sm">
+											<div>
+												<span className="text-gray-500 dark:text-gray-400">
+													Status:
+												</span>
+												<div className="flex items-center gap-2 mt-1">
+													<Badge
+														className={getStatusColor(selectedProject.status)}
+														variant="outline"
+													>
+														{formatStatus(selectedProject.status)}
+													</Badge>
 												</div>
 											</div>
-										)}
-									</div>
+										</div>
+									) : selectedClient ? (
+										<div className="text-center py-8 text-sm text-gray-500 dark:text-gray-400">
+											{projectOptions.length === 0
+												? "No projects available for this client"
+												: "Select a project above to view details"}
+										</div>
+									) : (
+										<div className="text-center py-8 text-sm text-gray-500 dark:text-gray-400">
+											Select a client to view project information
+										</div>
+									)}
 								</CardContent>
 							</Card>
-						)}
+						</div>
 
 						{/* Quote Details */}
 						<div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -430,37 +361,39 @@ export default function NewQuotePage() {
 
 									<div>
 										<label
-											htmlFor="quote-number"
-											className="block text-sm font-medium text-gray-900 dark:text-white mb-2"
-										>
-											Quote Number (Optional)
-										</label>
-										<Input
-											id="quote-number"
-											name="quote-number"
-											type="text"
-											placeholder="e.g., Q-2025-001"
-											value={quoteNumber}
-											onChange={(e) => setQuoteNumber(e.target.value)}
-											className="w-full h-11"
-										/>
-									</div>
-
-									<div>
-										<label
 											htmlFor="valid-until"
 											className="block text-sm font-medium text-gray-900 dark:text-white mb-2"
 										>
 											Valid Until (Optional)
 										</label>
-										<Input
-											id="valid-until"
-											name="valid-until"
-											type="date"
-											value={validUntil}
-											onChange={(e) => setValidUntil(e.target.value)}
-											className="w-full h-11"
-										/>
+										<Popover open={validUntilOpen} onOpenChange={setValidUntilOpen}>
+											<PopoverTrigger asChild>
+												<Button
+													intent="outline"
+													className="w-full justify-start text-left font-normal"
+												>
+													<CalendarIcon className="mr-2 h-4 w-4" />
+													{validUntil
+														? formatDisplayDate(validUntil)
+														: "Select valid until date"}
+												</Button>
+											</PopoverTrigger>
+											<PopoverContent
+												className="w-auto p-0 bg-white dark:bg-gray-950"
+												align="start"
+											>
+												<Calendar
+													mode="single"
+													selected={validUntil}
+													onSelect={(date) => {
+														setValidUntil(date);
+														setValidUntilOpen(false);
+													}}
+													disabled={isLoading}
+													className="!bg-white dark:!bg-gray-950"
+												/>
+											</PopoverContent>
+										</Popover>
 									</div>
 								</CardContent>
 							</Card>
@@ -536,11 +469,15 @@ export default function NewQuotePage() {
 			</div>
 
 			<StickyFormFooter
-				onCancel={handleSaveAsDraft}
-				onSave={handleCreateQuote}
-				cancelText="Save as Draft"
-				saveText="Create Quote"
-				isLoading={isLoading}
+				buttons={[
+					{
+						label: isLoading ? "Creating..." : "Create Quote",
+						onClick: handleCreateQuote,
+						intent: "primary",
+						isLoading,
+						position: "left",
+					},
+				]}
 			/>
 		</div>
 	);

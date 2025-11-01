@@ -4,10 +4,11 @@ import { useState, useMemo } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import ActivityItem from "./activity-item";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { ButtonGroup } from "@/components/ui/button-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent } from "@/components/ui/card";
 import { PaginationControls } from "@/components/ui/pagination";
+import { cn } from "@/lib/utils";
 
 // Sample activity data - this would typically come from props or a data source
 const activity = [
@@ -172,20 +173,56 @@ export default function ActivityFeed({
 						<h3 className="text-base font-semibold text-foreground">
 							Recent Activity
 						</h3>
-						<ToggleGroup
-							size="sm"
-							selectedKeys={new Set([selectedFilter])}
-							onSelectionChange={(keys) => {
-								const selectedKey = Array.from(keys)[0];
-								if (selectedKey) handleFilterChange(selectedKey as TimeFilter);
-							}}
-							className="bg-muted/60 dark:bg-muted/60 backdrop-blur-sm rounded-md p-0.5 border border-border/60 ring-1 ring-border/20"
-						>
-							<ToggleGroupItem id="1d">1d</ToggleGroupItem>
-							<ToggleGroupItem id="3d">3d</ToggleGroupItem>
-							<ToggleGroupItem id="7d">7d</ToggleGroupItem>
-							<ToggleGroupItem id="2w">2w</ToggleGroupItem>
-						</ToggleGroup>
+						<ButtonGroup>
+							<button
+								type="button"
+								onClick={() => handleFilterChange("1d")}
+								className={cn(
+									"inline-flex items-center gap-2 font-semibold transition-all duration-200 text-xs px-3 py-1.5 ring-1 shadow-sm hover:shadow-md backdrop-blur-sm",
+									selectedFilter === "1d"
+										? "text-primary hover:text-primary/80 bg-primary/10 hover:bg-primary/15 ring-primary/30 hover:ring-primary/40"
+										: "text-gray-600 hover:text-gray-700 bg-transparent hover:bg-gray-50 ring-transparent hover:ring-gray-200 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:bg-gray-800 dark:hover:ring-gray-700"
+								)}
+							>
+								1d
+							</button>
+							<button
+								type="button"
+								onClick={() => handleFilterChange("3d")}
+								className={cn(
+									"inline-flex items-center gap-2 font-semibold transition-all duration-200 text-xs px-3 py-1.5 ring-1 shadow-sm hover:shadow-md backdrop-blur-sm",
+									selectedFilter === "3d"
+										? "text-primary hover:text-primary/80 bg-primary/10 hover:bg-primary/15 ring-primary/30 hover:ring-primary/40"
+										: "text-gray-600 hover:text-gray-700 bg-transparent hover:bg-gray-50 ring-transparent hover:ring-gray-200 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:bg-gray-800 dark:hover:ring-gray-700"
+								)}
+							>
+								3d
+							</button>
+							<button
+								type="button"
+								onClick={() => handleFilterChange("7d")}
+								className={cn(
+									"inline-flex items-center gap-2 font-semibold transition-all duration-200 text-xs px-3 py-1.5 ring-1 shadow-sm hover:shadow-md backdrop-blur-sm",
+									selectedFilter === "7d"
+										? "text-primary hover:text-primary/80 bg-primary/10 hover:bg-primary/15 ring-primary/30 hover:ring-primary/40"
+										: "text-gray-600 hover:text-gray-700 bg-transparent hover:bg-gray-50 ring-transparent hover:ring-gray-200 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:bg-gray-800 dark:hover:ring-gray-700"
+								)}
+							>
+								7d
+							</button>
+							<button
+								type="button"
+								onClick={() => handleFilterChange("2w")}
+								className={cn(
+									"inline-flex items-center gap-2 font-semibold transition-all duration-200 text-xs px-3 py-1.5 ring-1 shadow-sm hover:shadow-md backdrop-blur-sm",
+									selectedFilter === "2w"
+										? "text-primary hover:text-primary/80 bg-primary/10 hover:bg-primary/15 ring-primary/30 hover:ring-primary/40"
+										: "text-gray-600 hover:text-gray-700 bg-transparent hover:bg-gray-50 ring-transparent hover:ring-gray-200 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:bg-gray-800 dark:hover:ring-gray-700"
+								)}
+							>
+								2w
+							</button>
+						</ButtonGroup>
 					</div>
 
 					{/* Compact List */}

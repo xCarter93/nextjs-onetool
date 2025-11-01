@@ -27,9 +27,8 @@ import {
 import ComboBox from "@/components/ui/combo-box";
 import { CalendarWidget } from "@/components/ui/calendar-widget";
 import { StickyFormFooter } from "@/components/shared/sticky-form-footer";
-import Announcement from "@/components/ui/announcement";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import type { Key } from "react-aria-components";
+import { ButtonGroup } from "@/components/ui/button-group";
+import { cn } from "@/lib/utils";
 import {
 	MagnifyingGlassIcon,
 	UserIcon,
@@ -313,13 +312,8 @@ export function ProjectViewEditForm({
 		}
 	};
 
-	const handleProjectTypeChange = (keys: Set<Key>) => {
-		if (keys.size === 0) {
-			form.setFieldValue("projectType", "one-off");
-			return;
-		}
-		const nextKey = keys.has("recurring") ? "recurring" : "one-off";
-		form.setFieldValue("projectType", nextKey);
+	const handleProjectTypeChange = (type: "one-off" | "recurring") => {
+		form.setFieldValue("projectType", type);
 	};
 
 	const clientOptions = useMemo(
@@ -413,37 +407,6 @@ export function ProjectViewEditForm({
 
 	return (
 		<>
-			<form.Subscribe
-				selector={(state) => state.values}
-				children={(formValues) => {
-					// Recalculate isDirty with current form values
-					const currentIsDirty =
-						(formValues.clientId || "") !==
-							(project.clientId?.toString() || "") ||
-						formValues.title !== project.title ||
-						(formValues.instructions || "") !== (project.instructions || "") ||
-						formValues.projectType !== project.projectType ||
-						(formValues.startDate
-							? formValues.startDate.getTime()
-							: undefined) !== (project.startDate || undefined) ||
-						(formValues.endDate ? formValues.endDate.getTime() : undefined) !==
-							(project.endDate || undefined) ||
-						(formValues.invoiceReminderEnabled || false) !==
-							(project.invoiceReminderEnabled || false) ||
-						(formValues.scheduleForLater || false) !==
-							(project.scheduleForLater || false);
-
-					return isEditing && currentIsDirty ? (
-						<Announcement
-							variant="warning"
-							className="mb-6 cursor-default"
-							disabled={true}
-						>
-							Unsaved changes - Save or cancel your changes
-						</Announcement>
-					) : null;
-				}}
-			/>
 
 			<div className="space-y-8">
 				{/* Client Information, Property Address & Contact Details */}
@@ -963,21 +926,42 @@ export function ProjectViewEditForm({
 							<form.Field
 								name="projectType"
 								children={(field) => (
-									<ToggleGroup
-										selectedKeys={new Set([field.state.value])}
-										onSelectionChange={handleProjectTypeChange}
-										selectionMode="single"
-										size="md"
-										className="w-fit"
-										isDisabled={!isEditing}
-									>
-										<ToggleGroupItem id="one-off">
+									<ButtonGroup>
+										<button
+											type="button"
+											onClick={() => {
+												if (isEditing) {
+													handleProjectTypeChange("one-off");
+												}
+											}}
+											disabled={!isEditing}
+											className={cn(
+												"inline-flex items-center gap-2 font-semibold transition-all duration-200 text-xs px-3 py-1.5 ring-1 shadow-sm hover:shadow-md backdrop-blur-sm",
+												field.state.value === "one-off"
+													? "text-primary hover:text-primary/80 bg-primary/10 hover:bg-primary/15 ring-primary/30 hover:ring-primary/40"
+													: "text-gray-600 hover:text-gray-700 bg-transparent hover:bg-gray-50 ring-transparent hover:ring-gray-200 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:bg-gray-800 dark:hover:ring-gray-700"
+											)}
+										>
 											One-off Project
-										</ToggleGroupItem>
-										<ToggleGroupItem id="recurring">
+										</button>
+										<button
+											type="button"
+											onClick={() => {
+												if (isEditing) {
+													handleProjectTypeChange("recurring");
+												}
+											}}
+											disabled={!isEditing}
+											className={cn(
+												"inline-flex items-center gap-2 font-semibold transition-all duration-200 text-xs px-3 py-1.5 ring-1 shadow-sm hover:shadow-md backdrop-blur-sm",
+												field.state.value === "recurring"
+													? "text-primary hover:text-primary/80 bg-primary/10 hover:bg-primary/15 ring-primary/30 hover:ring-primary/40"
+													: "text-gray-600 hover:text-gray-700 bg-transparent hover:bg-gray-50 ring-transparent hover:ring-gray-200 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:bg-gray-800 dark:hover:ring-gray-700"
+											)}
+										>
 											Recurring Project
-										</ToggleGroupItem>
-									</ToggleGroup>
+										</button>
+									</ButtonGroup>
 								)}
 							/>
 						</div>
@@ -1116,7 +1100,7 @@ export function ProjectViewEditForm({
 								handleCalendarNavigation={handleCalendarNavigation}
 								handleDateClick={handleDateClick}
 								formatDisplayDate={formatDisplayDate}
-								variant="detailed"
+								variant="default"
 							/>
 						</div>
 					</CardContent>
@@ -1314,6 +1298,8 @@ export function ProjectViewEditForm({
 						<StickyFormFooter
 							buttons={getFooterButtons(currentIsDirty)}
 							fullWidth
+							hasUnsavedChanges={currentIsDirty}
+							isEditing={isEditing}
 						/>
 					);
 				}}

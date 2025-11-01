@@ -34,8 +34,8 @@ import type { Id } from "../../../../../convex/_generated/dataModel";
 import { MagnifyingGlassIcon, UserIcon } from "@heroicons/react/16/solid";
 import { MapPinIcon } from "@heroicons/react/24/outline";
 import ComboBox from "@/components/ui/combo-box";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import type { Key } from "react-aria-components";
+import { ButtonGroup } from "@/components/ui/button-group";
+import { cn } from "@/lib/utils";
 
 type ClientId = Id<"clients">;
 type ClientContactId = Id<"clientContacts">;
@@ -119,8 +119,6 @@ const formatDisplayDate = (date?: Date | number) => {
 	});
 };
 
-const ONE_OFF_KEY: Key = "one-off";
-const RECURRING_KEY: Key = "recurring";
 
 const getStatusBadgeClass = (status?: string) => {
 	switch (status) {
@@ -283,9 +281,7 @@ export function ProjectOnboardingForm({
 		return date;
 	});
 
-	const [projectTypeKeys, setProjectTypeKeys] = React.useState<Set<Key>>(
-		new Set([ONE_OFF_KEY])
-	);
+	const [projectType, setProjectType] = React.useState<"one-off" | "recurring">("one-off");
 
 	const clientsResult = useQuery(api.clients.list, {});
 	const clients = useMemo(() => clientsResult ?? [], [clientsResult]);
@@ -486,18 +482,9 @@ export function ProjectOnboardingForm({
 		}
 	};
 
-	const handleProjectTypeChange = (keys: Set<Key>) => {
-		if (keys.size === 0) {
-			setProjectTypeKeys(new Set([ONE_OFF_KEY]));
-			form.setFieldValue("projectType", "one-off");
-			return;
-		}
-		const nextKey = keys.has(RECURRING_KEY) ? RECURRING_KEY : ONE_OFF_KEY;
-		setProjectTypeKeys(new Set([nextKey]));
-		form.setFieldValue(
-			"projectType",
-			nextKey === RECURRING_KEY ? "recurring" : "one-off"
-		);
+	const handleProjectTypeChange = (type: "one-off" | "recurring") => {
+		setProjectType(type);
+		form.setFieldValue("projectType", type);
 	};
 
 	const handleCalendarNavigation = (direction: "prev" | "next") => {
@@ -1021,20 +1008,32 @@ export function ProjectOnboardingForm({
 										<label className="block text-sm font-medium text-gray-900 dark:text-white mb-3">
 											Project Type
 										</label>
-										<ToggleGroup
-											selectedKeys={projectTypeKeys}
-											onSelectionChange={handleProjectTypeChange}
-											selectionMode="single"
-											size="md"
-											className="w-fit"
-										>
-											<ToggleGroupItem id="one-off">
+										<ButtonGroup>
+											<button
+												type="button"
+												onClick={() => handleProjectTypeChange("one-off")}
+												className={cn(
+													"inline-flex items-center gap-2 font-semibold transition-all duration-200 text-xs px-3 py-1.5 ring-1 shadow-sm hover:shadow-md backdrop-blur-sm",
+													projectType === "one-off"
+														? "text-primary hover:text-primary/80 bg-primary/10 hover:bg-primary/15 ring-primary/30 hover:ring-primary/40"
+														: "text-gray-600 hover:text-gray-700 bg-transparent hover:bg-gray-50 ring-transparent hover:ring-gray-200 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:bg-gray-800 dark:hover:ring-gray-700"
+												)}
+											>
 												One-off Project
-											</ToggleGroupItem>
-											<ToggleGroupItem id="recurring">
+											</button>
+											<button
+												type="button"
+												onClick={() => handleProjectTypeChange("recurring")}
+												className={cn(
+													"inline-flex items-center gap-2 font-semibold transition-all duration-200 text-xs px-3 py-1.5 ring-1 shadow-sm hover:shadow-md backdrop-blur-sm",
+													projectType === "recurring"
+														? "text-primary hover:text-primary/80 bg-primary/10 hover:bg-primary/15 ring-primary/30 hover:ring-primary/40"
+														: "text-gray-600 hover:text-gray-700 bg-transparent hover:bg-gray-50 ring-transparent hover:ring-gray-200 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:bg-gray-800 dark:hover:ring-gray-700"
+												)}
+											>
 												Recurring Project
-											</ToggleGroupItem>
-										</ToggleGroup>
+											</button>
+										</ButtonGroup>
 									</div>
 
 									<div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -1134,18 +1133,11 @@ export function ProjectOnboardingForm({
 			<StickyFormFooter
 				buttons={[
 					{
-						label: isLoading ? "Saving..." : "Save as Draft",
-						onClick: () => form.handleSubmit(),
-						intent: "outline",
-						disabled: isLoading,
-						position: "left",
-					},
-					{
 						label: isLoading ? "Creating..." : "Create Project",
 						onClick: () => form.handleSubmit(),
 						intent: "primary",
 						isLoading,
-						position: "right",
+						position: "left",
 					},
 				]}
 			/>
