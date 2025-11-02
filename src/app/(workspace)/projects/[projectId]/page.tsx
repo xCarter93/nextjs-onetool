@@ -123,7 +123,7 @@ export default function ProjectDetailPage() {
 		}
 	};
 
-	const handleDeleteProject = () => {
+	const handleDeleteProject = async () => {
 		setIsDeleteModalOpen(true);
 	};
 

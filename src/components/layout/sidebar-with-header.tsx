@@ -22,7 +22,7 @@ export function SidebarWithHeader({ children }: SidebarWithHeaderProps) {
 			<SidebarInset>
 				{/* Modern Header with Enhanced Design */}
 				<motion.header
-					className="sticky top-0 z-50 isolate overflow-hidden backdrop-blur-xl bg-background/80 dark:bg-background/80 border-b border-border/40 dark:border-border/20 transition-all duration-200"
+					className="sticky top-0 z-30 isolate overflow-hidden backdrop-blur-xl bg-background/80 dark:bg-background/80 border-b border-border/40 dark:border-border/20 transition-all duration-200"
 					initial={{ opacity: 0, y: -10 }}
 					animate={{ opacity: 1, y: 0 }}
 					transition={{ duration: 0.3 }}

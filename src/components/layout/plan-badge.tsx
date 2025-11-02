@@ -45,9 +45,9 @@ export function PlanBadge() {
 
 	const planName = hasPremiumAccess ? "Business" : "Free";
 
-	const handleUpgrade = () => {
+	const handleManageSubscription = () => {
 		setOpen(false);
-		router.push("/pricing");
+		router.push("/subscription");
 	};
 
 	return (
@@ -143,18 +143,6 @@ export function PlanBadge() {
 								className="h-2"
 							/>
 						</div>
-
-						{/* Upgrade CTA */}
-						<StyledButton
-							onClick={handleUpgrade}
-							intent="primary"
-							size="md"
-							icon={<ArrowUpRight className="h-4 w-4" />}
-							className="w-full justify-center"
-							showArrow={false}
-						>
-							Upgrade to Business
-						</StyledButton>
 					</div>
 				)}
 
@@ -210,18 +198,17 @@ export function PlanBadge() {
 								<span>AI import</span>
 							</div>
 						</div>
+					</div>
+				)}
 
-						{/* Manage Subscription Button */}
+				{/* Manage Subscription Button - Shared for all users with organization */}
+				{hasOrganization && (
+					<div className="p-4 border-t border-border bg-background">
 						<StyledButton
-							onClick={() => {
-								// Link to Clerk account portal
-								window.open(
-									"https://accounts.clerk.com/user/billing",
-									"_blank"
-								);
-							}}
-							intent="outline"
+							onClick={handleManageSubscription}
+							intent={hasPremiumAccess ? "outline" : "primary"}
 							size="md"
+							icon={<ArrowUpRight className="h-4 w-4" />}
 							className="w-full justify-center"
 							showArrow={false}
 						>

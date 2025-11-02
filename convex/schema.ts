@@ -9,6 +9,22 @@ export default defineSchema({
 		image: v.string(),
 		lastSignedInDate: v.optional(v.number()),
 		externalId: v.string(), // Clerk user ID
+
+		// Clerk Billing & Subscription (user-level)
+		clerkSubscriptionId: v.optional(v.string()), // Clerk subscription ID
+		clerkPlanId: v.optional(v.string()), // Clerk plan identifier
+		subscriptionStatus: v.optional(
+			v.union(
+				v.literal("active"),
+				v.literal("past_due"),
+				v.literal("canceled"),
+				v.literal("incomplete"),
+				v.literal("incomplete_expired"),
+				v.literal("trialing"),
+				v.literal("unpaid")
+			)
+		),
+		billingCycleStart: v.optional(v.number()), // Timestamp of current billing cycle start
 	})
 		.index("by_external_id", ["externalId"])
 		.index("by_email", ["email"]),

@@ -53,7 +53,6 @@ import DeleteConfirmationModal from "@/components/ui/delete-confirmation-modal";
 import { StyledButton } from "@/components/ui/styled/styled-button";
 import { CsvImportModal } from "@/app/(workspace)/clients/components/csv-import-modal";
 import { useCanPerformAction } from "@/hooks/use-feature-access";
-import { AlertCircle } from "lucide-react";
 
 type Client = {
 	id: string;
@@ -220,11 +219,10 @@ export default function ClientsPage() {
 
 	const handleAddClient = () => {
 		if (!canPerform) {
-			toast.toast({
-				title: "Upgrade Required",
-				description: reason || "You've reached your client limit",
-				variant: "destructive",
-			});
+			toast.error(
+				"Upgrade Required",
+				reason || "You've reached your client limit"
+			);
 			return;
 		}
 		router.push("/clients/new");

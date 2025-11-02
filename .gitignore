@@ -46,3 +46,6 @@ PRD.md
 
 /.claude
 /.cursor
+
+# Debug routes (should not be in production)
+src/app/(workspace)/settings/debug/

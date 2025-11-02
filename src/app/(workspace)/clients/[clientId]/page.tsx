@@ -6,7 +6,6 @@ import { api } from "../../../../../convex/_generated/api";
 import { Id, Doc } from "../../../../../convex/_generated/dataModel";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -227,7 +226,8 @@ export default function ClientDetailPage() {
 			form.smsOptIn !== client.smsOptIn ||
 			(form.priorityLevel || "") !== (client.priorityLevel || "") ||
 			(form.projectDimensions || "") !== (client.projectDimensions || "") ||
-			(form.communicationPreference || "") !== (client.communicationPreference || "") ||
+			(form.communicationPreference || "") !==
+				(client.communicationPreference || "") ||
 			(form.tags || "") !== (client.tags || []).join(", ") ||
 			(form.notes || "") !== (client.notes || "")
 		);
@@ -255,8 +255,12 @@ export default function ClientDetailPage() {
 			updates.priorityLevel = form.priorityLevel || undefined;
 		if ((form.projectDimensions || "") !== (client.projectDimensions || ""))
 			updates.projectDimensions = form.projectDimensions || undefined;
-		if ((form.communicationPreference || "") !== (client.communicationPreference || ""))
-			updates.communicationPreference = form.communicationPreference || undefined;
+		if (
+			(form.communicationPreference || "") !==
+			(client.communicationPreference || "")
+		)
+			updates.communicationPreference =
+				form.communicationPreference || undefined;
 		if ((form.tags || "") !== (client.tags || []).join(", "))
 			updates.tags = form.tags
 				? form.tags.split(/,\s*/).filter(Boolean)
@@ -390,7 +394,7 @@ export default function ClientDetailPage() {
 								<div className="flex items-center justify-center w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex-shrink-0">
 									<BuildingOffice2Icon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
 								</div>
-									<div className="flex-1 min-w-0">
+								<div className="flex-1 min-w-0">
 									<div className="flex items-center gap-3 flex-wrap">
 										<h1 className="text-3xl font-bold text-gray-900 dark:text-white">
 											{client.companyName}
@@ -873,7 +877,6 @@ export default function ClientDetailPage() {
 								</Popover>
 							</div>
 						</div>
-
 					</div>
 
 					{/* Two Column Layout */}
@@ -883,7 +886,9 @@ export default function ClientDetailPage() {
 							{/* Client Information Section */}
 							<StyledCard>
 								<StyledCardHeader>
-									<StyledCardTitle className="text-xl">Client Information</StyledCardTitle>
+									<StyledCardTitle className="text-xl">
+										Client Information
+									</StyledCardTitle>
 								</StyledCardHeader>
 								<StyledCardContent>
 									<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -969,7 +974,6 @@ export default function ClientDetailPage() {
 												</p>
 											</div>
 										)}
-
 									</div>
 
 									{/* Company Description - Full Width */}
@@ -1022,255 +1026,257 @@ export default function ClientDetailPage() {
 							{/* Overview Section with Tabs */}
 							<StyledCard>
 								<StyledCardHeader>
-									<StyledCardTitle className="text-xl">Overview</StyledCardTitle>
+									<StyledCardTitle className="text-xl">
+										Overview
+									</StyledCardTitle>
 								</StyledCardHeader>
 								<StyledCardContent>
-										<Tabs defaultValue="projects" className="w-full">
-											<TabsList className="grid w-full grid-cols-4">
-												<TabsTrigger value="projects">
-													Projects ({projects?.length || 0})
-												</TabsTrigger>
-												<TabsTrigger value="quotes">
-													Quotes ({quotes?.length || 0})
-												</TabsTrigger>
-												<TabsTrigger value="invoices">
-													Invoices ({invoices?.length || 0})
-												</TabsTrigger>
-												<TabsTrigger value="tasks">
-													Tasks ({clientTasks?.length || 0})
-												</TabsTrigger>
-											</TabsList>
-											<TabsContent value="projects" className="mt-6">
-												{projects && projects.length > 0 ? (
-													<div className="space-y-4">
-														{projects.map((project: Doc<"projects">) => (
-															<div
-																key={project._id}
-																className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg"
-															>
-																<div className="flex items-start justify-between">
-																	<div>
-																		<h4 className="font-medium text-gray-900 dark:text-white">
-																			{project.title}
-																		</h4>
-																		{project.description && (
-																			<p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-																				{project.description}
-																			</p>
-																		)}
-																	</div>
-																	<Badge
-																		variant="outline"
-																		className={`${project.status === "completed" ? "bg-green-50 text-green-700 border-green-200" : project.status === "in-progress" ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-gray-50 text-gray-700 border-gray-200"}`}
-																	>
-																		{formatStatus(project.status)}
-																	</Badge>
-																</div>
-															</div>
-														))}
-													</div>
-												) : (
-													<Empty>
-														<EmptyHeader>
-															<EmptyMedia variant="icon">
-																<FolderOpen />
-															</EmptyMedia>
-															<EmptyTitle>No projects</EmptyTitle>
-															<EmptyDescription>
-																No projects have been created for this client
-																yet.
-															</EmptyDescription>
-														</EmptyHeader>
-													</Empty>
-												)}
-											</TabsContent>
-											<TabsContent value="quotes" className="mt-6">
-												{quotes && quotes.length > 0 ? (
-													<div className="space-y-4">
-														{quotes.map((quote: Doc<"quotes">) => (
-															<div
-																key={quote._id}
-																className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg"
-															>
-																<div className="flex items-start justify-between">
-																	<div>
-																		<h4 className="font-medium text-gray-900 dark:text-white">
-																			Quote #{quote.quoteNumber}
-																		</h4>
-																		{quote.title && (
-																			<p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-																				{quote.title}
-																			</p>
-																		)}
-																	</div>
-																	<div className="text-right">
-																		<Badge
-																			variant="outline"
-																			className={`${
-																				quote.status === "approved"
-																					? "bg-green-50 text-green-700 border-green-200"
-																					: quote.status === "sent"
-																						? "bg-yellow-50 text-yellow-700 border-yellow-200"
-																						: "bg-gray-50 text-gray-700 border-gray-200"
-																			}`}
-																		>
-																			{formatStatus(quote.status)}
-																		</Badge>
-																		<p className="text-sm font-medium text-gray-900 dark:text-white mt-1">
-																			${quote.total.toLocaleString()}
+									<Tabs defaultValue="projects" className="w-full">
+										<TabsList className="grid w-full grid-cols-4">
+											<TabsTrigger value="projects">
+												Projects ({projects?.length || 0})
+											</TabsTrigger>
+											<TabsTrigger value="quotes">
+												Quotes ({quotes?.length || 0})
+											</TabsTrigger>
+											<TabsTrigger value="invoices">
+												Invoices ({invoices?.length || 0})
+											</TabsTrigger>
+											<TabsTrigger value="tasks">
+												Tasks ({clientTasks?.length || 0})
+											</TabsTrigger>
+										</TabsList>
+										<TabsContent value="projects" className="mt-6">
+											{projects && projects.length > 0 ? (
+												<div className="space-y-4">
+													{projects.map((project: Doc<"projects">) => (
+														<div
+															key={project._id}
+															className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg"
+														>
+															<div className="flex items-start justify-between">
+																<div>
+																	<h4 className="font-medium text-gray-900 dark:text-white">
+																		{project.title}
+																	</h4>
+																	{project.description && (
+																		<p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+																			{project.description}
 																		</p>
-																	</div>
+																	)}
 																</div>
+																<Badge
+																	variant="outline"
+																	className={`${project.status === "completed" ? "bg-green-50 text-green-700 border-green-200" : project.status === "in-progress" ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-gray-50 text-gray-700 border-gray-200"}`}
+																>
+																	{formatStatus(project.status)}
+																</Badge>
 															</div>
-														))}
-													</div>
-												) : (
-													<Empty>
-														<EmptyHeader>
-															<EmptyMedia variant="icon">
-																<Receipt />
-															</EmptyMedia>
-															<EmptyTitle>No quotes</EmptyTitle>
-															<EmptyDescription>
-																No quotes have been created for this client yet.
-															</EmptyDescription>
-														</EmptyHeader>
-													</Empty>
-												)}
-											</TabsContent>
-											<TabsContent value="invoices" className="mt-6">
-												{invoices && invoices.length > 0 ? (
-													<div className="space-y-4">
-														{invoices.map((invoice: Doc<"invoices">) => (
-															<div
-																key={invoice._id}
-																className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg"
-															>
-																<div className="flex items-start justify-between">
-																	<div>
-																		<h4 className="font-medium text-gray-900 dark:text-white">
-																			Invoice #{invoice.invoiceNumber}
-																		</h4>
-																	</div>
-																	<div className="text-right">
-																		<Badge
-																			variant="outline"
-																			className={`${invoice.status === "paid" ? "bg-green-50 text-green-700 border-green-200" : invoice.status === "sent" ? "bg-yellow-50 text-yellow-700 border-yellow-200" : "bg-red-50 text-red-700 border-red-200"}`}
-																		>
-																			{formatStatus(invoice.status)}
-																		</Badge>
-																		<p className="text-sm font-medium text-gray-900 dark:text-white mt-1">
-																			${invoice.total.toLocaleString()}
+														</div>
+													))}
+												</div>
+											) : (
+												<Empty>
+													<EmptyHeader>
+														<EmptyMedia variant="icon">
+															<FolderOpen />
+														</EmptyMedia>
+														<EmptyTitle>No projects</EmptyTitle>
+														<EmptyDescription>
+															No projects have been created for this client yet.
+														</EmptyDescription>
+													</EmptyHeader>
+												</Empty>
+											)}
+										</TabsContent>
+										<TabsContent value="quotes" className="mt-6">
+											{quotes && quotes.length > 0 ? (
+												<div className="space-y-4">
+													{quotes.map((quote: Doc<"quotes">) => (
+														<div
+															key={quote._id}
+															className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg"
+														>
+															<div className="flex items-start justify-between">
+																<div>
+																	<h4 className="font-medium text-gray-900 dark:text-white">
+																		Quote #{quote.quoteNumber}
+																	</h4>
+																	{quote.title && (
+																		<p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+																			{quote.title}
 																		</p>
-																	</div>
+																	)}
 																</div>
-															</div>
-														))}
-													</div>
-												) : (
-													<Empty>
-														<EmptyHeader>
-															<EmptyMedia variant="icon">
-																<FileText />
-															</EmptyMedia>
-															<EmptyTitle>No invoices</EmptyTitle>
-															<EmptyDescription>
-																This client hasn&apos;t been billed yet.
-															</EmptyDescription>
-														</EmptyHeader>
-													</Empty>
-												)}
-											</TabsContent>
-											<TabsContent value="tasks" className="mt-6">
-												{clientTasks && clientTasks.length > 0 ? (
-													<div className="space-y-4">
-														{clientTasks.map((task: Doc<"tasks">) => (
-															<div
-																key={task._id}
-																className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg"
-															>
-																<div className="flex items-start justify-between">
-																	<div className="flex-1">
-																		<h4 className="font-medium text-gray-900 dark:text-white">
-																			{task.title}
-																		</h4>
-																		{task.description && (
-																			<p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-																				{task.description}
-																			</p>
-																		)}
-																		<p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-																			Date:{" "}
-																			{new Date(task.date).toLocaleDateString()}
-																			{task.startTime && ` ${task.startTime}`}
-																		</p>
-																	</div>
+																<div className="text-right">
 																	<Badge
 																		variant="outline"
 																		className={`${
-																			task.status === "completed"
+																			quote.status === "approved"
 																				? "bg-green-50 text-green-700 border-green-200"
-																				: task.status === "in-progress"
-																					? "bg-blue-50 text-blue-700 border-blue-200"
+																				: quote.status === "sent"
+																					? "bg-yellow-50 text-yellow-700 border-yellow-200"
 																					: "bg-gray-50 text-gray-700 border-gray-200"
 																		}`}
 																	>
-																		{formatStatus(task.status)}
+																		{formatStatus(quote.status)}
 																	</Badge>
+																	<p className="text-sm font-medium text-gray-900 dark:text-white mt-1">
+																		${quote.total.toLocaleString()}
+																	</p>
 																</div>
 															</div>
-														))}
-													</div>
-												) : (
-													<Empty>
-														<EmptyHeader>
-															<EmptyMedia variant="icon">
-																<ClipboardList />
-															</EmptyMedia>
-															<EmptyTitle>No tasks</EmptyTitle>
-															<EmptyDescription>
-																No tasks have been scheduled for this client
-																yet.
-															</EmptyDescription>
-														</EmptyHeader>
-													</Empty>
-												)}
-											</TabsContent>
-										</Tabs>
+														</div>
+													))}
+												</div>
+											) : (
+												<Empty>
+													<EmptyHeader>
+														<EmptyMedia variant="icon">
+															<Receipt />
+														</EmptyMedia>
+														<EmptyTitle>No quotes</EmptyTitle>
+														<EmptyDescription>
+															No quotes have been created for this client yet.
+														</EmptyDescription>
+													</EmptyHeader>
+												</Empty>
+											)}
+										</TabsContent>
+										<TabsContent value="invoices" className="mt-6">
+											{invoices && invoices.length > 0 ? (
+												<div className="space-y-4">
+													{invoices.map((invoice: Doc<"invoices">) => (
+														<div
+															key={invoice._id}
+															className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg"
+														>
+															<div className="flex items-start justify-between">
+																<div>
+																	<h4 className="font-medium text-gray-900 dark:text-white">
+																		Invoice #{invoice.invoiceNumber}
+																	</h4>
+																</div>
+																<div className="text-right">
+																	<Badge
+																		variant="outline"
+																		className={`${invoice.status === "paid" ? "bg-green-50 text-green-700 border-green-200" : invoice.status === "sent" ? "bg-yellow-50 text-yellow-700 border-yellow-200" : "bg-red-50 text-red-700 border-red-200"}`}
+																	>
+																		{formatStatus(invoice.status)}
+																	</Badge>
+																	<p className="text-sm font-medium text-gray-900 dark:text-white mt-1">
+																		${invoice.total.toLocaleString()}
+																	</p>
+																</div>
+															</div>
+														</div>
+													))}
+												</div>
+											) : (
+												<Empty>
+													<EmptyHeader>
+														<EmptyMedia variant="icon">
+															<FileText />
+														</EmptyMedia>
+														<EmptyTitle>No invoices</EmptyTitle>
+														<EmptyDescription>
+															This client hasn&apos;t been billed yet.
+														</EmptyDescription>
+													</EmptyHeader>
+												</Empty>
+											)}
+										</TabsContent>
+										<TabsContent value="tasks" className="mt-6">
+											{clientTasks && clientTasks.length > 0 ? (
+												<div className="space-y-4">
+													{clientTasks.map((task: Doc<"tasks">) => (
+														<div
+															key={task._id}
+															className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg"
+														>
+															<div className="flex items-start justify-between">
+																<div className="flex-1">
+																	<h4 className="font-medium text-gray-900 dark:text-white">
+																		{task.title}
+																	</h4>
+																	{task.description && (
+																		<p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+																			{task.description}
+																		</p>
+																	)}
+																	<p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+																		Date:{" "}
+																		{new Date(task.date).toLocaleDateString()}
+																		{task.startTime && ` ${task.startTime}`}
+																	</p>
+																</div>
+																<Badge
+																	variant="outline"
+																	className={`${
+																		task.status === "completed"
+																			? "bg-green-50 text-green-700 border-green-200"
+																			: task.status === "in-progress"
+																				? "bg-blue-50 text-blue-700 border-blue-200"
+																				: "bg-gray-50 text-gray-700 border-gray-200"
+																	}`}
+																>
+																	{formatStatus(task.status)}
+																</Badge>
+															</div>
+														</div>
+													))}
+												</div>
+											) : (
+												<Empty>
+													<EmptyHeader>
+														<EmptyMedia variant="icon">
+															<ClipboardList />
+														</EmptyMedia>
+														<EmptyTitle>No tasks</EmptyTitle>
+														<EmptyDescription>
+															No tasks have been scheduled for this client yet.
+														</EmptyDescription>
+													</EmptyHeader>
+												</Empty>
+											)}
+										</TabsContent>
+									</Tabs>
 								</StyledCardContent>
 							</StyledCard>
 							{/* Client Notes Card (moved under overview) */}
 							<StyledCard>
 								<StyledCardHeader>
-									<StyledCardTitle className="text-lg">Client notes</StyledCardTitle>
+									<StyledCardTitle className="text-lg">
+										Client notes
+									</StyledCardTitle>
 									<p className="text-sm text-gray-600 dark:text-gray-400">
 										Internal notes visible only to your team
 									</p>
 								</StyledCardHeader>
 								<StyledCardContent>
-										{isEditing ? (
-											<textarea
-												className="w-full min-h-[100px] px-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-md text-gray-900 dark:text-white"
-												value={form.notes}
-												onChange={(e) =>
-													setForm((f) => ({ ...f, notes: e.target.value }))
-												}
-											/>
-										) : client.notes ? (
-											<div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
-												<p className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">
-													{client.notes}
-												</p>
-											</div>
-										) : (
-											<div className="text-center py-6">
-												<p className="text-sm text-gray-600 dark:text-gray-400 italic">
-													No notes added for this client yet
-												</p>
-											</div>
-										)}
-									</StyledCardContent>
-								</StyledCard>
+									{isEditing ? (
+										<textarea
+											className="w-full min-h-[100px] px-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-md text-gray-900 dark:text-white"
+											value={form.notes}
+											onChange={(e) =>
+												setForm((f) => ({ ...f, notes: e.target.value }))
+											}
+										/>
+									) : client.notes ? (
+										<div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
+											<p className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">
+												{client.notes}
+											</p>
+										</div>
+									) : (
+										<div className="text-center py-6">
+											<p className="text-sm text-gray-600 dark:text-gray-400 italic">
+												No notes added for this client yet
+											</p>
+										</div>
+									)}
+								</StyledCardContent>
+							</StyledCard>
 						</div>
 
 						{/* Contact Info Sidebar - Right Column */}
@@ -1279,7 +1285,9 @@ export default function ClientDetailPage() {
 								{/* Contact Info Card */}
 								<StyledCard>
 									<StyledCardHeader>
-										<StyledCardTitle className="text-lg">Contact Info</StyledCardTitle>
+										<StyledCardTitle className="text-lg">
+											Contact Info
+										</StyledCardTitle>
 									</StyledCardHeader>
 									<StyledCardContent className="space-y-4">
 										{primaryContact ? (
@@ -1346,7 +1354,11 @@ export default function ClientDetailPage() {
 														onValueChange={(value) =>
 															setForm((prev) => ({
 																...prev,
-																communicationPreference: value as "email" | "phone" | "both" | "",
+																communicationPreference: value as
+																	| "email"
+																	| "phone"
+																	| "both"
+																	| "",
 															}))
 														}
 													>
@@ -1355,15 +1367,21 @@ export default function ClientDetailPage() {
 														</StyledSelectTrigger>
 														<StyledSelectContent>
 															<SelectItem value="email">Email only</SelectItem>
-															<SelectItem value="phone">Phone calls for urgent matters</SelectItem>
-															<SelectItem value="both">Both email and phone</SelectItem>
+															<SelectItem value="phone">
+																Phone calls for urgent matters
+															</SelectItem>
+															<SelectItem value="both">
+																Both email and phone
+															</SelectItem>
 														</StyledSelectContent>
 													</StyledSelect>
 												</div>
 											) : (
 												<span className="text-sm text-gray-900 dark:text-white">
 													{client.communicationPreference
-														? formatCommunicationPreference(client.communicationPreference)
+														? formatCommunicationPreference(
+																client.communicationPreference
+															)
 														: "Not specified"}
 												</span>
 											)}
@@ -1443,10 +1461,7 @@ export default function ClientDetailPage() {
 										<StyledCardContent>
 											<div className="space-y-2">
 												{client.servicesNeeded.map((service, index) => (
-													<div
-														key={index}
-														className="flex items-center gap-2"
-													>
+													<div key={index} className="flex items-center gap-2">
 														<div className="w-2 h-2 bg-blue-500 rounded-full"></div>
 														<span className="text-sm text-gray-900 dark:text-white">
 															{service}
@@ -1461,7 +1476,9 @@ export default function ClientDetailPage() {
 								{/* Billing History */}
 								<StyledCard>
 									<StyledCardHeader className="flex flex-row items-center justify-between">
-										<StyledCardTitle className="text-lg">Billing summary</StyledCardTitle>
+										<StyledCardTitle className="text-lg">
+											Billing summary
+										</StyledCardTitle>
 										<Button
 											intent="outline"
 											size="sm"
@@ -1477,68 +1494,68 @@ export default function ClientDetailPage() {
 										</Button>
 									</StyledCardHeader>
 									<StyledCardContent className="space-y-4">
-											{invoices && invoices.length > 0 ? (
-												<>
-													<div className="space-y-3">
-														<div className="flex justify-between">
-															<span className="text-sm text-gray-600 dark:text-gray-400">
-																Total invoices
-															</span>
-															<span className="text-sm font-medium text-gray-900 dark:text-white">
-																{invoices.length}
-															</span>
-														</div>
-														<div className="flex justify-between">
-															<span className="text-sm text-gray-600 dark:text-gray-400">
-																Total billed
-															</span>
-															<span className="text-sm font-medium text-gray-900 dark:text-white">
-																$
-																{invoices
-																	.reduce(
-																		(sum: number, inv: Doc<"invoices">) =>
-																			sum + inv.total,
-																		0
-																	)
-																	.toLocaleString()}
-															</span>
-														</div>
-														<div className="flex justify-between">
-															<span className="text-sm text-gray-600 dark:text-gray-400">
-																Outstanding
-															</span>
-															<span className="text-sm font-medium text-gray-900 dark:text-white">
-																$
-																{invoices
-																	.filter(
-																		(inv: Doc<"invoices">) =>
-																			inv.status !== "paid"
-																	)
-																	.reduce(
-																		(sum: number, inv: Doc<"invoices">) =>
-																			sum + inv.total,
-																		0
-																	)
-																	.toLocaleString()}
-															</span>
-														</div>
+										{invoices && invoices.length > 0 ? (
+											<>
+												<div className="space-y-3">
+													<div className="flex justify-between">
+														<span className="text-sm text-gray-600 dark:text-gray-400">
+															Total invoices
+														</span>
+														<span className="text-sm font-medium text-gray-900 dark:text-white">
+															{invoices.length}
+														</span>
 													</div>
-												</>
-											) : (
-												<div className="flex flex-col items-center text-center py-6">
-													<div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center mb-3">
-														<EnvelopeIcon className="h-6 w-6 text-gray-400" />
+													<div className="flex justify-between">
+														<span className="text-sm text-gray-600 dark:text-gray-400">
+															Total billed
+														</span>
+														<span className="text-sm font-medium text-gray-900 dark:text-white">
+															$
+															{invoices
+																.reduce(
+																	(sum: number, inv: Doc<"invoices">) =>
+																		sum + inv.total,
+																	0
+																)
+																.toLocaleString()}
+														</span>
 													</div>
-													<h4 className="font-medium text-gray-900 dark:text-white mb-1">
-														No billing history
-													</h4>
-													<p className="text-sm text-gray-600 dark:text-gray-400">
-														This client hasn&apos;t been billed yet
-													</p>
+													<div className="flex justify-between">
+														<span className="text-sm text-gray-600 dark:text-gray-400">
+															Outstanding
+														</span>
+														<span className="text-sm font-medium text-gray-900 dark:text-white">
+															$
+															{invoices
+																.filter(
+																	(inv: Doc<"invoices">) =>
+																		inv.status !== "paid"
+																)
+																.reduce(
+																	(sum: number, inv: Doc<"invoices">) =>
+																		sum + inv.total,
+																	0
+																)
+																.toLocaleString()}
+														</span>
+													</div>
 												</div>
-											)}
-										</StyledCardContent>
-									</StyledCard>
+											</>
+										) : (
+											<div className="flex flex-col items-center text-center py-6">
+												<div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center mb-3">
+													<EnvelopeIcon className="h-6 w-6 text-gray-400" />
+												</div>
+												<h4 className="font-medium text-gray-900 dark:text-white mb-1">
+													No billing history
+												</h4>
+												<p className="text-sm text-gray-600 dark:text-gray-400">
+													This client hasn&apos;t been billed yet
+												</p>
+											</div>
+										)}
+									</StyledCardContent>
+								</StyledCard>
 							</div>
 						</div>
 					</div>

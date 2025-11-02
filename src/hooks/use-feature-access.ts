@@ -40,7 +40,7 @@ export function useFeatureAccess(): FeatureAccess {
 
 	// 2. Check if user has the business plan
 	const hasPremiumViaPlan = has
-		? has({ plan: "onetool_business_plan" })
+		? has({ plan: "onetool_business_plan_org" })
 		: false;
 
 	// User has premium access if EITHER is true

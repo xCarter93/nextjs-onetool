@@ -13,12 +13,14 @@ import { v } from "convex/values";
 export const handlePaymentAttemptCreated = internalMutation({
 	args: {
 		paymentAttemptId: v.string(),
-		organizationId: v.optional(v.string()),
 		userId: v.optional(v.string()),
 		amount: v.optional(v.number()),
 	},
 	handler: async (ctx, args) => {
-		console.log("Payment attempt created:", args.paymentAttemptId);
+		console.log("Payment attempt created:", {
+			paymentAttemptId: args.paymentAttemptId,
+			userId: args.userId,
+		});
 
 		// Log the payment attempt - you could store this in a payments table if needed
 		// For now, we just log it
@@ -34,13 +36,13 @@ export const handlePaymentAttemptUpdated = internalMutation({
 	args: {
 		paymentAttemptId: v.string(),
 		status: v.optional(v.string()),
-		organizationId: v.optional(v.string()),
 		userId: v.optional(v.string()),
 	},
 	handler: async (ctx, args) => {
 		console.log("Payment attempt updated:", {
 			id: args.paymentAttemptId,
 			status: args.status,
+			userId: args.userId,
 		});
 
 		// You could update a payments table here if tracking payment history
@@ -56,7 +58,8 @@ export const handlePaymentAttemptUpdated = internalMutation({
 export const handleSubscriptionCreated = internalMutation({
 	args: {
 		subscriptionId: v.string(),
-		organizationId: v.string(),
+		userId: v.optional(v.string()),
+		organizationId: v.optional(v.string()),
 		planId: v.string(),
 		status: v.string(),
 		currentPeriodStart: v.optional(v.number()),
@@ -64,38 +67,83 @@ export const handleSubscriptionCreated = internalMutation({
 	handler: async (ctx, args) => {
 		console.log("Subscription created:", {
 			subscriptionId: args.subscriptionId,
+			userId: args.userId,
 			organizationId: args.organizationId,
 			planId: args.planId,
 		});
 
-		// Find the organization by Clerk organization ID
-		const organization = await ctx.db
-			.query("organizations")
-			.withIndex("by_clerk_org", (q) =>
-				q.eq("clerkOrganizationId", args.organizationId)
-			)
-			.first();
+		// Handle organization subscription
+		if (args.organizationId) {
+			const orgId = args.organizationId;
+			const org = await ctx.db
+				.query("organizations")
+				.withIndex("by_clerk_org", (q) => q.eq("clerkOrganizationId", orgId))
+				.first();
 
-		if (!organization) {
-			console.error(
-				`Organization not found for Clerk ID: ${args.organizationId}`
+			if (!org) {
+				console.error(`Organization not found for Clerk ID: ${orgId}`);
+				return { success: false, error: "Organization not found" };
+			}
+
+			const statusValue = args.status as
+				| "active"
+				| "past_due"
+				| "canceled"
+				| "incomplete"
+				| "incomplete_expired"
+				| "trialing"
+				| "unpaid";
+			await ctx.db.patch(org._id, {
+				clerkSubscriptionId: args.subscriptionId,
+				clerkPlanId: args.planId,
+				subscriptionStatus: statusValue,
+				billingCycleStart: args.currentPeriodStart || Date.now(),
+			});
+
+			console.log(
+				`Updated organization ${org._id} with subscription ${args.subscriptionId}`
 			);
-			return { success: false, error: "Organization not found" };
+
+			return { success: true };
 		}
 
-		// Update organization with subscription details
-		await ctx.db.patch(organization._id, {
-			clerkSubscriptionId: args.subscriptionId,
-			clerkPlanId: args.planId,
-			subscriptionStatus: args.status as any,
-			billingCycleStart: args.currentPeriodStart || Date.now(),
-		});
+		// Handle user subscription
+		if (args.userId) {
+			const userId = args.userId;
+			const user = await ctx.db
+				.query("users")
+				.withIndex("by_external_id", (q) => q.eq("externalId", userId))
+				.first();
 
-		console.log(
-			`Updated organization ${organization._id} with subscription ${args.subscriptionId}`
-		);
+			if (!user) {
+				console.error(`User not found for Clerk ID: ${userId}`);
+				return { success: false, error: "User not found" };
+			}
 
-		return { success: true };
+			const statusValue = args.status as
+				| "active"
+				| "past_due"
+				| "canceled"
+				| "incomplete"
+				| "incomplete_expired"
+				| "trialing"
+				| "unpaid";
+			await ctx.db.patch(user._id, {
+				clerkSubscriptionId: args.subscriptionId,
+				clerkPlanId: args.planId,
+				subscriptionStatus: statusValue,
+				billingCycleStart: args.currentPeriodStart || Date.now(),
+			});
+
+			console.log(
+				`Updated user ${user._id} with subscription ${args.subscriptionId}`
+			);
+
+			return { success: true };
+		}
+
+		console.error("No userId or organizationId provided");
+		return { success: false, error: "No userId or organizationId provided" };
 	},
 });
 
@@ -105,42 +153,70 @@ export const handleSubscriptionCreated = internalMutation({
 export const handleSubscriptionActive = internalMutation({
 	args: {
 		subscriptionId: v.string(),
-		organizationId: v.string(),
+		userId: v.optional(v.string()),
+		organizationId: v.optional(v.string()),
 		planId: v.string(),
 		currentPeriodStart: v.optional(v.number()),
 	},
 	handler: async (ctx, args) => {
 		console.log("Subscription activated:", {
 			subscriptionId: args.subscriptionId,
+			userId: args.userId,
 			organizationId: args.organizationId,
 		});
 
-		// Find the organization by Clerk organization ID
-		const organization = await ctx.db
-			.query("organizations")
-			.withIndex("by_clerk_org", (q) =>
-				q.eq("clerkOrganizationId", args.organizationId)
-			)
-			.first();
+		// Handle organization subscription
+		if (args.organizationId) {
+			const orgId = args.organizationId;
+			const org = await ctx.db
+				.query("organizations")
+				.withIndex("by_clerk_org", (q) => q.eq("clerkOrganizationId", orgId))
+				.first();
 
-		if (!organization) {
-			console.error(
-				`Organization not found for Clerk ID: ${args.organizationId}`
-			);
-			return { success: false, error: "Organization not found" };
+			if (!org) {
+				console.error(`Organization not found for Clerk ID: ${orgId}`);
+				return { success: false, error: "Organization not found" };
+			}
+
+			await ctx.db.patch(org._id, {
+				clerkSubscriptionId: args.subscriptionId,
+				clerkPlanId: args.planId,
+				subscriptionStatus: "active",
+				billingCycleStart: args.currentPeriodStart || Date.now(),
+			});
+
+			console.log(`Activated subscription for organization ${org._id}`);
+
+			return { success: true };
 		}
 
-		// Update organization to active status
-		await ctx.db.patch(organization._id, {
-			clerkSubscriptionId: args.subscriptionId,
-			clerkPlanId: args.planId,
-			subscriptionStatus: "active",
-			billingCycleStart: args.currentPeriodStart || Date.now(),
-		});
+		// Handle user subscription
+		if (args.userId) {
+			const userId = args.userId;
+			const user = await ctx.db
+				.query("users")
+				.withIndex("by_external_id", (q) => q.eq("externalId", userId))
+				.first();
 
-		console.log(`Activated subscription for organization ${organization._id}`);
+			if (!user) {
+				console.error(`User not found for Clerk ID: ${userId}`);
+				return { success: false, error: "User not found" };
+			}
 
-		return { success: true };
+			await ctx.db.patch(user._id, {
+				clerkSubscriptionId: args.subscriptionId,
+				clerkPlanId: args.planId,
+				subscriptionStatus: "active",
+				billingCycleStart: args.currentPeriodStart || Date.now(),
+			});
+
+			console.log(`Activated subscription for user ${user._id}`);
+
+			return { success: true };
+		}
+
+		console.error("No userId or organizationId provided");
+		return { success: false, error: "No userId or organizationId provided" };
 	},
 });
 
@@ -150,7 +226,8 @@ export const handleSubscriptionActive = internalMutation({
 export const handleSubscriptionUpdated = internalMutation({
 	args: {
 		subscriptionId: v.string(),
-		organizationId: v.string(),
+		userId: v.optional(v.string()),
+		organizationId: v.optional(v.string()),
 		planId: v.string(),
 		status: v.string(),
 		currentPeriodStart: v.optional(v.number()),
@@ -159,34 +236,78 @@ export const handleSubscriptionUpdated = internalMutation({
 		console.log("Subscription updated:", {
 			subscriptionId: args.subscriptionId,
 			status: args.status,
+			userId: args.userId,
+			organizationId: args.organizationId,
 		});
 
-		// Find the organization by Clerk organization ID
-		const organization = await ctx.db
-			.query("organizations")
-			.withIndex("by_clerk_org", (q) =>
-				q.eq("clerkOrganizationId", args.organizationId)
-			)
-			.first();
+		// Handle organization subscription
+		if (args.organizationId) {
+			const orgId = args.organizationId;
+			const org = await ctx.db
+				.query("organizations")
+				.withIndex("by_clerk_org", (q) => q.eq("clerkOrganizationId", orgId))
+				.first();
 
-		if (!organization) {
-			console.error(
-				`Organization not found for Clerk ID: ${args.organizationId}`
-			);
-			return { success: false, error: "Organization not found" };
+			if (!org) {
+				console.error(`Organization not found for Clerk ID: ${orgId}`);
+				return { success: false, error: "Organization not found" };
+			}
+
+			const statusValue = args.status as
+				| "active"
+				| "past_due"
+				| "canceled"
+				| "incomplete"
+				| "incomplete_expired"
+				| "trialing"
+				| "unpaid";
+			await ctx.db.patch(org._id, {
+				clerkSubscriptionId: args.subscriptionId,
+				clerkPlanId: args.planId,
+				subscriptionStatus: statusValue,
+				billingCycleStart: args.currentPeriodStart,
+			});
+
+			console.log(`Updated subscription for organization ${org._id}`);
+
+			return { success: true };
 		}
 
-		// Update subscription details
-		await ctx.db.patch(organization._id, {
-			clerkSubscriptionId: args.subscriptionId,
-			clerkPlanId: args.planId,
-			subscriptionStatus: args.status as any,
-			billingCycleStart: args.currentPeriodStart,
-		});
+		// Handle user subscription
+		if (args.userId) {
+			const userId = args.userId;
+			const user = await ctx.db
+				.query("users")
+				.withIndex("by_external_id", (q) => q.eq("externalId", userId))
+				.first();
 
-		console.log(`Updated subscription for organization ${organization._id}`);
+			if (!user) {
+				console.error(`User not found for Clerk ID: ${userId}`);
+				return { success: false, error: "User not found" };
+			}
 
-		return { success: true };
+			const statusValue = args.status as
+				| "active"
+				| "past_due"
+				| "canceled"
+				| "incomplete"
+				| "incomplete_expired"
+				| "trialing"
+				| "unpaid";
+			await ctx.db.patch(user._id, {
+				clerkSubscriptionId: args.subscriptionId,
+				clerkPlanId: args.planId,
+				subscriptionStatus: statusValue,
+				billingCycleStart: args.currentPeriodStart,
+			});
+
+			console.log(`Updated subscription for user ${user._id}`);
+
+			return { success: true };
+		}
+
+		console.error("No userId or organizationId provided");
+		return { success: false, error: "No userId or organizationId provided" };
 	},
 });
 
@@ -196,38 +317,63 @@ export const handleSubscriptionUpdated = internalMutation({
 export const handleSubscriptionPastDue = internalMutation({
 	args: {
 		subscriptionId: v.string(),
-		organizationId: v.string(),
+		userId: v.optional(v.string()),
+		organizationId: v.optional(v.string()),
 	},
 	handler: async (ctx, args) => {
 		console.log("Subscription past due:", {
 			subscriptionId: args.subscriptionId,
+			userId: args.userId,
 			organizationId: args.organizationId,
 		});
 
-		// Find the organization by Clerk organization ID
-		const organization = await ctx.db
-			.query("organizations")
-			.withIndex("by_clerk_org", (q) =>
-				q.eq("clerkOrganizationId", args.organizationId)
-			)
-			.first();
+		// Handle organization subscription
+		if (args.organizationId) {
+			const orgId = args.organizationId;
+			const org = await ctx.db
+				.query("organizations")
+				.withIndex("by_clerk_org", (q) => q.eq("clerkOrganizationId", orgId))
+				.first();
 
-		if (!organization) {
-			console.error(
-				`Organization not found for Clerk ID: ${args.organizationId}`
+			if (!org) {
+				console.error(`Organization not found for Clerk ID: ${orgId}`);
+				return { success: false, error: "Organization not found" };
+			}
+
+			await ctx.db.patch(org._id, {
+				subscriptionStatus: "past_due",
+			});
+
+			console.log(
+				`Marked subscription as past due for organization ${org._id}`
 			);
-			return { success: false, error: "Organization not found" };
+
+			return { success: true };
 		}
 
-		// Update status to past_due
-		await ctx.db.patch(organization._id, {
-			subscriptionStatus: "past_due",
-		});
+		// Handle user subscription
+		if (args.userId) {
+			const userId = args.userId;
+			const user = await ctx.db
+				.query("users")
+				.withIndex("by_external_id", (q) => q.eq("externalId", userId))
+				.first();
 
-		console.log(`Marked subscription as past due for org ${organization._id}`);
+			if (!user) {
+				console.error(`User not found for Clerk ID: ${userId}`);
+				return { success: false, error: "User not found" };
+			}
 
-		// You might want to send a notification to the org owner here
+			await ctx.db.patch(user._id, {
+				subscriptionStatus: "past_due",
+			});
 
-		return { success: true };
+			console.log(`Marked subscription as past due for user ${user._id}`);
+
+			return { success: true };
+		}
+
+		console.error("No userId or organizationId provided");
+		return { success: false, error: "No userId or organizationId provided" };
 	},
 });
