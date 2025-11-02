@@ -5,6 +5,7 @@ import { SignedIn } from "@clerk/nextjs";
 import {
 	SubscriptionDetailsButton,
 	CheckoutButton,
+	usePlans,
 } from "@clerk/nextjs/experimental";
 import { useFeatureAccess } from "@/hooks/use-feature-access";
 import { useRouter } from "next/navigation";
@@ -30,14 +31,21 @@ import {
 	Headphones,
 } from "lucide-react";
 
-// Plan ID for the Business plan
-const BUSINESS_PLAN_ID = "cplan_34vdxwVgdd0pYgyTsDJEY3uFuun";
-
 export default function SubscriptionPage() {
 	const router = useRouter();
 	const { hasPremiumAccess, isLoading, hasOrganization } = useFeatureAccess();
 	const { resolvedTheme } = useTheme();
 	const [mounted, setMounted] = useState(false);
+
+	// Fetch organization plans from Clerk
+	const { data: plans, isLoading: plansLoading } = usePlans({
+		for: "organization",
+	});
+
+	// Find the Business plan by slug
+	const businessPlan = plans?.find(
+		(plan) => plan.slug === "onetool_business_plan_org"
+	);
 
 	useEffect(() => {
 		setMounted(true);
@@ -106,7 +114,7 @@ export default function SubscriptionPage() {
 		},
 	];
 
-	if (isLoading) {
+	if (isLoading || plansLoading) {
 		return (
 			<div className="min-h-screen bg-background flex items-center justify-center">
 				<div className="flex flex-col items-center gap-4">
@@ -305,7 +313,7 @@ export default function SubscriptionPage() {
 															<div className="flex gap-2 mt-1">
 																<SignedIn>
 																	<CheckoutButton
-																		planId={BUSINESS_PLAN_ID}
+																		planId={businessPlan?.id || ""}
 																		for="organization"
 																		planPeriod="month"
 																		newSubscriptionRedirectUrl="/subscription"
@@ -348,7 +356,7 @@ export default function SubscriptionPage() {
 																</SignedIn>
 																<SignedIn>
 																	<CheckoutButton
-																		planId={BUSINESS_PLAN_ID}
+																		planId={businessPlan?.id || ""}
 																		for="organization"
 																		planPeriod="annual"
 																		newSubscriptionRedirectUrl="/subscription"
