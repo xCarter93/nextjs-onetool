@@ -110,8 +110,13 @@ export const createFromClerk = internalMutation({
 			name: args.name,
 			ownerUserId: ownerUser._id,
 			logoUrl: args.logoUrl,
-			plan: "trial", // Default to trial plan
 			isMetadataComplete: false, // User needs to complete additional setup
+			// Initialize usage tracking
+			usageTracking: {
+				clientsCount: 0,
+				esignaturesSentThisMonth: 0,
+				lastEsignatureReset: Date.now(),
+			},
 		});
 
 		await ensureMembership(ctx, ownerUser._id, orgId, "owner");
@@ -357,36 +362,9 @@ export const update = mutation({
 });
 
 /**
- * Update organization plan (for billing/subscription management)
+ * Update organization plan (DEPRECATED - now handled by Clerk billing webhooks)
+ * This mutation is kept for backwards compatibility but should not be used
  */
-// TODO: Candidate for deletion if confirmed unused.
-export const updatePlan = mutation({
-	args: {
-		plan: v.union(v.literal("trial"), v.literal("pro"), v.literal("cancelled")),
-		stripeCustomerId: v.optional(v.string()),
-	},
-	handler: async (ctx, args) => {
-		const user = await getCurrentUserOrThrow(ctx);
-		const userOrgId = await getCurrentUserOrgId(ctx);
-
-		const organization = await ctx.db.get(userOrgId);
-		if (!organization) {
-			throw new Error("Organization not found");
-		}
-
-		// Only organization owner can update plan
-		if (organization.ownerUserId !== user._id) {
-			throw new Error("Only organization owner can update plan");
-		}
-
-		await ctx.db.patch(userOrgId, {
-			plan: args.plan,
-			stripeCustomerId: args.stripeCustomerId,
-		});
-
-		return userOrgId;
-	},
-});
 
 /**
  * Get organization members (users in the organization)

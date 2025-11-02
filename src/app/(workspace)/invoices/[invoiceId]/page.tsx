@@ -24,13 +24,12 @@ import {
 	Edit,
 	FolderOpen,
 	Mail,
-	MoreHorizontal,
 	CheckCircle,
 	XCircle,
 } from "lucide-react";
-import { StickyFormFooter } from "@/components/sticky-form-footer";
+import { StickyFormFooter } from "@/components/shared/sticky-form-footer";
 import { pdf } from "@react-pdf/renderer";
-import InvoicePDF from "@/components/InvoicePDF";
+import InvoicePDF from "@/app/(workspace)/invoices/components/InvoicePDF";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import type { Id as StorageId } from "../../../../../convex/_generated/dataModel";
 
@@ -850,7 +849,7 @@ export default function InvoiceDetailPage() {
 								{
 									label:
 										currentStatus === "draft"
-											? "Send Invoice"
+											? "Mark as Sent"
 											: currentStatus === "sent" || currentStatus === "overdue"
 												? "Mark as Paid"
 												: currentStatus === "paid"
@@ -900,23 +899,13 @@ export default function InvoiceDetailPage() {
 						? [
 								{
 									label: "Cancel Invoice",
-									intent: "outline" as const,
+									intent: "destructive" as const,
 									icon: <XCircle className="h-4 w-4" />,
 									onClick: () => handleStatusChange("cancelled"),
 									position: "right" as const,
 								},
 							]
 						: []),
-					{
-						label: "More",
-						intent: "outline",
-						icon: <MoreHorizontal className="h-4 w-4" />,
-						onClick: () => {
-							// Handle more options
-							console.log("More options");
-						},
-						position: "right" as const,
-					},
 				]}
 				fullWidth
 			/>

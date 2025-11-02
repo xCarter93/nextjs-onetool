@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { TaskSheet } from "@/components/task-sheet";
+import { TaskSheet } from "@/components/shared/task-sheet";
 import { motion, AnimatePresence } from "motion/react";
 import {
 	Calendar,

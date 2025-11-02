@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import ActivityFeed from "@/components/activity-feed";
-import GettingStarted from "@/components/getting-started";
-import HomeStats from "@/components/home-stats-real";
-import HomeTaskList from "@/components/home-task-list";
-import RevenueGoalSetter from "@/components/revenue-goal-setter";
-import { CalendarContainer } from "@/components/calendar/calendar-container";
+import ActivityFeed from "@/app/(workspace)/home/components/activity-feed";
+import GettingStarted from "@/app/(workspace)/home/components/getting-started";
+import HomeStats from "@/app/(workspace)/home/components/home-stats-real";
+import HomeTaskList from "@/app/(workspace)/home/components/home-task-list";
+import RevenueGoalSetter from "@/app/(workspace)/home/components/revenue-goal-setter";
+import { CalendarContainer } from "@/app/(workspace)/home/components/calendar/calendar-container";
 import { useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { motion } from "motion/react";

@@ -5,7 +5,7 @@ export const env = createEnv({
 	server: {
 		CLERK_SECRET_KEY: z.string().min(1),
 		CLERK_USER_WEBHOOK_SECRET: z.string().min(1),
-		CLERK_BILLING_WEBHOOK_SECRET: z.string().optional(),
+		CLERK_BILLING_WEBHOOK_SECRET: z.string().min(1),
 		BOLDSIGN_API_KEY: z.string().min(1),
 		BOLDSIGN_WEBHOOK_SECRET: z.string().optional(),
 		OPENAI_API_KEY: z.string().min(1),

@@ -7,13 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, ClipboardList, Receipt } from "lucide-react";
-import { TaskSheet } from "@/components/task-sheet";
-import { ProjectViewEditForm } from "@/components/project-view-edit-form";
+import { TaskSheet } from "@/components/shared/task-sheet";
+import { ProjectViewEditForm } from "@/app/(workspace)/projects/components/project-view-edit-form";
 import {
 	Popover,
 	PopoverTrigger,
 	PopoverContent,
 } from "@/components/ui/popover";
+import DeleteConfirmationModal from "@/components/ui/delete-confirmation-modal";
 import { useState } from "react";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 
@@ -23,13 +24,22 @@ export default function ProjectDetailPage() {
 	const toast = useToast();
 	const [isUpdating, setIsUpdating] = useState(false);
 	const [isTaskSheetOpen, setIsTaskSheetOpen] = useState(false);
+	const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+	const [isDeleting, setIsDeleting] = useState(false);
 
 	const projectId = params.projectId as Id<"projects">;
 
 	// Fetch project data
 	const project = useQuery(api.projects.get, { id: projectId });
-	const projectTasks = useQuery(api.tasks.list, { projectId });
-	const projectQuotes = useQuery(api.quotes.list, { projectId });
+	// Skip queries if project is null or deletion is in progress
+	const projectTasks = useQuery(
+		api.tasks.list,
+		project === null || isDeleting ? "skip" : { projectId }
+	);
+	const projectQuotes = useQuery(
+		api.quotes.list,
+		project === null || isDeleting ? "skip" : { projectId }
+	);
 
 	// Mutations
 	const updateProject = useMutation(api.projects.update);
@@ -114,22 +124,22 @@ export default function ProjectDetailPage() {
 	};
 
 	const handleDeleteProject = async () => {
-		if (
-			!confirm(
-				"Are you sure you want to delete this project? This action cannot be undone."
-			)
-		) {
-			return;
-		}
+		setIsDeleteModalOpen(true);
+	};
 
+	const confirmDeleteProject = async () => {
+		setIsDeleting(true);
 		try {
 			await deleteProject({ id: projectId });
 			toast.success("Project Deleted", "Project has been successfully deleted");
+			setIsDeleteModalOpen(false);
 			router.push("/projects");
 		} catch (err) {
 			const message =
 				err instanceof Error ? err.message : "Failed to delete project";
 			toast.error("Error", message);
+			setIsDeleteModalOpen(false);
+			setIsDeleting(false);
 		}
 	};
 
@@ -182,6 +192,15 @@ export default function ProjectDetailPage() {
 					clientId: project?.clientId,
 					projectId: projectId,
 				}}
+			/>
+			<DeleteConfirmationModal
+				isOpen={isDeleteModalOpen}
+				onClose={() => setIsDeleteModalOpen(false)}
+				onConfirm={confirmDeleteProject}
+				title="Delete Project"
+				itemName={project.title}
+				itemType="Project"
+				isArchive={false}
 			/>
 			<div className="w-full px-6">
 				<div className="w-full pt-8 pb-24">

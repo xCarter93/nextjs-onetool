@@ -7,8 +7,8 @@ import { api } from "../../../../../convex/_generated/api";
 import {
 	ClientOnboardingForm,
 	ClientFormData,
-} from "@/components/client-onboarding-form";
-import { StickyFormFooter } from "@/components/sticky-form-footer";
+} from "@/app/(workspace)/clients/components/client-onboarding-form";
+import { StickyFormFooter } from "@/components/shared/sticky-form-footer";
 
 export default function NewClientPage() {
 	const [isLoading, setIsLoading] = useState(false);
@@ -135,7 +135,7 @@ export default function NewClientPage() {
 	};
 
 	return (
-		<div className="min-h-screen">
+		<div className="min-h-screen pb-24">
 			{/* Error Display */}
 			{formErrors.length > 0 && (
 				<div className="mx-6 mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">

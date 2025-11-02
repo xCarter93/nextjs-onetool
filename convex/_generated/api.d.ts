@@ -10,6 +10,7 @@
 
 import type * as activities from "../activities.js";
 import type * as aggregates from "../aggregates.js";
+import type * as billingWebhook from "../billingWebhook.js";
 import type * as boldsign from "../boldsign.js";
 import type * as boldsignActions from "../boldsignActions.js";
 import type * as calendar from "../calendar.js";
@@ -27,6 +28,7 @@ import type * as lib_activities from "../lib/activities.js";
 import type * as lib_aggregates from "../lib/aggregates.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_memberships from "../lib/memberships.js";
+import type * as lib_permissions from "../lib/permissions.js";
 import type * as lib_shared from "../lib/shared.js";
 import type * as migrations_populateAggregates from "../migrations/populateAggregates.js";
 import type * as notifications from "../notifications.js";
@@ -37,6 +39,7 @@ import type * as quoteLineItems from "../quoteLineItems.js";
 import type * as quotes from "../quotes.js";
 import type * as skus from "../skus.js";
 import type * as tasks from "../tasks.js";
+import type * as usage from "../usage.js";
 import type * as users from "../users.js";
 
 import type {
@@ -56,6 +59,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   activities: typeof activities;
   aggregates: typeof aggregates;
+  billingWebhook: typeof billingWebhook;
   boldsign: typeof boldsign;
   boldsignActions: typeof boldsignActions;
   calendar: typeof calendar;
@@ -73,6 +77,7 @@ declare const fullApi: ApiFromModules<{
   "lib/aggregates": typeof lib_aggregates;
   "lib/auth": typeof lib_auth;
   "lib/memberships": typeof lib_memberships;
+  "lib/permissions": typeof lib_permissions;
   "lib/shared": typeof lib_shared;
   "migrations/populateAggregates": typeof migrations_populateAggregates;
   notifications: typeof notifications;
@@ -83,6 +88,7 @@ declare const fullApi: ApiFromModules<{
   quotes: typeof quotes;
   skus: typeof skus;
   tasks: typeof tasks;
+  usage: typeof usage;
   users: typeof users;
 }>;
 declare const fullApiWithMounts: typeof fullApi;

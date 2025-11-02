@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { internalMutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+import { internal } from "./_generated/api";
 
 // Internal mutation to update document with BoldSign info
 export const updateDocumentWithBoldSign = internalMutation({
@@ -95,6 +96,14 @@ export const handleWebhook = internalMutation({
 			case "Sent":
 				updatedBoldsign.status = "Sent";
 				updatedBoldsign.sentAt = timestamp;
+				// Track e-signature usage for plan limits
+				await ctx.scheduler.runAfter(
+					0,
+					internal.usage.incrementEsignatureCount,
+					{
+						orgId: document.orgId,
+					}
+				);
 				break;
 			case "Viewed":
 				updatedBoldsign.status = "Viewed";
