@@ -55,8 +55,7 @@ async function validateUserAccess(
 	userId: Id<"users">,
 	existingOrgId?: Id<"organizations">
 ): Promise<void> {
-	const userOrgId =
-		existingOrgId ?? (await getCurrentUserOrgId(ctx));
+	const userOrgId = existingOrgId ?? (await getCurrentUserOrgId(ctx));
 	const user = await ctx.db.get(userId);
 
 	if (!user) {
@@ -554,6 +553,9 @@ export const getStatsForUser = query({
 				payment_received: 0,
 				project_deadline: 0,
 				team_assignment: 0,
+				client_mention: 0,
+				project_mention: 0,
+				quote_mention: 0,
 			},
 			byPriority: {
 				low: 0,
@@ -629,6 +631,9 @@ export const getStats = query({
 				payment_received: 0,
 				project_deadline: 0,
 				team_assignment: 0,
+				client_mention: 0,
+				project_mention: 0,
+				quote_mention: 0,
 			},
 			byPriority: {
 				low: 0,
@@ -753,7 +758,9 @@ export const listForCurrentUser = query({
 		// Get the user record
 		const user = await ctx.db
 			.query("users")
-			.withIndex("by_external_id", (q) => q.eq("externalId", currentUser.subject))
+			.withIndex("by_external_id", (q) =>
+				q.eq("externalId", currentUser.subject)
+			)
 			.first();
 
 		if (!user) {
@@ -762,7 +769,7 @@ export const listForCurrentUser = query({
 
 		// Get notifications for this user in the current organization
 		let notifications: NotificationDocument[];
-		
+
 		if (args.isRead !== undefined) {
 			notifications = await ctx.db
 				.query("notifications")
@@ -771,13 +778,13 @@ export const listForCurrentUser = query({
 				)
 				.order("desc")
 				.collect();
-			
+
 			// Filter by current organization
 			notifications = notifications.filter((n) => n.orgId === userOrgId);
 		} else {
 			notifications = await ctx.db
 				.query("notifications")
-				.filter((q) => 
+				.filter((q) =>
 					q.and(
 						q.eq(q.field("userId"), user._id),
 						q.eq(q.field("orgId"), userOrgId)
@@ -799,8 +806,9 @@ export const listForCurrentUser = query({
 				q.eq("userId", user._id).eq("isRead", false)
 			)
 			.collect()
-			.then((notifications) => 
-				notifications.filter((n) => n.orgId === userOrgId).length
+			.then(
+				(notifications) =>
+					notifications.filter((n) => n.orgId === userOrgId).length
 			);
 
 		return { notifications, unreadCount };
@@ -844,40 +852,40 @@ export const listByEntity = query({
 				notification.entityId === args.entityId
 		);
 
-	// Fetch user details for each notification (author, not recipient)
-	const notificationsWithUsers = await Promise.all(
-		entityNotifications.map(async (notification) => {
-			// Extract author ID from the message format "authorId:message"
-			const colonIndex = notification.message.indexOf(":");
-			const authorIdStr = notification.message.substring(0, colonIndex);
-			const actualMessage = notification.message.substring(colonIndex + 1);
-			
-			// Get the author (person who created the message)
-			let author = null;
-			const authorId = authorIdStr as Id<"users">;
-			const authorUser = await ctx.db.get(authorId);
-			
-			if (authorUser) {
-				author = {
-					_id: authorUser._id,
-					name: authorUser.name,
-					email: authorUser.email,
-					image: authorUser.image,
+		// Fetch user details for each notification (author, not recipient)
+		const notificationsWithUsers = await Promise.all(
+			entityNotifications.map(async (notification) => {
+				// Extract author ID from the message format "authorId:message"
+				const colonIndex = notification.message.indexOf(":");
+				const authorIdStr = notification.message.substring(0, colonIndex);
+				const actualMessage = notification.message.substring(colonIndex + 1);
+
+				// Get the author (person who created the message)
+				let author = null;
+				const authorId = authorIdStr as Id<"users">;
+				const authorUser = await ctx.db.get(authorId);
+
+				if (authorUser) {
+					author = {
+						_id: authorUser._id,
+						name: authorUser.name,
+						email: authorUser.email,
+						image: authorUser.image,
+					};
+				}
+
+				return {
+					...notification,
+					message: actualMessage,
+					author,
 				};
-			}
+			})
+		);
 
-			return {
-				...notification,
-				message: actualMessage,
-				author,
-			};
-		})
-	);
-
-	// Sort by creation time (newest first for feed display)
-	return notificationsWithUsers.sort(
-		(a, b) => b._creationTime - a._creationTime
-	);
+		// Sort by creation time (newest first for feed display)
+		return notificationsWithUsers.sort(
+			(a, b) => b._creationTime - a._creationTime
+		);
 	},
 });
 
@@ -908,7 +916,9 @@ export const createMention = mutation({
 		// Get the current user's record (the author)
 		const author = await ctx.db
 			.query("users")
-			.withIndex("by_external_id", (q) => q.eq("externalId", currentUser.subject))
+			.withIndex("by_external_id", (q) =>
+				q.eq("externalId", currentUser.subject)
+			)
 			.first();
 
 		if (!author) {
