@@ -6,7 +6,11 @@ import { useOrganization } from "@clerk/nextjs";
 import { api } from "../../../convex/_generated/api";
 import { StyledButton } from "@/components/ui/styled/styled-button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
 import { Send } from "lucide-react";
 import type { Id } from "../../../convex/_generated/dataModel";
@@ -27,7 +31,9 @@ export function MentionInput({
 	const [message, setMessage] = useState("");
 	const [showUserList, setShowUserList] = useState(false);
 	const [searchQuery, setSearchQuery] = useState("");
-	const [mentionedUsers, setMentionedUsers] = useState<Array<{ id: Id<"users">; name: string }>>([]);
+	const [mentionedUsers, setMentionedUsers] = useState<
+		Array<{ id: Id<"users">; name: string }>
+	>([]);
 	const contentEditableRef = useRef<HTMLDivElement>(null);
 	const toast = useToast();
 
@@ -44,26 +50,31 @@ export function MentionInput({
 	const syncUserFromClerk = useMutation(api.users.syncUserFromClerk);
 
 	// Build a map of organization users with both Clerk and Convex data
-	const organizationUsers = memberships?.data?.map((membership) => {
-		const clerkUser = membership.publicUserData;
-		// Find the corresponding Convex user by email or external ID
-		const convexUser = convexUsers?.find(
-			(u) =>
-				u.email === clerkUser.identifier ||
-				u.externalId === clerkUser.userId
-		);
+	const organizationUsers =
+		memberships?.data
+			?.map((membership) => {
+				const clerkUser = membership.publicUserData;
+				if (!clerkUser || !clerkUser.userId) return null;
 
-		return {
-			id: convexUser?._id || clerkUser.userId,
-			name:
-				clerkUser.firstName && clerkUser.lastName
-					? `${clerkUser.firstName} ${clerkUser.lastName}`.trim()
-					: clerkUser.identifier || "Unknown User",
-			email: clerkUser.identifier,
-			image: clerkUser.imageUrl,
-			convexUserId: convexUser?._id,
-		};
-	}) || [];
+				// Find the corresponding Convex user by email or external ID
+				const convexUser = convexUsers?.find(
+					(u) =>
+						u.email === clerkUser.identifier ||
+						u.externalId === clerkUser.userId
+				);
+
+				return {
+					id: convexUser?._id || clerkUser.userId,
+					name:
+						clerkUser.firstName && clerkUser.lastName
+							? `${clerkUser.firstName} ${clerkUser.lastName}`.trim()
+							: clerkUser.identifier || "Unknown User",
+					email: clerkUser.identifier || "",
+					image: clerkUser.imageUrl || "",
+					convexUserId: convexUser?._id,
+				};
+			})
+			.filter((user): user is NonNullable<typeof user> => user !== null) || [];
 
 	// Filter users based on search query
 	const filteredUsers = organizationUsers.filter((user) =>
@@ -80,12 +91,12 @@ export function MentionInput({
 	const getCursorPosition = (): number => {
 		const selection = window.getSelection();
 		if (!selection || selection.rangeCount === 0) return 0;
-		
+
 		const range = selection.getRangeAt(0);
 		const preCaretRange = range.cloneRange();
 		preCaretRange.selectNodeContents(contentEditableRef.current!);
 		preCaretRange.setEnd(range.endContainer, range.endOffset);
-		
+
 		return preCaretRange.toString().length;
 	};
 
@@ -104,9 +115,14 @@ export function MentionInput({
 			// Check if this @ is not part of an existing mention (not inside @[...])
 			const lastMentionStart = textBeforeCursor.lastIndexOf("@[");
 			const lastMentionEnd = textBeforeCursor.lastIndexOf("]");
-			
+
 			// Only show if @ is not inside a completed mention and search text has no spaces/brackets
-			if ((lastMentionStart === -1 || lastMentionEnd > lastMentionStart) && !searchText.includes(" ") && !searchText.includes("[") && !searchText.includes("]")) {
+			if (
+				(lastMentionStart === -1 || lastMentionEnd > lastMentionStart) &&
+				!searchText.includes(" ") &&
+				!searchText.includes("[") &&
+				!searchText.includes("]")
+			) {
 				setSearchQuery(searchText);
 				setShowUserList(true);
 			} else {
@@ -136,8 +152,11 @@ export function MentionInput({
 
 			// Store the mentioned user
 			const finalUserId = convexUserId || (userId as Id<"users">);
-			setMentionedUsers(prev => [...prev, { id: finalUserId, name: userName }]);
-			
+			setMentionedUsers((prev) => [
+				...prev,
+				{ id: finalUserId, name: userName },
+			]);
+
 			// Update the contenteditable
 			contentEditableRef.current.textContent = newMessage;
 			setMessage(newMessage);
@@ -147,16 +166,19 @@ export function MentionInput({
 			const newCursorPos = lastAtIndex + userName.length + 3; // +3 for @[]
 			const selection = window.getSelection();
 			const range = document.createRange();
-			
+
 			// Find text node and set cursor position
 			const textNode = contentEditableRef.current.firstChild;
 			if (textNode && textNode.nodeType === Node.TEXT_NODE) {
-				range.setStart(textNode, Math.min(newCursorPos, textNode.textContent?.length || 0));
+				range.setStart(
+					textNode,
+					Math.min(newCursorPos, textNode.textContent?.length || 0)
+				);
 				range.collapse(true);
 				selection?.removeAllRanges();
 				selection?.addRange(range);
 			}
-			
+
 			// Focus back
 			contentEditableRef.current.focus();
 		}
@@ -179,7 +201,8 @@ export function MentionInput({
 			for (const mentionedUser of mentionedUsers) {
 				// Find the user in our organization list
 				const user = organizationUsers.find(
-					(u) => u.convexUserId === mentionedUser.id || u.id === mentionedUser.id
+					(u) =>
+						u.convexUserId === mentionedUser.id || u.id === mentionedUser.id
 				);
 
 				if (!user) {
@@ -188,7 +211,7 @@ export function MentionInput({
 
 				// If user doesn't have a Convex ID yet, sync them from Clerk first
 				let convexUserId = user.convexUserId;
-				
+
 				if (!convexUserId) {
 					// Sync the user from Clerk to Convex
 					convexUserId = await syncUserFromClerk({
@@ -237,25 +260,28 @@ export function MentionInput({
 
 	return (
 		<div className="space-y-3">
-			<Popover open={showUserList && filteredUsers.length > 0} onOpenChange={(open) => {
-				if (!open) setShowUserList(false);
-			}}>
+			<Popover
+				open={showUserList && filteredUsers.length > 0}
+				onOpenChange={(open) => {
+					if (!open) setShowUserList(false);
+				}}
+			>
 				<PopoverTrigger asChild>
 					<div className="relative">
 						{/* Plain contenteditable - shows @[username] format */}
-						<div 
+						<div
 							ref={contentEditableRef}
 							contentEditable
 							onInput={handleInput}
 							className="min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 overflow-auto whitespace-pre-wrap break-words empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground"
-							style={{ minHeight: '100px' }}
+							style={{ minHeight: "100px" }}
 							suppressContentEditableWarning
 							data-placeholder="Type @ to mention a team member..."
 						/>
 					</div>
 				</PopoverTrigger>
-				<PopoverContent 
-					align="start" 
+				<PopoverContent
+					align="start"
 					side="bottom"
 					className="w-80 p-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700"
 					onOpenAutoFocus={(e) => e.preventDefault()}
@@ -293,7 +319,8 @@ export function MentionInput({
 				<div className="text-xs text-gray-500 dark:text-gray-400">
 					{mentionedUsers.length > 0 ? (
 						<span>
-							Mentioning: <strong>{mentionedUsers.map(u => u.name).join(", ")}</strong>
+							Mentioning:{" "}
+							<strong>{mentionedUsers.map((u) => u.name).join(", ")}</strong>
 						</span>
 					) : (
 						<span>Type @ to mention someone</span>
@@ -312,4 +339,3 @@ export function MentionInput({
 		</div>
 	);
 }
-
