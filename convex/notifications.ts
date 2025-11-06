@@ -121,6 +121,9 @@ interface NotificationStats {
 		payment_received: number;
 		project_deadline: number;
 		team_assignment: number;
+		client_mention: number;
+		project_mention: number;
+		quote_mention: number;
 	};
 	byPriority: {
 		low: number;
@@ -143,6 +146,9 @@ function createEmptyNotificationStats(): NotificationStats {
 			payment_received: 0,
 			project_deadline: 0,
 			team_assignment: 0,
+			client_mention: 0,
+			project_mention: 0,
+			quote_mention: 0,
 		},
 		byPriority: {
 			low: 0,

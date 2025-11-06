@@ -5,7 +5,6 @@ import { api } from "../../../convex/_generated/api";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bell } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { StyledButton } from "@/components/ui/styled/styled-button";
 import {
@@ -31,15 +30,6 @@ export function NotificationBell() {
 
 	const notifications = notificationData?.notifications || [];
 	const unreadCount = notificationData?.unreadCount || 0;
-
-	// Get initials for avatar fallback
-	const getInitials = (name: string) => {
-		const names = name.split(" ");
-		if (names.length >= 2) {
-			return `${names[0][0]}${names[1][0]}`.toUpperCase();
-		}
-		return name.slice(0, 2).toUpperCase();
-	};
 
 	// Handle notification click
 	const handleNotificationClick = async (

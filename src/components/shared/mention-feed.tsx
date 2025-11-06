@@ -4,7 +4,7 @@ import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { formatRelativeTime, parseMessageParts, parseMessageForDisplay } from "@/lib/notification-utils";
+import { formatRelativeTime, parseMessageParts } from "@/lib/notification-utils";
 import { MessageSquare } from "lucide-react";
 
 interface MentionFeedProps {

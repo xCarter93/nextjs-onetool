@@ -1,16 +1,14 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { useOrganization } from "@clerk/nextjs";
 import { api } from "../../../convex/_generated/api";
 import { StyledButton } from "@/components/ui/styled/styled-button";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
 import { Send } from "lucide-react";
-import { parseMessageParts } from "@/lib/notification-utils";
 import type { Id } from "../../../convex/_generated/dataModel";
 
 interface MentionInputProps {
