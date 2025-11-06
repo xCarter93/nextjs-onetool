@@ -4,6 +4,7 @@ import { ReactNode } from "react";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { ThemeSwitcher } from "@/components/layout/theme-switcher";
 import { PlanBadge } from "@/components/layout/plan-badge";
+import { NotificationBell } from "@/components/layout/notification-bell";
 import {
 	SidebarInset,
 	SidebarProvider,
@@ -70,17 +71,18 @@ export function SidebarWithHeader({ children }: SidebarWithHeaderProps) {
 							</div>
 						</motion.div>
 
-						{/* Right Section - Plan Badge & Theme Switcher */}
-						<div className="flex items-center gap-3">
-							<PlanBadge />
-							<motion.div
-								whileHover={{ scale: 1.05 }}
-								whileTap={{ scale: 0.95 }}
-								transition={{ type: "spring", stiffness: 400, damping: 17 }}
-							>
-								<ThemeSwitcher className="group relative bg-card/50 hover:bg-card/80 dark:bg-card/20 dark:hover:bg-card/40 border border-border/40 dark:border-border/20 hover:border-border/60 dark:hover:border-border/40 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 ring-0 hover:ring-2 hover:ring-primary/20 dark:hover:ring-primary/30" />
-							</motion.div>
-						</div>
+					{/* Right Section - Plan Badge, Notifications & Theme Switcher */}
+					<div className="flex items-center gap-3">
+						<PlanBadge />
+						<NotificationBell />
+						<motion.div
+							whileHover={{ scale: 1.05 }}
+							whileTap={{ scale: 0.95 }}
+							transition={{ type: "spring", stiffness: 400, damping: 17 }}
+						>
+							<ThemeSwitcher className="group relative bg-card/50 hover:bg-card/80 dark:bg-card/20 dark:hover:bg-card/40 border border-border/40 dark:border-border/20 hover:border-border/60 dark:hover:border-border/40 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 ring-0 hover:ring-2 hover:ring-primary/20 dark:hover:ring-primary/30" />
+						</motion.div>
+					</div>
 					</div>
 
 					{/* Bottom Border Gradient */}

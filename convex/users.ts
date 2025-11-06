@@ -1,4 +1,4 @@
-import { internalMutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 import { UserJSON } from "@clerk/backend";
 import { v, Validator } from "convex/values";
 import {
@@ -160,5 +160,80 @@ export const removeUserFromOrganization = internalMutation({
 		}
 
 		await removeMembership(ctx, user._id, organization._id);
+	},
+});
+
+/**
+ * Ensure a user from Clerk exists in Convex
+ * This is used when tagging users who may not have signed in yet
+ */
+export const ensureUserExists = query({
+	args: {
+		clerkUserId: v.string(),
+		name: v.string(),
+		email: v.string(),
+		imageUrl: v.string(),
+	},
+	handler: async (ctx, args) => {
+		// Check if user already exists
+		const existingUser = await userByExternalId(ctx, args.clerkUserId);
+		
+		if (existingUser) {
+			return existingUser._id;
+		}
+
+		// User doesn't exist yet, return null
+		// We can't create users from a query, so we'll handle this differently
+		return null;
+	},
+});
+
+/**
+ * Sync a user from Clerk to Convex if they don't exist yet
+ * This allows tagging users who haven't signed in yet
+ */
+export const syncUserFromClerk = mutation({
+	args: {
+		clerkUserId: v.string(),
+		name: v.string(),
+		email: v.string(),
+		imageUrl: v.string(),
+	},
+	handler: async (ctx, args) => {
+		// Check if user already exists
+		const existingUser = await userByExternalId(ctx, args.clerkUserId);
+		
+		if (existingUser) {
+			// If user exists, make sure they have membership in current org
+			const userOrgId = await getCurrentUserOrgId(ctx);
+			const membership = await ctx.db
+				.query("organizationMemberships")
+				.withIndex("by_org_user", (q) =>
+					q.eq("orgId", userOrgId).eq("userId", existingUser._id)
+				)
+				.first();
+			
+			if (!membership) {
+				// Add them to the organization if they're not already a member
+				await ensureMembership(ctx, existingUser._id, userOrgId);
+			}
+			
+			return existingUser._id;
+		}
+
+		// Create the user
+		const userId = await ctx.db.insert("users", {
+			name: args.name,
+			email: args.email,
+			image: args.imageUrl,
+			externalId: args.clerkUserId,
+			lastSignedInDate: Date.now(),
+		});
+
+		// Ensure they're added to the current user's organization
+		const userOrgId = await getCurrentUserOrgId(ctx);
+		await ensureMembership(ctx, userId, userOrgId);
+
+		return userId;
 	},
 });

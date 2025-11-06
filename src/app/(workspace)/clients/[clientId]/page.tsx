@@ -43,6 +43,7 @@ import { StickyFormFooter } from "@/components/shared/sticky-form-footer";
 import { PropertyTable } from "@/app/(workspace)/clients/components/property-table";
 import { ContactTable } from "@/app/(workspace)/clients/components/contact-table";
 import { TaskSheet } from "@/components/shared/task-sheet";
+import { MentionSection } from "@/components/shared/mention-section";
 import {
 	Popover,
 	PopoverTrigger,
@@ -1243,40 +1244,47 @@ export default function ClientDetailPage() {
 									</Tabs>
 								</StyledCardContent>
 							</StyledCard>
-							{/* Client Notes Card (moved under overview) */}
-							<StyledCard>
-								<StyledCardHeader>
-									<StyledCardTitle className="text-lg">
-										Client notes
-									</StyledCardTitle>
-									<p className="text-sm text-gray-600 dark:text-gray-400">
-										Internal notes visible only to your team
-									</p>
-								</StyledCardHeader>
-								<StyledCardContent>
-									{isEditing ? (
-										<textarea
-											className="w-full min-h-[100px] px-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-md text-gray-900 dark:text-white"
-											value={form.notes}
-											onChange={(e) =>
-												setForm((f) => ({ ...f, notes: e.target.value }))
-											}
-										/>
-									) : client.notes ? (
-										<div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
-											<p className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">
-												{client.notes}
-											</p>
-										</div>
-									) : (
-										<div className="text-center py-6">
-											<p className="text-sm text-gray-600 dark:text-gray-400 italic">
-												No notes added for this client yet
-											</p>
-										</div>
-									)}
-								</StyledCardContent>
-							</StyledCard>
+						{/* Client Notes Card (moved under overview) */}
+						<StyledCard>
+							<StyledCardHeader>
+								<StyledCardTitle className="text-lg">
+									Client notes
+								</StyledCardTitle>
+								<p className="text-sm text-gray-600 dark:text-gray-400">
+									Internal notes visible only to your team
+								</p>
+							</StyledCardHeader>
+							<StyledCardContent>
+								{isEditing ? (
+									<textarea
+										className="w-full min-h-[100px] px-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-md text-gray-900 dark:text-white"
+										value={form.notes}
+										onChange={(e) =>
+											setForm((f) => ({ ...f, notes: e.target.value }))
+										}
+									/>
+								) : client.notes ? (
+									<div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
+										<p className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">
+											{client.notes}
+										</p>
+									</div>
+								) : (
+									<div className="text-center py-6">
+										<p className="text-sm text-gray-600 dark:text-gray-400 italic">
+											No notes added for this client yet
+										</p>
+									</div>
+								)}
+							</StyledCardContent>
+						</StyledCard>
+
+						{/* Team Communication Section */}
+						<MentionSection
+							entityType="client"
+							entityId={clientId}
+							entityName={client.companyName}
+						/>
 						</div>
 
 						{/* Contact Info Sidebar - Right Column */}
