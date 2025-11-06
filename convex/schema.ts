@@ -592,7 +592,10 @@ export default defineSchema({
 			v.literal("invoice_overdue"),
 			v.literal("payment_received"),
 			v.literal("project_deadline"),
-			v.literal("team_assignment")
+			v.literal("team_assignment"),
+			v.literal("client_mention"),
+			v.literal("project_mention"),
+			v.literal("quote_mention")
 		),
 		title: v.string(), // Notification title
 		message: v.string(), // Notification message content

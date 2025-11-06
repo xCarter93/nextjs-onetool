@@ -55,8 +55,7 @@ async function validateUserAccess(
 	userId: Id<"users">,
 	existingOrgId?: Id<"organizations">
 ): Promise<void> {
-	const userOrgId =
-		existingOrgId ?? (await getCurrentUserOrgId(ctx));
+	const userOrgId = existingOrgId ?? (await getCurrentUserOrgId(ctx));
 	const user = await ctx.db.get(userId);
 
 	if (!user) {
@@ -121,6 +120,9 @@ interface NotificationStats {
 		payment_received: number;
 		project_deadline: number;
 		team_assignment: number;
+		client_mention: number;
+		project_mention: number;
+		quote_mention: number;
 	};
 	byPriority: {
 		low: number;
@@ -143,6 +145,9 @@ function createEmptyNotificationStats(): NotificationStats {
 			payment_received: 0,
 			project_deadline: 0,
 			team_assignment: 0,
+			client_mention: 0,
+			project_mention: 0,
+			quote_mention: 0,
 		},
 		byPriority: {
 			low: 0,
@@ -548,6 +553,9 @@ export const getStatsForUser = query({
 				payment_received: 0,
 				project_deadline: 0,
 				team_assignment: 0,
+				client_mention: 0,
+				project_mention: 0,
+				quote_mention: 0,
 			},
 			byPriority: {
 				low: 0,
@@ -623,6 +631,9 @@ export const getStats = query({
 				payment_received: 0,
 				project_deadline: 0,
 				team_assignment: 0,
+				client_mention: 0,
+				project_mention: 0,
+				quote_mention: 0,
 			},
 			byPriority: {
 				low: 0,
@@ -722,5 +733,240 @@ export const cleanupOldNotifications = mutation({
 		}
 
 		return { deletedCount: toDelete.length };
+	},
+});
+
+/**
+ * List notifications for the current user in the current organization
+ */
+export const listForCurrentUser = query({
+	args: {
+		isRead: v.optional(v.boolean()),
+		limit: v.optional(v.number()),
+	},
+	handler: async (ctx, args) => {
+		const currentUser = await ctx.auth.getUserIdentity();
+		if (!currentUser) {
+			return { notifications: [], unreadCount: 0 };
+		}
+
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return { notifications: [], unreadCount: 0 };
+		}
+
+		// Get the user record
+		const user = await ctx.db
+			.query("users")
+			.withIndex("by_external_id", (q) =>
+				q.eq("externalId", currentUser.subject)
+			)
+			.first();
+
+		if (!user) {
+			return { notifications: [], unreadCount: 0 };
+		}
+
+		// Get notifications for this user in the current organization
+		let notifications: NotificationDocument[];
+
+		if (args.isRead !== undefined) {
+			notifications = await ctx.db
+				.query("notifications")
+				.withIndex("by_user_read", (q) =>
+					q.eq("userId", user._id).eq("isRead", args.isRead as boolean)
+				)
+				.order("desc")
+				.collect();
+
+			// Filter by current organization
+			notifications = notifications.filter((n) => n.orgId === userOrgId);
+		} else {
+			notifications = await ctx.db
+				.query("notifications")
+				.filter((q) =>
+					q.and(
+						q.eq(q.field("userId"), user._id),
+						q.eq(q.field("orgId"), userOrgId)
+					)
+				)
+				.order("desc")
+				.collect();
+		}
+
+		// Apply limit if specified
+		if (args.limit) {
+			notifications = notifications.slice(0, args.limit);
+		}
+
+		// Count unread notifications for current organization only
+		const unreadCount = await ctx.db
+			.query("notifications")
+			.withIndex("by_user_read", (q) =>
+				q.eq("userId", user._id).eq("isRead", false)
+			)
+			.collect()
+			.then(
+				(notifications) =>
+					notifications.filter((n) => n.orgId === userOrgId).length
+			);
+
+		return { notifications, unreadCount };
+	},
+});
+
+/**
+ * List mention notifications for a specific entity
+ */
+export const listByEntity = query({
+	args: {
+		entityType: v.union(
+			v.literal("client"),
+			v.literal("project"),
+			v.literal("quote")
+		),
+		entityId: v.string(),
+	},
+	handler: async (ctx, args) => {
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return [];
+		}
+
+		// Get all notifications for this entity
+		const notifications = await ctx.db
+			.query("notifications")
+			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
+			.collect();
+
+		// Filter for mentions on this specific entity
+		const mentionTypes: Record<string, string> = {
+			client: "client_mention",
+			project: "project_mention",
+			quote: "quote_mention",
+		};
+
+		const entityNotifications = notifications.filter(
+			(notification) =>
+				notification.notificationType === mentionTypes[args.entityType] &&
+				notification.entityId === args.entityId
+		);
+
+		// Fetch user details for each notification (author, not recipient)
+		const notificationsWithUsers = await Promise.all(
+			entityNotifications.map(async (notification) => {
+				// Extract author ID from the message format "authorId:message"
+				const colonIndex = notification.message.indexOf(":");
+				const authorIdStr = notification.message.substring(0, colonIndex);
+				const actualMessage = notification.message.substring(colonIndex + 1);
+
+				// Get the author (person who created the message)
+				let author = null;
+				const authorId = authorIdStr as Id<"users">;
+				const authorUser = await ctx.db.get(authorId);
+
+				if (authorUser) {
+					author = {
+						_id: authorUser._id,
+						name: authorUser.name,
+						email: authorUser.email,
+						image: authorUser.image,
+					};
+				}
+
+				return {
+					...notification,
+					message: actualMessage,
+					author,
+				};
+			})
+		);
+
+		// Sort by creation time (newest first for feed display)
+		return notificationsWithUsers.sort(
+			(a, b) => b._creationTime - a._creationTime
+		);
+	},
+});
+
+/**
+ * Create a mention notification
+ */
+export const createMention = mutation({
+	args: {
+		taggedUserId: v.id("users"),
+		message: v.string(),
+		entityType: v.union(
+			v.literal("client"),
+			v.literal("project"),
+			v.literal("quote")
+		),
+		entityId: v.string(),
+		entityName: v.string(),
+	},
+	handler: async (ctx, args): Promise<NotificationId> => {
+		// Get current user
+		const currentUser = await ctx.auth.getUserIdentity();
+		if (!currentUser) {
+			throw new Error("Not authenticated");
+		}
+
+		const userOrgId = await getCurrentUserOrgId(ctx);
+
+		// Get the current user's record (the author)
+		const author = await ctx.db
+			.query("users")
+			.withIndex("by_external_id", (q) =>
+				q.eq("externalId", currentUser.subject)
+			)
+			.first();
+
+		if (!author) {
+			throw new Error("User not found");
+		}
+
+		// Validate message
+		if (!args.message.trim()) {
+			throw new Error("Message cannot be empty");
+		}
+
+		// Validate tagged user exists and is in same organization
+		await validateUserAccess(ctx, args.taggedUserId, userOrgId);
+
+		// Generate action URL
+		const actionUrl = `/${args.entityType}s/${args.entityId}`;
+
+		// Determine notification type
+		const notificationTypeMap = {
+			client: "client_mention" as const,
+			project: "project_mention" as const,
+			quote: "quote_mention" as const,
+		};
+
+		const notificationType = notificationTypeMap[args.entityType];
+
+		// Create title with author name
+		const title = `${author.name} mentioned you in ${args.entityName}`;
+
+		// Store the author's ID in the title field temporarily
+		// We'll use a special format: "authorId:message"
+		const messageWithAuthor = `${author._id}:${args.message}`;
+
+		// Create the notification
+		const notificationId = await createNotificationWithOrg(ctx, {
+			userId: args.taggedUserId,
+			notificationType,
+			title,
+			message: messageWithAuthor, // Store author ID with message
+			entityType: args.entityType,
+			entityId: args.entityId,
+			actionUrl,
+			isRead: false,
+			priority: "medium",
+			sentVia: "in_app",
+			sentAt: Date.now(),
+		});
+
+		return notificationId;
 	},
 });

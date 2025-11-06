@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, ClipboardList, Receipt } from "lucide-react";
 import { TaskSheet } from "@/components/shared/task-sheet";
 import { ProjectViewEditForm } from "@/app/(workspace)/projects/components/project-view-edit-form";
+import { MentionSection } from "@/components/shared/mention-section";
 import {
 	Popover,
 	PopoverTrigger,
@@ -437,21 +438,30 @@ export default function ProjectDetailPage() {
 						</div>
 					</div>
 
-					{/* Project View/Edit Form Component */}
-					<ProjectViewEditForm
-						projectId={projectId}
-						project={project}
-						onUpdate={handleUpdate}
-						onDelete={handleDeleteProject}
-						onStatusUpdate={handleStatusUpdate}
-						isUpdating={isUpdating}
-						projectTasks={projectTasks}
-						projectQuotes={projectQuotes}
-						onTaskSheetOpen={() => setIsTaskSheetOpen(true)}
-						onNavigate={(path) => router.push(path)}
+				{/* Project View/Edit Form Component */}
+				<ProjectViewEditForm
+					projectId={projectId}
+					project={project}
+					onUpdate={handleUpdate}
+					onDelete={handleDeleteProject}
+					onStatusUpdate={handleStatusUpdate}
+					isUpdating={isUpdating}
+					projectTasks={projectTasks}
+					projectQuotes={projectQuotes}
+					onTaskSheetOpen={() => setIsTaskSheetOpen(true)}
+					onNavigate={(path) => router.push(path)}
+				/>
+
+				{/* Team Communication Section */}
+				<div className="mt-8">
+					<MentionSection
+						entityType="project"
+						entityId={projectId}
+						entityName={project.title}
 					/>
 				</div>
 			</div>
+		</div>
 		</>
 	);
 }

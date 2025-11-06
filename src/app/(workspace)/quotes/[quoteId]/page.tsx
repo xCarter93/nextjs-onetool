@@ -39,6 +39,7 @@ import { DocumentSelectionModal } from "@/app/(workspace)/quotes/components/docu
 import { SendEmailPopover } from "@/app/(workspace)/quotes/components/send-email-popover";
 import { SignatureProgressBar } from "@/app/(workspace)/quotes/components/signature-progress-bar";
 import Accordion from "@/components/ui/accordion";
+import { MentionSection } from "@/components/shared/mention-section";
 
 type QuoteStatus = "draft" | "sent" | "approved" | "declined" | "expired";
 
@@ -1498,6 +1499,15 @@ export default function QuoteDetailPage() {
 							</div>
 						</div>
 					</div>
+				</div>
+
+				{/* Team Communication Section */}
+				<div className="px-6 mb-8">
+					<MentionSection
+						entityType="quote"
+						entityId={quoteId}
+						entityName={quote?.title || `Quote #${quote?.quoteNumber || quoteId.slice(-6)}`}
+					/>
 				</div>
 			</div>
 
