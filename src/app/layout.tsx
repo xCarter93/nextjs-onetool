@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Outfit } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import ConvexClientProvider from "@/providers/ConvexClientProvider";
 import { ThemeProvider } from "@/providers/ThemeProvider";
@@ -9,13 +9,8 @@ import { DynamicTitle } from "@/components/shared/dynamic-title";
 import "./globals.css";
 import { env } from "@/env";
 
-const geistSans = Geist({
-	variable: "--font-geist-sans",
-	subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-	variable: "--font-geist-mono",
+const outfit = Outfit({
+	variable: "--font-outfit",
 	subsets: ["latin"],
 });
 
@@ -31,9 +26,7 @@ export default function RootLayout({
 }>) {
 	return (
 		<html suppressHydrationWarning lang="en">
-			<body
-				className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-			>
+			<body className={`${outfit.className} antialiased`}>
 				<ClerkProvider
 					publishableKey={env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
 					afterSignOutUrl="/"
