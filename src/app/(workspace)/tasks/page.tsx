@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TaskSheet } from "@/components/shared/task-sheet";
+import { StyledButton } from "@/components/ui/styled/styled-button";
 import { motion, AnimatePresence } from "motion/react";
 import {
 	Calendar,
@@ -489,16 +490,11 @@ export default function TasksPage() {
 				<TaskSheet
 					mode="create"
 					trigger={
-						<>
-							<Plus className="h-4 w-4" />
-							<span>New Task</span>
-							<span
-								aria-hidden="true"
-								className="group-hover:translate-x-1 transition-transform duration-200"
-							>
-								→
-							</span>
-						</>
+						<StyledButton
+							label="New Task"
+							icon={<Plus className="h-4 w-4" />}
+							intent="primary"
+						/>
 					}
 				/>
 			</div>
@@ -674,16 +670,11 @@ export default function TasksPage() {
 									<TaskSheet
 										mode="create"
 										trigger={
-											<>
-												<Plus className="h-4 w-4" />
-												<span>Create Your First Task</span>
-												<span
-													aria-hidden="true"
-													className="group-hover:translate-x-1 transition-transform duration-200"
-												>
-													→
-												</span>
-											</>
+											<StyledButton
+												label="Create Your First Task"
+												icon={<Plus className="h-4 w-4" />}
+												intent="primary"
+											/>
 										}
 									/>
 								)}
