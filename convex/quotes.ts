@@ -149,6 +149,54 @@ async function calculateQuoteTotals(
 }
 
 /**
+ * Generate the next sequential quote number for an organization
+ * Uses a counter stored in the organization for O(1) performance
+ */
+async function generateNextQuoteNumber(
+	ctx: MutationCtx,
+	orgId: Id<"organizations">
+): Promise<string> {
+	const org = await ctx.db.get(orgId);
+	if (!org) {
+		throw new Error("Organization not found");
+	}
+
+	let nextNumber: number;
+
+	// If organization doesn't have a lastQuoteNumber (legacy), scan all quotes once
+	if (org.lastQuoteNumber === undefined) {
+		const quotes = await ctx.db
+			.query("quotes")
+			.withIndex("by_org", (q) => q.eq("orgId", orgId))
+			.collect();
+
+		let maxNumber = 0;
+		for (const quote of quotes) {
+			if (quote.quoteNumber) {
+				// Extract number from format Q-000001
+				const match = quote.quoteNumber.match(/^Q-(\d+)$/);
+				if (match) {
+					const num = parseInt(match[1], 10);
+					if (num > maxNumber) {
+						maxNumber = num;
+					}
+				}
+			}
+		}
+		nextNumber = maxNumber + 1;
+	} else {
+		// Use the counter - much faster!
+		nextNumber = org.lastQuoteNumber + 1;
+	}
+
+	// Update the organization's counter
+	await ctx.db.patch(orgId, { lastQuoteNumber: nextNumber });
+
+	// Format with leading zeros (6 digits)
+	return `Q-${nextNumber.toString().padStart(6, "0")}`;
+}
+
+/**
  * Create a quote with automatic orgId assignment
  */
 async function createQuoteWithOrg(
@@ -165,8 +213,13 @@ async function createQuoteWithOrg(
 		await validateProjectAccess(ctx, data.projectId);
 	}
 
+	// Auto-generate quote number if not provided
+	const quoteNumber =
+		data.quoteNumber || (await generateNextQuoteNumber(ctx, userOrgId));
+
 	const quoteData = {
 		...data,
+		quoteNumber,
 		orgId: userOrgId,
 		publicToken: generatePublicToken(),
 	};

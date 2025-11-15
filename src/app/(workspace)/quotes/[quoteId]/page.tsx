@@ -28,6 +28,7 @@ import {
 	Check,
 	History,
 	Clock,
+	ClipboardList,
 } from "lucide-react";
 import { StickyFormFooter } from "@/components/shared/sticky-form-footer";
 import { pdf } from "@react-pdf/renderer";
@@ -609,7 +610,6 @@ export default function QuoteDetailPage() {
 							</div>
 						</div>
 
-
 						{/* Two Column Layout */}
 						<div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
 							{/* Main Content - Left Column */}
@@ -1156,18 +1156,10 @@ export default function QuoteDetailPage() {
 												</>
 											) : (
 												<div className="p-8 border-2 border-dashed border-gray-300 dark:border-white/20 rounded-lg text-center">
-													<div className="text-4xl mb-3">📋</div>
-													<p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+													<ClipboardList className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+													<p className="text-sm text-gray-500 dark:text-gray-400">
 														No line items added yet
 													</p>
-													<Button
-														size="sm"
-														onClick={() =>
-															router.push(`/quotes/${quoteId}/quoteLineEditor`)
-														}
-													>
-														Add Line Items
-													</Button>
 												</div>
 											)}
 										</CardContent>
@@ -1506,7 +1498,10 @@ export default function QuoteDetailPage() {
 					<MentionSection
 						entityType="quote"
 						entityId={quoteId}
-						entityName={quote?.title || `Quote #${quote?.quoteNumber || quoteId.slice(-6)}`}
+						entityName={
+							quote?.title ||
+							`Quote #${quote?.quoteNumber || quoteId.slice(-6)}`
+						}
 					/>
 				</div>
 			</div>

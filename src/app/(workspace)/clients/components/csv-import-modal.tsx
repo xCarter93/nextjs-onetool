@@ -126,6 +126,21 @@ export function CsvImportModal({
 			case "date":
 				const date = new Date(String(value));
 				return isNaN(date.getTime()) ? undefined : date.toISOString();
+			case "array":
+				// Handle array fields - split by common delimiters
+				if (Array.isArray(value)) return value;
+				const stringValue = String(value).trim();
+				if (!stringValue) return undefined;
+				
+				// Split by semicolon, comma, or pipe - trim each item and filter empty strings
+				const delimiter = stringValue.includes(';') ? ';' : 
+				                 stringValue.includes(',') ? ',' : 
+				                 stringValue.includes('|') ? '|' : ',';
+				
+				return stringValue
+					.split(delimiter)
+					.map(item => item.trim())
+					.filter(item => item.length > 0);
 			default:
 				return value;
 		}
