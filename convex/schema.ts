@@ -86,6 +86,9 @@ export default defineSchema({
 		monthlyRevenueTarget: v.optional(v.number()), // Monthly Revenue target displayed on home page
 		timezone: v.optional(v.string()), // IANA timezone (e.g., "America/New_York")
 
+		// Sequential numbering counters
+		lastQuoteNumber: v.optional(v.number()), // Last used quote number for sequential generation
+
 		// Metadata flags
 		isMetadataComplete: v.optional(v.boolean()), // Whether user completed additional onboarding
 	})

@@ -27,6 +27,13 @@ For client data, required fields are:
 - emailOptIn (boolean)
 - smsOptIn (boolean)
 
+Optional client fields include:
+- industry, companyDescription, notes (strings)
+- leadSource, category, clientSize, clientType, priorityLevel, communicationPreference (enums)
+- isActive (boolean)
+- projectDimensions (string)
+- servicesNeeded, tags (arrays - can be semicolon, comma, or pipe-separated in CSV)
+
 For project data, required fields are:
 - title (string)
 - status (enum: planned, in-progress, completed, cancelled)
@@ -36,6 +43,10 @@ For project data, required fields are:
 Always suggest appropriate defaults for missing required fields:
 - For clients: status="lead", emailOptIn=false, smsOptIn=false
 - For projects: status="planned", projectType="one-off"
+
+For array fields (servicesNeeded, tags, assignedUserIds):
+- These should be comma, semicolon, or pipe-separated values in the CSV
+- They will be automatically split into arrays during import
 
 Be helpful and provide actionable feedback to users about their data quality.`,
 	model: "openai/gpt-4o",

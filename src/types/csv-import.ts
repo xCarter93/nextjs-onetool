@@ -52,25 +52,25 @@ export interface ImportResult {
 	items: ImportResultItem[];
 }
 
-// Schema field definitions for reference
+// Schema field definitions for reference - must match convex/schema.ts clients table
 export const CLIENT_SCHEMA_FIELDS = {
-	// Required fields
+	// Required fields (from schema)
 	companyName: { type: "string", required: true },
 	status: {
 		type: "enum",
 		required: true,
-		values: ["lead", "prospect", "active", "inactive", "archived"],
+		options: ["lead", "prospect", "active", "inactive", "archived"],
 	},
 	emailOptIn: { type: "boolean", required: true },
 	smsOptIn: { type: "boolean", required: true },
 
-	// Optional fields
+	// Optional fields (from schema)
 	industry: { type: "string", required: false },
 	companyDescription: { type: "string", required: false },
 	leadSource: {
 		type: "enum",
 		required: false,
-		values: [
+		options: [
 			"word-of-mouth",
 			"website",
 			"social-media",
@@ -84,7 +84,7 @@ export const CLIENT_SCHEMA_FIELDS = {
 	category: {
 		type: "enum",
 		required: false,
-		values: [
+		options: [
 			"design",
 			"development",
 			"consulting",
@@ -96,12 +96,12 @@ export const CLIENT_SCHEMA_FIELDS = {
 	clientSize: {
 		type: "enum",
 		required: false,
-		values: ["small", "medium", "large", "enterprise"],
+		options: ["small", "medium", "large", "enterprise"],
 	},
 	clientType: {
 		type: "enum",
 		required: false,
-		values: [
+		options: [
 			"new-client",
 			"existing-client",
 			"partner",
@@ -113,35 +113,36 @@ export const CLIENT_SCHEMA_FIELDS = {
 	priorityLevel: {
 		type: "enum",
 		required: false,
-		values: ["low", "medium", "high", "urgent"],
+		options: ["low", "medium", "high", "urgent"],
 	},
 	projectDimensions: { type: "string", required: false },
 	communicationPreference: {
 		type: "enum",
 		required: false,
-		values: ["email", "phone", "both"],
+		options: ["email", "phone", "both"],
 	},
 	servicesNeeded: { type: "array", required: false },
 	tags: { type: "array", required: false },
 	notes: { type: "string", required: false },
 } as const;
 
+// Schema field definitions for reference - must match convex/schema.ts projects table
 export const PROJECT_SCHEMA_FIELDS = {
-	// Required fields
+	// Required fields (from schema)
 	title: { type: "string", required: true },
 	status: {
 		type: "enum",
 		required: true,
-		values: ["planned", "in-progress", "completed", "cancelled"],
+		options: ["planned", "in-progress", "completed", "cancelled"],
 	},
 	projectType: {
 		type: "enum",
 		required: true,
-		values: ["one-off", "recurring"],
+		options: ["one-off", "recurring"],
 	},
 	clientId: { type: "id", required: true }, // Can be resolved from client name
 
-	// Optional fields
+	// Optional fields (from schema)
 	description: { type: "string", required: false },
 	instructions: { type: "string", required: false },
 	projectNumber: { type: "string", required: false },

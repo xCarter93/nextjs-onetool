@@ -30,6 +30,7 @@ import type * as lib_auth from "../lib/auth.js";
 import type * as lib_memberships from "../lib/memberships.js";
 import type * as lib_permissions from "../lib/permissions.js";
 import type * as lib_shared from "../lib/shared.js";
+import type * as migrations_initializeQuoteCounters from "../migrations/initializeQuoteCounters.js";
 import type * as migrations_populateAggregates from "../migrations/populateAggregates.js";
 import type * as notifications from "../notifications.js";
 import type * as organizationDocuments from "../organizationDocuments.js";
@@ -79,6 +80,7 @@ declare const fullApi: ApiFromModules<{
   "lib/memberships": typeof lib_memberships;
   "lib/permissions": typeof lib_permissions;
   "lib/shared": typeof lib_shared;
+  "migrations/initializeQuoteCounters": typeof migrations_initializeQuoteCounters;
   "migrations/populateAggregates": typeof migrations_populateAggregates;
   notifications: typeof notifications;
   organizationDocuments: typeof organizationDocuments;
