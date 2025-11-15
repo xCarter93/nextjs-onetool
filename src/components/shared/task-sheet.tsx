@@ -6,26 +6,39 @@ import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import { cn } from "@/lib/utils";
 import { StyledButton } from "@/components/ui/styled/styled-button";
+import {
+	StyledSelect,
+	StyledSelectTrigger,
+	StyledSelectContent,
+	SelectValue,
+	SelectItem,
+} from "@/components/ui/styled/styled-select";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from "@/components/ui/popover";
 import {
 	Sheet,
 	SheetContent,
 	SheetHeader,
 	SheetTitle,
 	SheetDescription,
-	SheetBody,
-	SheetFooter,
-	SheetClose,
 	SheetTrigger,
+	SheetFooter,
 } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
 import {
-	Calendar,
-	Clock,
+	CalendarIcon,
 	User,
 	Flag,
 	Building2,
 	FolderOpen,
+	Activity,
 } from "lucide-react";
 
 interface Task {
@@ -85,22 +98,23 @@ export function TaskSheet({
 	isOpen,
 	initialValues,
 }: TaskSheetProps) {
-	const { error: toastError, success: toastSuccess } = useToast();
+	const { success, error } = useToast();
 	const [formData, setFormData] = useState({
 		title: "",
 		description: "",
 		clientId: "" as Id<"clients"> | "",
 		projectId: "" as Id<"projects"> | "",
-		date: "",
-		startTime: "",
-		endTime: "",
+		date: undefined as Date | undefined,
 		assigneeUserId: "" as Id<"users"> | "",
 		status: "pending" as Task["status"],
 		priority: "medium" as Task["priority"],
 		repeat: "none" as Task["repeat"],
-		repeatUntil: "",
+		repeatUntil: undefined as Date | undefined,
 	});
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [datePopoverOpen, setDatePopoverOpen] = useState(false);
+	const [repeatUntilPopoverOpen, setRepeatUntilPopoverOpen] = useState(false);
+	const [internalOpen, setInternalOpen] = useState(false);
 
 	// Queries for form data
 	const clients = useQuery(api.clients.list, {});
@@ -127,33 +141,28 @@ export function TaskSheet({
 				description: task.description || "",
 				clientId: task.clientId,
 				projectId: task.projectId || "",
-				date: taskDate.toISOString().split("T")[0], // Convert to YYYY-MM-DD format
-				startTime: task.startTime || "",
-				endTime: task.endTime || "",
+				date: taskDate,
 				assigneeUserId: task.assigneeUserId || "",
 				status: task.status,
 				priority: task.priority || "medium",
 				repeat: task.repeat || "none",
-				repeatUntil: task.repeatUntil
-					? new Date(task.repeatUntil).toISOString().split("T")[0]
-					: "",
+				repeatUntil: task.repeatUntil ? new Date(task.repeatUntil) : undefined,
 			});
 		} else if (isCreateMode) {
 			// Reset form for create mode with optional initial values
-			const today = new Date().toISOString().split("T")[0];
+			const today = new Date();
+			today.setHours(0, 0, 0, 0);
 			setFormData({
 				title: "",
 				description: "",
 				clientId: initialValues?.clientId || "",
 				projectId: initialValues?.projectId || "",
 				date: today,
-				startTime: "",
-				endTime: "",
 				assigneeUserId: "",
 				status: "pending",
 				priority: "medium",
 				repeat: "none",
-				repeatUntil: "",
+				repeatUntil: undefined,
 			});
 		}
 	}, [task, isEditMode, isCreateMode, initialValues, mode]);
@@ -171,26 +180,26 @@ export function TaskSheet({
 		e?.preventDefault();
 
 		if (!formData.title.trim()) {
-			toastError("Task title is required");
+			error("Error", "Task title is required");
 			return;
 		}
 
 		if (!formData.clientId) {
-			toastError("Please select a client");
+			error("Error", "Please select a client");
 			return;
 		}
 
 		if (!formData.date) {
-			toastError("Please select a date");
+			error("Error", "Please select a date");
 			return;
 		}
 
 		setIsSubmitting(true);
 
 		try {
-			const taskDate = new Date(formData.date).getTime();
+			const taskDate = formData.date.getTime();
 			const repeatUntil = formData.repeatUntil
-				? new Date(formData.repeatUntil).getTime()
+				? formData.repeatUntil.getTime()
 				: undefined;
 
 			const taskData = {
@@ -201,8 +210,6 @@ export function TaskSheet({
 					? (formData.projectId as Id<"projects">)
 					: undefined,
 				date: taskDate,
-				startTime: formData.startTime || undefined,
-				endTime: formData.endTime || undefined,
 				assigneeUserId: formData.assigneeUserId
 					? (formData.assigneeUserId as Id<"users">)
 					: undefined,
@@ -217,335 +224,389 @@ export function TaskSheet({
 					id: task._id,
 					...taskData,
 				});
-				toastSuccess("Task updated successfully!");
+				success("Success", "Task updated successfully!");
 			} else {
 				await createTask(taskData);
-				toastSuccess("Task created successfully!");
+				success("Success", "Task created successfully!");
 			}
 
-			if (onOpenChange) onOpenChange(false);
-		} catch (error) {
-			console.error("Error saving task:", error);
-			toastError(
-				error instanceof Error ? error.message : "Failed to save task"
+			// Close the sheet
+			if (trigger) {
+				setInternalOpen(false);
+			} else if (onOpenChange) {
+				onOpenChange(false);
+			}
+		} catch (err) {
+			console.error("Error saving task:", err);
+			error(
+				"Error",
+				err instanceof Error ? err.message : "Failed to save task"
 			);
 		} finally {
 			setIsSubmitting(false);
 		}
 	};
 
+	const handleClose = () => {
+		if (trigger) {
+			setInternalOpen(false);
+		} else if (onOpenChange) {
+			onOpenChange(false);
+		}
+	};
+
 	const sheetContent = (
-		<SheetContent
-			side="right"
-			className="w-full sm:max-w-xl overflow-y-auto"
-			isBlurred={true}
-		>
-			<SheetHeader className="border-b border-border pb-4">
-				<SheetTitle className="flex items-center gap-2 text-2xl font-semibold">
-					{isEditMode ? "Edit Task" : "Create New Task"}
-				</SheetTitle>
-				<SheetDescription className="text-muted-foreground">
-					{isEditMode
-						? "Update the task details below."
-						: "Add a new task to your schedule. Fill in the details below."}
-				</SheetDescription>
-			</SheetHeader>
+		<SheetContent side="right" className="w-full sm:max-w-xl !bg-background">
+			<div className="flex flex-col h-full overflow-hidden">
+				<SheetHeader className="border-b border-border pb-4 flex-shrink-0">
+					<SheetTitle className="flex items-center gap-2 text-2xl font-semibold">
+						{isEditMode ? "Edit Task" : "Create New Task"}
+					</SheetTitle>
+					<SheetDescription className="text-muted-foreground">
+						{isEditMode
+							? "Update the task details below."
+							: "Add a new task to your schedule. Fill in the details below."}
+					</SheetDescription>
+				</SheetHeader>
 
-			<SheetBody className="pt-6">
-				<form onSubmit={handleSubmit} className="space-y-6">
-					{/* Title */}
-					<div className="space-y-2.5">
-						<label className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-							Task Title <span className="text-danger">*</span>
-						</label>
-						<Input
-							value={formData.title}
-							onChange={(e) => handleInputChange("title", e.target.value)}
-							placeholder="Enter task title..."
-							className="w-full transition-all duration-200 hover:border-primary/50 focus:border-primary"
-						/>
-					</div>
-
-					{/* Description */}
-					<div className="space-y-2.5">
-						<label className="text-sm font-semibold text-foreground">
-							Description
-						</label>
-						<textarea
-							value={formData.description}
-							onChange={(e) => handleInputChange("description", e.target.value)}
-							placeholder="Add task description..."
-							className={cn(
-								"flex min-h-[100px] w-full rounded-md border border-input bg-transparent px-3 py-2.5 text-sm",
-								"placeholder:text-muted-foreground",
-								"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-								"disabled:cursor-not-allowed disabled:opacity-50",
-								"transition-all duration-200 hover:border-primary/50 focus:border-primary",
-								"resize-none"
-							)}
-							rows={4}
-						/>
-					</div>
-
-					{/* Client Selection */}
-					<div className="space-y-2.5">
-						<label className="text-sm font-semibold text-foreground flex items-center gap-2">
-							<Building2 className="h-4 w-4 text-primary" />
-							Client <span className="text-danger">*</span>
-						</label>
-						<select
-							value={formData.clientId}
-							onChange={(e) => handleInputChange("clientId", e.target.value)}
-							className={cn(
-								"flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm",
-								"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-								"disabled:cursor-not-allowed disabled:opacity-50",
-								"transition-all duration-200 hover:border-primary/50 focus:border-primary",
-								"cursor-pointer"
-							)}
-						>
-							<option value="">Select a client...</option>
-							{clients?.map((client) => (
-								<option key={client._id} value={client._id}>
-									{client.companyName}
-								</option>
-							))}
-						</select>
-					</div>
-
-					{/* Project Selection */}
-					<div className="space-y-2.5">
-						<label className="text-sm font-semibold text-foreground flex items-center gap-2">
-							<FolderOpen className="h-4 w-4 text-primary" />
-							Project{" "}
-							<span className="text-muted-foreground text-xs">(Optional)</span>
-						</label>
-						<select
-							value={formData.projectId}
-							onChange={(e) => handleInputChange("projectId", e.target.value)}
-							disabled={!formData.clientId}
-							className={cn(
-								"flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm",
-								"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-								"disabled:cursor-not-allowed disabled:opacity-50",
-								"transition-all duration-200 hover:border-primary/50 focus:border-primary",
-								"cursor-pointer"
-							)}
-						>
-							<option value="">No project selected</option>
-							{projects?.map((project) => (
-								<option key={project._id} value={project._id}>
-									{project.title}
-								</option>
-							))}
-						</select>
-						{!formData.clientId && (
-							<p className="text-xs text-muted-foreground">
-								Select a client first to choose a project
-							</p>
-						)}
-					</div>
-
-					{/* Date and Time */}
-					<div className="space-y-4 p-4 rounded-lg bg-muted/30 border border-border/50">
-						<h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-							<Calendar className="h-4 w-4 text-primary" />
-							Schedule
-						</h3>
-						<div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-							<div className="space-y-2">
-								<label className="text-xs font-medium text-foreground">
-									Date <span className="text-danger">*</span>
-								</label>
-								<Input
-									type="date"
-									value={formData.date}
-									onChange={(e) => handleInputChange("date", e.target.value)}
-									className="w-full transition-all duration-200 hover:border-primary/50 focus:border-primary"
-								/>
-							</div>
-							<div className="space-y-2">
-								<label className="text-xs font-medium text-foreground flex items-center gap-1.5">
-									<Clock className="h-3.5 w-3.5" />
-									Start Time
-								</label>
-								<Input
-									type="time"
-									value={formData.startTime}
-									onChange={(e) =>
-										handleInputChange("startTime", e.target.value)
-									}
-									className="w-full transition-all duration-200 hover:border-primary/50 focus:border-primary"
-								/>
-							</div>
-							<div className="space-y-2">
-								<label className="text-xs font-medium text-foreground flex items-center gap-1.5">
-									<Clock className="h-3.5 w-3.5" />
-									End Time
-								</label>
-								<Input
-									type="time"
-									value={formData.endTime}
-									onChange={(e) => handleInputChange("endTime", e.target.value)}
-									className="w-full transition-all duration-200 hover:border-primary/50 focus:border-primary"
-								/>
-							</div>
+				<div className="flex-1 overflow-y-auto pt-6 px-6">
+					<form onSubmit={handleSubmit} className="space-y-6">
+						{/* Title */}
+						<div className="space-y-2.5">
+							<label className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+								Task Title <span className="text-danger">*</span>
+							</label>
+							<Input
+								value={formData.title}
+								onChange={(e) => handleInputChange("title", e.target.value)}
+								placeholder="Enter task title..."
+								className="w-full transition-all duration-200 hover:border-primary/50 focus:border-primary"
+							/>
 						</div>
-					</div>
 
-					{/* Status and Priority */}
-					<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+						{/* Description */}
 						<div className="space-y-2.5">
 							<label className="text-sm font-semibold text-foreground">
-								Status
+								Description
 							</label>
-							<select
-								value={formData.status}
-								onChange={(e) => handleInputChange("status", e.target.value)}
+							<textarea
+								value={formData.description}
+								onChange={(e) =>
+									handleInputChange("description", e.target.value)
+								}
+								placeholder="Add task description..."
 								className={cn(
-									"flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm",
+									"flex min-h-[100px] w-full rounded-md border border-input bg-transparent px-3 py-2.5 text-sm",
+									"placeholder:text-muted-foreground",
 									"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+									"disabled:cursor-not-allowed disabled:opacity-50",
 									"transition-all duration-200 hover:border-primary/50 focus:border-primary",
-									"cursor-pointer"
+									"resize-none"
 								)}
-							>
-								{statusOptions.map((option) => (
-									<option key={option.value} value={option.value}>
-										{option.label}
-									</option>
-								))}
-							</select>
+								rows={4}
+							/>
 						</div>
+
+						{/* Client Selection */}
 						<div className="space-y-2.5">
 							<label className="text-sm font-semibold text-foreground flex items-center gap-2">
-								<Flag className="h-4 w-4 text-primary" />
-								Priority
+								<Building2 className="h-4 w-4 text-primary" />
+								Client <span className="text-danger">*</span>
 							</label>
-							<select
-								value={formData.priority}
-								onChange={(e) => handleInputChange("priority", e.target.value)}
-								className={cn(
-									"flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm",
-									"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-									"transition-all duration-200 hover:border-primary/50 focus:border-primary",
-									"cursor-pointer"
-								)}
+							<StyledSelect
+								value={formData.clientId}
+								onValueChange={(value) => handleInputChange("clientId", value)}
 							>
-								{priorityOptions.map((option) => (
-									<option key={option.value} value={option.value}>
-										{option.label}
-									</option>
-								))}
-							</select>
+								<StyledSelectTrigger className="w-full">
+									<SelectValue placeholder="Select a client..." />
+								</StyledSelectTrigger>
+								<StyledSelectContent>
+									{clients?.map((client) => (
+										<SelectItem key={client._id} value={client._id}>
+											{client.companyName}
+										</SelectItem>
+									))}
+								</StyledSelectContent>
+							</StyledSelect>
 						</div>
-					</div>
 
-					{/* Assignee */}
-					<div className="space-y-2.5">
-						<label className="text-sm font-semibold text-foreground flex items-center gap-2">
-							<User className="h-4 w-4 text-primary" />
-							Assign To
-						</label>
-						<select
-							value={formData.assigneeUserId}
-							onChange={(e) =>
-								handleInputChange("assigneeUserId", e.target.value)
-							}
-							className={cn(
-								"flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm",
-								"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-								"transition-all duration-200 hover:border-primary/50 focus:border-primary",
-								"cursor-pointer"
-							)}
-						>
-							<option value="">Unassigned</option>
-							{users?.map((user) => (
-								<option key={user._id} value={user._id}>
-									{user.name || user.email}
-								</option>
-							))}
-						</select>
-					</div>
-
-					{/* Repeat Options */}
-					<div className="space-y-4 p-4 rounded-lg bg-muted/30 border border-border/50">
-						<h3 className="text-sm font-semibold text-foreground">
-							Recurrence
-						</h3>
+						{/* Project Selection */}
 						<div className="space-y-2.5">
-							<label className="text-xs font-medium text-foreground">
-								Repeat
+							<label className="text-sm font-semibold text-foreground flex items-center gap-2">
+								<FolderOpen className="h-4 w-4 text-primary" />
+								Project{" "}
+								<span className="text-muted-foreground text-xs">
+									(Optional)
+								</span>
 							</label>
-							<select
-								value={formData.repeat}
-								onChange={(e) => handleInputChange("repeat", e.target.value)}
-								className={cn(
-									"flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm",
-									"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-									"transition-all duration-200 hover:border-primary/50 focus:border-primary",
-									"cursor-pointer"
-								)}
+							<StyledSelect
+								value={formData.projectId}
+								onValueChange={(value) => handleInputChange("projectId", value)}
+								disabled={!formData.clientId}
 							>
-								{repeatOptions.map((option) => (
-									<option key={option.value} value={option.value}>
-										{option.label}
-									</option>
-								))}
-							</select>
+								<StyledSelectTrigger
+									className="w-full"
+									disabled={!formData.clientId}
+								>
+									<SelectValue placeholder="No project selected" />
+								</StyledSelectTrigger>
+								<StyledSelectContent>
+									{projects?.map((project) => (
+										<SelectItem key={project._id} value={project._id}>
+											{project.title}
+										</SelectItem>
+									))}
+								</StyledSelectContent>
+							</StyledSelect>
+							{!formData.clientId && (
+								<p className="text-xs text-muted-foreground">
+									Select a client first to choose a project
+								</p>
+							)}
 						</div>
 
-						{formData.repeat !== "none" && (
-							<div className="space-y-2.5 animate-in fade-in-50 slide-in-from-top-2 duration-200">
-								<label className="text-xs font-medium text-foreground">
-									Repeat Until
-								</label>
-								<Input
-									type="date"
-									value={formData.repeatUntil}
-									onChange={(e) =>
-										handleInputChange("repeatUntil", e.target.value)
-									}
-									className="w-full transition-all duration-200 hover:border-primary/50 focus:border-primary"
-								/>
-							</div>
-						)}
-					</div>
-				</form>
-			</SheetBody>
+						{/* Date */}
+						<div className="space-y-2.5">
+							<label className="text-sm font-semibold text-foreground flex items-center gap-2">
+								<CalendarIcon className="h-4 w-4 text-primary" />
+								Date <span className="text-danger">*</span>
+							</label>
+							<Popover open={datePopoverOpen} onOpenChange={setDatePopoverOpen}>
+								<PopoverTrigger asChild>
+									<Button
+										intent="outline"
+										id="date-picker"
+										className="w-full justify-start font-normal"
+									>
+										<CalendarIcon className="mr-2 h-4 w-4" />
+										{formData.date
+											? formData.date.toLocaleDateString("en-US", {
+													year: "numeric",
+													month: "long",
+													day: "numeric",
+												})
+											: "Select date"}
+									</Button>
+								</PopoverTrigger>
+								<PopoverContent
+									className="w-auto p-0 bg-white dark:bg-gray-950"
+									align="start"
+								>
+									<Calendar
+										mode="single"
+										selected={formData.date}
+										onSelect={(date) => {
+											if (date) {
+												setFormData((prev) => ({ ...prev, date }));
+												setDatePopoverOpen(false);
+											}
+										}}
+										className="!bg-white dark:!bg-gray-950"
+									/>
+								</PopoverContent>
+							</Popover>
+						</div>
 
-			<SheetFooter className="flex flex-row justify-end gap-3 border-t border-border pt-4 mt-6">
-				<SheetClose intent="outline" isDisabled={isSubmitting}>
-					Cancel
-				</SheetClose>
-				<StyledButton
-					onClick={() => handleSubmit()}
-					intent="primary"
-					isLoading={isSubmitting}
-					disabled={
-						isSubmitting || !formData.title.trim() || !formData.clientId
-					}
-					label={
-						isSubmitting
-							? isEditMode
-								? "Updating..."
-								: "Creating..."
-							: isEditMode
-								? "Update Task"
-								: "Create Task"
-					}
-					className="min-w-[120px]"
-				/>
-			</SheetFooter>
+						{/* Status and Priority */}
+						<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+							<div className="space-y-2.5">
+								<label className="text-sm font-semibold text-foreground flex items-center gap-2">
+									<Activity className="h-4 w-4 text-primary" />
+									Status
+								</label>
+								<StyledSelect
+									value={formData.status}
+									onValueChange={(value) => handleInputChange("status", value)}
+								>
+									<StyledSelectTrigger className="w-full">
+										<SelectValue />
+									</StyledSelectTrigger>
+									<StyledSelectContent>
+										{statusOptions.map((option) => (
+											<SelectItem key={option.value} value={option.value}>
+												{option.label}
+											</SelectItem>
+										))}
+									</StyledSelectContent>
+								</StyledSelect>
+							</div>
+							<div className="space-y-2.5">
+								<label className="text-sm font-semibold text-foreground flex items-center gap-2">
+									<Flag className="h-4 w-4 text-primary" />
+									Priority
+								</label>
+								<StyledSelect
+									value={formData.priority}
+									onValueChange={(value) =>
+										handleInputChange("priority", value)
+									}
+								>
+									<StyledSelectTrigger className="w-full">
+										<SelectValue />
+									</StyledSelectTrigger>
+									<StyledSelectContent>
+										{priorityOptions.map((option) => (
+											<SelectItem key={option.value} value={option.value}>
+												{option.label}
+											</SelectItem>
+										))}
+									</StyledSelectContent>
+								</StyledSelect>
+							</div>
+						</div>
+
+						{/* Assignee */}
+						<div className="space-y-2.5">
+							<label className="text-sm font-semibold text-foreground flex items-center gap-2">
+								<User className="h-4 w-4 text-primary" />
+								Assign To
+							</label>
+							<StyledSelect
+								value={formData.assigneeUserId || undefined}
+								onValueChange={(value) =>
+									handleInputChange("assigneeUserId", value)
+								}
+							>
+								<StyledSelectTrigger className="w-full">
+									<SelectValue placeholder="Unassigned" />
+								</StyledSelectTrigger>
+								<StyledSelectContent>
+									{users?.map((user) => (
+										<SelectItem key={user._id} value={user._id}>
+											{user.name || user.email}
+										</SelectItem>
+									))}
+								</StyledSelectContent>
+							</StyledSelect>
+						</div>
+
+						{/* Repeat Options */}
+						<div className="space-y-4 p-4 rounded-lg bg-muted/30 border border-border/50">
+							<h3 className="text-sm font-semibold text-foreground">
+								Recurrence
+							</h3>
+							<div className="space-y-2.5">
+								<label className="text-xs font-medium text-foreground">
+									Repeat
+								</label>
+								<StyledSelect
+									value={formData.repeat}
+									onValueChange={(value) => handleInputChange("repeat", value)}
+								>
+									<StyledSelectTrigger className="w-full">
+										<SelectValue />
+									</StyledSelectTrigger>
+									<StyledSelectContent>
+										{repeatOptions.map((option) => (
+											<SelectItem key={option.value} value={option.value}>
+												{option.label}
+											</SelectItem>
+										))}
+									</StyledSelectContent>
+								</StyledSelect>
+							</div>
+
+							{formData.repeat !== "none" && (
+								<div className="flex flex-col gap-2 animate-in fade-in-50 slide-in-from-top-2 duration-200">
+									<Label
+										htmlFor="repeat-until-picker"
+										className="text-xs font-medium text-foreground"
+									>
+										Repeat Until
+									</Label>
+									<Popover
+										open={repeatUntilPopoverOpen}
+										onOpenChange={setRepeatUntilPopoverOpen}
+									>
+										<PopoverTrigger asChild>
+											<Button
+												intent="outline"
+												id="repeat-until-picker"
+												className="w-full justify-start font-normal"
+											>
+												<CalendarIcon className="mr-2 h-4 w-4" />
+												{formData.repeatUntil
+													? formData.repeatUntil.toLocaleDateString("en-US", {
+															year: "numeric",
+															month: "long",
+															day: "numeric",
+														})
+													: "Select end date"}
+											</Button>
+										</PopoverTrigger>
+										<PopoverContent
+											className="w-auto p-0 bg-white dark:bg-gray-950"
+											align="start"
+										>
+											<Calendar
+												mode="single"
+												selected={formData.repeatUntil}
+												onSelect={(date) => {
+													if (date) {
+														setFormData((prev) => ({
+															...prev,
+															repeatUntil: date,
+														}));
+														setRepeatUntilPopoverOpen(false);
+													}
+												}}
+												disabled={(date) => {
+													if (!formData.date) return false;
+													const taskDate = new Date(formData.date);
+													taskDate.setHours(0, 0, 0, 0);
+													const checkDate = new Date(date);
+													checkDate.setHours(0, 0, 0, 0);
+													return checkDate < taskDate;
+												}}
+												className="!bg-white dark:!bg-gray-950"
+											/>
+										</PopoverContent>
+									</Popover>
+								</div>
+							)}
+						</div>
+					</form>
+				</div>
+
+				<SheetFooter className="flex flex-row justify-end gap-3 border-t border-border flex-shrink-0">
+					<StyledButton
+						type="button"
+						intent="outline"
+						onClick={handleClose}
+						disabled={isSubmitting}
+						label="Cancel"
+						showArrow={false}
+					/>
+					<StyledButton
+						type="button"
+						intent="primary"
+						onClick={() => handleSubmit()}
+						isLoading={isSubmitting}
+						disabled={
+							isSubmitting || !formData.title.trim() || !formData.clientId
+						}
+						label={
+							isSubmitting
+								? isEditMode
+									? "Updating..."
+									: "Creating..."
+								: isEditMode
+									? "Update Task"
+									: "Create Task"
+						}
+						className="min-w-[120px]"
+						showArrow={false}
+					/>
+				</SheetFooter>
+			</div>
 		</SheetContent>
 	);
 
 	// If trigger is provided, wrap in Sheet with trigger
 	if (trigger) {
 		return (
-			<Sheet>
-				<SheetTrigger className="group inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/90 transition-all duration-300 px-4 py-2.5 rounded-lg bg-primary/10 hover:bg-primary/15 ring-1 ring-primary/20 hover:ring-primary/30 shadow-sm hover:shadow-md backdrop-blur-sm transform hover:scale-[1.02] active:scale-[0.98]">
-					{trigger}
-				</SheetTrigger>
+			<Sheet open={internalOpen} onOpenChange={setInternalOpen}>
+				<SheetTrigger asChild>{trigger}</SheetTrigger>
 				{sheetContent}
 			</Sheet>
 		);
@@ -553,7 +614,7 @@ export function TaskSheet({
 
 	// If controlled from parent with isOpen prop
 	return (
-		<Sheet isOpen={isOpen} onOpenChange={onOpenChange}>
+		<Sheet open={isOpen} onOpenChange={onOpenChange}>
 			{sheetContent}
 		</Sheet>
 	);
