@@ -128,13 +128,13 @@ function TaskItem({ task, onStatusChange, isUpdating }: TaskItemProps) {
 				task.status === "completed" && "opacity-60 bg-muted/30"
 			)}
 		>
-			<div className="flex items-start gap-3">
+			<div className="flex items-center gap-4">
 				{/* Status Toggle Button */}
 				<button
 					onClick={handleToggleComplete}
 					disabled={isUpdating}
 					className={cn(
-						"flex-shrink-0 mt-0.5 p-0.5 rounded-full transition-colors",
+						"flex-shrink-0 p-0.5 rounded-full transition-colors",
 						"hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
 						isUpdating && "opacity-50 cursor-not-allowed"
 					)}
@@ -146,27 +146,66 @@ function TaskItem({ task, onStatusChange, isUpdating }: TaskItemProps) {
 					)}
 				</button>
 
-				{/* Task Content */}
-				<div className="flex-1 min-w-0">
-					<div className="flex items-start justify-between gap-2 mb-2">
-						<div className="flex-1 min-w-0">
-							<h3
-								className={cn(
-									"font-medium text-foreground leading-snug",
-									task.status === "completed" &&
-										"line-through text-muted-foreground"
-								)}
-							>
-								{task.title}
-							</h3>
-							{task.description && (
-								<p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-									{task.description}
-								</p>
+				{/* Tabular Grid Layout - Everything Horizontal */}
+				<div className="flex-1 grid grid-cols-[2fr_2fr_1.5fr_1.5fr_auto] gap-6 items-center">
+					{/* Column 1: Task Title & Description */}
+					<div className="min-w-0">
+						<h3
+							className={cn(
+								"font-medium text-sm text-foreground leading-tight truncate",
+								task.status === "completed" &&
+									"line-through text-muted-foreground"
 							)}
-						</div>
+						>
+							{task.title}
+						</h3>
+						{task.description && (
+							<p className="text-xs text-muted-foreground mt-1 line-clamp-1">
+								{task.description}
+							</p>
+						)}
+					</div>
 
-						{/* Priority Badge */}
+					{/* Column 2: Client */}
+					<div className="min-w-0 flex items-center gap-1.5">
+						<Building2 className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+						<span className="text-sm truncate">
+							{client?.companyName || "Unknown Client"}
+							{project && ` • ${project.title}`}
+						</span>
+					</div>
+
+					{/* Column 3: Date */}
+					<div className="min-w-0 flex items-center gap-1.5">
+						<Calendar className="h-3.5 w-3.5 flex-shrink-0" />
+						<span
+							className={cn(
+								"text-sm truncate",
+								isOverdue ? "text-red-600 font-medium" : ""
+							)}
+						>
+							{formatDate(taskDate)}
+							{(task.startTime || task.endTime) && (
+								<span className="text-muted-foreground ml-1">
+									{task.startTime && formatTime(task.startTime)}
+									{task.startTime && task.endTime && "-"}
+									{task.endTime && formatTime(task.endTime)}
+								</span>
+							)}
+						</span>
+						{isOverdue && <AlertTriangle className="h-3.5 w-3.5 text-red-600 flex-shrink-0" />}
+					</div>
+
+					{/* Column 4: Assignee */}
+					<div className="min-w-0 flex items-center gap-1.5">
+						<User className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+						<span className="text-sm truncate">
+							{assignee ? (assignee.name || assignee.email) : "Unassigned"}
+						</span>
+					</div>
+
+					{/* Column 5: Priority Badge */}
+					<div className="flex-shrink-0">
 						{task.priority && (
 							<Badge
 								variant="secondary"
@@ -175,55 +214,6 @@ function TaskItem({ task, onStatusChange, isUpdating }: TaskItemProps) {
 								<PriorityIcon className="h-3 w-3 mr-1" />
 								{task.priority}
 							</Badge>
-						)}
-					</div>
-
-					{/* Task Details */}
-					<div className="space-y-2">
-						{/* Client and Project */}
-						<div className="flex items-center gap-4 text-sm text-muted-foreground">
-							<div className="flex items-center gap-1">
-								<Building2 className="h-3 w-3" />
-								<span>{client?.companyName || "Unknown Client"}</span>
-							</div>
-							{project && (
-								<div className="flex items-center gap-1">
-									<span>•</span>
-									<span>{project.title}</span>
-								</div>
-							)}
-						</div>
-
-						{/* Date and Time */}
-						<div className="flex items-center gap-4 text-sm">
-							<div
-								className={cn(
-									"flex items-center gap-1",
-									isOverdue ? "text-red-600" : "text-muted-foreground"
-								)}
-							>
-								<Calendar className="h-3 w-3" />
-								<span>{formatDate(taskDate)}</span>
-								{isOverdue && <AlertTriangle className="h-3 w-3" />}
-							</div>
-							{(task.startTime || task.endTime) && (
-								<div className="flex items-center gap-1 text-muted-foreground">
-									<Clock className="h-3 w-3" />
-									<span>
-										{task.startTime && formatTime(task.startTime)}
-										{task.startTime && task.endTime && " - "}
-										{task.endTime && formatTime(task.endTime)}
-									</span>
-								</div>
-							)}
-						</div>
-
-						{/* Assignee */}
-						{assignee && (
-							<div className="flex items-center gap-1 text-sm text-muted-foreground">
-								<User className="h-3 w-3" />
-								<span>{assignee.name || assignee.email}</span>
-							</div>
 						)}
 					</div>
 				</div>
