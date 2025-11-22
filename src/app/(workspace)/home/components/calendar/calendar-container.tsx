@@ -31,10 +31,21 @@ export function CalendarContainer() {
 		[currentDate, view]
 	);
 
+	// Convert date range to UTC midnight timestamps to match how tasks are stored
+	const startDateUTC = useMemo(() => {
+		const d = dateRange.start;
+		return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+	}, [dateRange.start]);
+
+	const endDateUTC = useMemo(() => {
+		const d = dateRange.end;
+		return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+	}, [dateRange.end]);
+
 	// Fetch calendar events for the current date range
 	const calendarData = useQuery(api.calendar.getCalendarEvents, {
-		startDate: dateRange.start.getTime(),
-		endDate: dateRange.end.getTime(),
+		startDate: startDateUTC,
+		endDate: endDateUTC,
 	});
 
 	// Combine and normalize events
