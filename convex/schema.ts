@@ -629,6 +629,7 @@ export default defineSchema({
 			v.literal("high"),
 			v.literal("urgent")
 		),
+		hasAttachments: v.optional(v.boolean()), // Quick flag for whether this notification has attachments
 	})
 		.index("by_user_read", ["userId", "isRead"])
 		.index("by_org", ["orgId"])
@@ -673,4 +674,35 @@ export default defineSchema({
 	})
 		.index("by_org", ["orgId"])
 		.index("by_org_active", ["orgId", "isActive"]),
+
+	// Message Attachments - files attached to mention messages
+	messageAttachments: defineTable({
+		orgId: v.id("organizations"),
+		notificationId: v.id("notifications"),
+		uploadedBy: v.id("users"),
+
+		// Entity reference (denormalized from notification for efficient querying)
+		entityType: v.union(
+			v.literal("client"),
+			v.literal("project"),
+			v.literal("quote")
+		),
+		entityId: v.string(), // ID of the client, project, or quote
+
+		// File metadata
+		fileName: v.string(),
+		fileSize: v.number(), // Size in bytes
+		mimeType: v.string(),
+
+		// Storage
+		storageId: v.id("_storage"),
+
+		// Tracking
+		uploadedAt: v.number(),
+	})
+		.index("by_notification", ["notificationId"])
+		.index("by_org", ["orgId"])
+		.index("by_uploader", ["uploadedBy"])
+		.index("by_entity", ["entityType", "entityId"]) // NEW: Efficient lookup for "all attachments on entity X"
+		.index("by_org_entity", ["orgId", "entityType", "entityId"]), // NEW: Org-scoped entity lookup
 });

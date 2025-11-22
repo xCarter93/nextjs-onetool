@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { useOrganization } from "@clerk/nextjs";
 import { api } from "../../../convex/_generated/api";
@@ -12,7 +12,7 @@ import {
 	PopoverTrigger,
 } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
-import { Send } from "lucide-react";
+import { Send, Paperclip, X, FileIcon, Loader2 } from "lucide-react";
 import type { Id } from "../../../convex/_generated/dataModel";
 
 interface MentionInputProps {
@@ -20,6 +20,14 @@ interface MentionInputProps {
 	entityId: string;
 	entityName: string;
 	onMentionCreated?: () => void;
+}
+
+interface AttachmentFile {
+	tempId: string;
+	file: File;
+	storageId?: Id<"_storage">;
+	uploading: boolean;
+	error?: string;
 }
 
 export function MentionInput({
@@ -34,7 +42,12 @@ export function MentionInput({
 	const [mentionedUsers, setMentionedUsers] = useState<
 		Array<{ id: Id<"users">; name: string }>
 	>([]);
+	const [attachments, setAttachments] = useState<AttachmentFile[]>([]);
+	const [previewUrls, setPreviewUrls] = useState<Map<string, string>>(
+		new Map()
+	);
 	const contentEditableRef = useRef<HTMLDivElement>(null);
+	const fileInputRef = useRef<HTMLInputElement>(null);
 	const toast = useToast();
 
 	// Fetch organization members from Clerk
@@ -48,6 +61,9 @@ export function MentionInput({
 	const convexUsers = useQuery(api.users.listByOrg);
 	const createMention = useMutation(api.notifications.createMention);
 	const syncUserFromClerk = useMutation(api.users.syncUserFromClerk);
+	const generateUploadUrl = useMutation(
+		api.messageAttachments.generateUploadUrl
+	);
 
 	// Build a map of organization users with both Clerk and Convex data
 	const organizationUsers =
@@ -75,6 +91,48 @@ export function MentionInput({
 				};
 			})
 			.filter((user): user is NonNullable<typeof user> => user !== null) || [];
+
+	// Manage blob URLs for image previews to prevent memory leaks
+	useEffect(() => {
+		// Create preview URLs for new image attachments
+		const newPreviewUrls = new Map(previewUrls);
+		let hasChanges = false;
+
+		// Add URLs for new attachments (by tempId)
+		attachments.forEach((attachment) => {
+			const isImage = attachment.file.type.startsWith("image/");
+			if (isImage && !newPreviewUrls.has(attachment.tempId)) {
+				const url = URL.createObjectURL(attachment.file);
+				newPreviewUrls.set(attachment.tempId, url);
+				hasChanges = true;
+			}
+		});
+
+		// Remove URLs for deleted attachments and revoke them
+		const currentTempIds = new Set(attachments.map((a) => a.tempId));
+		Array.from(newPreviewUrls.keys()).forEach((tempId) => {
+			if (!currentTempIds.has(tempId)) {
+				const url = newPreviewUrls.get(tempId);
+				if (url) {
+					URL.revokeObjectURL(url);
+					newPreviewUrls.delete(tempId);
+					hasChanges = true;
+				}
+			}
+		});
+
+		if (hasChanges) {
+			setPreviewUrls(newPreviewUrls);
+		}
+
+		// Cleanup: revoke all URLs on unmount
+		return () => {
+			newPreviewUrls.forEach((url) => {
+				URL.revokeObjectURL(url);
+			});
+		};
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [attachments]);
 
 	// Filter users based on search query
 	const filteredUsers = organizationUsers.filter((user) =>
@@ -184,6 +242,113 @@ export function MentionInput({
 		}
 	};
 
+	// Handle file selection
+	const handleFileSelect = async (
+		event: React.ChangeEvent<HTMLInputElement>
+	) => {
+		const files = event.target.files;
+		if (!files || files.length === 0) return;
+
+		// Validate files first and create attachment objects with stable tempIds
+		const validatedAttachments: AttachmentFile[] = Array.from(files)
+			.map((file) => {
+				// Generate a unique stable identifier
+				const tempId = crypto.randomUUID();
+
+				// Validate file size (10MB limit)
+				if (file.size > 10 * 1024 * 1024) {
+					return {
+						tempId,
+						file,
+						uploading: false,
+						error: "File size exceeds 10MB limit",
+					};
+				}
+
+				return {
+					tempId,
+					file,
+					uploading: false,
+					error: undefined,
+				};
+			})
+			// Filter out files with errors before adding to state
+			.filter((attachment) => !attachment.error);
+
+		// Add validated attachments to state using functional setter
+		setAttachments((prev) => [...prev, ...validatedAttachments]);
+
+		// Start uploading files - capture tempId for each attachment
+		for (const attachment of validatedAttachments) {
+			const { tempId } = attachment;
+
+			// Mark as uploading using tempId
+			setAttachments((prev) =>
+				prev.map((a) => (a.tempId === tempId ? { ...a, uploading: true } : a))
+			);
+
+			try {
+				// Get upload URL
+				const uploadUrl = await generateUploadUrl();
+
+				// Upload file
+				const result = await fetch(uploadUrl, {
+					method: "POST",
+					headers: { "Content-Type": attachment.file.type },
+					body: attachment.file,
+				});
+
+				if (!result.ok) {
+					throw new Error("Upload failed");
+				}
+
+				const { storageId } = await result.json();
+
+				// Update attachment with storage ID using tempId
+				setAttachments((prev) =>
+					prev.map((a) =>
+						a.tempId === tempId
+							? {
+									...a,
+									uploading: false,
+									storageId: storageId as Id<"_storage">,
+								}
+							: a
+					)
+				);
+			} catch (error) {
+				console.error("File upload error:", error);
+				// Update error state using tempId
+				setAttachments((prev) =>
+					prev.map((a) =>
+						a.tempId === tempId
+							? { ...a, uploading: false, error: "Upload failed" }
+							: a
+					)
+				);
+			}
+		}
+
+		// Clear input
+		if (fileInputRef.current) {
+			fileInputRef.current.value = "";
+		}
+	};
+
+	// Remove attachment
+	const handleRemoveAttachment = (tempId: string) => {
+		setAttachments((prev) => prev.filter((a) => a.tempId !== tempId));
+	};
+
+	// Format file size
+	const formatFileSize = (bytes: number): string => {
+		if (bytes === 0) return "0 Bytes";
+		const k = 1024;
+		const sizes = ["Bytes", "KB", "MB"];
+		const i = Math.floor(Math.log(bytes) / Math.log(k));
+		return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
+	};
+
 	// Handle form submission
 	const handleSubmit = async () => {
 		if (!message.trim()) {
@@ -191,12 +356,39 @@ export function MentionInput({
 			return;
 		}
 
-		if (mentionedUsers.length === 0) {
-			toast.error("Error", "Please @mention a team member");
+		// Check if any attachments are still uploading
+		if (attachments.some((a) => a.uploading)) {
+			toast.error("Error", "Please wait for files to finish uploading");
+			return;
+		}
+
+		// Check if any attachments have errors
+		if (attachments.some((a) => a.error)) {
+			toast.error("Error", "Please remove files with errors");
 			return;
 		}
 
 		try {
+			// Prepare attachment data
+			const attachmentData = attachments
+				.filter((a) => a.storageId)
+				.map((a) => ({
+					storageId: a.storageId!,
+					fileName: a.file.name,
+					fileSize: a.file.size,
+					mimeType: a.file.type,
+				}));
+
+			// Process mentioned users if there are any
+			if (mentionedUsers.length === 0) {
+				// No mentions - show helpful message
+				toast.error(
+					"No recipients",
+					"Please @mention a team member to notify them about this message"
+				);
+				return;
+			}
+
 			// Process each mentioned user
 			for (const mentionedUser of mentionedUsers) {
 				// Find the user in our organization list
@@ -222,13 +414,14 @@ export function MentionInput({
 					});
 				}
 
-				// Create the mention with the Convex user ID
+				// Create the mention with the Convex user ID and attachments
 				await createMention({
 					taggedUserId: convexUserId,
 					message: message, // Message is stored with @[username] format
 					entityType,
 					entityId,
 					entityName,
+					attachments: attachmentData.length > 0 ? attachmentData : undefined,
 				});
 			}
 
@@ -238,6 +431,14 @@ export function MentionInput({
 			}
 			setMessage("");
 			setMentionedUsers([]);
+
+			// Revoke all preview URLs before clearing attachments
+			previewUrls.forEach((url) => {
+				URL.revokeObjectURL(url);
+			});
+			setPreviewUrls(new Map());
+			setAttachments([]);
+
 			toast.success("Success", "Message sent!");
 
 			// Notify parent
@@ -315,6 +516,96 @@ export function MentionInput({
 				</PopoverContent>
 			</Popover>
 
+			{/* File Attachments Preview */}
+			{attachments.length > 0 && (
+				<div className="flex flex-wrap gap-2">
+					{attachments.map((attachment) => {
+						const isImage = attachment.file.type.startsWith("image/");
+						const isPdf = attachment.file.type === "application/pdf";
+
+						return (
+							<div
+								key={attachment.tempId}
+								className="relative inline-block group"
+							>
+								{isImage ? (
+									// Image preview thumbnail
+									<div className="relative">
+										<div className="h-20 w-20 bg-gray-100 dark:bg-gray-800 rounded-lg border-2 border-gray-200 dark:border-gray-700 overflow-hidden flex items-center justify-center">
+											{attachment.uploading ? (
+												<Loader2 className="h-6 w-6 text-gray-400 animate-spin" />
+											) : (
+												// eslint-disable-next-line @next/next/no-img-element
+												<img
+													src={previewUrls.get(attachment.tempId) || ""}
+													alt={attachment.file.name}
+													className="h-full w-full object-cover"
+												/>
+											)}
+										</div>
+										{!attachment.uploading && !attachment.error && (
+											<button
+												onClick={() =>
+													handleRemoveAttachment(attachment.tempId)
+												}
+												className="absolute -top-2 -right-2 p-1 bg-red-500 hover:bg-red-600 text-white rounded-full shadow-lg transition-colors"
+												type="button"
+												title="Remove"
+											>
+												<X className="h-3 w-3" />
+											</button>
+										)}
+										{attachment.error && (
+											<div className="absolute inset-0 bg-red-500/90 rounded-lg flex items-center justify-center">
+												<span className="text-xs text-white font-medium px-2 text-center">
+													Error
+												</span>
+											</div>
+										)}
+									</div>
+								) : (
+									// Document badge
+									<div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 transition-colors max-w-[200px]">
+										<FileIcon
+											className={`h-3.5 w-3.5 flex-shrink-0 ${
+												isPdf ? "text-red-500" : "text-gray-500"
+											}`}
+										/>
+										<div className="flex-1 min-w-0">
+											<span className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate block">
+												{attachment.file.name}
+											</span>
+											<span className="text-xs text-gray-500 dark:text-gray-400">
+												{formatFileSize(attachment.file.size)}
+												{attachment.uploading && " • Uploading..."}
+											</span>
+										</div>
+										{attachment.uploading ? (
+											<Loader2 className="h-3 w-3 text-gray-400 animate-spin flex-shrink-0" />
+										) : attachment.error ? (
+											<span className="text-xs text-red-500 flex-shrink-0">
+												✕
+											</span>
+										) : (
+											<button
+												onClick={() =>
+													handleRemoveAttachment(attachment.tempId)
+												}
+												className="p-0.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors flex-shrink-0"
+												type="button"
+												title="Remove"
+											>
+												<X className="h-3 w-3 text-gray-500" />
+											</button>
+										)}
+									</div>
+								)}
+							</div>
+						);
+					})}
+				</div>
+			)}
+
 			<div className="flex items-center justify-between">
 				<div className="text-xs text-gray-500 dark:text-gray-400">
 					{mentionedUsers.length > 0 ? (
@@ -326,15 +617,40 @@ export function MentionInput({
 						<span>Type @ to mention someone</span>
 					)}
 				</div>
-				<StyledButton
-					onClick={handleSubmit}
-					disabled={!message.trim() || mentionedUsers.length === 0}
-					size="sm"
-					intent="primary"
-					icon={<Send className="h-4 w-4" />}
-					label="Send"
-					showArrow={false}
-				/>
+
+				<div className="flex items-center gap-2">
+					{/* Hidden file input */}
+					<input
+						ref={fileInputRef}
+						type="file"
+						multiple
+						className="hidden"
+						onChange={handleFileSelect}
+						accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip"
+					/>
+
+					{/* Attach file button */}
+					<StyledButton
+						onClick={() => fileInputRef.current?.click()}
+						size="sm"
+						intent="outline"
+						icon={<Paperclip className="h-4 w-4" />}
+						showArrow={false}
+						type="button"
+					/>
+
+					<StyledButton
+						onClick={handleSubmit}
+						disabled={
+							!message.trim() || attachments.some((a) => a.uploading || a.error)
+						}
+						size="sm"
+						intent="primary"
+						icon={<Send className="h-4 w-4" />}
+						label="Send"
+						showArrow={false}
+					/>
+				</div>
 			</div>
 		</div>
 	);
