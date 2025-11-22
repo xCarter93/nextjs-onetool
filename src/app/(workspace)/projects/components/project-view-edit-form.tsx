@@ -47,7 +47,15 @@ import {
 	ClipboardList,
 	Receipt,
 	FileText,
+	User,
 } from "lucide-react";
+import {
+	StyledSelect,
+	StyledSelectTrigger,
+	StyledSelectContent,
+	SelectValue,
+	SelectItem,
+} from "@/components/ui/styled/styled-select";
 
 type ClientId = Id<"clients">;
 
@@ -60,6 +68,7 @@ interface ProjectData {
 	projectType: "one-off" | "recurring";
 	startDate?: number;
 	endDate?: number;
+	assignedUserIds?: string;
 	invoiceReminderEnabled?: boolean;
 	scheduleForLater?: boolean;
 	status: "planned" | "in-progress" | "completed" | "cancelled";
@@ -102,6 +111,7 @@ const formSchema = z.object({
 	projectType: z.enum(["one-off", "recurring"]),
 	startDate: z.date().optional(),
 	endDate: z.date().optional(),
+	assignedUserIds: z.string().optional(),
 	invoiceReminderEnabled: z.boolean(),
 	scheduleForLater: z.boolean(),
 });
@@ -177,6 +187,7 @@ export function ProjectViewEditForm({
 		api.clientProperties.listByClient,
 		project?.clientId ? { clientId: project.clientId } : "skip"
 	);
+	const users = useQuery(api.users.listByOrg);
 
 	const form = useForm({
 		defaultValues: {
@@ -186,6 +197,7 @@ export function ProjectViewEditForm({
 			projectType: project.projectType,
 			startDate: project.startDate ? new Date(project.startDate) : undefined,
 			endDate: project.endDate ? new Date(project.endDate) : undefined,
+			assignedUserIds: project.assignedUserIds || "",
 			invoiceReminderEnabled: project.invoiceReminderEnabled || false,
 			scheduleForLater: project.scheduleForLater || false,
 		},
@@ -216,6 +228,8 @@ export function ProjectViewEditForm({
 				(project.endDate || undefined)
 			)
 				updates.endDate = value.endDate ? value.endDate.getTime() : undefined;
+			if ((value.assignedUserIds || "") !== (project.assignedUserIds || ""))
+				updates.assignedUserIds = value.assignedUserIds || undefined;
 			if (
 				(value.invoiceReminderEnabled || false) !==
 				(project.invoiceReminderEnabled || false)
@@ -252,6 +266,7 @@ export function ProjectViewEditForm({
 				"endDate",
 				project.endDate ? new Date(project.endDate) : undefined
 			);
+			form.setFieldValue("assignedUserIds", project.assignedUserIds || "");
 			form.setFieldValue(
 				"invoiceReminderEnabled",
 				project.invoiceReminderEnabled || false
@@ -273,6 +288,7 @@ export function ProjectViewEditForm({
 			"endDate",
 			project.endDate ? new Date(project.endDate) : undefined
 		);
+		form.setFieldValue("assignedUserIds", project.assignedUserIds || "");
 		form.setFieldValue(
 			"invoiceReminderEnabled",
 			project.invoiceReminderEnabled || false
@@ -899,6 +915,37 @@ export function ProjectViewEditForm({
 									/>
 								</FieldGroup>
 
+								{/* Assigned User */}
+								<FieldGroup>
+									<form.Field
+										name="assignedUserIds"
+										children={(field) => (
+											<Field>
+												<FieldLabel htmlFor={field.name} className="flex items-center gap-2">
+													<User className="h-4 w-4 text-primary" />
+													Assign To
+												</FieldLabel>
+												<StyledSelect
+													value={field.state.value || undefined}
+													onValueChange={(value) => field.handleChange(value)}
+													disabled={!isEditing}
+												>
+													<StyledSelectTrigger className="w-full">
+														<SelectValue placeholder="Unassigned" />
+													</StyledSelectTrigger>
+													<StyledSelectContent>
+														{users?.map((user) => (
+															<SelectItem key={user._id} value={user._id}>
+																{user.name || user.email}
+															</SelectItem>
+														))}
+													</StyledSelectContent>
+												</StyledSelect>
+											</Field>
+										)}
+									/>
+								</FieldGroup>
+
 								<div>
 									<label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
 										Project Number
@@ -1322,6 +1369,8 @@ export function ProjectViewEditForm({
 							: undefined) !== (project.startDate || undefined) ||
 						(formValues.endDate ? formValues.endDate.getTime() : undefined) !==
 							(project.endDate || undefined) ||
+						(formValues.assignedUserIds || "") !==
+							(project.assignedUserIds || "") ||
 						(formValues.invoiceReminderEnabled || false) !==
 							(project.invoiceReminderEnabled || false) ||
 						(formValues.scheduleForLater || false) !==
