@@ -27,14 +27,13 @@ import {
 	Save,
 	Trash2,
 	Calculator,
-	Edit,
 	X,
 	Eye,
 } from "lucide-react";
 import { SKUSelector } from "@/components/shared/sku-selector";
 
 type LineItem = {
-	_id: Id<"quoteLineItems"> | string; // Allow temp IDs for new items
+	_id: Id<"quoteLineItems">;
 	description: string;
 	quantity: number;
 	unit: string;
@@ -45,13 +44,6 @@ type LineItem = {
 	optional?: boolean;
 	isNew?: boolean; // Track if this is a new item not yet saved
 };
-
-const TEMP_LINE_ITEM_ID_PREFIX = "temp-";
-const isTempLineItemId = (id: Id<"quoteLineItems"> | string): id is string =>
-	typeof id === "string" && id.startsWith(TEMP_LINE_ITEM_ID_PREFIX);
-
-const isTempLineItem = (item: LineItem) =>
-	item.isNew || isTempLineItemId(item._id);
 
 // Status formatting functions
 const formatStatus = (status: string) => {
@@ -115,17 +107,12 @@ export default function QuoteLineEditorPage() {
 
 	// Mutations
 	const updateQuote = useMutation(api.quotes.update);
-	const bulkCreateLineItems = useMutation(api.quoteLineItems.bulkCreate);
+	const createLineItem = useMutation(api.quoteLineItems.create);
 	const updateLineItem = useMutation(api.quoteLineItems.update);
 	const deleteLineItem = useMutation(api.quoteLineItems.remove);
 
 	// Local state
-	const [editingId, setEditingId] = useState<
-		Id<"quoteLineItems"> | string | null
-	>(null);
 	const [hasChanges, setHasChanges] = useState(false);
-	const [localLineItems, setLocalLineItems] = useState<LineItem[]>([]);
-	const [nextTempId, setNextTempId] = useState(1);
 
 	// PDF visibility controls
 	const [pdfSettings, setPdfSettings] = useState({
@@ -177,21 +164,18 @@ export default function QuoteLineEditorPage() {
 		}
 	}, [quote]);
 
-	// Combine saved line items with local ones
+	// Use line items directly from the database
 	const allLineItems = useMemo(() => {
-		if (!lineItems) return localLineItems;
+		if (!lineItems) return [];
 
 		// Convert saved items to our LineItem type
-		const savedItems: LineItem[] = lineItems.map((item) => ({
-			...item,
-			isNew: false,
-		}));
-
-		// Combine and sort by sortOrder
-		return [...savedItems, ...localLineItems].sort(
-			(a, b) => a.sortOrder - b.sortOrder
-		);
-	}, [lineItems, localLineItems]);
+		return lineItems
+			.map((item) => ({
+				...item,
+				isNew: false,
+			}))
+			.sort((a, b) => a.sortOrder - b.sortOrder);
+	}, [lineItems]);
 
 	// Calculate totals (must be before early returns)
 	const totals = useMemo(() => {
@@ -270,110 +254,55 @@ export default function QuoteLineEditorPage() {
 		);
 	}
 
-	const handleAddLineItem = () => {
-		const tempId = `${TEMP_LINE_ITEM_ID_PREFIX}${nextTempId}`;
+	const handleAddLineItem = async () => {
 		const newSortOrder = allLineItems.length;
 
-		const newLineItem: LineItem = {
-			_id: tempId,
-			description: "",
-			quantity: 1,
-			unit: "hour",
-			rate: 0,
-			cost: 0,
-			amount: 0,
-			sortOrder: newSortOrder,
-			isNew: true,
-		};
-
-		setLocalLineItems((prev) => [...prev, newLineItem]);
-		setEditingId(tempId);
-		setNextTempId((prev) => prev + 1);
-		setHasChanges(true);
-	};
-
-	const handleEditLineItem = (id: Id<"quoteLineItems"> | string) => {
-		setEditingId(id);
-	};
-
-	const handleSaveLineItem = async (item: LineItem) => {
-		if (isTempLineItem(item)) {
-			// Update local item
-			setLocalLineItems((prev) =>
-				prev.map((localItem) =>
-					localItem._id === item._id
-						? { ...item, amount: item.quantity * item.rate }
-						: localItem
-				)
+		try {
+			await createLineItem({
+				quoteId,
+				description: "New Item",
+				quantity: 1,
+				unit: "hour",
+				rate: 0,
+				cost: 0,
+				sortOrder: newSortOrder,
+			});
+			toast.success(
+				"Line Item Added",
+				"You can now edit the line item details."
 			);
-			setEditingId(null);
-			setHasChanges(true);
-		} else {
-			// Update existing item in database
-			try {
-				await updateLineItem({
-					id: item._id as Id<"quoteLineItems">,
-					description: item.description,
-					quantity: item.quantity,
-					unit: item.unit,
-					rate: item.rate,
-					cost: item.cost,
-				});
-				setEditingId(null);
-				setHasChanges(true);
-			} catch (error) {
-				console.error("Failed to save line item:", error);
-				toast.error("Error", "Failed to save line item. Please try again.");
-			}
+		} catch (error) {
+			console.error("Failed to add line item:", error);
+			toast.error("Error", "Failed to add line item. Please try again.");
 		}
 	};
 
-	const handleDeleteLineItem = async (id: Id<"quoteLineItems"> | string) => {
-		if (isTempLineItemId(id)) {
-			// Remove local item
-			setLocalLineItems((prev) => prev.filter((item) => item._id !== id));
-			setHasChanges(true);
-			if (editingId === id) {
-				setEditingId(null);
-			}
-		} else {
-			// Delete from database
-			try {
-				await deleteLineItem({ id });
-				if (editingId === id) {
-					setEditingId(null);
-				}
-				setHasChanges(true);
-			} catch (error) {
-				console.error("Failed to delete line item:", error);
-				toast.error("Error", "Failed to delete line item. Please try again.");
-			}
+	const handleUpdateLineItem = async (
+		id: Id<"quoteLineItems">,
+		updates: Partial<LineItem>
+	) => {
+		try {
+			await updateLineItem({
+				id,
+				...updates,
+			});
+		} catch (error) {
+			console.error("Failed to update line item:", error);
+			toast.error("Error", "Failed to update line item. Please try again.");
+		}
+	};
+
+	const handleDeleteLineItem = async (id: Id<"quoteLineItems">) => {
+		try {
+			await deleteLineItem({ id });
+		} catch (error) {
+			console.error("Failed to delete line item:", error);
+			toast.error("Error", "Failed to delete line item. Please try again.");
 		}
 	};
 
 	const handleSaveQuote = async () => {
 		try {
-			// First, save any new line items to the database
-			if (localLineItems.length > 0) {
-				const newLineItemsData = localLineItems.map((item) => ({
-					description: item.description || "New Item", // Ensure description is not empty
-					quantity: item.quantity,
-					unit: item.unit || "hour",
-					rate: item.rate,
-					cost: item.cost,
-					sortOrder: item.sortOrder,
-					optional: item.optional,
-				}));
-
-				await bulkCreateLineItems({
-					quoteId,
-					lineItems: newLineItemsData,
-				});
-
-				// Clear local items after successful save
-				setLocalLineItems([]);
-			}
-
 			// Update quote totals and settings
 			await updateQuote({
 				id: quoteId,
@@ -512,7 +441,7 @@ export default function QuoteLineEditorPage() {
 							<Card className="bg-transparent border-none shadow-none ring-0">
 								<CardHeader>
 									<CardTitle className="flex items-center gap-2 text-xl">
-										<Edit className="h-5 w-5" />
+										<FileText className="h-5 w-5" />
 										Line Items Configuration
 									</CardTitle>
 								</CardHeader>
@@ -553,10 +482,12 @@ export default function QuoteLineEditorPage() {
 													<LineItemRow
 														key={item._id}
 														item={item}
-														isEditing={editingId === item._id}
-														onEdit={() => handleEditLineItem(item._id)}
-														onSave={handleSaveLineItem}
-														onDelete={() => handleDeleteLineItem(item._id)}
+														onUpdate={handleUpdateLineItem}
+														onDelete={() =>
+															handleDeleteLineItem(
+																item._id as Id<"quoteLineItems">
+															)
+														}
 													/>
 												))}
 											</TableBody>
@@ -862,28 +793,25 @@ export default function QuoteLineEditorPage() {
 	);
 }
 
-// LineItemRow Component for inline editing
+// LineItemRow Component with auto-save on blur
 function LineItemRow({
 	item,
-	isEditing,
-	onEdit,
-	onSave,
+	onUpdate,
 	onDelete,
 }: {
 	item: LineItem;
-	isEditing: boolean;
-	onEdit: () => void;
-	onSave: (item: LineItem) => void;
+	onUpdate: (
+		id: Id<"quoteLineItems">,
+		updates: Partial<LineItem>
+	) => Promise<void>;
 	onDelete: () => void;
 }) {
 	const [editedItem, setEditedItem] = useState<LineItem>(item);
 	const [isSaving, setIsSaving] = useState(false);
 
 	React.useEffect(() => {
-		if (isEditing) {
-			setEditedItem(item);
-		}
-	}, [isEditing, item]);
+		setEditedItem(item);
+	}, [item]);
 
 	const handleFieldChange = (field: keyof LineItem, value: string | number) => {
 		setEditedItem((prev) => ({
@@ -892,174 +820,128 @@ function LineItemRow({
 		}));
 	};
 
-	const handleSave = async () => {
+	const handleBlur = async (field: keyof LineItem) => {
+		// Only save if the value actually changed
+		if (editedItem[field] === item[field]) {
+			return;
+		}
+
 		setIsSaving(true);
 		try {
-			await onSave(editedItem);
+			const updates: Partial<LineItem> = { [field]: editedItem[field] };
+			await onUpdate(item._id as Id<"quoteLineItems">, updates);
 		} finally {
 			setIsSaving(false);
 		}
 	};
 
-	const handleBlur = () => {
-		// Auto-save when any field loses focus
-		if (isEditing && !isSaving) {
-			handleSave();
+	const handleSKUSelect = async (sku: {
+		name: string;
+		unit: string;
+		rate: number;
+		cost?: number;
+	}) => {
+		const updates = {
+			description: sku.name,
+			unit: sku.unit,
+			rate: sku.rate,
+			cost: sku.cost || 0,
+		};
+
+		setEditedItem((prev) => ({
+			...prev,
+			...updates,
+		}));
+
+		setIsSaving(true);
+		try {
+			await onUpdate(item._id as Id<"quoteLineItems">, updates);
+		} finally {
+			setIsSaving(false);
 		}
 	};
 
-	if (isEditing) {
-		return (
-			<TableRow
-				className={`bg-blue-50/50 dark:bg-blue-900/10 border-l-4 border-l-blue-500 ${item.isNew ? "bg-yellow-50/50 dark:bg-yellow-900/10" : ""} ${isSaving ? "opacity-60 pointer-events-none" : ""}`}
-			>
-				<TableCell>
-					<div className="flex gap-2">
-						<Input
-							value={editedItem.description}
-							onChange={(e) => handleFieldChange("description", e.target.value)}
-							onBlur={handleBlur}
-							placeholder="Enter description..."
-							className="flex-1"
-							disabled={isSaving}
-						/>
-						<SKUSelector
-							onSelect={(sku) => {
-								setEditedItem((prev) => ({
-									...prev,
-									description: sku.name,
-									unit: sku.unit,
-									rate: sku.rate,
-									cost: sku.cost || 0,
-								}));
-							}}
-							disabled={isSaving}
-						/>
-					</div>
-				</TableCell>
-				<TableCell>
-					<Input
-						type="number"
-						value={editedItem.quantity}
-						onChange={(e) =>
-							handleFieldChange("quantity", parseInt(e.target.value) || 0)
-						}
-						onBlur={handleBlur}
-						className="w-full text-center"
-						min="0"
-						disabled={isSaving}
-					/>
-				</TableCell>
-				<TableCell>
-					<Input
-						value={editedItem.unit}
-						onChange={(e) => handleFieldChange("unit", e.target.value)}
-						onBlur={handleBlur}
-						className="w-full text-center"
-						placeholder="hour"
-						disabled={isSaving}
-					/>
-				</TableCell>
-				<TableCell>
-					<Input
-						type="number"
-						value={editedItem.rate}
-						onChange={(e) =>
-							handleFieldChange("rate", parseFloat(e.target.value) || 0)
-						}
-						onBlur={handleBlur}
-						className="w-full text-right"
-						min="0"
-						step="0.01"
-						disabled={isSaving}
-					/>
-				</TableCell>
-				<TableCell>
-					<Input
-						type="number"
-						value={editedItem.cost || 0}
-						onChange={(e) =>
-							handleFieldChange("cost", parseFloat(e.target.value) || 0)
-						}
-						onBlur={handleBlur}
-						className="w-full text-right"
-						min="0"
-						step="0.01"
-						placeholder="0.00"
-						disabled={isSaving}
-					/>
-				</TableCell>
-				<TableCell className="text-right font-medium">
-					{isSaving ? (
-						<span className="text-xs text-gray-500">Saving...</span>
-					) : (
-						formatCurrency(editedItem.quantity * editedItem.rate)
-					)}
-				</TableCell>
-				<TableCell className="text-center">
-					{(() => {
-						const itemAmount = editedItem.quantity * editedItem.rate;
-						const itemCost = editedItem.quantity * (editedItem.cost || 0);
-						const itemMargin = itemAmount - itemCost;
-						const marginPercent =
-							itemAmount > 0 ? (itemMargin / itemAmount) * 100 : 0;
-						return (
-							<span
-								className={`text-xs font-medium ${
-									marginPercent >= 0
-										? "text-green-600 dark:text-green-400"
-										: "text-red-600 dark:text-red-400"
-								}`}
-							>
-								{marginPercent.toFixed(1)}%
-							</span>
-						);
-					})()}
-				</TableCell>
-				<TableCell>
-					<div className="flex gap-1">
-						<Button
-							intent="outline"
-							size="sq-sm"
-							onPress={onDelete}
-							aria-label="Delete"
-							isDisabled={isSaving}
-						>
-							<Trash2 className="h-3 w-3" />
-						</Button>
-					</div>
-				</TableCell>
-			</TableRow>
-		);
-	}
-
 	return (
-		<TableRow
-			className={`hover:bg-muted/50 ${item.isNew ? "bg-yellow-50/30 dark:bg-yellow-900/20 border-l-4 border-l-yellow-400" : ""}`}
-		>
-			<TableCell className="font-medium">
-				{item.description}
-				{item.isNew && (
-					<span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
-						Unsaved
-					</span>
-				)}
+		<TableRow className={`hover:bg-muted/30 ${isSaving ? "opacity-60" : ""}`}>
+			<TableCell>
+				<div className="flex gap-2">
+					<Input
+						value={editedItem.description}
+						onChange={(e) => handleFieldChange("description", e.target.value)}
+						onBlur={() => handleBlur("description")}
+						placeholder="Enter description..."
+						className="flex-1"
+						disabled={isSaving}
+					/>
+					<SKUSelector onSelect={handleSKUSelect} disabled={isSaving} />
+				</div>
 			</TableCell>
-			<TableCell className="text-center">{item.quantity}</TableCell>
-			<TableCell className="text-center">{item.unit}</TableCell>
-			<TableCell className="text-right">{formatCurrency(item.rate)}</TableCell>
-			<TableCell className="text-right text-muted-foreground">
-				{item.cost ? formatCurrency(item.cost) : "-"}
+			<TableCell>
+				<Input
+					type="number"
+					value={editedItem.quantity}
+					onChange={(e) =>
+						handleFieldChange("quantity", parseInt(e.target.value) || 0)
+					}
+					onBlur={() => handleBlur("quantity")}
+					className="w-full text-center"
+					min="0"
+					disabled={isSaving}
+				/>
+			</TableCell>
+			<TableCell>
+				<Input
+					value={editedItem.unit}
+					onChange={(e) => handleFieldChange("unit", e.target.value)}
+					onBlur={() => handleBlur("unit")}
+					className="w-full text-center"
+					placeholder="hour"
+					disabled={isSaving}
+				/>
+			</TableCell>
+			<TableCell>
+				<Input
+					type="number"
+					value={editedItem.rate}
+					onChange={(e) =>
+						handleFieldChange("rate", parseFloat(e.target.value) || 0)
+					}
+					onBlur={() => handleBlur("rate")}
+					className="w-full text-right"
+					min="0"
+					step="0.01"
+					disabled={isSaving}
+				/>
+			</TableCell>
+			<TableCell>
+				<Input
+					type="number"
+					value={editedItem.cost || 0}
+					onChange={(e) =>
+						handleFieldChange("cost", parseFloat(e.target.value) || 0)
+					}
+					onBlur={() => handleBlur("cost")}
+					className="w-full text-right"
+					min="0"
+					step="0.01"
+					placeholder="0.00"
+					disabled={isSaving}
+				/>
 			</TableCell>
 			<TableCell className="text-right font-medium">
-				{formatCurrency(item.amount)}
+				{isSaving ? (
+					<span className="text-xs text-gray-500">Saving...</span>
+				) : (
+					formatCurrency(editedItem.quantity * editedItem.rate)
+				)}
 			</TableCell>
 			<TableCell className="text-center">
 				{(() => {
-					const itemCost = item.quantity * (item.cost || 0);
-					const itemMargin = item.amount - itemCost;
+					const itemAmount = editedItem.quantity * editedItem.rate;
+					const itemCost = editedItem.quantity * (editedItem.cost || 0);
+					const itemMargin = itemAmount - itemCost;
 					const marginPercent =
-						item.amount > 0 ? (itemMargin / item.amount) * 100 : 0;
+						itemAmount > 0 ? (itemMargin / itemAmount) * 100 : 0;
 					return (
 						<span
 							className={`text-xs font-medium ${
@@ -1078,16 +960,9 @@ function LineItemRow({
 					<Button
 						intent="outline"
 						size="sq-sm"
-						onPress={onEdit}
-						aria-label="Edit"
-					>
-						<Edit className="h-3 w-3" />
-					</Button>
-					<Button
-						intent="outline"
-						size="sq-sm"
 						onPress={onDelete}
 						aria-label="Delete"
+						isDisabled={isSaving}
 					>
 						<Trash2 className="h-3 w-3" />
 					</Button>

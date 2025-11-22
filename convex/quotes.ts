@@ -273,7 +273,7 @@ interface QuoteStats {
 }
 
 /**
- * Get all quotes for the current user's organization
+ * Get all quotes for the current user's organization with calculated totals
  */
 export const list = query({
 	args: {
@@ -320,18 +320,58 @@ export const list = query({
 				.collect();
 		}
 
+		// Calculate totals for each quote
+		const quotesWithCalculatedTotals = await Promise.all(
+			quotes.map(async (quote) => {
+				const calculatedTotals = await calculateQuoteTotals(ctx, quote._id, {
+					discountEnabled: quote.discountEnabled,
+					discountAmount: quote.discountAmount,
+					discountType: quote.discountType,
+					taxEnabled: quote.taxEnabled,
+					taxRate: quote.taxRate,
+				});
+
+				return {
+					...quote,
+					subtotal: calculatedTotals.subtotal,
+					total: calculatedTotals.total,
+					taxAmount: calculatedTotals.taxAmount,
+				};
+			})
+		);
+
 		// Sort by creation time (newest first)
-		return quotes.sort((a, b) => b._creationTime - a._creationTime);
+		return quotesWithCalculatedTotals.sort(
+			(a, b) => b._creationTime - a._creationTime
+		);
 	},
 });
 
 /**
- * Get a specific quote by ID
+ * Get a specific quote by ID with calculated totals from line items
  */
 export const get = query({
 	args: { id: v.id("quotes") },
 	handler: async (ctx, args): Promise<QuoteDocument | null> => {
-		return await getQuoteWithOrgValidation(ctx, args.id);
+		const quote = await getQuoteWithOrgValidation(ctx, args.id);
+		if (!quote) return null;
+
+		// Calculate totals from line items
+		const calculatedTotals = await calculateQuoteTotals(ctx, args.id, {
+			discountEnabled: quote.discountEnabled,
+			discountAmount: quote.discountAmount,
+			discountType: quote.discountType,
+			taxEnabled: quote.taxEnabled,
+			taxRate: quote.taxRate,
+		});
+
+		// Return quote with calculated totals (overriding stored values)
+		return {
+			...quote,
+			subtotal: calculatedTotals.subtotal,
+			total: calculatedTotals.total,
+			taxAmount: calculatedTotals.taxAmount,
+		};
 	},
 });
 
