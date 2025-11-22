@@ -5,11 +5,107 @@ import { api } from "../../../convex/_generated/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { formatRelativeTime, parseMessageParts } from "@/lib/notification-utils";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, Download, FileIcon, Image as ImageIcon } from "lucide-react";
+import type { Id } from "../../../convex/_generated/dataModel";
 
 interface MentionFeedProps {
 	entityType: "client" | "project" | "quote";
 	entityId: string;
+}
+
+// Component to display attachments
+function AttachmentItem({ notificationId }: { notificationId: Id<"notifications"> }) {
+	const attachments = useQuery(api.messageAttachments.listByNotification, {
+		notificationId,
+	});
+
+	if (!attachments || attachments.length === 0) {
+		return null;
+	}
+
+	const formatFileSize = (bytes: number): string => {
+		if (bytes === 0) return "0 Bytes";
+		const k = 1024;
+		const sizes = ["Bytes", "KB", "MB"];
+		const i = Math.floor(Math.log(bytes) / Math.log(k));
+		return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
+	};
+
+	const isImage = (mimeType: string) => mimeType.startsWith("image/");
+
+	return (
+		<div className="mt-2 flex flex-wrap gap-2">
+			{attachments.map((attachment) => {
+				// Individual attachment with its own URL query
+				return <AttachmentDownloadLink key={attachment._id} attachment={attachment} formatFileSize={formatFileSize} isImage={isImage} />;
+			})}
+		</div>
+	);
+}
+
+// Component to handle individual attachment download with its own URL query
+function AttachmentDownloadLink({ 
+	attachment, 
+	formatFileSize, 
+	isImage 
+}: { 
+	attachment: any;
+	formatFileSize: (bytes: number) => string;
+	isImage: (mimeType: string) => boolean;
+}) {
+	const downloadUrl = useQuery(api.messageAttachments.getDownloadUrl, {
+		id: attachment._id,
+	});
+
+	if (!downloadUrl) {
+		return null;
+	}
+
+	const isPdf = attachment.mimeType === "application/pdf";
+	
+	// For images, show a thumbnail preview
+	if (isImage(attachment.mimeType)) {
+		return (
+			<a
+				href={downloadUrl}
+				target="_blank"
+				rel="noopener noreferrer"
+				className="group relative inline-block"
+				title={`${attachment.fileName} (${formatFileSize(attachment.fileSize)})`}
+			>
+				<img
+					src={downloadUrl}
+					alt={attachment.fileName}
+					className="h-20 w-20 object-cover rounded-lg border-2 border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500 transition-colors"
+				/>
+				<div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 rounded-lg transition-colors flex items-center justify-center">
+					<Download className="h-4 w-4 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg" />
+				</div>
+			</a>
+		);
+	}
+	
+	// For other files, show compact inline badge
+	return (
+		<a
+			href={downloadUrl}
+			target="_blank"
+			rel="noopener noreferrer"
+			download={attachment.fileName}
+			className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md border border-gray-200 dark:border-gray-700 transition-colors group max-w-[200px]"
+			title={`${attachment.fileName} (${formatFileSize(attachment.fileSize)})`}
+		>
+			{isPdf ? (
+				<FileIcon className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />
+			) : (
+				<FileIcon className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+			)}
+			<span className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">
+				{attachment.fileName}
+			</span>
+			<Download className="h-3 w-3 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 flex-shrink-0 ml-auto" />
+		</a>
+	);
 }
 
 export function MentionFeed({ entityType, entityId }: MentionFeedProps) {
@@ -105,6 +201,9 @@ export function MentionFeed({ entityType, entityId }: MentionFeedProps) {
 								)}
 							</div>
 						</div>
+						
+						{/* Attachments - rendered outside the message bubble */}
+						{mention.hasAttachments && <AttachmentItem notificationId={mention._id} />}
 					</div>
 				</div>
 			))}

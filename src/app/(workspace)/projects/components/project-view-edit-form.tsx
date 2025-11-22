@@ -28,6 +28,7 @@ import ComboBox from "@/components/ui/combo-box";
 import { CalendarWidget } from "@/components/ui/calendar-widget";
 import { StickyFormFooter } from "@/components/shared/sticky-form-footer";
 import { ButtonGroup } from "@/components/ui/button-group";
+import { ProjectDocuments } from "@/app/(workspace)/projects/components/project-documents";
 import { cn } from "@/lib/utils";
 import {
 	MagnifyingGlassIcon,
@@ -816,9 +817,10 @@ export function ProjectViewEditForm({
 					</Card>
 				</div>
 
-				{/* Project Information */}
-				<div className="grid grid-cols-1 gap-6">
-					<Card className="shadow-sm border-gray-200/60 dark:border-white/10">
+				{/* Project Information & Documents */}
+				<div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+					{/* Project Information */}
+					<Card className={`shadow-sm border-gray-200/60 dark:border-white/10 ${isEditing ? 'lg:col-span-3' : 'lg:col-span-2'}`}>
 						<CardHeader className="pb-4">
 							<CardTitle className="text-xl font-semibold text-gray-900 dark:text-white">
 								Project Information
@@ -922,6 +924,13 @@ export function ProjectViewEditForm({
 							</div>
 						</CardContent>
 					</Card>
+
+					{/* Project Documents - Only show when not editing */}
+					{!isEditing && (
+						<div className="lg:col-span-1">
+							<ProjectDocuments projectId={projectId} />
+						</div>
+					)}
 				</div>
 
 				{/* Schedule */}

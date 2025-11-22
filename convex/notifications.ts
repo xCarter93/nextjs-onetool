@@ -903,6 +903,16 @@ export const createMention = mutation({
 		),
 		entityId: v.string(),
 		entityName: v.string(),
+		attachments: v.optional(
+			v.array(
+				v.object({
+					storageId: v.id("_storage"),
+					fileName: v.string(),
+					fileSize: v.number(),
+					mimeType: v.string(),
+				})
+			)
+		),
 	},
 	handler: async (ctx, args): Promise<NotificationId> => {
 		// Get current user
@@ -952,6 +962,8 @@ export const createMention = mutation({
 		// We'll use a special format: "authorId:message"
 		const messageWithAuthor = `${author._id}:${args.message}`;
 
+		const hasAttachments = args.attachments && args.attachments.length > 0;
+
 		// Create the notification
 		const notificationId = await createNotificationWithOrg(ctx, {
 			userId: args.taggedUserId,
@@ -965,7 +977,26 @@ export const createMention = mutation({
 			priority: "medium",
 			sentVia: "in_app",
 			sentAt: Date.now(),
+			hasAttachments,
 		});
+
+		// Create attachment records if any
+		if (hasAttachments) {
+			for (const attachment of args.attachments!) {
+				await ctx.db.insert("messageAttachments", {
+					orgId: userOrgId,
+					notificationId,
+					uploadedBy: author._id,
+					entityType: args.entityType,
+					entityId: args.entityId,
+					fileName: attachment.fileName,
+					fileSize: attachment.fileSize,
+					mimeType: attachment.mimeType,
+					storageId: attachment.storageId,
+					uploadedAt: Date.now(),
+				});
+			}
+		}
 
 		return notificationId;
 	},
