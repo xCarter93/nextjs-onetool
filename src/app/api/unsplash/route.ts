@@ -4,7 +4,40 @@ import type { UnsplashSearchResponse } from "@/types/unsplash";
 
 export const revalidate = 3600; // Cache for 1 hour
 
-export async function GET() {
+export async function GET(request: Request) {
+	const { searchParams } = new URL(request.url);
+	const downloadUrl = searchParams.get("download");
+
+	// Handle download tracking
+	if (downloadUrl) {
+		try {
+			if (!env.UNSPLASH_ACCESS_KEY) {
+				console.error("UNSPLASH_ACCESS_KEY is not defined");
+				return NextResponse.json(
+					{ error: "Missing Unsplash API key" },
+					{ status: 500 }
+				);
+			}
+
+			// Track download with authentication
+			const response = await fetch(downloadUrl, {
+				headers: {
+					Authorization: `Client-ID ${env.UNSPLASH_ACCESS_KEY}`,
+				},
+			});
+
+			if (!response.ok) {
+				console.error(`Unsplash download tracking error: ${response.status}`);
+			}
+
+			return NextResponse.json({ success: true });
+		} catch (error) {
+			console.error("Error tracking download:", error);
+			return NextResponse.json({ success: false });
+		}
+	}
+
+	// Handle image search
 	try {
 		console.log("Fetching from Unsplash API...");
 
@@ -14,9 +47,9 @@ export async function GET() {
 			throw new Error("Missing Unsplash API key");
 		}
 
-		// Fetch 5 random images with 'Small Business' query
+		// Fetch 20 images with 'Small Business' query for cycling through
 		const response = await fetch(
-			`https://api.unsplash.com/search/photos?query=small+business&per_page=5&orientation=portrait&order_by=relevant`,
+			`https://api.unsplash.com/search/photos?query=small+business&per_page=30&orientation=portrait&order_by=relevant`,
 			{
 				headers: {
 					Authorization: `Client-ID ${env.UNSPLASH_ACCESS_KEY}`,

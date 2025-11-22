@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { StyledButton } from "@/components/ui/styled/styled-button";
@@ -39,7 +39,9 @@ const DEFAULT_IMAGES: UnsplashImage[] = [
 export default function HeroSection() {
 	const [mounted, setMounted] = useState(false);
 	const { resolvedTheme } = useTheme();
-	const [images, setImages] = useState<UnsplashImage[]>(DEFAULT_IMAGES);
+	const [allImages, setAllImages] = useState<UnsplashImage[]>(DEFAULT_IMAGES);
+	// Track current indices for each of the 5 image positions
+	const [imageIndices, setImageIndices] = useState([0, 1, 2, 3, 4]);
 
 	// Fetch images from Unsplash API
 	const fetchImages = async () => {
@@ -55,14 +57,16 @@ export default function HeroSection() {
 
 			const data: UnsplashResponse = await response.json();
 			console.log("Successfully fetched images:", data.photos.length);
-			setImages(data.photos);
+			setAllImages(data.photos);
 
 			// Track downloads for Unsplash attribution requirements
 			if (!data.isFallback) {
 				data.photos.forEach((photo) => {
 					if (photo.downloadLocation) {
-						// Track download in background (non-blocking)
-						fetch(photo.downloadLocation).catch(() => {
+						// Track download in background (non-blocking) via our API endpoint
+						fetch(
+							`/api/unsplash?download=${encodeURIComponent(photo.downloadLocation)}`
+						).catch(() => {
 							// Silently fail if tracking doesn't work
 						});
 					}
@@ -71,7 +75,7 @@ export default function HeroSection() {
 		} catch (error) {
 			console.error("Error fetching Unsplash images:", error);
 			// Keep using current images or fallback to defaults
-			setImages(DEFAULT_IMAGES);
+			setAllImages(DEFAULT_IMAGES);
 		}
 	};
 
@@ -93,6 +97,40 @@ export default function HeroSection() {
 
 		return () => clearInterval(interval);
 	}, [mounted]);
+
+	// Cycle through images with staggered transitions
+	useEffect(() => {
+		if (!mounted || allImages.length <= 5) return;
+
+		// Create 5 separate intervals with staggered timing
+		const intervals: NodeJS.Timeout[] = [];
+
+		// Each position cycles at slightly different times
+		const delays = [0, 2000, 4000, 6000, 8000]; // 2-second stagger
+
+		delays.forEach((delay, position) => {
+			const timeout = setTimeout(() => {
+				// Then cycle every 10 seconds
+				const interval = setInterval(() => {
+					setImageIndices((prev) => {
+						const newIndices = [...prev];
+						// Move to next image in the pool, wrapping around
+						newIndices[position] =
+							(newIndices[position] + 5) % allImages.length;
+						return newIndices;
+					});
+				}, 10000); // Change every 10 seconds
+
+				intervals.push(interval);
+			}, delay);
+
+			intervals.push(timeout);
+		});
+
+		return () => {
+			intervals.forEach((interval) => clearInterval(interval));
+		};
+	}, [mounted, allImages]);
 
 	// Prevent hydration mismatch by not rendering until theme is resolved
 	if (!mounted || !resolvedTheme) {
@@ -196,16 +234,35 @@ export default function HeroSection() {
 												transition: { duration: 0.3 },
 											}}
 										>
-											<Image
-												alt={images[0]?.alt || "Small business"}
-												src={images[0]?.url || DEFAULT_IMAGES[0].url}
-												width={176}
-												height={264}
-												className="aspect-2/3 w-full rounded-xl bg-gray-900/5 object-cover shadow-lg hover:shadow-2xl dark:bg-gray-700/5 transition-all duration-300"
-												key={images[0]?.id}
-											/>
-											<div className="pointer-events-none absolute inset-0 rounded-xl ring-1 ring-gray-900/10 ring-inset dark:ring-white/10" />
-											<div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300" />
+											<AnimatePresence mode="wait">
+												<motion.div
+													key={allImages[imageIndices[0]]?.id}
+													initial={{ opacity: 0, scale: 0.85 }}
+													animate={{ opacity: 1, scale: 1 }}
+													exit={{ opacity: 0, scale: 0.85 }}
+													transition={{
+														duration: 0.6,
+														ease: "easeInOut",
+													}}
+													className="relative"
+												>
+													<Image
+														alt={
+															allImages[imageIndices[0]]?.alt ||
+															"Small business"
+														}
+														src={
+															allImages[imageIndices[0]]?.url ||
+															DEFAULT_IMAGES[0].url
+														}
+														width={176}
+														height={264}
+														className="aspect-2/3 w-full rounded-xl bg-gray-900/5 object-cover shadow-lg hover:shadow-2xl dark:bg-gray-700/5"
+													/>
+													<div className="pointer-events-none absolute inset-0 rounded-xl ring-1 ring-gray-900/10 ring-inset dark:ring-white/10" />
+													<div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300" />
+												</motion.div>
+											</AnimatePresence>
 										</motion.div>
 									</div>
 									<div className="mr-auto w-44 flex-none space-y-8 sm:mr-0 sm:pt-52 lg:pt-36">
@@ -238,16 +295,35 @@ export default function HeroSection() {
 												transition: { duration: 0.3 },
 											}}
 										>
-											<Image
-												alt={images[1]?.alt || "Small business"}
-												src={images[1]?.url || DEFAULT_IMAGES[1].url}
-												width={176}
-												height={264}
-												className="aspect-2/3 w-full rounded-xl bg-gray-900/5 object-cover shadow-lg hover:shadow-2xl dark:bg-gray-700/5 transition-all duration-300"
-												key={images[1]?.id}
-											/>
-											<div className="pointer-events-none absolute inset-0 rounded-xl ring-1 ring-gray-900/10 ring-inset dark:ring-white/10" />
-											<div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300" />
+											<AnimatePresence mode="wait">
+												<motion.div
+													key={allImages[imageIndices[1]]?.id}
+													initial={{ opacity: 0, scale: 0.85 }}
+													animate={{ opacity: 1, scale: 1 }}
+													exit={{ opacity: 0, scale: 0.85 }}
+													transition={{
+														duration: 0.6,
+														ease: "easeInOut",
+													}}
+													className="relative"
+												>
+													<Image
+														alt={
+															allImages[imageIndices[1]]?.alt ||
+															"Small business"
+														}
+														src={
+															allImages[imageIndices[1]]?.url ||
+															DEFAULT_IMAGES[1].url
+														}
+														width={176}
+														height={264}
+														className="aspect-2/3 w-full rounded-xl bg-gray-900/5 object-cover shadow-lg hover:shadow-2xl dark:bg-gray-700/5"
+													/>
+													<div className="pointer-events-none absolute inset-0 rounded-xl ring-1 ring-gray-900/10 ring-inset dark:ring-white/10" />
+													<div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300" />
+												</motion.div>
+											</AnimatePresence>
 										</motion.div>
 										<motion.div
 											className="relative"
@@ -278,16 +354,35 @@ export default function HeroSection() {
 												transition: { duration: 0.3 },
 											}}
 										>
-											<Image
-												alt={images[2]?.alt || "Small business"}
-												src={images[2]?.url || DEFAULT_IMAGES[2].url}
-												width={176}
-												height={264}
-												className="aspect-2/3 w-full rounded-xl bg-gray-900/5 object-cover shadow-lg hover:shadow-2xl dark:bg-gray-700/5 transition-all duration-300"
-												key={images[2]?.id}
-											/>
-											<div className="pointer-events-none absolute inset-0 rounded-xl ring-1 ring-gray-900/10 ring-inset dark:ring-white/10" />
-											<div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300" />
+											<AnimatePresence mode="wait">
+												<motion.div
+													key={allImages[imageIndices[2]]?.id}
+													initial={{ opacity: 0, scale: 0.85 }}
+													animate={{ opacity: 1, scale: 1 }}
+													exit={{ opacity: 0, scale: 0.85 }}
+													transition={{
+														duration: 0.6,
+														ease: "easeInOut",
+													}}
+													className="relative"
+												>
+													<Image
+														alt={
+															allImages[imageIndices[2]]?.alt ||
+															"Small business"
+														}
+														src={
+															allImages[imageIndices[2]]?.url ||
+															DEFAULT_IMAGES[2].url
+														}
+														width={176}
+														height={264}
+														className="aspect-2/3 w-full rounded-xl bg-gray-900/5 object-cover shadow-lg hover:shadow-2xl dark:bg-gray-700/5"
+													/>
+													<div className="pointer-events-none absolute inset-0 rounded-xl ring-1 ring-gray-900/10 ring-inset dark:ring-white/10" />
+													<div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300" />
+												</motion.div>
+											</AnimatePresence>
 										</motion.div>
 									</div>
 									<div className="w-44 flex-none space-y-8 pt-32 sm:pt-0">
@@ -320,16 +415,35 @@ export default function HeroSection() {
 												transition: { duration: 0.3 },
 											}}
 										>
-											<Image
-												alt={images[3]?.alt || "Small business"}
-												src={images[3]?.url || DEFAULT_IMAGES[3].url}
-												width={176}
-												height={264}
-												className="aspect-2/3 w-full rounded-xl bg-gray-900/5 object-cover shadow-lg hover:shadow-2xl dark:bg-gray-700/5 transition-all duration-300"
-												key={images[3]?.id}
-											/>
-											<div className="pointer-events-none absolute inset-0 rounded-xl ring-1 ring-gray-900/10 ring-inset dark:ring-white/10" />
-											<div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300" />
+											<AnimatePresence mode="wait">
+												<motion.div
+													key={allImages[imageIndices[3]]?.id}
+													initial={{ opacity: 0, scale: 0.85 }}
+													animate={{ opacity: 1, scale: 1 }}
+													exit={{ opacity: 0, scale: 0.85 }}
+													transition={{
+														duration: 0.6,
+														ease: "easeInOut",
+													}}
+													className="relative"
+												>
+													<Image
+														alt={
+															allImages[imageIndices[3]]?.alt ||
+															"Small business"
+														}
+														src={
+															allImages[imageIndices[3]]?.url ||
+															DEFAULT_IMAGES[3].url
+														}
+														width={176}
+														height={264}
+														className="aspect-2/3 w-full rounded-xl bg-gray-900/5 object-cover shadow-lg hover:shadow-2xl dark:bg-gray-700/5"
+													/>
+													<div className="pointer-events-none absolute inset-0 rounded-xl ring-1 ring-gray-900/10 ring-inset dark:ring-white/10" />
+													<div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300" />
+												</motion.div>
+											</AnimatePresence>
 										</motion.div>
 										<motion.div
 											className="relative"
@@ -360,16 +474,35 @@ export default function HeroSection() {
 												transition: { duration: 0.3 },
 											}}
 										>
-											<Image
-												alt={images[4]?.alt || "Small business"}
-												src={images[4]?.url || DEFAULT_IMAGES[4].url}
-												width={176}
-												height={264}
-												className="aspect-2/3 w-full rounded-xl bg-gray-900/5 object-cover shadow-lg hover:shadow-2xl dark:bg-gray-700/5 transition-all duration-300"
-												key={images[4]?.id}
-											/>
-											<div className="pointer-events-none absolute inset-0 rounded-xl ring-1 ring-gray-900/10 ring-inset dark:ring-white/10" />
-											<div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300" />
+											<AnimatePresence mode="wait">
+												<motion.div
+													key={allImages[imageIndices[4]]?.id}
+													initial={{ opacity: 0, scale: 0.85 }}
+													animate={{ opacity: 1, scale: 1 }}
+													exit={{ opacity: 0, scale: 0.85 }}
+													transition={{
+														duration: 0.6,
+														ease: "easeInOut",
+													}}
+													className="relative"
+												>
+													<Image
+														alt={
+															allImages[imageIndices[4]]?.alt ||
+															"Small business"
+														}
+														src={
+															allImages[imageIndices[4]]?.url ||
+															DEFAULT_IMAGES[4].url
+														}
+														width={176}
+														height={264}
+														className="aspect-2/3 w-full rounded-xl bg-gray-900/5 object-cover shadow-lg hover:shadow-2xl dark:bg-gray-700/5"
+													/>
+													<div className="pointer-events-none absolute inset-0 rounded-xl ring-1 ring-gray-900/10 ring-inset dark:ring-white/10" />
+													<div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300" />
+												</motion.div>
+											</AnimatePresence>
 										</motion.div>
 									</div>
 								</div>
