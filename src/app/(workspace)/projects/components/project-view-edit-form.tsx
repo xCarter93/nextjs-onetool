@@ -58,6 +58,7 @@ import {
 } from "@/components/ui/styled/styled-select";
 
 type ClientId = Id<"clients">;
+type UserId = Id<"users">;
 
 interface ProjectData {
 	_id: Id<"projects">;
@@ -68,7 +69,7 @@ interface ProjectData {
 	projectType: "one-off" | "recurring";
 	startDate?: number;
 	endDate?: number;
-	assignedUserIds?: string;
+	assignedUserIds?: UserId[];
 	invoiceReminderEnabled?: boolean;
 	scheduleForLater?: boolean;
 	status: "planned" | "in-progress" | "completed" | "cancelled";
@@ -111,7 +112,7 @@ const formSchema = z.object({
 	projectType: z.enum(["one-off", "recurring"]),
 	startDate: z.date().optional(),
 	endDate: z.date().optional(),
-	assignedUserIds: z.string().optional(),
+	assignedUserId: z.string().optional(), // Single user in form, converted to array for DB
 	invoiceReminderEnabled: z.boolean(),
 	scheduleForLater: z.boolean(),
 });
@@ -197,7 +198,7 @@ export function ProjectViewEditForm({
 			projectType: project.projectType,
 			startDate: project.startDate ? new Date(project.startDate) : undefined,
 			endDate: project.endDate ? new Date(project.endDate) : undefined,
-			assignedUserIds: project.assignedUserIds || "",
+			assignedUserId: project.assignedUserIds?.[0] || "", // Take first user from array
 			invoiceReminderEnabled: project.invoiceReminderEnabled || false,
 			scheduleForLater: project.scheduleForLater || false,
 		},
@@ -228,8 +229,13 @@ export function ProjectViewEditForm({
 				(project.endDate || undefined)
 			)
 				updates.endDate = value.endDate ? value.endDate.getTime() : undefined;
-			if ((value.assignedUserIds || "") !== (project.assignedUserIds || ""))
-				updates.assignedUserIds = value.assignedUserIds || undefined;
+			// Convert single user to array for database
+			const currentAssignedUser = project.assignedUserIds?.[0] || "";
+			if ((value.assignedUserId || "") !== currentAssignedUser) {
+				updates.assignedUserIds = value.assignedUserId
+					? [value.assignedUserId as UserId]
+					: undefined;
+			}
 			if (
 				(value.invoiceReminderEnabled || false) !==
 				(project.invoiceReminderEnabled || false)
@@ -266,7 +272,7 @@ export function ProjectViewEditForm({
 				"endDate",
 				project.endDate ? new Date(project.endDate) : undefined
 			);
-			form.setFieldValue("assignedUserIds", project.assignedUserIds || "");
+			form.setFieldValue("assignedUserId", project.assignedUserIds?.[0] || "");
 			form.setFieldValue(
 				"invoiceReminderEnabled",
 				project.invoiceReminderEnabled || false
@@ -288,7 +294,7 @@ export function ProjectViewEditForm({
 			"endDate",
 			project.endDate ? new Date(project.endDate) : undefined
 		);
-		form.setFieldValue("assignedUserIds", project.assignedUserIds || "");
+		form.setFieldValue("assignedUserId", project.assignedUserIds?.[0] || "");
 		form.setFieldValue(
 			"invoiceReminderEnabled",
 			project.invoiceReminderEnabled || false
@@ -918,7 +924,7 @@ export function ProjectViewEditForm({
 								{/* Assigned User */}
 								<FieldGroup>
 									<form.Field
-										name="assignedUserIds"
+										name="assignedUserId"
 										children={(field) => (
 											<Field>
 												<FieldLabel htmlFor={field.name} className="flex items-center gap-2">
@@ -1369,8 +1375,8 @@ export function ProjectViewEditForm({
 							: undefined) !== (project.startDate || undefined) ||
 						(formValues.endDate ? formValues.endDate.getTime() : undefined) !==
 							(project.endDate || undefined) ||
-						(formValues.assignedUserIds || "") !==
-							(project.assignedUserIds || "") ||
+						(formValues.assignedUserId || "") !==
+							(project.assignedUserIds?.[0] || "") ||
 						(formValues.invoiceReminderEnabled || false) !==
 							(project.invoiceReminderEnabled || false) ||
 						(formValues.scheduleForLater || false) !==
