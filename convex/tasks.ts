@@ -5,6 +5,7 @@ import { getCurrentUserOrgId } from "./lib/auth";
 import { ActivityHelpers } from "./lib/activities";
 import { DateUtils } from "./lib/shared";
 import { requireMembership } from "./lib/memberships";
+import { isMember, getCurrentUserId } from "./lib/permissions";
 
 /**
  * Task/Schedule operations with embedded CRUD helpers
@@ -270,6 +271,10 @@ export const list = query({
 			return [];
 		}
 
+		// Check if user is a member (non-admin) - members can only see their assigned tasks
+		const isUserMember = await isMember(ctx);
+		const currentUserId = await getCurrentUserId(ctx);
+
 		let tasks: TaskDocument[];
 
 		// Start with the most specific query available
@@ -321,6 +326,11 @@ export const list = query({
 
 		if (args.projectId && !args.assigneeUserId) {
 			tasks = tasks.filter((task) => task.projectId === args.projectId);
+		}
+
+		// Filter by assignment if user is a member
+		if (isUserMember && currentUserId) {
+			tasks = tasks.filter((task) => task.assigneeUserId === currentUserId);
 		}
 
 		// Sort by date
@@ -679,10 +689,20 @@ export const getStats = query({
 		if (!userOrgId) {
 			return createEmptyTaskStats();
 		}
-		const tasks = await ctx.db
+
+		// Check if user is a member (non-admin) - members can only see their assigned tasks
+		const isUserMember = await isMember(ctx);
+		const currentUserId = await getCurrentUserId(ctx);
+
+		let tasks = await ctx.db
 			.query("tasks")
 			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
 			.collect();
+
+		// Filter by assignment if user is a member
+		if (isUserMember && currentUserId) {
+			tasks = tasks.filter((task) => task.assigneeUserId === currentUserId);
+		}
 
 		const stats: TaskStats = {
 			total: tasks.length,
@@ -796,6 +816,11 @@ export const getOverdue = query({
 		if (!userOrgId) {
 			return [];
 		}
+
+		// Check if user is a member (non-admin) - members can only see their assigned tasks
+		const isUserMember = await isMember(ctx);
+		const currentUserId = await getCurrentUserId(ctx);
+
 		const today = DateUtils.startOfDay(Date.now());
 
 		let tasks = await ctx.db
@@ -816,6 +841,11 @@ export const getOverdue = query({
 			);
 		}
 
+		// Filter by assignment if user is a member
+		if (isUserMember && currentUserId) {
+			tasks = tasks.filter((task) => task.assigneeUserId === currentUserId);
+		}
+
 		return tasks.sort((a, b) => b.date - a.date); // Most recent overdue first
 	},
 });
@@ -833,6 +863,11 @@ export const getUpcoming = query({
 		if (!userOrgId) {
 			return [];
 		}
+
+		// Check if user is a member (non-admin) - members can only see their assigned tasks
+		const isUserMember = await isMember(ctx);
+		const currentUserId = await getCurrentUserId(ctx);
+
 		const today = DateUtils.startOfDay(Date.now());
 		const daysAhead = args.daysAhead || 7;
 		const futureDate = DateUtils.addDays(today, daysAhead);
@@ -855,6 +890,11 @@ export const getUpcoming = query({
 			tasks = tasks.filter(
 				(task) => task.assigneeUserId === args.assigneeUserId
 			);
+		}
+
+		// Filter by assignment if user is a member
+		if (isUserMember && currentUserId) {
+			tasks = tasks.filter((task) => task.assigneeUserId === currentUserId);
 		}
 
 		// Sort by date, then by priority (urgent first), then by start time

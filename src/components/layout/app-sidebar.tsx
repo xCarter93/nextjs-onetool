@@ -28,6 +28,7 @@ import {
 import { api } from "../../../convex/_generated/api";
 import { useQuery } from "convex/react";
 import { useFeatureAccess } from "@/hooks/use-feature-access";
+import { useRoleAccess } from "@/hooks/use-role-access";
 
 // This is sample data.
 const data = {
@@ -120,6 +121,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 	const taskStats = useQuery(api.tasks.getStats, {});
 	const tasksDueToday = taskStats?.todayTasks ?? 0;
 	const { hasOrganization } = useFeatureAccess();
+	const { isAdmin, isMember } = useRoleAccess();
 
 	// Function to determine if a navigation item should be active
 	const isNavItemActive = (navUrl: string, title: string) => {
@@ -157,58 +159,68 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 	};
 
 	// Create navigation items with dynamic isActive property
-	const navigationItems = data.navMain.map((item) => {
-		const subItems = item.items?.map((subItem) => {
-			// For URLs with search params, we need to compare both pathname and params
-			const [subItemPath, subItemParams] = subItem.url.split("?");
-			const currentPath = pathname;
-			const currentParams = searchParams.toString();
-
-			let isSubItemActive = false;
-
-			if (subItemParams) {
-				// URL has search params (like ?tab=business)
-				isSubItemActive =
-					currentPath === subItemPath && currentParams === subItemParams;
-			} else {
-				// No search params in the URL - should match only when current page has no params either
-				// Special case: for organization/profile, only match when there are no search params
-				if (subItem.url === "/organization/profile") {
-					isSubItemActive = pathname === subItem.url && currentParams === "";
-				} else {
-					// Use original logic for other routes
-					isSubItemActive =
-						pathname === subItem.url ||
-						(subItem.url !== item.url &&
-							pathname.startsWith(`${subItem.url}/`));
-				}
+	const navigationItems = data.navMain
+		.filter((item) => {
+			// Filter navigation items based on user role
+			// Members can only see Projects and Tasks
+			if (isMember && hasOrganization) {
+				return item.title === "Projects" || item.title === "Tasks";
 			}
+			// Admins see all items (default behavior)
+			return true;
+		})
+		.map((item) => {
+			const subItems = item.items?.map((subItem) => {
+				// For URLs with search params, we need to compare both pathname and params
+				const [subItemPath, subItemParams] = subItem.url.split("?");
+				const currentPath = pathname;
+				const currentParams = searchParams.toString();
+
+				let isSubItemActive = false;
+
+				if (subItemParams) {
+					// URL has search params (like ?tab=business)
+					isSubItemActive =
+						currentPath === subItemPath && currentParams === subItemParams;
+				} else {
+					// No search params in the URL - should match only when current page has no params either
+					// Special case: for organization/profile, only match when there are no search params
+					if (subItem.url === "/organization/profile") {
+						isSubItemActive = pathname === subItem.url && currentParams === "";
+					} else {
+						// Use original logic for other routes
+						isSubItemActive =
+							pathname === subItem.url ||
+							(subItem.url !== item.url &&
+								pathname.startsWith(`${subItem.url}/`));
+					}
+				}
+
+				return {
+					...subItem,
+					isActive: isSubItemActive,
+				};
+			});
+
+			const isActive =
+				isNavItemActive(item.url, item.title) ||
+				subItems?.some((subItem) => subItem.isActive);
+
+			// Determine if item should be disabled
+			// Users without an organization can only access Settings
+			const isDisabled =
+				!hasOrganization && item.title !== "Settings" && item.title !== "Home";
 
 			return {
-				...subItem,
-				isActive: isSubItemActive,
+				...item,
+				items: subItems,
+				isActive,
+				disabled: isDisabled,
+				badgeCount:
+					item.title === "Tasks" && tasksDueToday > 0 ? tasksDueToday : undefined,
+				badgeVariant: item.title === "Tasks" ? ("alert" as const) : undefined,
 			};
 		});
-
-		const isActive =
-			isNavItemActive(item.url, item.title) ||
-			subItems?.some((subItem) => subItem.isActive);
-
-		// Determine if item should be disabled
-		// Users without an organization can only access Settings
-		const isDisabled =
-			!hasOrganization && item.title !== "Settings" && item.title !== "Home";
-
-		return {
-			...item,
-			items: subItems,
-			isActive,
-			disabled: isDisabled,
-			badgeCount:
-				item.title === "Tasks" && tasksDueToday > 0 ? tasksDueToday : undefined,
-			badgeVariant: item.title === "Tasks" ? ("alert" as const) : undefined,
-		};
-	});
 
 	return (
 		<Sidebar collapsible="icon" {...props}>
@@ -216,7 +228,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 				<TeamSwitcher />
 			</SidebarHeader>
 			<SidebarContent>
-				<NavMain items={navigationItems} />
+				<NavMain items={navigationItems} showQuickActions={isAdmin} />
 			</SidebarContent>
 			<SidebarFooter>
 				<NavUser />
