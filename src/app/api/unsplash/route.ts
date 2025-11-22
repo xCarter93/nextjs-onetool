@@ -19,8 +19,39 @@ export async function GET(request: Request) {
 				);
 			}
 
+			// Validate download URL to prevent SSRF
+			let url: URL;
+			try {
+				url = new URL(downloadUrl);
+			} catch {
+				return NextResponse.json(
+					{ error: "Invalid download URL" },
+					{ status: 400 }
+				);
+			}
+
+			// Only allow HTTPS requests to Unsplash domains
+			if (url.protocol !== "https:") {
+				return NextResponse.json(
+					{ error: "Only HTTPS URLs are allowed" },
+					{ status: 400 }
+				);
+			}
+
+			// Validate hostname is an Unsplash domain
+			const hostname = url.hostname.toLowerCase();
+			const isUnsplashDomain =
+				hostname === "api.unsplash.com" || hostname.endsWith(".unsplash.com");
+
+			if (!isUnsplashDomain) {
+				return NextResponse.json(
+					{ error: "Only Unsplash URLs are allowed" },
+					{ status: 400 }
+				);
+			}
+
 			// Track download with authentication
-			const response = await fetch(downloadUrl, {
+			const response = await fetch(url.toString(), {
 				headers: {
 					Authorization: `Client-ID ${env.UNSPLASH_ACCESS_KEY}`,
 				},

@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence, type MotionProps } from "motion/react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { StyledButton } from "@/components/ui/styled/styled-button";
@@ -35,6 +35,47 @@ const DEFAULT_IMAGES: UnsplashImage[] = [
 		url: "https://images.unsplash.com/photo-1670272505284-8faba1c31f7d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDF8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&h=528&q=80",
 	},
 ];
+
+// Reusable animated image component
+interface AnimatedHeroImageProps {
+	image: UnsplashImage;
+	fallbackImage: UnsplashImage;
+	containerMotionProps: MotionProps;
+}
+
+function AnimatedHeroImage({
+	image,
+	fallbackImage,
+	containerMotionProps,
+}: AnimatedHeroImageProps) {
+	return (
+		<motion.div className="relative" {...containerMotionProps}>
+			<AnimatePresence mode="wait">
+				<motion.div
+					key={image?.id}
+					initial={{ opacity: 0, scale: 0.85 }}
+					animate={{ opacity: 1, scale: 1 }}
+					exit={{ opacity: 0, scale: 0.85 }}
+					transition={{
+						duration: 0.6,
+						ease: "easeInOut",
+					}}
+					className="relative"
+				>
+					<Image
+						alt={image?.alt || "Small business"}
+						src={image?.url || fallbackImage.url}
+						width={176}
+						height={264}
+						className="aspect-2/3 w-full rounded-xl bg-gray-900/5 object-cover shadow-lg hover:shadow-2xl dark:bg-gray-700/5"
+					/>
+					<div className="pointer-events-none absolute inset-0 rounded-xl ring-1 ring-gray-900/10 ring-inset dark:ring-white/10" />
+					<div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300" />
+				</motion.div>
+			</AnimatePresence>
+		</motion.div>
+	);
+}
 
 export default function HeroSection() {
 	const [mounted, setMounted] = useState(false);
@@ -212,298 +253,163 @@ export default function HeroSection() {
 								</div>
 								<div className="mt-14 flex justify-end gap-8 sm:-mt-44 sm:justify-start sm:pl-20 lg:mt-0 lg:pl-0">
 									<div className="ml-auto w-44 flex-none space-y-8 pt-32 sm:ml-0 sm:pt-80 lg:order-last lg:pt-36 xl:order-0 xl:pt-80">
-										<motion.div
-											className="relative"
-											initial={{ opacity: 0, y: 20 }}
-											animate={{
-												opacity: 1,
-												y: [0, -10, 0],
-											}}
-											transition={{
-												opacity: { duration: 0.6, delay: 0.2 },
-												y: {
-													duration: 6,
-													repeat: Infinity,
-													ease: "easeInOut",
-													delay: 0.5,
+										<AnimatedHeroImage
+											image={allImages[imageIndices[0]]}
+											fallbackImage={DEFAULT_IMAGES[0]}
+											containerMotionProps={{
+												initial: { opacity: 0, y: 20 },
+												animate: {
+													opacity: 1,
+													y: [0, -10, 0],
+												},
+												transition: {
+													opacity: { duration: 0.6, delay: 0.2 },
+													y: {
+														duration: 6,
+														repeat: Infinity,
+														ease: "easeInOut",
+														delay: 0.5,
+													},
+												},
+												whileHover: {
+													scale: 1.05,
+													y: -5,
+													transition: { duration: 0.3 },
 												},
 											}}
-											whileHover={{
-												scale: 1.05,
-												y: -5,
-												transition: { duration: 0.3 },
-											}}
-										>
-											<AnimatePresence mode="wait">
-												<motion.div
-													key={allImages[imageIndices[0]]?.id}
-													initial={{ opacity: 0, scale: 0.85 }}
-													animate={{ opacity: 1, scale: 1 }}
-													exit={{ opacity: 0, scale: 0.85 }}
-													transition={{
-														duration: 0.6,
-														ease: "easeInOut",
-													}}
-													className="relative"
-												>
-													<Image
-														alt={
-															allImages[imageIndices[0]]?.alt ||
-															"Small business"
-														}
-														src={
-															allImages[imageIndices[0]]?.url ||
-															DEFAULT_IMAGES[0].url
-														}
-														width={176}
-														height={264}
-														className="aspect-2/3 w-full rounded-xl bg-gray-900/5 object-cover shadow-lg hover:shadow-2xl dark:bg-gray-700/5"
-													/>
-													<div className="pointer-events-none absolute inset-0 rounded-xl ring-1 ring-gray-900/10 ring-inset dark:ring-white/10" />
-													<div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300" />
-												</motion.div>
-											</AnimatePresence>
-										</motion.div>
+										/>
 									</div>
 									<div className="mr-auto w-44 flex-none space-y-8 sm:mr-0 sm:pt-52 lg:pt-36">
-										<motion.div
-											className="relative"
-											initial={{ opacity: 0, y: 20 }}
-											animate={{
-												opacity: 1,
-												y: [0, -8, 0],
-												rotate: [0, 1, 0, -1, 0],
-											}}
-											transition={{
-												opacity: { duration: 0.6, delay: 0.4 },
-												y: {
-													duration: 7,
-													repeat: Infinity,
-													ease: "easeInOut",
-													delay: 1,
+										<AnimatedHeroImage
+											image={allImages[imageIndices[1]]}
+											fallbackImage={DEFAULT_IMAGES[1]}
+											containerMotionProps={{
+												initial: { opacity: 0, y: 20 },
+												animate: {
+													opacity: 1,
+													y: [0, -8, 0],
+													rotate: [0, 1, 0, -1, 0],
 												},
-												rotate: {
-													duration: 8,
-													repeat: Infinity,
-													ease: "easeInOut",
-													delay: 2,
-												},
-											}}
-											whileHover={{
-												scale: 1.05,
-												y: -5,
-												transition: { duration: 0.3 },
-											}}
-										>
-											<AnimatePresence mode="wait">
-												<motion.div
-													key={allImages[imageIndices[1]]?.id}
-													initial={{ opacity: 0, scale: 0.85 }}
-													animate={{ opacity: 1, scale: 1 }}
-													exit={{ opacity: 0, scale: 0.85 }}
-													transition={{
-														duration: 0.6,
+												transition: {
+													opacity: { duration: 0.6, delay: 0.4 },
+													y: {
+														duration: 7,
+														repeat: Infinity,
 														ease: "easeInOut",
-													}}
-													className="relative"
-												>
-													<Image
-														alt={
-															allImages[imageIndices[1]]?.alt ||
-															"Small business"
-														}
-														src={
-															allImages[imageIndices[1]]?.url ||
-															DEFAULT_IMAGES[1].url
-														}
-														width={176}
-														height={264}
-														className="aspect-2/3 w-full rounded-xl bg-gray-900/5 object-cover shadow-lg hover:shadow-2xl dark:bg-gray-700/5"
-													/>
-													<div className="pointer-events-none absolute inset-0 rounded-xl ring-1 ring-gray-900/10 ring-inset dark:ring-white/10" />
-													<div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300" />
-												</motion.div>
-											</AnimatePresence>
-										</motion.div>
-										<motion.div
-											className="relative"
-											initial={{ opacity: 0, y: 20 }}
-											animate={{
-												opacity: 1,
-												y: [0, -12, 0],
-												x: [0, 2, 0, -2, 0],
-											}}
-											transition={{
-												opacity: { duration: 0.6, delay: 0.6 },
-												y: {
-													duration: 5,
-													repeat: Infinity,
-													ease: "easeInOut",
-													delay: 1.5,
-												},
-												x: {
-													duration: 9,
-													repeat: Infinity,
-													ease: "easeInOut",
-													delay: 0.8,
-												},
-											}}
-											whileHover={{
-												scale: 1.05,
-												y: -5,
-												transition: { duration: 0.3 },
-											}}
-										>
-											<AnimatePresence mode="wait">
-												<motion.div
-													key={allImages[imageIndices[2]]?.id}
-													initial={{ opacity: 0, scale: 0.85 }}
-													animate={{ opacity: 1, scale: 1 }}
-													exit={{ opacity: 0, scale: 0.85 }}
-													transition={{
-														duration: 0.6,
+														delay: 1,
+													},
+													rotate: {
+														duration: 8,
+														repeat: Infinity,
 														ease: "easeInOut",
-													}}
-													className="relative"
-												>
-													<Image
-														alt={
-															allImages[imageIndices[2]]?.alt ||
-															"Small business"
-														}
-														src={
-															allImages[imageIndices[2]]?.url ||
-															DEFAULT_IMAGES[2].url
-														}
-														width={176}
-														height={264}
-														className="aspect-2/3 w-full rounded-xl bg-gray-900/5 object-cover shadow-lg hover:shadow-2xl dark:bg-gray-700/5"
-													/>
-													<div className="pointer-events-none absolute inset-0 rounded-xl ring-1 ring-gray-900/10 ring-inset dark:ring-white/10" />
-													<div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300" />
-												</motion.div>
-											</AnimatePresence>
-										</motion.div>
+														delay: 2,
+													},
+												},
+												whileHover: {
+													scale: 1.05,
+													y: -5,
+													transition: { duration: 0.3 },
+												},
+											}}
+										/>
+										<AnimatedHeroImage
+											image={allImages[imageIndices[2]]}
+											fallbackImage={DEFAULT_IMAGES[2]}
+											containerMotionProps={{
+												initial: { opacity: 0, y: 20 },
+												animate: {
+													opacity: 1,
+													y: [0, -12, 0],
+													x: [0, 2, 0, -2, 0],
+												},
+												transition: {
+													opacity: { duration: 0.6, delay: 0.6 },
+													y: {
+														duration: 5,
+														repeat: Infinity,
+														ease: "easeInOut",
+														delay: 1.5,
+													},
+													x: {
+														duration: 9,
+														repeat: Infinity,
+														ease: "easeInOut",
+														delay: 0.8,
+													},
+												},
+												whileHover: {
+													scale: 1.05,
+													y: -5,
+													transition: { duration: 0.3 },
+												},
+											}}
+										/>
 									</div>
 									<div className="w-44 flex-none space-y-8 pt-32 sm:pt-0">
-										<motion.div
-											className="relative"
-											initial={{ opacity: 0, y: 20 }}
-											animate={{
-												opacity: 1,
-												y: [0, -6, 0],
-												scale: [1, 1.02, 1],
-											}}
-											transition={{
-												opacity: { duration: 0.6, delay: 0.8 },
-												y: {
-													duration: 4,
-													repeat: Infinity,
-													ease: "easeInOut",
-													delay: 2.5,
+										<AnimatedHeroImage
+											image={allImages[imageIndices[3]]}
+											fallbackImage={DEFAULT_IMAGES[3]}
+											containerMotionProps={{
+												initial: { opacity: 0, y: 20 },
+												animate: {
+													opacity: 1,
+													y: [0, -6, 0],
+													scale: [1, 1.02, 1],
 												},
-												scale: {
-													duration: 6,
-													repeat: Infinity,
-													ease: "easeInOut",
-													delay: 3,
-												},
-											}}
-											whileHover={{
-												scale: 1.05,
-												y: -5,
-												transition: { duration: 0.3 },
-											}}
-										>
-											<AnimatePresence mode="wait">
-												<motion.div
-													key={allImages[imageIndices[3]]?.id}
-													initial={{ opacity: 0, scale: 0.85 }}
-													animate={{ opacity: 1, scale: 1 }}
-													exit={{ opacity: 0, scale: 0.85 }}
-													transition={{
-														duration: 0.6,
+												transition: {
+													opacity: { duration: 0.6, delay: 0.8 },
+													y: {
+														duration: 4,
+														repeat: Infinity,
 														ease: "easeInOut",
-													}}
-													className="relative"
-												>
-													<Image
-														alt={
-															allImages[imageIndices[3]]?.alt ||
-															"Small business"
-														}
-														src={
-															allImages[imageIndices[3]]?.url ||
-															DEFAULT_IMAGES[3].url
-														}
-														width={176}
-														height={264}
-														className="aspect-2/3 w-full rounded-xl bg-gray-900/5 object-cover shadow-lg hover:shadow-2xl dark:bg-gray-700/5"
-													/>
-													<div className="pointer-events-none absolute inset-0 rounded-xl ring-1 ring-gray-900/10 ring-inset dark:ring-white/10" />
-													<div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300" />
-												</motion.div>
-											</AnimatePresence>
-										</motion.div>
-										<motion.div
-											className="relative"
-											initial={{ opacity: 0, y: 20 }}
-											animate={{
-												opacity: 1,
-												y: [0, -9, 0],
-												rotate: [0, -0.5, 0, 0.5, 0],
-											}}
-											transition={{
-												opacity: { duration: 0.6, delay: 1.0 },
-												y: {
-													duration: 5.5,
-													repeat: Infinity,
-													ease: "easeInOut",
-													delay: 2,
-												},
-												rotate: {
-													duration: 10,
-													repeat: Infinity,
-													ease: "easeInOut",
-													delay: 1.2,
-												},
-											}}
-											whileHover={{
-												scale: 1.05,
-												y: -5,
-												transition: { duration: 0.3 },
-											}}
-										>
-											<AnimatePresence mode="wait">
-												<motion.div
-													key={allImages[imageIndices[4]]?.id}
-													initial={{ opacity: 0, scale: 0.85 }}
-													animate={{ opacity: 1, scale: 1 }}
-													exit={{ opacity: 0, scale: 0.85 }}
-													transition={{
-														duration: 0.6,
+														delay: 2.5,
+													},
+													scale: {
+														duration: 6,
+														repeat: Infinity,
 														ease: "easeInOut",
-													}}
-													className="relative"
-												>
-													<Image
-														alt={
-															allImages[imageIndices[4]]?.alt ||
-															"Small business"
-														}
-														src={
-															allImages[imageIndices[4]]?.url ||
-															DEFAULT_IMAGES[4].url
-														}
-														width={176}
-														height={264}
-														className="aspect-2/3 w-full rounded-xl bg-gray-900/5 object-cover shadow-lg hover:shadow-2xl dark:bg-gray-700/5"
-													/>
-													<div className="pointer-events-none absolute inset-0 rounded-xl ring-1 ring-gray-900/10 ring-inset dark:ring-white/10" />
-													<div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300" />
-												</motion.div>
-											</AnimatePresence>
-										</motion.div>
+														delay: 3,
+													},
+												},
+												whileHover: {
+													scale: 1.05,
+													y: -5,
+													transition: { duration: 0.3 },
+												},
+											}}
+										/>
+										<AnimatedHeroImage
+											image={allImages[imageIndices[4]]}
+											fallbackImage={DEFAULT_IMAGES[4]}
+											containerMotionProps={{
+												initial: { opacity: 0, y: 20 },
+												animate: {
+													opacity: 1,
+													y: [0, -9, 0],
+													rotate: [0, -0.5, 0, 0.5, 0],
+												},
+												transition: {
+													opacity: { duration: 0.6, delay: 1.0 },
+													y: {
+														duration: 5.5,
+														repeat: Infinity,
+														ease: "easeInOut",
+														delay: 2,
+													},
+													rotate: {
+														duration: 10,
+														repeat: Infinity,
+														ease: "easeInOut",
+														delay: 1.2,
+													},
+												},
+												whileHover: {
+													scale: 1.05,
+													y: -5,
+													transition: { duration: 0.3 },
+												},
+											}}
+										/>
 									</div>
 								</div>
 							</div>
