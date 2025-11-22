@@ -280,46 +280,51 @@ export function formatTime(time: string): string {
 
 /**
  * Check if an event is happening on a specific date
- * Note: Event dates are stored as UTC midnight timestamps
+ * Note: Events come with Date objects that represent local dates (from calendar-container)
  */
 export function isEventOnDate(event: CalendarEvent, date: Date): boolean {
-	// Convert the check date to UTC midnight for comparison
-	const checkDate = new Date(date);
-	const checkDateUTC = Date.UTC(
-		checkDate.getFullYear(),
-		checkDate.getMonth(),
-		checkDate.getDate()
-	);
+	// Normalize the check date to start of day for comparison
+	const checkYear = date.getFullYear();
+	const checkMonth = date.getMonth();
+	const checkDay = date.getDate();
 
 	if (event.type === "task") {
-		// For tasks, the startDate is already a UTC midnight timestamp
-		// Convert to Date object in UTC for comparison
-		const eventDate = new Date(event.startDate);
-		const eventDateUTC = Date.UTC(
-			eventDate.getUTCFullYear(),
-			eventDate.getUTCMonth(),
-			eventDate.getUTCDate()
+		// For tasks, check if the dates match (year, month, day)
+		const eventYear = event.startDate.getFullYear();
+		const eventMonth = event.startDate.getMonth();
+		const eventDay = event.startDate.getDate();
+		
+		return (
+			eventYear === checkYear &&
+			eventMonth === checkMonth &&
+			eventDay === checkDay
 		);
-		return eventDateUTC === checkDateUTC;
 	} else {
 		// Project - check if date falls within project range
-		const eventStartDate = new Date(event.startDate);
-		const eventStartUTC = Date.UTC(
-			eventStartDate.getUTCFullYear(),
-			eventStartDate.getUTCMonth(),
-			eventStartDate.getUTCDate()
-		);
+		const eventStartYear = event.startDate.getFullYear();
+		const eventStartMonth = event.startDate.getMonth();
+		const eventStartDay = event.startDate.getDate();
 
-		let eventEndUTC = eventStartUTC;
+		// Create comparable timestamps at midnight
+		const checkTimestamp = new Date(checkYear, checkMonth, checkDay).getTime();
+		const startTimestamp = new Date(
+			eventStartYear,
+			eventStartMonth,
+			eventStartDay
+		).getTime();
+
+		let endTimestamp = startTimestamp;
 		if (event.endDate) {
-			const eventEndDate = new Date(event.endDate);
-			eventEndUTC = Date.UTC(
-				eventEndDate.getUTCFullYear(),
-				eventEndDate.getUTCMonth(),
-				eventEndDate.getUTCDate()
-			);
+			const eventEndYear = event.endDate.getFullYear();
+			const eventEndMonth = event.endDate.getMonth();
+			const eventEndDay = event.endDate.getDate();
+			endTimestamp = new Date(
+				eventEndYear,
+				eventEndMonth,
+				eventEndDay
+			).getTime();
 		}
 
-		return checkDateUTC >= eventStartUTC && checkDateUTC <= eventEndUTC;
+		return checkTimestamp >= startTimestamp && checkTimestamp <= endTimestamp;
 	}
 }
