@@ -10,6 +10,13 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TaskSheet } from "@/components/shared/task-sheet";
 import { StyledButton } from "@/components/ui/styled/styled-button";
+import {
+	StyledSelect,
+	StyledSelectTrigger,
+	StyledSelectContent,
+	SelectValue,
+	SelectItem,
+} from "@/components/ui/styled/styled-select";
 import { motion, AnimatePresence } from "motion/react";
 import {
 	Calendar,
@@ -96,10 +103,27 @@ function TaskRow({
 			u._id === task.assigneeUserId
 	);
 
-	const isOverdue = task.date < Date.now() && task.status !== "completed";
-	const isToday =
-		new Date(task.date).toDateString() === new Date().toDateString();
+	// Create date in UTC to avoid timezone shifts
 	const taskDate = new Date(task.date);
+	const taskDateUTC = new Date(
+		taskDate.getUTCFullYear(),
+		taskDate.getUTCMonth(),
+		taskDate.getUTCDate()
+	);
+
+	const todayUTC = new Date();
+	todayUTC.setHours(0, 0, 0, 0);
+	const todayUTCDate = new Date(
+		Date.UTC(
+			todayUTC.getFullYear(),
+			todayUTC.getMonth(),
+			todayUTC.getDate()
+		)
+	);
+
+	const isOverdue =
+		task.date < todayUTCDate.getTime() && task.status !== "completed";
+	const isToday = task.date === todayUTCDate.getTime();
 
 	const PriorityIcon = priorityConfig[task.priority || "medium"].icon;
 
@@ -115,16 +139,18 @@ function TaskRow({
 	const formatDate = (date: Date) => {
 		if (isToday) return "Today";
 
-		const tomorrow = new Date();
-		tomorrow.setDate(tomorrow.getDate() + 1);
-		if (date.toDateString() === tomorrow.toDateString()) return "Tomorrow";
+		const tomorrow = new Date(todayUTCDate);
+		tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+		
+		if (date.getTime() === tomorrow.getTime()) return "Tomorrow";
 
+		// Use UTC methods to display the date consistently
 		return date.toLocaleDateString("en-US", {
 			weekday: "short",
 			month: "short",
 			day: "numeric",
 			year:
-				taskDate.getFullYear() !== new Date().getFullYear()
+				date.getFullYear() !== new Date().getFullYear()
 					? "numeric"
 					: undefined,
 		});
@@ -223,7 +249,7 @@ function TaskRow({
 					)}
 				>
 					<Calendar className="h-3 w-3 flex-shrink-0" />
-					<span>{formatDate(taskDate)}</span>
+					<span>{formatDate(taskDateUTC)}</span>
 				</div>
 			</td>
 
@@ -445,13 +471,22 @@ export default function TasksPage() {
 		}
 	};
 
-	// Stats
+	// Stats - Calculate today in UTC for consistent comparisons
+	const todayUTC = new Date();
+	todayUTC.setHours(0, 0, 0, 0);
+	const todayUTCTimestamp = Date.UTC(
+		todayUTC.getFullYear(),
+		todayUTC.getMonth(),
+		todayUTC.getDate()
+	);
+
 	const totalTasks = allTasks?.length || 0;
 	const completedTasks =
 		allTasks?.filter((t) => t.status === "completed").length || 0;
 	const overdueTasks =
-		allTasks?.filter((t) => t.date < Date.now() && t.status !== "completed")
-			.length || 0;
+		allTasks?.filter(
+			(t) => t.date < todayUTCTimestamp && t.status !== "completed"
+		).length || 0;
 
 	return (
 		<motion.div
@@ -499,39 +534,41 @@ export default function TasksPage() {
 
 				{/* Filters */}
 				<div className="flex gap-2">
-					<select
+					<StyledSelect
 						value={statusFilter}
-						onChange={(e) =>
-							setStatusFilter(e.target.value as Task["status"] | "all")
+						onValueChange={(value) =>
+							setStatusFilter(value as Task["status"] | "all")
 						}
-						className={cn(
-							"flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm",
-							"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-						)}
 					>
-						<option value="all">All Status</option>
-						<option value="pending">Pending</option>
-						<option value="in-progress">In Progress</option>
-						<option value="completed">Completed</option>
-						<option value="cancelled">Cancelled</option>
-					</select>
+						<StyledSelectTrigger className="w-[140px]">
+							<SelectValue placeholder="All Status" />
+						</StyledSelectTrigger>
+						<StyledSelectContent>
+							<SelectItem value="all">All Status</SelectItem>
+							<SelectItem value="pending">Pending</SelectItem>
+							<SelectItem value="in-progress">In Progress</SelectItem>
+							<SelectItem value="completed">Completed</SelectItem>
+							<SelectItem value="cancelled">Cancelled</SelectItem>
+						</StyledSelectContent>
+					</StyledSelect>
 
-					<select
+					<StyledSelect
 						value={priorityFilter}
-						onChange={(e) =>
-							setPriorityFilter(e.target.value as Task["priority"] | "all")
+						onValueChange={(value) =>
+							setPriorityFilter(value as Task["priority"] | "all")
 						}
-						className={cn(
-							"flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm",
-							"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-						)}
 					>
-						<option value="all">All Priority</option>
-						<option value="urgent">Urgent</option>
-						<option value="high">High</option>
-						<option value="medium">Medium</option>
-						<option value="low">Low</option>
-					</select>
+						<StyledSelectTrigger className="w-[140px]">
+							<SelectValue placeholder="All Priority" />
+						</StyledSelectTrigger>
+						<StyledSelectContent>
+							<SelectItem value="all">All Priority</SelectItem>
+							<SelectItem value="urgent">Urgent</SelectItem>
+							<SelectItem value="high">High</SelectItem>
+							<SelectItem value="medium">Medium</SelectItem>
+							<SelectItem value="low">Low</SelectItem>
+						</StyledSelectContent>
+					</StyledSelect>
 				</div>
 			</div>
 

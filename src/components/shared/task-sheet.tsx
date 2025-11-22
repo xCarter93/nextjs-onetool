@@ -180,12 +180,32 @@ export function TaskSheet({
 			return;
 		}
 
+		if (
+			formData.repeat &&
+			formData.repeat !== "none" &&
+			!formData.repeatUntil
+		) {
+			error("Error", "Please select an end date for recurring tasks");
+			return;
+		}
+
 		setIsSubmitting(true);
 
 		try {
-			const taskDate = formData.date.getTime();
+			// Normalize dates to midnight UTC to avoid timezone issues
+			const normalizeDate = (date: Date): number => {
+				const normalized = new Date(date);
+				// Get the date components in local timezone
+				const year = normalized.getFullYear();
+				const month = normalized.getMonth();
+				const day = normalized.getDate();
+				// Create a new date in UTC with these components
+				return Date.UTC(year, month, day);
+			};
+
+			const taskDate = normalizeDate(formData.date);
 			const repeatUntil = formData.repeatUntil
-				? formData.repeatUntil.getTime()
+				? normalizeDate(formData.repeatUntil)
 				: undefined;
 
 			const taskData = {
@@ -496,9 +516,9 @@ export function TaskSheet({
 								<div className="flex flex-col gap-2 animate-in fade-in-50 slide-in-from-top-2 duration-200">
 									<Label
 										htmlFor="repeat-until-picker"
-										className="text-xs font-medium text-foreground"
+										className="text-xs font-medium text-foreground flex items-center gap-1"
 									>
-										Repeat Until
+										Repeat Until <span className="text-danger">*</span>
 									</Label>
 									<Popover
 										open={repeatUntilPopoverOpen}
@@ -569,7 +589,10 @@ export function TaskSheet({
 						onClick={() => handleSubmit()}
 						isLoading={isSubmitting}
 						disabled={
-							isSubmitting || !formData.title.trim() || !formData.clientId
+							isSubmitting ||
+							!formData.title.trim() ||
+							!formData.clientId ||
+							(formData.repeat !== "none" && !formData.repeatUntil)
 						}
 						label={
 							isSubmitting
