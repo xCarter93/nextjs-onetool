@@ -36,6 +36,14 @@ import { MapPinIcon } from "@heroicons/react/24/outline";
 import ComboBox from "@/components/ui/combo-box";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { cn } from "@/lib/utils";
+import {
+	StyledSelect,
+	StyledSelectTrigger,
+	StyledSelectContent,
+	SelectValue,
+	SelectItem,
+} from "@/components/ui/styled/styled-select";
+import { User } from "lucide-react";
 
 type ClientId = Id<"clients">;
 type ClientContactId = Id<"clientContacts">;
@@ -58,6 +66,9 @@ export interface ProjectFormData {
 	startTime: string;
 	endTime: string;
 
+	// Assignment
+	assignedUserIds: string;
+
 	// Settings
 	invoiceReminderEnabled: boolean;
 	scheduleForLater: boolean;
@@ -78,6 +89,7 @@ const initialFormData: ProjectFormData = {
 	endDate: undefined,
 	startTime: "",
 	endTime: "",
+	assignedUserIds: "",
 	invoiceReminderEnabled: true,
 	scheduleForLater: false,
 };
@@ -93,6 +105,7 @@ const formSchema = z
 		endDate: z.date().optional(),
 		startTime: z.string(),
 		endTime: z.string(),
+		assignedUserIds: z.string(),
 		invoiceReminderEnabled: z.boolean(),
 		scheduleForLater: z.boolean(),
 	})
@@ -299,6 +312,8 @@ export function ProjectOnboardingForm({
 		selectedClientId ? { clientId: selectedClientId } : "skip"
 	);
 
+	const users = useQuery(api.users.listByOrg);
+
 	const createProject = useMutation(api.projects.create);
 
 	// Set up form with preselected client
@@ -330,6 +345,7 @@ export function ProjectOnboardingForm({
 					projectType: value.projectType,
 					startDate: value.startDate ? value.startDate.getTime() : undefined,
 					endDate: value.endDate ? value.endDate.getTime() : undefined,
+					assignedUserIds: value.assignedUserIds || undefined,
 					invoiceReminderEnabled: value.invoiceReminderEnabled,
 					scheduleForLater: value.scheduleForLater,
 				};
@@ -955,6 +971,36 @@ export function ProjectOnboardingForm({
 													</Field>
 												);
 											}}
+										/>
+									</FieldGroup>
+
+									{/* Assigned User */}
+									<FieldGroup className="sm:col-span-4">
+										<form.Field
+											name="assignedUserIds"
+											children={(field) => (
+												<Field>
+													<FieldLabel htmlFor={field.name} className="flex items-center gap-2">
+														<User className="h-4 w-4 text-primary" />
+														Assign To
+													</FieldLabel>
+													<StyledSelect
+														value={field.state.value || undefined}
+														onValueChange={(value) => field.handleChange(value)}
+													>
+														<StyledSelectTrigger className="w-full" disabled={isLoading}>
+															<SelectValue placeholder="Unassigned" />
+														</StyledSelectTrigger>
+														<StyledSelectContent>
+															{users?.map((user) => (
+																<SelectItem key={user._id} value={user._id}>
+																	{user.name || user.email}
+																</SelectItem>
+															))}
+														</StyledSelectContent>
+													</StyledSelect>
+												</Field>
+											)}
 										/>
 									</FieldGroup>
 
