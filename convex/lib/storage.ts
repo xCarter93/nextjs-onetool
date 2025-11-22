@@ -79,8 +79,9 @@ export class StorageHelpers {
 			};
 		}
 
-		// Check MIME type
-		if (!types.includes(metadata.mimeType)) {
+		// Check MIME type (case-insensitive)
+		const allowedLower = types.map((t) => t.toLowerCase());
+		if (!allowedLower.includes(metadata.mimeType.toLowerCase())) {
 			return {
 				valid: false,
 				error: `File type ${metadata.mimeType} is not allowed`,

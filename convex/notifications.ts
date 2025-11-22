@@ -903,6 +903,7 @@ export const createMention = mutation({
 		),
 		entityId: v.string(),
 		entityName: v.string(),
+		// Note: Maximum 10 attachments enforced in handler validation
 		attachments: v.optional(
 			v.array(
 				v.object({
@@ -943,6 +944,75 @@ export const createMention = mutation({
 		// Validate tagged user exists and is in same organization
 		await validateUserAccess(ctx, args.taggedUserId, userOrgId);
 
+		// Validate attachments if provided
+		if (args.attachments && args.attachments.length > 0) {
+			const MAX_ATTACHMENTS = 10;
+			const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+			const MAX_FILENAME_LENGTH = 255;
+			const MIME_TYPE_REGEX =
+				/^[a-zA-Z0-9][a-zA-Z0-9!#$&^_+-]+\/[a-zA-Z0-9][a-zA-Z0-9!#$&^_.+-]+$/;
+
+			// Validate attachment count
+			if (args.attachments.length > MAX_ATTACHMENTS) {
+				throw new Error("Maximum 10 attachments allowed per message");
+			}
+
+			for (const attachment of args.attachments) {
+				// Validate fileName
+				const trimmedFileName = attachment.fileName.trim();
+				if (!trimmedFileName) {
+					throw new Error("Attachment fileName cannot be empty");
+				}
+				if (trimmedFileName.length > MAX_FILENAME_LENGTH) {
+					throw new Error(
+						`Attachment fileName exceeds maximum length of ${MAX_FILENAME_LENGTH} characters`
+					);
+				}
+				// Check for path traversal patterns
+				if (
+					trimmedFileName.includes("../") ||
+					trimmedFileName.startsWith("/") ||
+					trimmedFileName.startsWith("\\")
+				) {
+					throw new Error(
+						`Invalid fileName: path traversal characters are not allowed`
+					);
+				}
+
+				// Validate fileSize
+				if (attachment.fileSize <= 0) {
+					throw new Error("Attachment fileSize must be greater than 0");
+				}
+				if (attachment.fileSize > MAX_FILE_SIZE) {
+					throw new Error(
+						`Attachment fileSize exceeds maximum size of ${MAX_FILE_SIZE} bytes (100MB)`
+					);
+				}
+
+				// Validate mimeType
+				if (!attachment.mimeType.includes("/")) {
+					throw new Error("Invalid mimeType: must follow type/subtype pattern");
+				}
+				if (!MIME_TYPE_REGEX.test(attachment.mimeType)) {
+					throw new Error(`Invalid mimeType format: ${attachment.mimeType}`);
+				}
+
+				// Verify storageId exists
+				try {
+					const storageUrl = await ctx.storage.getUrl(attachment.storageId);
+					if (!storageUrl) {
+						throw new Error(
+							`Storage file not found for storageId: ${attachment.storageId}`
+						);
+					}
+				} catch {
+					throw new Error(
+						`Invalid storageId: ${attachment.storageId} - file does not exist in storage`
+					);
+				}
+			}
+		}
+
 		// Generate action URL
 		const actionUrl = `/${args.entityType}s/${args.entityId}`;
 
@@ -965,6 +1035,8 @@ export const createMention = mutation({
 		const hasAttachments = args.attachments && args.attachments.length > 0;
 
 		// Create the notification
+		// Note: We create the notification FIRST to get the notificationId needed for attachments
+		// If attachment creation fails, we'll clean up by deleting the notification
 		const notificationId = await createNotificationWithOrg(ctx, {
 			userId: args.taggedUserId,
 			notificationType,
@@ -981,20 +1053,41 @@ export const createMention = mutation({
 		});
 
 		// Create attachment records if any
+		// If this fails, delete the notification to maintain consistency
 		if (hasAttachments) {
-			for (const attachment of args.attachments!) {
-				await ctx.db.insert("messageAttachments", {
-					orgId: userOrgId,
-					notificationId,
-					uploadedBy: author._id,
-					entityType: args.entityType,
-					entityId: args.entityId,
-					fileName: attachment.fileName,
-					fileSize: attachment.fileSize,
-					mimeType: attachment.mimeType,
-					storageId: attachment.storageId,
-					uploadedAt: Date.now(),
-				});
+			try {
+				for (const attachment of args.attachments!) {
+					await ctx.db.insert("messageAttachments", {
+						orgId: userOrgId,
+						notificationId,
+						uploadedBy: author._id,
+						entityType: args.entityType,
+						entityId: args.entityId,
+						fileName: attachment.fileName,
+						fileSize: attachment.fileSize,
+						mimeType: attachment.mimeType,
+						storageId: attachment.storageId,
+						uploadedAt: Date.now(),
+					});
+				}
+			} catch (error) {
+				// Rollback: delete the notification we just created
+				await ctx.db.delete(notificationId);
+
+				// Clean up any partial attachments that might have been created
+				const partialAttachments = await ctx.db
+					.query("messageAttachments")
+					.withIndex("by_notification", (q) =>
+						q.eq("notificationId", notificationId)
+					)
+					.collect();
+
+				for (const attachment of partialAttachments) {
+					await ctx.db.delete(attachment._id);
+				}
+
+				// Re-throw the error after cleanup
+				throw error;
 			}
 		}
 

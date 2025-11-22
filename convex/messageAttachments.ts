@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
 import { getCurrentUserOrgId, getCurrentUser } from "./lib/auth";
 import { StorageHelpers } from "./lib/storage";
+import { getMembership } from "./lib/memberships";
 
 /**
  * Message Attachments operations
@@ -166,7 +167,59 @@ export const listByNotification = query({
 });
 
 /**
+ * Get attachments for a notification with download URLs
+ * Optimized to avoid N+1 query problem
+ */
+export const listByNotificationWithUrls = query({
+	args: {
+		notificationId: v.id("notifications"),
+	},
+	handler: async (
+		ctx,
+		args
+	): Promise<(MessageAttachment & { downloadUrl: string | null })[]> => {
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return [];
+		}
+
+		// Validate notification access
+		const notification = await ctx.db.get(args.notificationId);
+		if (!notification || notification.orgId !== userOrgId) {
+			return [];
+		}
+
+		const attachments = await ctx.db
+			.query("messageAttachments")
+			.withIndex("by_notification", (q) =>
+				q.eq("notificationId", args.notificationId)
+			)
+			.collect();
+
+		// Filter by org (extra safety)
+		const filtered = attachments.filter((a) => a.orgId === userOrgId);
+
+		// Fetch download URLs for all attachments in parallel
+		const withUrls = await Promise.all(
+			filtered.map(async (attachment) => {
+				const downloadUrl = await StorageHelpers.getStorageUrl(
+					ctx,
+					attachment.storageId
+				);
+				return {
+					...attachment,
+					downloadUrl,
+				};
+			})
+		);
+
+		return withUrls;
+	},
+});
+
+/**
  * Get all attachments for a specific entity (client, project, or quote)
+ * Includes download URLs to avoid N+1 query problem
  */
 export const listByEntity = query({
 	args: {
@@ -177,7 +230,10 @@ export const listByEntity = query({
 		),
 		entityId: v.string(),
 	},
-	handler: async (ctx, args): Promise<MessageAttachment[]> => {
+	handler: async (
+		ctx,
+		args
+	): Promise<(MessageAttachment & { downloadUrl: string | null })[]> => {
 		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
 		if (!userOrgId) {
 			return [];
@@ -191,9 +247,25 @@ export const listByEntity = query({
 			.collect();
 
 		// Filter by org and sort by upload time (newest first)
-		return attachments
+		const filtered = attachments
 			.filter((a) => a.orgId === userOrgId)
 			.sort((a, b) => b.uploadedAt - a.uploadedAt);
+
+		// Fetch download URLs for all attachments in parallel
+		const withUrls = await Promise.all(
+			filtered.map(async (attachment) => {
+				const downloadUrl = await StorageHelpers.getStorageUrl(
+					ctx,
+					attachment.storageId
+				);
+				return {
+					...attachment,
+					downloadUrl,
+				};
+			})
+		);
+
+		return withUrls;
 	},
 });
 
@@ -328,6 +400,22 @@ export const listByUploader = query({
 		}
 
 		const userId = args.userId || currentUser._id;
+
+		// If a specific userId was provided, validate it belongs to the same organization
+		if (args.userId) {
+			const targetUser = await ctx.db.get(args.userId);
+			if (!targetUser) {
+				// User not found
+				return [];
+			}
+
+			// Check if user is a member of the current organization
+			const membership = await getMembership(ctx, args.userId, userOrgId);
+			if (!membership) {
+				// User does not belong to the same organization
+				return [];
+			}
+		}
 
 		let attachments = await ctx.db
 			.query("messageAttachments")

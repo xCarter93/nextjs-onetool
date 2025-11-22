@@ -8,37 +8,105 @@ import {
 	StyledCardTitle,
 	StyledCardContent,
 } from "@/components/ui/styled";
-import { FileIcon, Download, Image as ImageIcon, FolderOpen } from "lucide-react";
+import {
+	FileIcon,
+	Download,
+	Image as ImageIcon,
+	FolderOpen,
+	Loader2,
+} from "lucide-react";
 import type { Id } from "../../../../../convex/_generated/dataModel";
+import { memo } from "react";
 
 interface ProjectDocumentsProps {
 	projectId: Id<"projects">;
 }
 
+// Helper utilities
+const formatFileSize = (bytes: number): string => {
+	if (bytes === 0) return "0 Bytes";
+	const k = 1024;
+	const sizes = ["Bytes", "KB", "MB", "GB", "TB", "PB"];
+	let i = Math.floor(Math.log(bytes) / Math.log(k));
+	i = Math.min(i, sizes.length - 1);
+	return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
+};
+
+const formatDate = (timestamp: number): string => {
+	// Use runtime-detected locale from navigator, fallback to undefined (browser default)
+	const userLocale =
+		typeof navigator !== "undefined" ? navigator.language : undefined;
+	return new Date(timestamp).toLocaleDateString(userLocale, {
+		year: "numeric",
+		month: "short",
+		day: "numeric",
+	});
+};
+
+const isImage = (mimeType: string) => mimeType.startsWith("image/");
+const isPdf = (mimeType: string) => mimeType === "application/pdf";
+
+// Attachment content component with memo optimization
+interface AttachmentContentProps {
+	attachment: {
+		_id: Id<"messageAttachments">;
+		fileName: string;
+		fileSize: number;
+		mimeType: string;
+		uploadedAt: number;
+	};
+}
+
+const AttachmentContent = memo(({ attachment }: AttachmentContentProps) => (
+	<>
+		{/* File preview/icon */}
+		<div className="flex-shrink-0">
+			{isImage(attachment.mimeType) ? (
+				<div className="h-16 w-16 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center overflow-hidden">
+					<ImageIcon className="h-6 w-6 text-blue-500" />
+				</div>
+			) : (
+				<div className="h-16 w-16 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center">
+					<FileIcon
+						className={`h-6 w-6 ${
+							isPdf(attachment.mimeType) ? "text-red-500" : "text-gray-500"
+						}`}
+					/>
+				</div>
+			)}
+		</div>
+
+		{/* File details */}
+		<div className="flex-1 min-w-0">
+			<p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+				{attachment.fileName}
+			</p>
+			<div className="flex items-center gap-2 mt-1">
+				<p className="text-xs text-gray-500 dark:text-gray-400">
+					{formatFileSize(attachment.fileSize)}
+				</p>
+				<span className="text-xs text-gray-400">•</span>
+				<p className="text-xs text-gray-500 dark:text-gray-400">
+					{formatDate(attachment.uploadedAt)}
+				</p>
+			</div>
+		</div>
+
+		{/* Download button */}
+		<div className="flex-shrink-0">
+			<Download className="h-4 w-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors" />
+		</div>
+	</>
+));
+
+AttachmentContent.displayName = "AttachmentContent";
+
 export function ProjectDocuments({ projectId }: ProjectDocumentsProps) {
+	// Fetch attachments with download URLs in bulk (no N+1 query problem)
 	const attachments = useQuery(api.messageAttachments.listByEntity, {
 		entityType: "project",
 		entityId: projectId,
 	});
-
-	const formatFileSize = (bytes: number): string => {
-		if (bytes === 0) return "0 Bytes";
-		const k = 1024;
-		const sizes = ["Bytes", "KB", "MB"];
-		const i = Math.floor(Math.log(bytes) / Math.log(k));
-		return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
-	};
-
-	const formatDate = (timestamp: number): string => {
-		return new Date(timestamp).toLocaleDateString("en-US", {
-			year: "numeric",
-			month: "short",
-			day: "numeric",
-		});
-	};
-
-	const isImage = (mimeType: string) => mimeType.startsWith("image/");
-	const isPdf = (mimeType: string) => mimeType === "application/pdf";
 
 	// Loading state
 	if (attachments === undefined) {
@@ -119,81 +187,36 @@ export function ProjectDocuments({ projectId }: ProjectDocumentsProps) {
 			</StyledCardHeader>
 			<StyledCardContent>
 				<div className="grid grid-cols-1 gap-3">
-					{attachments.map((attachment) => {
-						const AttachmentContent = () => (
-							<>
-								{/* File preview/icon */}
-								<div className="flex-shrink-0">
-									{isImage(attachment.mimeType) ? (
-										<div className="h-16 w-16 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center overflow-hidden">
-											<ImageIcon className="h-6 w-6 text-blue-500" />
-										</div>
-									) : (
-										<div className="h-16 w-16 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center">
-											<FileIcon
-												className={`h-6 w-6 ${
-													isPdf(attachment.mimeType)
-														? "text-red-500"
-														: "text-gray-500"
-												}`}
-											/>
-										</div>
-									)}
-								</div>
-
-								{/* File details */}
-								<div className="flex-1 min-w-0">
-									<p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-										{attachment.fileName}
-									</p>
-									<div className="flex items-center gap-2 mt-1">
-										<p className="text-xs text-gray-500 dark:text-gray-400">
-											{formatFileSize(attachment.fileSize)}
-										</p>
-										<span className="text-xs text-gray-400">•</span>
-										<p className="text-xs text-gray-500 dark:text-gray-400">
-											{formatDate(attachment.uploadedAt)}
-										</p>
-									</div>
-								</div>
-
-								{/* Download button */}
-								<div className="flex-shrink-0">
-									<Download className="h-4 w-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors" />
-								</div>
-							</>
-						);
-
-						return (
-							<DocumentDownloadLink
-								key={attachment._id}
-								attachmentId={attachment._id}
-							>
-								<AttachmentContent />
-							</DocumentDownloadLink>
-						);
-					})}
+					{attachments.map((attachment) => (
+						<DocumentDownloadLink
+							key={attachment._id}
+							downloadUrl={attachment.downloadUrl}
+						>
+							<AttachmentContent attachment={attachment} />
+						</DocumentDownloadLink>
+					))}
 				</div>
 			</StyledCardContent>
 		</StyledCard>
 	);
 }
 
-// Separate component to handle URL fetching for each document
+// Component to render download link with pre-fetched URL (no per-attachment query)
 function DocumentDownloadLink({
-	attachmentId,
+	downloadUrl,
 	children,
 }: {
-	attachmentId: Id<"messageAttachments">;
+	downloadUrl: string | null;
 	children: React.ReactNode;
 }) {
-	const downloadUrl = useQuery(api.messageAttachments.getDownloadUrl, {
-		id: attachmentId,
-	});
-
 	if (!downloadUrl) {
 		return (
-			<div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg opacity-50">
+			<div
+				className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg opacity-50"
+				aria-busy="true"
+				aria-label="Loading download link"
+			>
+				<Loader2 className="h-4 w-4 text-gray-400 animate-spin flex-shrink-0" />
 				{children}
 			</div>
 		);
@@ -210,4 +233,3 @@ function DocumentDownloadLink({
 		</a>
 	);
 }
-

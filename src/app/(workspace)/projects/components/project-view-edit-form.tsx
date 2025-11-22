@@ -41,7 +41,13 @@ import {
 	TrashIcon,
 	PlayIcon,
 } from "@heroicons/react/24/outline";
-import { CalendarIcon, Plus, ClipboardList, Receipt, FileText } from "lucide-react";
+import {
+	CalendarIcon,
+	Plus,
+	ClipboardList,
+	Receipt,
+	FileText,
+} from "lucide-react";
 
 type ClientId = Id<"clients">;
 
@@ -422,7 +428,6 @@ export function ProjectViewEditForm({
 
 	return (
 		<>
-
 			<div className="space-y-8">
 				{/* Client Information, Property Address & Contact Details */}
 				<div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -820,7 +825,12 @@ export function ProjectViewEditForm({
 				{/* Project Information & Documents */}
 				<div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
 					{/* Project Information */}
-					<Card className={`shadow-sm border-gray-200/60 dark:border-white/10 ${isEditing ? 'lg:col-span-3' : 'lg:col-span-2'}`}>
+					<Card
+						className={cn(
+							"shadow-sm border-gray-200/60 dark:border-white/10",
+							isEditing ? "lg:col-span-3" : "lg:col-span-2"
+						)}
+					>
 						<CardHeader className="pb-4">
 							<CardTitle className="text-xl font-semibold text-gray-900 dark:text-white">
 								Project Information

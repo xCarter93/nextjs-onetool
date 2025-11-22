@@ -4,9 +4,13 @@ import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { formatRelativeTime, parseMessageParts } from "@/lib/notification-utils";
-import { MessageSquare, Download, FileIcon, Image as ImageIcon } from "lucide-react";
-import type { Id } from "../../../convex/_generated/dataModel";
+import {
+	formatRelativeTime,
+	parseMessageParts,
+} from "@/lib/notification-utils";
+import { MessageSquare, Download, FileIcon } from "lucide-react";
+import type { Id, Doc } from "../../../convex/_generated/dataModel";
+import Image from "next/image";
 
 interface MentionFeedProps {
 	entityType: "client" | "project" | "quote";
@@ -14,10 +18,18 @@ interface MentionFeedProps {
 }
 
 // Component to display attachments
-function AttachmentItem({ notificationId }: { notificationId: Id<"notifications"> }) {
-	const attachments = useQuery(api.messageAttachments.listByNotification, {
-		notificationId,
-	});
+function AttachmentItem({
+	notificationId,
+}: {
+	notificationId: Id<"notifications">;
+}) {
+	// Fetch attachments with download URLs in bulk to avoid N+1 query problem
+	const attachments = useQuery(
+		api.messageAttachments.listByNotificationWithUrls,
+		{
+			notificationId,
+		}
+	);
 
 	if (!attachments || attachments.length === 0) {
 		return null;
@@ -26,8 +38,11 @@ function AttachmentItem({ notificationId }: { notificationId: Id<"notifications"
 	const formatFileSize = (bytes: number): string => {
 		if (bytes === 0) return "0 Bytes";
 		const k = 1024;
-		const sizes = ["Bytes", "KB", "MB"];
-		const i = Math.floor(Math.log(bytes) / Math.log(k));
+		const sizes = ["Bytes", "KB", "MB", "GB", "TB", "PB"];
+		const i = Math.min(
+			Math.floor(Math.log(bytes) / Math.log(k)),
+			sizes.length - 1
+		);
 		return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
 	};
 
@@ -36,33 +51,39 @@ function AttachmentItem({ notificationId }: { notificationId: Id<"notifications"
 	return (
 		<div className="mt-2 flex flex-wrap gap-2">
 			{attachments.map((attachment) => {
-				// Individual attachment with its own URL query
-				return <AttachmentDownloadLink key={attachment._id} attachment={attachment} formatFileSize={formatFileSize} isImage={isImage} />;
+				// Pass download URL as prop to avoid per-attachment query
+				return (
+					<AttachmentDownloadLink
+						key={attachment._id}
+						attachment={attachment}
+						downloadUrl={attachment.downloadUrl}
+						formatFileSize={formatFileSize}
+						isImage={isImage}
+					/>
+				);
 			})}
 		</div>
 	);
 }
 
-// Component to handle individual attachment download with its own URL query
-function AttachmentDownloadLink({ 
-	attachment, 
-	formatFileSize, 
-	isImage 
-}: { 
-	attachment: any;
+// Component to handle individual attachment download
+function AttachmentDownloadLink({
+	attachment,
+	downloadUrl,
+	formatFileSize,
+	isImage,
+}: {
+	attachment: Doc<"messageAttachments"> & { downloadUrl: string | null };
+	downloadUrl: string | null;
 	formatFileSize: (bytes: number) => string;
 	isImage: (mimeType: string) => boolean;
 }) {
-	const downloadUrl = useQuery(api.messageAttachments.getDownloadUrl, {
-		id: attachment._id,
-	});
-
 	if (!downloadUrl) {
 		return null;
 	}
 
 	const isPdf = attachment.mimeType === "application/pdf";
-	
+
 	// For images, show a thumbnail preview
 	if (isImage(attachment.mimeType)) {
 		return (
@@ -73,9 +94,11 @@ function AttachmentDownloadLink({
 				className="group relative inline-block"
 				title={`${attachment.fileName} (${formatFileSize(attachment.fileSize)})`}
 			>
-				<img
+				<Image
 					src={downloadUrl}
 					alt={attachment.fileName}
+					width={80}
+					height={80}
 					className="h-20 w-20 object-cover rounded-lg border-2 border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500 transition-colors"
 				/>
 				<div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 rounded-lg transition-colors flex items-center justify-center">
@@ -84,7 +107,7 @@ function AttachmentDownloadLink({
 			</a>
 		);
 	}
-	
+
 	// For other files, show compact inline badge
 	return (
 		<a
@@ -151,7 +174,8 @@ export function MentionFeed({ entityType, entityId }: MentionFeedProps) {
 					No messages yet
 				</h3>
 				<p className="text-sm text-gray-600 dark:text-gray-400 max-w-sm">
-					Start a conversation by mentioning a team member with @ in the input above.
+					Start a conversation by mentioning a team member with @ in the input
+					above.
 				</p>
 			</div>
 		);
@@ -168,7 +192,11 @@ export function MentionFeed({ entityType, entityId }: MentionFeedProps) {
 							alt={mention.author?.name || mention.author?.email || "User"}
 						/>
 						<AvatarFallback className="text-sm">
-							{mention.author?.name ? getInitials(mention.author.name) : mention.author?.email ? mention.author.email.substring(0, 2).toUpperCase() : "??"}
+							{mention.author?.name
+								? getInitials(mention.author.name)
+								: mention.author?.email
+									? mention.author.email.substring(0, 2).toUpperCase()
+									: "??"}
 						</AvatarFallback>
 					</Avatar>
 
@@ -176,7 +204,9 @@ export function MentionFeed({ entityType, entityId }: MentionFeedProps) {
 					<div className="flex-1 min-w-0">
 						<div className="flex items-center gap-2 mb-1">
 							<span className="text-sm font-semibold text-gray-900 dark:text-white">
-								{mention.author?.name || mention.author?.email || "Unknown User"}
+								{mention.author?.name ||
+									mention.author?.email ||
+									"Unknown User"}
 							</span>
 							<span className="text-xs text-gray-500 dark:text-gray-400">
 								{formatRelativeTime(mention._creationTime)}
@@ -186,10 +216,10 @@ export function MentionFeed({ entityType, entityId }: MentionFeedProps) {
 						{/* Message text with styled mentions */}
 						<div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg px-4 py-3 border border-gray-200 dark:border-gray-700">
 							<div className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap break-words">
-								{parseMessageParts(mention.message).map((part, index) => 
+								{parseMessageParts(mention.message).map((part, index) =>
 									part.isMention ? (
-										<Badge 
-											key={index} 
+										<Badge
+											key={index}
 											variant="secondary"
 											className="inline-flex mx-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/50 font-medium"
 										>
@@ -201,13 +231,14 @@ export function MentionFeed({ entityType, entityId }: MentionFeedProps) {
 								)}
 							</div>
 						</div>
-						
+
 						{/* Attachments - rendered outside the message bubble */}
-						{mention.hasAttachments && <AttachmentItem notificationId={mention._id} />}
+						{mention.hasAttachments && (
+							<AttachmentItem notificationId={mention._id} />
+						)}
 					</div>
 				</div>
 			))}
 		</div>
 	);
 }
-
