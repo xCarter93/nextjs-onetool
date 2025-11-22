@@ -23,8 +23,8 @@ export function useRoleAccess(): RoleAccess {
 	const isAdmin = orgRole ? orgRole.toLowerCase().includes("admin") : false;
 
 	// Check if user is a member (non-admin)
-	// If no role is set, treat as member for safety
-	const isMember = !isAdmin;
+	// If no orgRole is set, no access by default
+	const isMember = orgRole ? !isAdmin : false;
 
 	return {
 		isAdmin,
@@ -49,4 +49,3 @@ export function useIsMember(): boolean {
 	const { isMember } = useRoleAccess();
 	return isMember;
 }
-

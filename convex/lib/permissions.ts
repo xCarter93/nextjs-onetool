@@ -210,25 +210,29 @@ export async function isAdmin(ctx: QueryCtx | MutationCtx): Promise<boolean> {
 
 /**
  * Check if the current user is a member (non-admin) in their organization
- * Member is defined as any role not containing "admin" or no role set
+ * Member is defined as a role that explicitly includes "member" and does not include "admin"
+ * Secure-by-default: denies access if role is missing or lookup fails
  */
 export async function isMember(ctx: QueryCtx | MutationCtx): Promise<boolean> {
 	const role = await getCurrentUserRole(ctx);
-	
-	// If no role is set, treat as member for safety
+
+	// Secure-by-default: deny if role is missing or lookup fails
 	if (!role) {
-		return true;
+		return false;
 	}
 
-	return !role.toLowerCase().includes("admin");
+	// Normalize role string
+	const normalizedRole = role.trim().toLowerCase();
+
+	// Only return true for explicit member roles
+	// Must include/equal "member" and must NOT include "admin"
+	return normalizedRole.includes("member") && !normalizedRole.includes("admin");
 }
 
 /**
  * Require that the current user is an admin, throw if not
  */
-export async function requireAdmin(
-	ctx: QueryCtx | MutationCtx
-): Promise<void> {
+export async function requireAdmin(ctx: QueryCtx | MutationCtx): Promise<void> {
 	const isAdminUser = await isAdmin(ctx);
 	if (!isAdminUser) {
 		throw new Error(

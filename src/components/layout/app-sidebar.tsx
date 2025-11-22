@@ -123,6 +123,26 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 	const { hasOrganization } = useFeatureAccess();
 	const { isAdmin, isMember } = useRoleAccess();
 
+	// Helper function to compare query parameters in an order-insensitive way
+	const areQueryParamsEqual = (paramsStr1: string, paramsStr2: string) => {
+		const params1 = new URLSearchParams(paramsStr1);
+		const params2 = new URLSearchParams(paramsStr2);
+
+		// Check if both have the same number of parameters
+		if (params1.size !== params2.size) {
+			return false;
+		}
+
+		// Check if all keys and values match
+		for (const [key, value] of params1.entries()) {
+			if (params2.get(key) !== value) {
+				return false;
+			}
+		}
+
+		return true;
+	};
+
 	// Function to determine if a navigation item should be active
 	const isNavItemActive = (navUrl: string, title: string) => {
 		if (title === "Settings") {
@@ -180,8 +200,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
 				if (subItemParams) {
 					// URL has search params (like ?tab=business)
+					// Use order-insensitive comparison for query parameters
 					isSubItemActive =
-						currentPath === subItemPath && currentParams === subItemParams;
+						currentPath === subItemPath &&
+						areQueryParamsEqual(currentParams, subItemParams);
 				} else {
 					// No search params in the URL - should match only when current page has no params either
 					// Special case: for organization/profile, only match when there are no search params
@@ -217,7 +239,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 				isActive,
 				disabled: isDisabled,
 				badgeCount:
-					item.title === "Tasks" && tasksDueToday > 0 ? tasksDueToday : undefined,
+					item.title === "Tasks" && tasksDueToday > 0
+						? tasksDueToday
+						: undefined,
 				badgeVariant: item.title === "Tasks" ? ("alert" as const) : undefined,
 			};
 		});
