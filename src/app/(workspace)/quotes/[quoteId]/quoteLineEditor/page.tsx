@@ -483,11 +483,7 @@ export default function QuoteLineEditorPage() {
 														key={item._id}
 														item={item}
 														onUpdate={handleUpdateLineItem}
-														onDelete={() =>
-															handleDeleteLineItem(
-																item._id as Id<"quoteLineItems">
-															)
-														}
+														onDelete={() => handleDeleteLineItem(item._id)}
 													/>
 												))}
 											</TableBody>
@@ -829,7 +825,7 @@ function LineItemRow({
 		setIsSaving(true);
 		try {
 			const updates: Partial<LineItem> = { [field]: editedItem[field] };
-			await onUpdate(item._id as Id<"quoteLineItems">, updates);
+			await onUpdate(item._id, updates);
 		} finally {
 			setIsSaving(false);
 		}
@@ -855,7 +851,7 @@ function LineItemRow({
 
 		setIsSaving(true);
 		try {
-			await onUpdate(item._id as Id<"quoteLineItems">, updates);
+			await onUpdate(item._id, updates);
 		} finally {
 			setIsSaving(false);
 		}
