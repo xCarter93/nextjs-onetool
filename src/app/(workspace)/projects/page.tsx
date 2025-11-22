@@ -4,21 +4,20 @@ import React from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@/components/ui/card";
-import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+	StyledBadge,
+	StyledButton,
+	StyledCard,
+	StyledCardContent,
+	StyledCardDescription,
+	StyledCardHeader,
+	StyledCardTitle,
+	StyledTable,
+	StyledTableBody,
+	StyledTableCell,
+	StyledTableHead,
+	StyledTableHeader,
+	StyledTableRow,
+} from "@/components/ui/styled";
 import {
 	ColumnDef,
 	ColumnFiltersState,
@@ -38,6 +37,8 @@ import {
 	Plus,
 	FolderOpen,
 	Trash2,
+	TableProperties,
+	LayoutGrid,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
@@ -46,10 +47,37 @@ import type { Doc } from "../../../../convex/_generated/dataModel";
 import { useState } from "react";
 import type { Id } from "../../../../convex/_generated/dataModel";
 import DeleteConfirmationModal from "@/components/ui/delete-confirmation-modal";
+import {
+	KanbanBoard,
+	KanbanCard,
+	KanbanCards,
+	KanbanHeader,
+	KanbanProvider,
+} from "./components/kanban";
+import { ButtonGroup } from "@/components/ui/button-group";
+import { cn } from "@/lib/utils";
 
 // Enhanced project type that includes client information for display
 type ProjectWithClient = Doc<"projects"> & {
 	client?: Doc<"clients">;
+};
+
+type ProjectKanbanItem = {
+	id: string;
+	name: string;
+	column: Doc<"projects">["status"];
+	status: Doc<"projects">["status"];
+	clientName?: string;
+	projectType: Doc<"projects">["projectType"];
+	startDate?: number;
+	endDate?: number;
+	projectNumber?: string | null;
+};
+
+type ProjectKanbanColumn = {
+	id: Doc<"projects">["status"];
+	name: string;
+	description: string;
 };
 
 const statusVariant = (status: Doc<"projects">["status"]) => {
@@ -67,6 +95,29 @@ const statusVariant = (status: Doc<"projects">["status"]) => {
 	}
 };
 
+const kanbanColumns: ProjectKanbanColumn[] = [
+	{
+		id: "planned",
+		name: "Planned",
+		description: "Projects queued up",
+	},
+	{
+		id: "in-progress",
+		name: "In Progress",
+		description: "Currently active work",
+	},
+	{
+		id: "completed",
+		name: "Completed",
+		description: "Recently wrapped up",
+	},
+	{
+		id: "cancelled",
+		name: "Cancelled",
+		description: "Parked or cancelled",
+	},
+];
+
 const formatStatus = (status: Doc<"projects">["status"]) => {
 	switch (status) {
 		case "in-progress":
@@ -80,6 +131,14 @@ const formatStatus = (status: Doc<"projects">["status"]) => {
 		default:
 			return status;
 	}
+};
+
+const formatProjectDate = (timestamp?: number) => {
+	if (!timestamp) {
+		return "Not set";
+	}
+	const date = new Date(timestamp);
+	return date.toLocaleDateString();
 };
 
 const createColumns = (
@@ -113,9 +172,9 @@ const createColumns = (
 		accessorKey: "status",
 		header: "Status",
 		cell: ({ row }) => (
-			<Badge variant={statusVariant(row.original.status)}>
+			<StyledBadge variant={statusVariant(row.original.status)}>
 				{formatStatus(row.original.status)}
-			</Badge>
+			</StyledBadge>
 		),
 	},
 	{
@@ -166,6 +225,7 @@ const createColumns = (
 
 export default function ProjectsPage() {
 	const router = useRouter();
+	const [viewMode, setViewMode] = useState<"table" | "kanban">("table");
 	const [sorting, setSorting] = React.useState<SortingState>([]);
 	const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
 		[]
@@ -178,6 +238,8 @@ export default function ProjectsPage() {
 		name: string;
 	} | null>(null);
 	const deleteProject = useMutation(api.projects.remove);
+	const updateProjectStatus = useMutation(api.projects.update);
+	const [kanbanData, setKanbanData] = useState<ProjectKanbanItem[]>([]);
 
 	// Fetch projects and clients from Convex
 	const projects = useQuery(api.projects.list, {});
@@ -193,6 +255,33 @@ export default function ProjectsPage() {
 			client: clients.find((client) => client._id === project.clientId),
 		}));
 	}, [projects, clients]);
+
+	const projectStatusMap = React.useMemo(() => {
+		const statusMap = new Map<string, Doc<"projects">["status"]>();
+		data.forEach((project) => statusMap.set(project._id, project.status));
+		return statusMap;
+	}, [data]);
+
+	React.useEffect(() => {
+		if (!data || data.length === 0) {
+			setKanbanData([]);
+			return;
+		}
+
+		setKanbanData(
+			data.map((project) => ({
+				id: project._id,
+				name: project.title,
+				column: project.status,
+				status: project.status,
+				clientName: project.client?.companyName,
+				projectType: project.projectType,
+				startDate: project.startDate,
+				endDate: project.endDate,
+				projectNumber: project.projectNumber ?? null,
+			}))
+		);
+	}, [data]);
 
 	// Loading state
 	const isLoading = projects === undefined || clients === undefined;
@@ -270,6 +359,27 @@ export default function ProjectsPage() {
 		table.setPageSize(pageSize);
 	}, [pageSize, table]);
 
+	const handleKanbanDataChange = React.useCallback(
+		(nextData: ProjectKanbanItem[]) => {
+			setKanbanData(nextData);
+
+			const changedItem = nextData.find((item) => {
+				const originalStatus = projectStatusMap.get(item.id);
+				return originalStatus && originalStatus !== item.column;
+			});
+
+			if (changedItem) {
+				updateProjectStatus({
+					id: changedItem.id as Id<"projects">,
+					status: changedItem.column,
+				}).catch((error) => {
+					console.error("Failed to update project status:", error);
+				});
+			}
+		},
+		[projectStatusMap, updateProjectStatus]
+	);
+
 	return (
 		<div className="relative p-6 space-y-6">
 			<div className="flex items-center justify-between">
@@ -282,114 +392,137 @@ export default function ProjectsPage() {
 						</p>
 					</div>
 				</div>
-				<button
+				<StyledButton
+					intent="primary"
+					icon={<Plus className="h-4 w-4" />}
+					label="Create Project"
 					onClick={() => router.push("/projects/new")}
-					className="group inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-all duration-200 px-4 py-2 rounded-lg bg-primary/10 hover:bg-primary/15 ring-1 ring-primary/30 hover:ring-primary/40 shadow-sm hover:shadow-md backdrop-blur-sm"
-				>
-					<Plus className="h-4 w-4" />
-					Create Project
-					<span
-						aria-hidden="true"
-						className="group-hover:translate-x-1 transition-transform duration-200"
-					>
-						→
-					</span>
-				</button>
+				/>
 			</div>
 
 			{isLoading ? (
 				<div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 					{[...Array(3)].map((_, i) => (
-						<Card key={i}>
-							<CardHeader>
-								<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-24"></div>
-								<div className="h-3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-32"></div>
-							</CardHeader>
-							<CardContent>
-								<div className="h-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-16"></div>
-							</CardContent>
-						</Card>
+						<StyledCard key={i}>
+							<StyledCardHeader>
+								<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-24" />
+								<div className="h-3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-32" />
+							</StyledCardHeader>
+							<StyledCardContent>
+								<div className="h-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-16" />
+							</StyledCardContent>
+						</StyledCard>
 					))}
 				</div>
 			) : (
 				<div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-					<Card className="group relative backdrop-blur-md overflow-hidden ring-1 ring-border/20 dark:ring-border/40">
-						<div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
-						<CardHeader className="relative z-10">
-							<CardTitle className="flex items-center gap-2 text-base">
+					<StyledCard>
+						<StyledCardHeader>
+							<StyledCardTitle className="flex items-center gap-2 text-base">
 								<FolderKanban className="size-4" /> Total Projects
-							</CardTitle>
-							<CardDescription>All projects in your workspace</CardDescription>
-						</CardHeader>
-						<CardContent className="relative z-10">
+							</StyledCardTitle>
+							<StyledCardDescription>
+								All projects in your workspace
+							</StyledCardDescription>
+						</StyledCardHeader>
+						<StyledCardContent>
 							<div className="text-3xl font-semibold">
 								{projectStats?.total || data.length}
 							</div>
-						</CardContent>
-					</Card>
-					<Card className="group relative backdrop-blur-md overflow-hidden ring-1 ring-border/20 dark:ring-border/40">
-						<div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
-						<CardHeader className="relative z-10">
-							<CardTitle className="text-base">In Progress</CardTitle>
-							<CardDescription>Currently active projects</CardDescription>
-						</CardHeader>
-						<CardContent className="relative z-10">
+						</StyledCardContent>
+					</StyledCard>
+					<StyledCard>
+						<StyledCardHeader>
+							<StyledCardTitle className="text-base">In Progress</StyledCardTitle>
+							<StyledCardDescription>
+								Currently active projects
+							</StyledCardDescription>
+						</StyledCardHeader>
+						<StyledCardContent>
 							<div className="text-3xl font-semibold">
 								{projectStats?.byStatus["in-progress"] ||
 									data.filter((p) => p.status === "in-progress").length}
 							</div>
-						</CardContent>
-					</Card>
-					<Card className="group relative backdrop-blur-md overflow-hidden ring-1 ring-border/20 dark:ring-border/40">
-						<div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
-						<CardHeader className="relative z-10">
-							<CardTitle className="text-base">Completed</CardTitle>
-							<CardDescription>Finished projects</CardDescription>
-						</CardHeader>
-						<CardContent className="relative z-10">
+						</StyledCardContent>
+					</StyledCard>
+					<StyledCard>
+						<StyledCardHeader>
+							<StyledCardTitle className="text-base">Completed</StyledCardTitle>
+							<StyledCardDescription>
+								Finished projects
+							</StyledCardDescription>
+						</StyledCardHeader>
+						<StyledCardContent>
 							<div className="text-3xl font-semibold">
 								{projectStats?.byStatus.completed ||
 									data.filter((p) => p.status === "completed").length}
 							</div>
-						</CardContent>
-					</Card>
+						</StyledCardContent>
+					</StyledCard>
 				</div>
 			)}
 
-			<Card className="group relative backdrop-blur-md overflow-hidden ring-1 ring-border/20 dark:ring-border/40">
-				<div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
-				<CardHeader className="relative z-10 flex flex-col gap-2 border-b">
-					<div className="flex items-center justify-between gap-3">
-						<div>
-							<CardTitle>Projects</CardTitle>
-							<CardDescription>
-								Search, sort, and browse your projects
-							</CardDescription>
-						</div>
-						<div className="flex items-center gap-2">
-							<Input
-								placeholder="Search projects, clients, or status..."
-								value={query}
-								onChange={(e) => setQuery(e.target.value)}
-								className="w-96"
-							/>
-						</div>
+			<StyledCard>
+				<StyledCardHeader className="flex flex-col gap-3 border-b">
+					<div>
+						<StyledCardTitle>Projects</StyledCardTitle>
+						<StyledCardDescription>
+							Search, sort, and browse your projects
+						</StyledCardDescription>
 					</div>
-				</CardHeader>
-				<CardContent className="relative z-10 px-0">
+					<div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+						<Input
+							placeholder="Search projects, clients, or status..."
+							value={query}
+							onChange={(e) => setQuery(e.target.value)}
+							className="w-full md:w-96"
+						/>
+						<ButtonGroup>
+							<button
+								onClick={() => setViewMode("table")}
+								aria-pressed={viewMode === "table"}
+								aria-label="Table view"
+								className={cn(
+									"inline-flex items-center gap-2 font-semibold transition-all duration-200 text-xs px-3 py-1.5 ring-1 shadow-sm hover:shadow-md backdrop-blur-sm",
+									viewMode === "table"
+										? "text-primary hover:text-primary/80 bg-primary/10 hover:bg-primary/15 ring-primary/30 hover:ring-primary/40"
+										: "text-gray-600 hover:text-gray-700 bg-transparent hover:bg-gray-50 ring-transparent hover:ring-gray-200 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:bg-gray-800 dark:hover:ring-gray-700"
+								)}
+							>
+								<TableProperties className="w-4 h-4" />
+								<span className="hidden sm:inline">Table</span>
+							</button>
+							<button
+								onClick={() => setViewMode("kanban")}
+								aria-pressed={viewMode === "kanban"}
+								aria-label="Kanban view"
+								className={cn(
+									"inline-flex items-center gap-2 font-semibold transition-all duration-200 text-xs px-3 py-1.5 ring-1 shadow-sm hover:shadow-md backdrop-blur-sm",
+									viewMode === "kanban"
+										? "text-primary hover:text-primary/80 bg-primary/10 hover:bg-primary/15 ring-primary/30 hover:ring-primary/40"
+										: "text-gray-600 hover:text-gray-700 bg-transparent hover:bg-gray-50 ring-transparent hover:ring-gray-200 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:bg-gray-800 dark:hover:ring-gray-700"
+								)}
+							>
+								<LayoutGrid className="w-4 h-4" />
+								<span className="hidden sm:inline">Kanban</span>
+							</button>
+						</ButtonGroup>
+					</div>
+				</StyledCardHeader>
+				<StyledCardContent className="relative px-0">
 					{isLoading ? (
 						<div className="px-6">
 							<div className="space-y-4">
 								{[...Array(5)].map((_, i) => (
 									<div key={i} className="flex items-center space-x-4 p-4">
 										<div className="flex-1 space-y-2">
-											<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-2/3"></div>
-											<div className="h-3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-1/2"></div>
+											<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-2/3" />
+											<div className="h-3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-1/2" />
 										</div>
-										<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-16"></div>
-										<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-20"></div>
-										<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-24"></div>
-										<div className="h-8 w-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+										<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-16" />
+										<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-20" />
+										<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-24" />
+										<div className="h-8 w-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
 									</div>
 								))}
 							</div>
@@ -406,69 +539,62 @@ export default function ProjectsPage() {
 								Get started by creating your first project. Projects help you
 								organize work and track progress.
 							</p>
-							<button
+							<StyledButton
+								intent="primary"
+								icon={<Plus className="h-4 w-4" />}
+								label="Create Your First Project"
 								onClick={() => router.push("/projects/new")}
-								className="group inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-all duration-200 px-4 py-2 rounded-lg bg-primary/10 hover:bg-primary/15 ring-1 ring-primary/30 hover:ring-primary/40 shadow-sm hover:shadow-md backdrop-blur-sm"
-							>
-								<Plus className="h-4 w-4" />
-								Create Your First Project
-								<span
-									aria-hidden="true"
-									className="group-hover:translate-x-1 transition-transform duration-200"
-								>
-									→
-								</span>
-							</button>
+							/>
 						</div>
-					) : (
+					) : viewMode === "table" ? (
 						<div className="px-6">
 							<div className="overflow-hidden rounded-lg border">
-								<Table>
-									<TableHeader className="bg-muted sticky top-0 z-10">
+								<StyledTable>
+									<StyledTableHeader>
 										{table.getHeaderGroups().map((headerGroup) => (
-											<TableRow key={headerGroup.id}>
+											<StyledTableRow key={headerGroup.id}>
 												{headerGroup.headers.map((header) => (
-													<TableHead key={header.id}>
+													<StyledTableHead key={header.id}>
 														{header.isPlaceholder
 															? null
 															: flexRender(
 																	header.column.columnDef.header,
 																	header.getContext()
 																)}
-													</TableHead>
+													</StyledTableHead>
 												))}
-											</TableRow>
+											</StyledTableRow>
 										))}
-									</TableHeader>
-									<TableBody>
+									</StyledTableHeader>
+									<StyledTableBody>
 										{table.getRowModel().rows?.length ? (
 											table.getRowModel().rows.map((row) => (
-												<TableRow
+												<StyledTableRow
 													key={row.id}
 													data-state={row.getIsSelected() && "selected"}
 												>
 													{row.getVisibleCells().map((cell) => (
-														<TableCell key={cell.id}>
+														<StyledTableCell key={cell.id}>
 															{flexRender(
 																cell.column.columnDef.cell,
 																cell.getContext()
 															)}
-														</TableCell>
+														</StyledTableCell>
 													))}
-												</TableRow>
+												</StyledTableRow>
 											))
 										) : (
-											<TableRow>
-												<TableCell
+											<StyledTableRow>
+												<StyledTableCell
 													colSpan={createColumns(router, handleDelete).length}
 													className="h-24 text-center"
 												>
 													No projects match your search.
-												</TableCell>
-											</TableRow>
+												</StyledTableCell>
+											</StyledTableRow>
 										)}
-									</TableBody>
-								</Table>
+									</StyledTableBody>
+								</StyledTable>
 							</div>
 							<div className="flex items-center justify-between py-4">
 								<div className="text-muted-foreground text-sm">
@@ -501,9 +627,107 @@ export default function ProjectsPage() {
 								</div>
 							</div>
 						</div>
+					) : (
+						<div className="px-2 py-6">
+							<KanbanProvider
+								columns={kanbanColumns}
+								data={kanbanData}
+								onDataChange={handleKanbanDataChange}
+							>
+								{(column) => {
+									const columnItems = kanbanData.filter(
+										(item) => item.column === column.id
+									);
+
+									return (
+										<KanbanBoard
+											key={column.id}
+											id={column.id}
+											className="bg-card/60"
+										>
+											<KanbanHeader className="flex items-center justify-between border-b bg-muted/30">
+												<div>
+													<p className="font-semibold text-sm text-foreground">
+														{column.name}
+													</p>
+													<p className="text-xs text-muted-foreground">
+														{column.description}
+													</p>
+												</div>
+												<StyledBadge variant="outline">
+													{columnItems.length}
+												</StyledBadge>
+											</KanbanHeader>
+											<KanbanCards id={column.id}>
+												{(item: ProjectKanbanItem) => (
+													<KanbanCard
+														key={item.id}
+														id={item.id}
+														name={item.name}
+														column={item.column}
+													>
+														<div className="space-y-3">
+															<div className="flex items-center justify-between gap-2">
+																<p className="text-sm font-semibold text-foreground">
+																	{item.name}
+																</p>
+																<StyledBadge
+																	variant="outline"
+																	className="capitalize"
+																>
+																	{item.projectType}
+																</StyledBadge>
+															</div>
+															<div className="text-xs text-muted-foreground">
+																Client:{" "}
+																{item.clientName || "Unknown Client"}
+															</div>
+															<div className="flex items-center justify-between text-xs text-muted-foreground">
+																<span>
+																	Start: {formatProjectDate(item.startDate)}
+																</span>
+																<span>
+																	Due: {formatProjectDate(item.endDate)}
+																</span>
+															</div>
+															<div className="flex items-center justify-between text-xs">
+																<span className="text-muted-foreground">
+																	{item.projectNumber
+																		? `Project #${item.projectNumber}`
+																		: "No project number"}
+																</span>
+																<StyledBadge
+																	variant={statusVariant(item.column)}
+																>
+																	{formatStatus(item.column)}
+																</StyledBadge>
+															</div>
+															<div className="pt-2 border-t border-border/50">
+																<StyledButton
+																	intent="outline"
+																	size="sm"
+																	icon={<ExternalLink className="h-3.5 w-3.5" />}
+																	label="View Project"
+																	showArrow={false}
+																	onClick={(e) => {
+																		e?.stopPropagation();
+																		router.push(`/projects/${item.id}`);
+																	}}
+																	className="w-full justify-center"
+																/>
+															</div>
+														</div>
+													</KanbanCard>
+												)}
+											</KanbanCards>
+										</KanbanBoard>
+									);
+								}}
+							</KanbanProvider>
+						</div>
 					)}
-				</CardContent>
-			</Card>
+				</StyledCardContent>
+			</StyledCard>
 
 			{/* Delete Confirmation Modal */}
 			{projectToDelete && (
