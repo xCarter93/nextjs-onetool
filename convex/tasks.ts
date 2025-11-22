@@ -110,35 +110,37 @@ async function validateUserAccess(
 /**
  * Generate recurring task instances based on frequency and end date
  */
+/**
+ * Generate recurring task dates based on frequency and end date
+ * Note: Expects timestamps already normalized to UTC midnight from frontend
+ */
 function generateRecurringTaskDates(
 	startDate: number,
 	frequency: "daily" | "weekly" | "monthly" | "yearly",
 	endDate: number
 ): number[] {
 	const dates: number[] = [];
-	const currentDate = new Date(startDate);
+	const current = new Date(startDate);
 	const end = new Date(endDate);
 
-	// Set to beginning of day for consistency
-	currentDate.setHours(0, 0, 0, 0);
-	end.setHours(23, 59, 59, 999);
-
-	while (currentDate <= end) {
-		dates.push(currentDate.getTime());
+	// Dates should already be normalized to UTC midnight from frontend
+	// Just iterate through them without further normalization
+	while (current <= end) {
+		dates.push(current.getTime());
 
 		// Move to next occurrence based on frequency
 		switch (frequency) {
 			case "daily":
-				currentDate.setDate(currentDate.getDate() + 1);
+				current.setUTCDate(current.getUTCDate() + 1);
 				break;
 			case "weekly":
-				currentDate.setDate(currentDate.getDate() + 7);
+				current.setUTCDate(current.getUTCDate() + 7);
 				break;
 			case "monthly":
-				currentDate.setMonth(currentDate.getMonth() + 1);
+				current.setUTCMonth(current.getUTCMonth() + 1);
 				break;
 			case "yearly":
-				currentDate.setFullYear(currentDate.getFullYear() + 1);
+				current.setUTCFullYear(current.getUTCFullYear() + 1);
 				break;
 		}
 	}
@@ -427,8 +429,11 @@ export const create = mutation({
 				args.repeatUntil
 			);
 
-			// Create parent task (the first occurrence)
-			const parentTaskId = await createTaskWithOrg(ctx, args);
+			// Create parent task with the first normalized date
+			const parentTaskId = await createTaskWithOrg(ctx, {
+				...args,
+				date: dates[0], // Use normalized first date
+			});
 
 			// Get the parent task for activity logging
 			const parentTask = await ctx.db.get(parentTaskId);

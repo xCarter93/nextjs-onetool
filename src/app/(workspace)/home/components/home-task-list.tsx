@@ -64,10 +64,24 @@ function TaskItem({ task, onStatusChange, isUpdating }: TaskItemProps) {
 			u._id === task.assigneeUserId
 	);
 
-	const isOverdue = task.date < Date.now() && task.status !== "completed";
-	const isToday =
-		new Date(task.date).toDateString() === new Date().toDateString();
+	// Create date in UTC to avoid timezone shifts
 	const taskDate = new Date(task.date);
+	const taskDateUTC = new Date(
+		taskDate.getUTCFullYear(),
+		taskDate.getUTCMonth(),
+		taskDate.getUTCDate()
+	);
+
+	const todayUTC = new Date();
+	todayUTC.setHours(0, 0, 0, 0);
+	const todayUTCTimestamp = Date.UTC(
+		todayUTC.getFullYear(),
+		todayUTC.getMonth(),
+		todayUTC.getDate()
+	);
+
+	const isOverdue = task.date < todayUTCTimestamp && task.status !== "completed";
+	const isToday = task.date === todayUTCTimestamp;
 
 	const PriorityIcon = priorityConfig[task.priority || "medium"].icon;
 
@@ -83,9 +97,10 @@ function TaskItem({ task, onStatusChange, isUpdating }: TaskItemProps) {
 	const formatDate = (date: Date) => {
 		if (isToday) return "Today";
 
-		const tomorrow = new Date();
-		tomorrow.setDate(tomorrow.getDate() + 1);
-		if (date.toDateString() === tomorrow.toDateString()) return "Tomorrow";
+		const tomorrow = new Date(todayUTCTimestamp);
+		tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+		
+		if (date.getTime() === tomorrow.getTime()) return "Tomorrow";
 
 		const dayOfWeek = date.toLocaleDateString("en-US", { weekday: "short" });
 		const month = date.toLocaleDateString("en-US", { month: "short" });
@@ -168,7 +183,7 @@ function TaskItem({ task, onStatusChange, isUpdating }: TaskItemProps) {
 								isOverdue ? "text-red-600 font-medium" : ""
 							)}
 						>
-							{formatDate(taskDate)}
+							{formatDate(taskDateUTC)}
 							{(task.startTime || task.endTime) && (
 								<span className="text-muted-foreground ml-1">
 									{task.startTime && formatTime(task.startTime)}
@@ -287,10 +302,18 @@ export function HomeTaskList() {
 	}
 
 	const overdueTasksCount = (overdueTasks || []).length;
+	
+	// Calculate today in UTC for consistent comparisons
+	const today = new Date();
+	today.setHours(0, 0, 0, 0);
+	const todayTimestamp = Date.UTC(
+		today.getFullYear(),
+		today.getMonth(),
+		today.getDate()
+	);
+	
 	const todayTasksCount = allTasks.filter((task) => {
-		const taskDate = new Date(task.date).toDateString();
-		const today = new Date().toDateString();
-		return taskDate === today;
+		return task.date === todayTimestamp;
 	}).length;
 
 	return (

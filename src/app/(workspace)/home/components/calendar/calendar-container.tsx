@@ -41,34 +41,64 @@ export function CalendarContainer() {
 	const events: CalendarEvent[] = useMemo(() => {
 		if (!calendarData) return [];
 
-		const projectEvents: CalendarEvent[] = calendarData.projects.map((p) => ({
-			id: p.id,
-			type: "project" as const,
-			title: p.title,
-			description: p.description,
-			startDate: new Date(p.startDate),
-			endDate: p.endDate ? new Date(p.endDate) : undefined,
-			status: p.status,
-			clientId: p.clientId,
-			clientName: p.clientName,
-			assignedUserIds: p.assignedUserIds,
-		}));
+		const projectEvents: CalendarEvent[] = calendarData.projects.map((p) => {
+			// Convert UTC timestamp to Date object representing the local date
+			const startDate = new Date(p.startDate);
+			const startDateLocal = new Date(
+				startDate.getUTCFullYear(),
+				startDate.getUTCMonth(),
+				startDate.getUTCDate()
+			);
 
-		const taskEvents: CalendarEvent[] = calendarData.tasks.map((t) => ({
-			id: t.id,
-			type: "task" as const,
-			title: t.title,
-			description: t.description,
-			startDate: new Date(t.startDate),
-			startTime: t.startTime,
-			endTime: t.endTime,
-			status: t.status,
-			priority: t.priority,
-			clientId: t.clientId,
-			clientName: t.clientName,
-			assignedUserIds: t.assigneeUserId ? [t.assigneeUserId] : undefined,
-			projectId: t.projectId,
-		}));
+			let endDateLocal;
+			if (p.endDate) {
+				const endDate = new Date(p.endDate);
+				endDateLocal = new Date(
+					endDate.getUTCFullYear(),
+					endDate.getUTCMonth(),
+					endDate.getUTCDate()
+				);
+			}
+
+			return {
+				id: p.id,
+				type: "project" as const,
+				title: p.title,
+				description: p.description,
+				startDate: startDateLocal,
+				endDate: endDateLocal,
+				status: p.status,
+				clientId: p.clientId,
+				clientName: p.clientName,
+				assignedUserIds: p.assignedUserIds,
+			};
+		});
+
+		const taskEvents: CalendarEvent[] = calendarData.tasks.map((t) => {
+			// Convert UTC timestamp to Date object representing the local date
+			const startDate = new Date(t.startDate);
+			const startDateLocal = new Date(
+				startDate.getUTCFullYear(),
+				startDate.getUTCMonth(),
+				startDate.getUTCDate()
+			);
+
+			return {
+				id: t.id,
+				type: "task" as const,
+				title: t.title,
+				description: t.description,
+				startDate: startDateLocal,
+				startTime: t.startTime,
+				endTime: t.endTime,
+				status: t.status,
+				priority: t.priority,
+				clientId: t.clientId,
+				clientName: t.clientName,
+				assignedUserIds: t.assigneeUserId ? [t.assigneeUserId] : undefined,
+				projectId: t.projectId,
+			};
+		});
 
 		return [...projectEvents, ...taskEvents];
 	}, [calendarData]);

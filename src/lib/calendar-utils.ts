@@ -280,16 +280,46 @@ export function formatTime(time: string): string {
 
 /**
  * Check if an event is happening on a specific date
+ * Note: Event dates are stored as UTC midnight timestamps
  */
 export function isEventOnDate(event: CalendarEvent, date: Date): boolean {
-	const checkDate = startOfDay(date);
+	// Convert the check date to UTC midnight for comparison
+	const checkDate = new Date(date);
+	const checkDateUTC = Date.UTC(
+		checkDate.getFullYear(),
+		checkDate.getMonth(),
+		checkDate.getDate()
+	);
 
 	if (event.type === "task") {
-		return isSameDay(event.startDate, checkDate);
+		// For tasks, the startDate is already a UTC midnight timestamp
+		// Convert to Date object in UTC for comparison
+		const eventDate = new Date(event.startDate);
+		const eventDateUTC = Date.UTC(
+			eventDate.getUTCFullYear(),
+			eventDate.getUTCMonth(),
+			eventDate.getUTCDate()
+		);
+		return eventDateUTC === checkDateUTC;
 	} else {
-		// Project
-		const eventStart = startOfDay(event.startDate);
-		const eventEnd = event.endDate ? startOfDay(event.endDate) : eventStart;
-		return checkDate >= eventStart && checkDate <= eventEnd;
+		// Project - check if date falls within project range
+		const eventStartDate = new Date(event.startDate);
+		const eventStartUTC = Date.UTC(
+			eventStartDate.getUTCFullYear(),
+			eventStartDate.getUTCMonth(),
+			eventStartDate.getUTCDate()
+		);
+
+		let eventEndUTC = eventStartUTC;
+		if (event.endDate) {
+			const eventEndDate = new Date(event.endDate);
+			eventEndUTC = Date.UTC(
+				eventEndDate.getUTCFullYear(),
+				eventEndDate.getUTCMonth(),
+				eventEndDate.getUTCDate()
+			);
+		}
+
+		return checkDateUTC >= eventStartUTC && checkDateUTC <= eventEndUTC;
 	}
 }
