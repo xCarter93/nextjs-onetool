@@ -8,23 +8,7 @@ import { StyledButton } from "@/components/ui/styled/styled-button";
 import { useToast } from "@/hooks/use-toast";
 import { Upload } from "lucide-react";
 import { CsvImportStep } from "@/app/(workspace)/clients/components/csv-import-step";
-import type {
-	EntityType,
-	CsvAnalysisResult,
-	FieldMapping,
-	ImportResult,
-} from "@/types/csv-import";
-
-interface CsvImportState {
-	file: File | null;
-	fileContent: string | null;
-	entityType: EntityType;
-	isAnalyzing: boolean;
-	analysisResult: CsvAnalysisResult | null;
-	mappings: FieldMapping[];
-	isImporting: boolean;
-	importResult: ImportResult | null;
-}
+import type { CsvAnalysisResult, CsvImportState } from "@/types/csv-import";
 
 interface CsvImportModalProps {
 	isOpen: boolean;
@@ -104,7 +88,7 @@ export function CsvImportModal({
 	const handleMappingChange = (csvColumn: string, newSchemaField: string) => {
 		setCsvImportState((prev) => ({
 			...prev,
-			mappings: prev.mappings.map((m) =>
+			mappings: (prev.mappings || []).map((m) =>
 				m.csvColumn === csvColumn ? { ...m, schemaField: newSchemaField } : m
 			),
 		}));
@@ -131,16 +115,20 @@ export function CsvImportModal({
 				if (Array.isArray(value)) return value;
 				const stringValue = String(value).trim();
 				if (!stringValue) return undefined;
-				
+
 				// Split by semicolon, comma, or pipe - trim each item and filter empty strings
-				const delimiter = stringValue.includes(';') ? ';' : 
-				                 stringValue.includes(',') ? ',' : 
-				                 stringValue.includes('|') ? '|' : ',';
-				
+				const delimiter = stringValue.includes(";")
+					? ";"
+					: stringValue.includes(",")
+						? ","
+						: stringValue.includes("|")
+							? "|"
+							: ",";
+
 				return stringValue
 					.split(delimiter)
-					.map(item => item.trim())
-					.filter(item => item.length > 0);
+					.map((item) => item.trim())
+					.filter((item) => item.length > 0);
 			default:
 				return value;
 		}
@@ -167,7 +155,7 @@ export function CsvImportModal({
 			const records = rows.map((row) => {
 				const record: Record<string, unknown> = {};
 
-				csvImportState.mappings.forEach((mapping) => {
+				(csvImportState.mappings || []).forEach((mapping) => {
 					const csvValue = row[mapping.csvColumn];
 					const transformedValue = transformValue(csvValue, mapping.dataType);
 
@@ -287,9 +275,9 @@ export function CsvImportModal({
 					isAnalyzing={csvImportState.isAnalyzing}
 					onFileSelect={handleFileSelect}
 					analysisResult={csvImportState.analysisResult}
-					mappings={csvImportState.mappings}
+					mappings={csvImportState.mappings || []}
 					onMappingChange={handleMappingChange}
-					importResult={csvImportState.importResult}
+					importResult={csvImportState.importResult ?? null}
 					error={error}
 					showTitle={false}
 					disabledEntityTypes={["projects"]}

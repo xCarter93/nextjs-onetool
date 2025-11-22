@@ -10,12 +10,14 @@ import { Plus, ClipboardList, Receipt } from "lucide-react";
 import { TaskSheet } from "@/components/shared/task-sheet";
 import { ProjectViewEditForm } from "@/app/(workspace)/projects/components/project-view-edit-form";
 import { MentionSection } from "@/components/shared/mention-section";
+import { ProminentStatusBadge } from "@/components/shared/prominent-status-badge";
 import {
 	Popover,
 	PopoverTrigger,
 	PopoverContent,
 } from "@/components/ui/popover";
 import DeleteConfirmationModal from "@/components/ui/delete-confirmation-modal";
+import { InvoiceGenerationModal } from "@/app/(workspace)/projects/components/invoice-generation-modal";
 import { useState } from "react";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 
@@ -27,6 +29,7 @@ export default function ProjectDetailPage() {
 	const [isTaskSheetOpen, setIsTaskSheetOpen] = useState(false);
 	const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 	const [isDeleting, setIsDeleting] = useState(false);
+	const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
 
 	const projectId = params.projectId as Id<"projects">;
 
@@ -168,20 +171,8 @@ export default function ProjectDetailPage() {
 		});
 	};
 
-	const formatStatus = (status: string) => {
-		switch (status) {
-			case "in-progress":
-				return "In Progress";
-			case "completed":
-				return "Completed";
-			case "cancelled":
-				return "Cancelled";
-			case "planned":
-				return "Planned";
-			default:
-				return status;
-		}
-	};
+	// Filter approved quotes for invoice generation
+	const approvedQuotes = projectQuotes?.filter((quote) => quote.status === "approved") || [];
 
 	return (
 		<>
@@ -203,20 +194,32 @@ export default function ProjectDetailPage() {
 				itemType="Project"
 				isArchive={false}
 			/>
+			<InvoiceGenerationModal
+				isOpen={isInvoiceModalOpen}
+				onClose={() => setIsInvoiceModalOpen(false)}
+				approvedQuotes={approvedQuotes}
+			/>
 			<div className="w-full px-6">
 				<div className="w-full pt-8 pb-24">
-					{/* Header */}
-					<div className="mb-8">
-						<div className="flex items-center justify-between">
-							<div>
+				{/* Header */}
+				<div className="mb-8">
+					<div className="flex items-center justify-between">
+						<div>
+							<div className="flex items-center gap-3 flex-wrap mb-2">
 								<h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
 									{project.title}
 								</h1>
-								<p className="mt-3 text-base text-gray-600 dark:text-gray-400 max-w-2xl">
-									Project #{project.projectNumber || projectId.slice(-6)} •{" "}
-									{formatStatus(project.status)}
-								</p>
+								<ProminentStatusBadge
+									status={project.status}
+									size="large"
+									showIcon={true}
+									entityType="project"
+								/>
 							</div>
+							<p className="text-base text-gray-600 dark:text-gray-400">
+								Project #{project.projectNumber || projectId.slice(-6)}
+							</p>
+						</div>
 							<div className="flex items-center gap-3">
 								{/* Tasks Summary - Compact */}
 								<Popover>
@@ -427,9 +430,6 @@ export default function ProjectDetailPage() {
 									</PopoverContent>
 								</Popover>
 
-								<Badge className={getStatusColor(project.status)}>
-									{formatStatus(project.status)}
-								</Badge>
 								<Badge variant="outline">
 									{project.projectType.charAt(0).toUpperCase() +
 										project.projectType.slice(1)}
@@ -448,8 +448,10 @@ export default function ProjectDetailPage() {
 					isUpdating={isUpdating}
 					projectTasks={projectTasks}
 					projectQuotes={projectQuotes}
+					approvedQuotesCount={approvedQuotes.length}
 					onTaskSheetOpen={() => setIsTaskSheetOpen(true)}
 					onNavigate={(path) => router.push(path)}
+					onGenerateInvoice={() => setIsInvoiceModalOpen(true)}
 				/>
 
 				{/* Team Communication Section */}

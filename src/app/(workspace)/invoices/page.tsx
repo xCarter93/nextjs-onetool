@@ -38,7 +38,6 @@ import {
 	Receipt,
 	Clock,
 	ExternalLink,
-	Plus,
 	Trash2,
 	CheckCircle,
 } from "lucide-react";
@@ -308,19 +307,6 @@ export default function InvoicesPage() {
 						</p>
 					</div>
 				</div>
-				<button
-					onClick={() => router.push("/invoices/new")}
-					className="group inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-all duration-200 px-4 py-2 rounded-lg bg-primary/10 hover:bg-primary/15 ring-1 ring-primary/30 hover:ring-primary/40 shadow-sm hover:shadow-md backdrop-blur-sm"
-				>
-					<Plus className="h-4 w-4" />
-					Create Invoice
-					<span
-						aria-hidden="true"
-						className="group-hover:translate-x-1 transition-transform duration-200"
-					>
-						→
-					</span>
-				</button>
 			</div>
 
 			<div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -410,22 +396,9 @@ export default function InvoicesPage() {
 								No invoices yet
 							</h3>
 							<p className="text-muted-foreground mb-6 max-w-sm mx-auto">
-								Create your first invoice to get started tracking payments and
-								revenue.
+								Create invoices from approved quotes on the Projects page to get
+								started tracking payments and revenue.
 							</p>
-							<button
-								onClick={() => router.push("/invoices/new")}
-								className="group inline-flex items-center gap-2 rounded-lg bg-primary/10 px-4 py-2 text-sm font-semibold text-primary shadow-sm transition-all duration-200 hover:bg-primary/15 hover:text-primary/80 hover:shadow-md ring-1 ring-primary/30 hover:ring-primary/40 backdrop-blur-sm"
-							>
-								<Plus className="h-4 w-4" />
-								Create Your First Invoice
-								<span
-									aria-hidden="true"
-									className="transition-transform duration-200 group-hover:translate-x-1"
-								>
-									→
-								</span>
-							</button>
 						</div>
 					) : (
 						<div className="px-6">

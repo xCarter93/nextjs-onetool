@@ -1,36 +1,8 @@
 import { env } from "@/env";
 import { NextResponse } from "next/server";
+import type { UnsplashSearchResponse } from "@/types/unsplash";
 
 export const revalidate = 3600; // Cache for 1 hour
-
-interface UnsplashPhoto {
-	id: string;
-	alt_description: string | null;
-	urls: {
-		raw: string;
-		full: string;
-		regular: string;
-		small: string;
-		thumb: string;
-	};
-	user: {
-		name: string;
-		username: string;
-		links: {
-			html: string;
-		};
-	};
-	links: {
-		html: string;
-		download_location: string;
-	};
-}
-
-interface UnsplashSearchResponse {
-	total: number;
-	total_pages: number;
-	results: UnsplashPhoto[];
-}
 
 export async function GET() {
 	try {

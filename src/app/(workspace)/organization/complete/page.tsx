@@ -15,10 +15,8 @@ import { api } from "../../../../../convex/_generated/api";
 import { CsvImportStep } from "@/app/(workspace)/clients/components/csv-import-step";
 import { StyledButton } from "@/components/ui/styled/styled-button";
 import type {
-	EntityType,
 	CsvAnalysisResult,
-	FieldMapping,
-	ImportResult,
+	CsvImportState,
 } from "@/types/csv-import";
 import Image from "next/image";
 
@@ -36,18 +34,6 @@ interface FormData {
 	smsEnabled: boolean;
 	monthlyRevenueTarget: number;
 	logoInvertInDarkMode: boolean;
-}
-
-interface CsvImportState {
-	file: File | null;
-	fileContent: string | null;
-	entityType: EntityType;
-	isAnalyzing: boolean;
-	analysisResult: CsvAnalysisResult | null;
-	mappings: FieldMapping[];
-	isImporting: boolean;
-	importResult: ImportResult | null;
-	skipImport: boolean;
 }
 
 export default function CompleteOrganizationMetadata() {
@@ -257,7 +243,7 @@ export default function CompleteOrganizationMetadata() {
 	const handleMappingChange = (csvColumn: string, newSchemaField: string) => {
 		setCsvImportState((prev) => ({
 			...prev,
-			mappings: prev.mappings.map((m) =>
+			mappings: (prev.mappings || []).map((m) =>
 				m.csvColumn === csvColumn ? { ...m, schemaField: newSchemaField } : m
 			),
 		}));
@@ -322,7 +308,7 @@ export default function CompleteOrganizationMetadata() {
 			const mappedData = rows.map((row) => {
 				const mapped: Record<string, unknown> = {};
 
-				csvImportState.mappings.forEach((mapping) => {
+				(csvImportState.mappings || []).forEach((mapping) => {
 					const value = row[mapping.csvColumn];
 					if (value !== null && value !== undefined && value !== "") {
 						const transformedValue = transformValue(value, mapping.dataType);
@@ -338,7 +324,7 @@ export default function CompleteOrganizationMetadata() {
 				).forEach(([key, value]) => {
 					if (!(key in mapped)) {
 						// Transform default values too
-						const mapping = csvImportState.mappings.find(
+						const mapping = (csvImportState.mappings || []).find(
 							(m) => m.schemaField === key
 						);
 						if (mapping && typeof value === "string") {
@@ -726,24 +712,24 @@ export default function CompleteOrganizationMetadata() {
 			{/* CSV Import Step Component */}
 			<CsvImportStep
 				entityType={csvImportState.entityType}
-				onEntityTypeChange={(value) =>
-					setCsvImportState((prev) => ({
-						...prev,
-						entityType: value,
-						analysisResult: null,
-						mappings: [],
-					}))
-				}
-				isAnalyzing={csvImportState.isAnalyzing}
-				onFileSelect={handleFileSelect}
-				analysisResult={csvImportState.analysisResult}
-				mappings={csvImportState.mappings}
-				onMappingChange={handleMappingChange}
-				importResult={csvImportState.importResult}
-				error={error}
-				showTitle={true}
-				disabledEntityTypes={["projects"]}
-			/>
+			onEntityTypeChange={(value) =>
+				setCsvImportState((prev) => ({
+					...prev,
+					entityType: value,
+					analysisResult: null,
+					mappings: [],
+				}))
+			}
+			isAnalyzing={csvImportState.isAnalyzing}
+			onFileSelect={handleFileSelect}
+			analysisResult={csvImportState.analysisResult}
+			mappings={csvImportState.mappings || []}
+			onMappingChange={handleMappingChange}
+			importResult={csvImportState.importResult ?? null}
+			error={error}
+			showTitle={true}
+			disabledEntityTypes={["projects"]}
+		/>
 
 			{/* Action Buttons */}
 			<div className="flex justify-between pt-6">

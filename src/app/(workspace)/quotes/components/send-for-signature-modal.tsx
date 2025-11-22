@@ -5,13 +5,7 @@ import Modal from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { X, Plus, Mail } from "lucide-react";
-
-interface Recipient {
-	id: string;
-	name: string;
-	email: string;
-	signerType: "Signer" | "CC";
-}
+import { Recipient } from "@/types/quote";
 
 interface SendForSignatureModalProps {
 	isOpen: boolean;

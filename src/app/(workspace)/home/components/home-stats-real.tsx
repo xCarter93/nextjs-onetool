@@ -18,18 +18,7 @@ import { GradientRoundedAreaChart } from "@/components/ui/gradient-rounded-chart
 import ChartDetailModal from "@/components/ui/chart-detail-modal";
 import type { ChartConfig } from "@/components/ui/chart";
 import { RoundedPieChartCore } from "@/components/ui/rounded-pie-chart";
-
-interface StatItem {
-	name: string;
-	stat: string;
-	previousStat?: string;
-	change?: string;
-	changeType?: "increase" | "decrease" | "neutral";
-	value?: string;
-	subtitle?: string;
-	icon: React.ComponentType<{ className?: string }>;
-	isLoading?: boolean;
-}
+import { StatItem } from "@/types/stats";
 
 function classNames(...classes: string[]) {
 	return classes.filter(Boolean).join(" ");

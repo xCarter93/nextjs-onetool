@@ -28,7 +28,6 @@ import {
 	Trash2,
 	Calculator,
 	Edit,
-	Check,
 	X,
 	Eye,
 } from "lucide-react";
@@ -557,7 +556,6 @@ export default function QuoteLineEditorPage() {
 														isEditing={editingId === item._id}
 														onEdit={() => handleEditLineItem(item._id)}
 														onSave={handleSaveLineItem}
-														onCancel={() => setEditingId(null)}
 														onDelete={() => handleDeleteLineItem(item._id)}
 													/>
 												))}
@@ -870,17 +868,16 @@ function LineItemRow({
 	isEditing,
 	onEdit,
 	onSave,
-	onCancel,
 	onDelete,
 }: {
 	item: LineItem;
 	isEditing: boolean;
 	onEdit: () => void;
 	onSave: (item: LineItem) => void;
-	onCancel: () => void;
 	onDelete: () => void;
 }) {
 	const [editedItem, setEditedItem] = useState<LineItem>(item);
+	const [isSaving, setIsSaving] = useState(false);
 
 	React.useEffect(() => {
 		if (isEditing) {
@@ -895,22 +892,36 @@ function LineItemRow({
 		}));
 	};
 
-	const handleSave = () => {
-		onSave(editedItem);
+	const handleSave = async () => {
+		setIsSaving(true);
+		try {
+			await onSave(editedItem);
+		} finally {
+			setIsSaving(false);
+		}
+	};
+
+	const handleBlur = () => {
+		// Auto-save when any field loses focus
+		if (isEditing && !isSaving) {
+			handleSave();
+		}
 	};
 
 	if (isEditing) {
 		return (
 			<TableRow
-				className={`bg-blue-50/50 dark:bg-blue-900/10 border-l-4 border-l-blue-500 ${item.isNew ? "bg-yellow-50/50 dark:bg-yellow-900/10" : ""}`}
+				className={`bg-blue-50/50 dark:bg-blue-900/10 border-l-4 border-l-blue-500 ${item.isNew ? "bg-yellow-50/50 dark:bg-yellow-900/10" : ""} ${isSaving ? "opacity-60 pointer-events-none" : ""}`}
 			>
 				<TableCell>
 					<div className="flex gap-2">
 						<Input
 							value={editedItem.description}
 							onChange={(e) => handleFieldChange("description", e.target.value)}
+							onBlur={handleBlur}
 							placeholder="Enter description..."
 							className="flex-1"
+							disabled={isSaving}
 						/>
 						<SKUSelector
 							onSelect={(sku) => {
@@ -922,7 +933,7 @@ function LineItemRow({
 									cost: sku.cost || 0,
 								}));
 							}}
-							disabled={false}
+							disabled={isSaving}
 						/>
 					</div>
 				</TableCell>
@@ -933,16 +944,20 @@ function LineItemRow({
 						onChange={(e) =>
 							handleFieldChange("quantity", parseInt(e.target.value) || 0)
 						}
+						onBlur={handleBlur}
 						className="w-full text-center"
 						min="0"
+						disabled={isSaving}
 					/>
 				</TableCell>
 				<TableCell>
 					<Input
 						value={editedItem.unit}
 						onChange={(e) => handleFieldChange("unit", e.target.value)}
+						onBlur={handleBlur}
 						className="w-full text-center"
 						placeholder="hour"
+						disabled={isSaving}
 					/>
 				</TableCell>
 				<TableCell>
@@ -952,9 +967,11 @@ function LineItemRow({
 						onChange={(e) =>
 							handleFieldChange("rate", parseFloat(e.target.value) || 0)
 						}
+						onBlur={handleBlur}
 						className="w-full text-right"
 						min="0"
 						step="0.01"
+						disabled={isSaving}
 					/>
 				</TableCell>
 				<TableCell>
@@ -964,14 +981,20 @@ function LineItemRow({
 						onChange={(e) =>
 							handleFieldChange("cost", parseFloat(e.target.value) || 0)
 						}
+						onBlur={handleBlur}
 						className="w-full text-right"
 						min="0"
 						step="0.01"
 						placeholder="0.00"
+						disabled={isSaving}
 					/>
 				</TableCell>
 				<TableCell className="text-right font-medium">
-					{formatCurrency(editedItem.quantity * editedItem.rate)}
+					{isSaving ? (
+						<span className="text-xs text-gray-500">Saving...</span>
+					) : (
+						formatCurrency(editedItem.quantity * editedItem.rate)
+					)}
 				</TableCell>
 				<TableCell className="text-center">
 					{(() => {
@@ -998,18 +1021,11 @@ function LineItemRow({
 						<Button
 							intent="outline"
 							size="sq-sm"
-							onPress={handleSave}
-							aria-label="Save"
+							onPress={onDelete}
+							aria-label="Delete"
+							isDisabled={isSaving}
 						>
-							<Check className="h-3 w-3" />
-						</Button>
-						<Button
-							intent="outline"
-							size="sq-sm"
-							onPress={onCancel}
-							aria-label="Cancel"
-						>
-							<X className="h-3 w-3" />
+							<Trash2 className="h-3 w-3" />
 						</Button>
 					</div>
 				</TableCell>

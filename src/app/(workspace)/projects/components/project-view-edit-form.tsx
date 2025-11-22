@@ -40,7 +40,7 @@ import {
 	TrashIcon,
 	PlayIcon,
 } from "@heroicons/react/24/outline";
-import { CalendarIcon, Plus, ClipboardList, Receipt } from "lucide-react";
+import { CalendarIcon, Plus, ClipboardList, Receipt, FileText } from "lucide-react";
 
 type ClientId = Id<"clients">;
 
@@ -81,8 +81,10 @@ interface ProjectViewEditFormProps {
 		total?: number;
 		_creationTime: number;
 	}>;
+	approvedQuotesCount: number;
 	onTaskSheetOpen: () => void;
 	onNavigate: (path: string) => void;
+	onGenerateInvoice: () => void;
 }
 
 // Zod validation schema
@@ -140,8 +142,10 @@ export function ProjectViewEditForm({
 	isUpdating,
 	projectTasks,
 	projectQuotes,
+	approvedQuotesCount,
 	onTaskSheetOpen,
 	onNavigate,
+	onGenerateInvoice,
 }: ProjectViewEditFormProps) {
 	const [isEditing, setIsEditing] = useState(false);
 	const [calendarDate, setCalendarDate] = useState(() => {
@@ -393,6 +397,16 @@ export function ProjectViewEditForm({
 					break;
 			}
 		}
+
+		// Add Generate Invoice button (right side, before Delete)
+		buttons.push({
+			label: "Generate Invoice",
+			onClick: onGenerateInvoice,
+			intent: "primary" as const,
+			icon: <FileText className="h-4 w-4" />,
+			position: "right" as const,
+			disabled: approvedQuotesCount === 0,
+		});
 
 		buttons.push({
 			label: "Delete",
