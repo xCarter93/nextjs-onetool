@@ -48,6 +48,7 @@ import { User } from "lucide-react";
 type ClientId = Id<"clients">;
 type ClientContactId = Id<"clientContacts">;
 type ClientPropertyId = Id<"clientProperties">;
+type UserId = Id<"users">;
 
 export interface ProjectFormData {
 	// Client Selection
@@ -66,8 +67,8 @@ export interface ProjectFormData {
 	startTime: string;
 	endTime: string;
 
-	// Assignment
-	assignedUserIds: string;
+	// Assignment (single user in form, converted to array for DB)
+	assignedUserId: string;
 
 	// Settings
 	invoiceReminderEnabled: boolean;
@@ -89,7 +90,7 @@ const initialFormData: ProjectFormData = {
 	endDate: undefined,
 	startTime: "",
 	endTime: "",
-	assignedUserIds: "",
+	assignedUserId: "",
 	invoiceReminderEnabled: true,
 	scheduleForLater: false,
 };
@@ -105,7 +106,7 @@ const formSchema = z
 		endDate: z.date().optional(),
 		startTime: z.string(),
 		endTime: z.string(),
-		assignedUserIds: z.string(),
+		assignedUserId: z.string(),
 		invoiceReminderEnabled: z.boolean(),
 		scheduleForLater: z.boolean(),
 	})
@@ -345,7 +346,10 @@ export function ProjectOnboardingForm({
 					projectType: value.projectType,
 					startDate: value.startDate ? value.startDate.getTime() : undefined,
 					endDate: value.endDate ? value.endDate.getTime() : undefined,
-					assignedUserIds: value.assignedUserIds || undefined,
+					// Convert single user to array for database
+					assignedUserIds: value.assignedUserId
+						? [value.assignedUserId as UserId]
+						: undefined,
 					invoiceReminderEnabled: value.invoiceReminderEnabled,
 					scheduleForLater: value.scheduleForLater,
 				};
@@ -977,7 +981,7 @@ export function ProjectOnboardingForm({
 									{/* Assigned User */}
 									<FieldGroup className="sm:col-span-4">
 										<form.Field
-											name="assignedUserIds"
+											name="assignedUserId"
 											children={(field) => (
 												<Field>
 													<FieldLabel htmlFor={field.name} className="flex items-center gap-2">
