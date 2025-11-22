@@ -6,14 +6,17 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bell } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { StyledButton } from "@/components/ui/styled/styled-button";
 import {
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { formatRelativeTime, truncateText, stripAuthorIdFromMessage } from "@/lib/notification-utils";
+import {
+	formatRelativeTime,
+	truncateText,
+	stripAuthorIdFromMessage,
+} from "@/lib/notification-utils";
 import { motion } from "motion/react";
 import type { Id } from "../../../convex/_generated/dataModel";
 
@@ -128,7 +131,10 @@ export function NotificationBell() {
 												{notification.title}
 											</p>
 											<p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">
-												{truncateText(stripAuthorIdFromMessage(notification.message), 100)}
+												{truncateText(
+													stripAuthorIdFromMessage(notification.message),
+													100
+												)}
 											</p>
 											<p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
 												{formatRelativeTime(notification._creationTime)}
@@ -140,25 +146,7 @@ export function NotificationBell() {
 						</div>
 					)}
 				</ScrollArea>
-
-				{/* Footer */}
-				{notifications.length > 0 && (
-					<div className="px-4 py-3 border-t border-gray-200 dark:border-gray-800">
-						<StyledButton
-							intent="plain"
-							size="sm"
-							className="w-full justify-center"
-							onClick={() => {
-								// TODO: Navigate to full notifications page if we create one
-								setOpen(false);
-							}}
-							label="View all notifications"
-							showArrow={false}
-						/>
-					</div>
-				)}
 			</PopoverContent>
 		</Popover>
 	);
 }
-

@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { ProminentStatusBadge } from "@/components/shared/prominent-status-badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
 	BuildingOffice2Icon,
@@ -388,57 +389,50 @@ export default function ClientDetailPage() {
 		<>
 			<div className="relative min-h-screen px-6 pt-8 pb-20">
 				<div className="mx-auto">
-					{/* Client Header */}
-					<div className="mb-8">
-						<div className="flex items-start justify-between gap-6 mb-4">
-							<div className="flex items-start gap-6">
-								<div className="flex items-center justify-center w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex-shrink-0">
-									<BuildingOffice2Icon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-								</div>
-								<div className="flex-1 min-w-0">
-									<div className="flex items-center gap-3 flex-wrap">
-										<h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-											{client.companyName}
-										</h1>
-										{isEditing ? (
-											<StyledSelect
-												value={form.status}
-												onValueChange={(value) =>
-													setForm((prev) => ({
-														...prev,
-														status: value as typeof form.status,
-													}))
-												}
-											>
-												<StyledSelectTrigger className="w-auto">
-													<SelectValue />
-												</StyledSelectTrigger>
-												<StyledSelectContent>
-													{STATUS_OPTIONS.map((status) => (
-														<SelectItem key={status} value={status}>
-															{formatStatus(status)}
-														</SelectItem>
-													))}
-												</StyledSelectContent>
-											</StyledSelect>
-										) : (
-											<Badge
-												variant="secondary"
-												className={`${
-													client.status === "active"
-														? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
-														: client.status === "lead" ||
-															  client.status === "prospect"
-															? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
-															: "bg-gray-100 dark:bg-gray-900/30 text-gray-700 dark:text-gray-300"
-												}`}
-											>
-												{formatStatus(client.status)}
-											</Badge>
-										)}
-									</div>
+				{/* Client Header */}
+				<div className="mb-8">
+					<div className="flex items-start justify-between gap-6 mb-4">
+						<div className="flex items-start gap-6">
+							<div className="flex items-center justify-center w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex-shrink-0">
+								<BuildingOffice2Icon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+							</div>
+							<div className="flex-1 min-w-0">
+								<div className="flex items-center gap-3 flex-wrap mb-2">
+									<h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+										{client.companyName}
+									</h1>
+									{isEditing ? (
+										<StyledSelect
+											value={form.status}
+											onValueChange={(value) =>
+												setForm((prev) => ({
+													...prev,
+													status: value as typeof form.status,
+												}))
+											}
+										>
+											<StyledSelectTrigger className="w-auto">
+												<SelectValue />
+											</StyledSelectTrigger>
+											<StyledSelectContent>
+												{STATUS_OPTIONS.map((status) => (
+													<SelectItem key={status} value={status}>
+														{formatStatus(status)}
+													</SelectItem>
+												))}
+											</StyledSelectContent>
+										</StyledSelect>
+									) : (
+										<ProminentStatusBadge
+											status={client.status}
+											size="large"
+											showIcon={true}
+											entityType="client"
+										/>
+									)}
 								</div>
 							</div>
+						</div>
 
 							{/* Compact Indicators with Popovers - Aligned Right */}
 							<div className="flex items-center gap-3 flex-wrap flex-shrink-0">

@@ -108,11 +108,52 @@ async function validateUserAccess(
 }
 
 /**
+ * Generate recurring task instances based on frequency and end date
+ */
+function generateRecurringTaskDates(
+	startDate: number,
+	frequency: "daily" | "weekly" | "monthly" | "yearly",
+	endDate: number
+): number[] {
+	const dates: number[] = [];
+	const currentDate = new Date(startDate);
+	const end = new Date(endDate);
+
+	// Set to beginning of day for consistency
+	currentDate.setHours(0, 0, 0, 0);
+	end.setHours(23, 59, 59, 999);
+
+	while (currentDate <= end) {
+		dates.push(currentDate.getTime());
+
+		// Move to next occurrence based on frequency
+		switch (frequency) {
+			case "daily":
+				currentDate.setDate(currentDate.getDate() + 1);
+				break;
+			case "weekly":
+				currentDate.setDate(currentDate.getDate() + 7);
+				break;
+			case "monthly":
+				currentDate.setMonth(currentDate.getMonth() + 1);
+				break;
+			case "yearly":
+				currentDate.setFullYear(currentDate.getFullYear() + 1);
+				break;
+		}
+	}
+
+	return dates;
+}
+
+/**
  * Create a task with automatic orgId assignment
  */
 async function createTaskWithOrg(
 	ctx: MutationCtx,
-	data: Omit<Doc<"tasks">, "_id" | "_creationTime" | "orgId">
+	data: Omit<Doc<"tasks">, "_id" | "_creationTime" | "orgId"> & {
+		parentTaskId?: Id<"tasks">;
+	}
 ): Promise<Id<"tasks">> {
 	const userOrgId = await getCurrentUserOrgId(ctx);
 
@@ -331,7 +372,8 @@ export const create = mutation({
 				v.literal("none"),
 				v.literal("daily"),
 				v.literal("weekly"),
-				v.literal("monthly")
+				v.literal("monthly"),
+				v.literal("yearly")
 			)
 		),
 		repeatUntil: v.optional(v.number()),
@@ -377,6 +419,36 @@ export const create = mutation({
 			throw new Error("Repeat end date must be after task date");
 		}
 
+		// If recurring task with end date, generate all instances immediately
+		if (args.repeat && args.repeat !== "none" && args.repeatUntil) {
+			const dates = generateRecurringTaskDates(
+				args.date,
+				args.repeat,
+				args.repeatUntil
+			);
+
+			// Create parent task (the first occurrence)
+			const parentTaskId = await createTaskWithOrg(ctx, args);
+
+			// Get the parent task for activity logging
+			const parentTask = await ctx.db.get(parentTaskId);
+			if (parentTask) {
+				await ActivityHelpers.taskCreated(ctx, parentTask as TaskDocument);
+			}
+
+			// Create child tasks for remaining occurrences
+			for (let i = 1; i < dates.length; i++) {
+				await createTaskWithOrg(ctx, {
+					...args,
+					date: dates[i],
+					parentTaskId: parentTaskId, // Link to parent
+				});
+			}
+
+			return parentTaskId;
+		}
+
+		// Single task or recurring without end date
 		const taskId = await createTaskWithOrg(ctx, args);
 
 		// Get the created task for activity logging
@@ -424,7 +496,8 @@ export const update = mutation({
 				v.literal("none"),
 				v.literal("daily"),
 				v.literal("weekly"),
-				v.literal("monthly")
+				v.literal("monthly"),
+				v.literal("yearly")
 			)
 		),
 		repeatUntil: v.optional(v.number()),

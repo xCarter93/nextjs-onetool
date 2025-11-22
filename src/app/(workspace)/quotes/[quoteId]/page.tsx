@@ -41,6 +41,8 @@ import { SendEmailPopover } from "@/app/(workspace)/quotes/components/send-email
 import { SignatureProgressBar } from "@/app/(workspace)/quotes/components/signature-progress-bar";
 import Accordion from "@/components/ui/accordion";
 import { MentionSection } from "@/components/shared/mention-section";
+import { ProminentStatusBadge } from "@/components/shared/prominent-status-badge";
+import { Recipient } from "@/types/quote";
 
 type QuoteStatus = "draft" | "sent" | "approved" | "declined" | "expired";
 
@@ -142,7 +144,6 @@ export default function QuoteDetailPage() {
 	const updateQuote = useMutation(api.quotes.update);
 	const generateUploadUrl = useMutation(api.documents.generateUploadUrl);
 	const createDocument = useMutation(api.documents.create);
-	const createInvoiceFromQuote = useMutation(api.invoices.createFromQuote);
 
 	// Actions
 	const sendForSignature = useAction(
@@ -553,11 +554,7 @@ export default function QuoteDetailPage() {
 	};
 
 	const handleSendForSignature = async (
-		recipients: Array<{
-			name: string;
-			email: string;
-			signerType: "Signer" | "CC";
-		}>,
+		recipients: Recipient[],
 		message?: string
 	) => {
 		if (!selectedDocumentUrl || !latestDocument) {
@@ -566,10 +563,16 @@ export default function QuoteDetailPage() {
 		}
 
 		try {
+			// Filter recipients to ensure signerType is present
+			const validRecipients = recipients
+				.filter((r): r is Recipient & { signerType: "Signer" | "CC" } => 
+					r.signerType === "Signer" || r.signerType === "CC"
+				);
+
 			await sendForSignature({
 				quoteId,
 				documentId: latestDocument._id,
-				recipients,
+				recipients: validRecipients,
 				documentUrl: selectedDocumentUrl,
 				message,
 			});
@@ -595,15 +598,18 @@ export default function QuoteDetailPage() {
 									<FileText className="h-6 w-6 text-blue-600 dark:text-blue-400" />
 								</div>
 								<div>
-									<div className="flex items-center gap-3">
+									<div className="flex items-center gap-3 flex-wrap mb-3">
 										<h1 className="text-3xl font-bold text-gray-900 dark:text-white">
 											Quote {quote.quoteNumber || `#${quote._id.slice(-6)}`}
 										</h1>
-										<Badge variant={statusVariant(currentStatus)}>
-											{formatStatus(currentStatus)}
-										</Badge>
+										<ProminentStatusBadge
+											status={currentStatus}
+											size="large"
+											showIcon={true}
+											entityType="quote"
+										/>
 									</div>
-									<p className="text-muted-foreground text-sm mt-1">
+									<p className="text-muted-foreground text-sm">
 										{quote.title || project?.title || "Untitled Quote"}
 									</p>
 								</div>
@@ -1568,46 +1574,6 @@ export default function QuoteDetailPage() {
 						icon: <FileText className="h-4 w-4" />,
 						onClick: () => setShowDocumentModal(true),
 						position: "right" as const,
-					},
-					{
-						label: "Convert to Invoice",
-						intent: "primary",
-						onClick: async () => {
-							// Only allow conversion if quote is approved
-							if (quote?.status !== "approved") {
-								toast.error(
-									"Cannot Convert",
-									"Only approved quotes can be converted to invoices"
-								);
-								return;
-							}
-
-							try {
-								const loadingId = toast.loading(
-									"Creating Invoice",
-									"Converting quote to invoice..."
-								);
-								const invoiceId = await createInvoiceFromQuote({
-									quoteId,
-									issuedDate: Date.now(),
-									dueDate: Date.now() + 30 * 24 * 60 * 60 * 1000, // 30 days default
-								});
-								toast.removeToast(loadingId);
-								toast.success(
-									"Invoice Created",
-									"Quote converted to invoice successfully"
-								);
-								router.push(`/invoices/${invoiceId}`);
-							} catch (error) {
-								const message =
-									error instanceof Error
-										? error.message
-										: "Failed to convert quote";
-								toast.error("Conversion Failed", message);
-							}
-						},
-						position: "right" as const,
-						disabled: quote?.status !== "approved",
 					},
 				]}
 				fullWidth

@@ -9,13 +9,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { TagsInput } from "@/components/ui/tags-input";
 import { Mail, X, FileText } from "lucide-react";
-
-interface Recipient {
-	id: string;
-	name: string;
-	email: string;
-	signerType: "Signer" | "CC";
-}
+import { Recipient } from "@/types/quote";
 
 interface SendEmailPopoverProps {
 	isOpen: boolean;

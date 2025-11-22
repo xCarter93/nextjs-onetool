@@ -396,6 +396,8 @@ export const bulkCreate = mutation({
 				}
 
 				// Create the project
+				// Omit clientName as it's only used for lookup, not stored in the project
+				// eslint-disable-next-line @typescript-eslint/no-unused-vars
 				const { clientName, ...projectCreateData } = projectData;
 				const projectId = await createProjectWithOrg(ctx, {
 					...projectCreateData,

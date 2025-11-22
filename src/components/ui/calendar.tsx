@@ -185,7 +185,6 @@ function CalendarDayButton({
 		if (modifiers.focused) ref.current?.focus();
 	}, [modifiers.focused]);
 
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	const { onClick, onFocus, onBlur, onKeyDown, onKeyUp, ...restProps } = props;
 
 	// Use native button with Button styling to ensure onClick works correctly with react-day-picker

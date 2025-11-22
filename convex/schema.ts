@@ -329,16 +329,19 @@ export default defineSchema({
 				v.literal("none"),
 				v.literal("daily"),
 				v.literal("weekly"),
-				v.literal("monthly")
+				v.literal("monthly"),
+				v.literal("yearly")
 			)
 		),
 		repeatUntil: v.optional(v.number()),
+		parentTaskId: v.optional(v.id("tasks")), // Links recurring task instances to parent
 	})
 		.index("by_org", ["orgId"])
 		.index("by_project", ["projectId"])
 		.index("by_client", ["clientId"])
 		.index("by_assignee", ["assigneeUserId"])
-		.index("by_date", ["orgId", "date"]),
+		.index("by_date", ["orgId", "date"])
+		.index("by_parent_task", ["parentTaskId"]),
 
 	// Quotes
 	quotes: defineTable({

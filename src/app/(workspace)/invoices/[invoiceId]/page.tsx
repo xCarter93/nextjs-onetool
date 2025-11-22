@@ -5,6 +5,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ProminentStatusBadge } from "@/components/shared/prominent-status-badge";
 import {
 	Table,
 	TableBody,
@@ -365,27 +366,30 @@ export default function InvoiceDetailPage() {
 
 				<div className="relative px-6 pt-8 pb-20">
 					<div className="mx-auto">
-						{/* Invoice Header */}
-						<div className="flex items-center mb-8">
-							<div className="flex items-center gap-4">
-								<div className="flex items-center justify-center w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-900/30">
-									<FileText className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-								</div>
-								<div>
-									<div className="flex items-center gap-3">
-										<h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-											{invoice.invoiceNumber}
-										</h1>
-										<Badge variant={statusVariant(currentStatus)}>
-											{formatStatus(currentStatus)}
-										</Badge>
-									</div>
-									<p className="text-muted-foreground text-sm mt-1">
-										{project?.title || "Invoice"}
-									</p>
-								</div>
-							</div>
+				{/* Invoice Header */}
+				<div className="flex items-center mb-8">
+					<div className="flex items-center gap-4">
+						<div className="flex items-center justify-center w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-900/30">
+							<FileText className="h-6 w-6 text-blue-600 dark:text-blue-400" />
 						</div>
+						<div>
+							<div className="flex items-center gap-3 flex-wrap mb-3">
+								<h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+									{invoice.invoiceNumber}
+								</h1>
+								<ProminentStatusBadge
+									status={currentStatus}
+									size="large"
+									showIcon={true}
+									entityType="invoice"
+								/>
+							</div>
+							<p className="text-muted-foreground text-sm">
+								{project?.title || "Invoice"}
+							</p>
+						</div>
+						</div>
+					</div>
 
 						{/* Two Column Layout */}
 						<div className="grid grid-cols-1 xl:grid-cols-4 gap-8">

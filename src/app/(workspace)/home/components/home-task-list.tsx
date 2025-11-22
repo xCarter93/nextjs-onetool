@@ -13,7 +13,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { motion, AnimatePresence } from "motion/react";
 import {
 	Calendar,
-	Clock,
 	User,
 	Flag,
 	Plus,
@@ -24,22 +23,7 @@ import {
 	Building2,
 } from "lucide-react";
 import Link from "next/link";
-
-interface Task {
-	_id: Id<"tasks">;
-	title: string;
-	description?: string;
-	clientId: Id<"clients">;
-	projectId?: Id<"projects">;
-	date: number;
-	startTime?: string;
-	endTime?: string;
-	assigneeUserId?: Id<"users">;
-	status: "pending" | "in-progress" | "completed" | "cancelled";
-	priority?: "low" | "medium" | "high" | "urgent";
-	repeat?: "none" | "daily" | "weekly" | "monthly";
-	repeatUntil?: number;
-}
+import { Task } from "@/types/task";
 
 const priorityConfig = {
 	low: {
@@ -193,14 +177,16 @@ function TaskItem({ task, onStatusChange, isUpdating }: TaskItemProps) {
 								</span>
 							)}
 						</span>
-						{isOverdue && <AlertTriangle className="h-3.5 w-3.5 text-red-600 flex-shrink-0" />}
+						{isOverdue && (
+							<AlertTriangle className="h-3.5 w-3.5 text-red-600 flex-shrink-0" />
+						)}
 					</div>
 
 					{/* Column 4: Assignee */}
 					<div className="min-w-0 flex items-center gap-1.5">
 						<User className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
 						<span className="text-sm truncate">
-							{assignee ? (assignee.name || assignee.email) : "Unassigned"}
+							{assignee ? assignee.name || assignee.email : "Unassigned"}
 						</span>
 					</div>
 

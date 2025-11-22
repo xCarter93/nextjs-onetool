@@ -5,25 +5,7 @@ import { motion } from "motion/react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { StyledButton } from "@/components/ui/styled/styled-button";
-
-interface UnsplashImage {
-	id: string;
-	alt: string;
-	url: string;
-	downloadLocation?: string;
-	photographer?: {
-		name: string;
-		username: string;
-		profileUrl?: string;
-	};
-	photoUrl?: string;
-}
-
-interface UnsplashResponse {
-	photos: UnsplashImage[];
-	fetchedAt: string;
-	isFallback?: boolean;
-}
+import type { UnsplashImage, UnsplashResponse } from "@/types/unsplash";
 
 // Default fallback images
 const DEFAULT_IMAGES: UnsplashImage[] = [

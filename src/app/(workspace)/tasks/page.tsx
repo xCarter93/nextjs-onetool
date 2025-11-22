@@ -28,22 +28,7 @@ import {
 	Edit,
 	Trash2,
 } from "lucide-react";
-
-interface Task {
-	_id: Id<"tasks">;
-	title: string;
-	description?: string;
-	clientId: Id<"clients">;
-	projectId?: Id<"projects">;
-	date: number;
-	startTime?: string;
-	endTime?: string;
-	assigneeUserId?: Id<"users">;
-	status: "pending" | "in-progress" | "completed" | "cancelled";
-	priority?: "low" | "medium" | "high" | "urgent";
-	repeat?: "none" | "daily" | "weekly" | "monthly";
-	repeatUntil?: number;
-}
+import { Task } from "@/types/task";
 
 const priorityConfig = {
 	low: {

@@ -52,6 +52,21 @@ export interface ImportResult {
 	items: ImportResultItem[];
 }
 
+/**
+ * State for CSV import flow
+ */
+export interface CsvImportState {
+	file: File | null;
+	fileContent: string | null;
+	entityType: EntityType;
+	isAnalyzing: boolean;
+	analysisResult: CsvAnalysisResult | null;
+	mappings?: FieldMapping[];
+	isImporting?: boolean;
+	importResult?: ImportResult | null;
+	skipImport?: boolean;
+}
+
 // Schema field definitions for reference - must match convex/schema.ts clients table
 export const CLIENT_SCHEMA_FIELDS = {
 	// Required fields (from schema)

@@ -14,17 +14,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useQuery } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import type { HomeStats as HomeStatsType } from "../../../../../convex/homeStats";
-
-interface StatItem {
-	name: string;
-	stat: string;
-	previousStat?: string;
-	change?: string;
-	changeType?: "increase" | "decrease" | "neutral";
-	value?: string;
-	subtitle?: string;
-	icon: React.ComponentType<{ className?: string }>;
-}
+import { StatItem } from "@/types/stats";
 
 // Helper function to format currency
 function formatCurrency(amount: number): string {
