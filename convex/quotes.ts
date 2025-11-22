@@ -273,7 +273,8 @@ interface QuoteStats {
 }
 
 /**
- * Get all quotes for the current user's organization
+ * Get all quotes for the current user's organization with calculated totals
+ * Optimized to avoid N+1 query problem by batching line item fetches
  */
 export const list = query({
 	args: {
@@ -320,18 +321,90 @@ export const list = query({
 				.collect();
 		}
 
+		// Batch fetch ALL line items for ALL quotes in a single query
+		// This avoids N+1 query problem (1 query for quotes + 1 query for all line items = 2 total)
+		const allLineItems = await ctx.db
+			.query("quoteLineItems")
+			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
+			.collect();
+
+		// Group line items by quoteId for O(1) lookup
+		const lineItemsByQuote = new Map<Id<"quotes">, typeof allLineItems>();
+		for (const item of allLineItems) {
+			const existing = lineItemsByQuote.get(item.quoteId) || [];
+			existing.push(item);
+			lineItemsByQuote.set(item.quoteId, existing);
+		}
+
+		// Calculate totals for each quote using in-memory data
+		const quotesWithCalculatedTotals = quotes.map((quote) => {
+			const lineItems = lineItemsByQuote.get(quote._id) || [];
+
+			// Calculate subtotal
+			const subtotal = lineItems.reduce((sum, item) => sum + item.amount, 0);
+
+			// Apply discount if enabled
+			let discountedSubtotal = subtotal;
+			if (quote.discountEnabled && quote.discountAmount) {
+				discountedSubtotal = BusinessUtils.applyDiscount(
+					subtotal,
+					quote.discountAmount,
+					quote.discountType === "percentage"
+				);
+			}
+
+			// Calculate tax
+			let taxAmount = 0;
+			if (quote.taxEnabled && quote.taxRate) {
+				taxAmount = BusinessUtils.calculateTax(
+					discountedSubtotal,
+					quote.taxRate
+				);
+			}
+
+			// Calculate total
+			const total = discountedSubtotal + taxAmount;
+
+			return {
+				...quote,
+				subtotal,
+				total,
+				taxAmount,
+			};
+		});
+
 		// Sort by creation time (newest first)
-		return quotes.sort((a, b) => b._creationTime - a._creationTime);
+		return quotesWithCalculatedTotals.sort(
+			(a, b) => b._creationTime - a._creationTime
+		);
 	},
 });
 
 /**
- * Get a specific quote by ID
+ * Get a specific quote by ID with calculated totals from line items
  */
 export const get = query({
 	args: { id: v.id("quotes") },
 	handler: async (ctx, args): Promise<QuoteDocument | null> => {
-		return await getQuoteWithOrgValidation(ctx, args.id);
+		const quote = await getQuoteWithOrgValidation(ctx, args.id);
+		if (!quote) return null;
+
+		// Calculate totals from line items
+		const calculatedTotals = await calculateQuoteTotals(ctx, args.id, {
+			discountEnabled: quote.discountEnabled,
+			discountAmount: quote.discountAmount,
+			discountType: quote.discountType,
+			taxEnabled: quote.taxEnabled,
+			taxRate: quote.taxRate,
+		});
+
+		// Return quote with calculated totals (overriding stored values)
+		return {
+			...quote,
+			subtotal: calculatedTotals.subtotal,
+			total: calculatedTotals.total,
+			taxAmount: calculatedTotals.taxAmount,
+		};
 	},
 });
 
