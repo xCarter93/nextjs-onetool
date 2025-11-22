@@ -6,6 +6,7 @@ import { ActivityHelpers } from "./lib/activities";
 import { AggregateHelpers } from "./lib/aggregates";
 import { DateUtils } from "./lib/shared";
 import { requireMembership } from "./lib/memberships";
+import { isMember, getCurrentUserId } from "./lib/permissions";
 
 /**
  * Project operations with embedded CRUD helpers
@@ -209,6 +210,10 @@ export const list = query({
 			return [];
 		}
 
+		// Check if user is a member (non-admin) - members can only see their assigned projects
+		const isUserMember = await isMember(ctx);
+		const currentUserId = await getCurrentUserId(ctx);
+
 		let projects: ProjectDocument[];
 
 		if (args.clientId) {
@@ -229,6 +234,15 @@ export const list = query({
 				.query("projects")
 				.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
 				.collect();
+		}
+
+		// Filter by assignment if user is a member
+		if (isUserMember && currentUserId) {
+			projects = projects.filter(
+				(project) =>
+					project.assignedUserIds &&
+					project.assignedUserIds.includes(currentUserId)
+			);
 		}
 
 		return projects;
@@ -639,10 +653,24 @@ export const getStats = query({
 		if (!userOrgId) {
 			return createEmptyProjectStats();
 		}
-		const projects = await ctx.db
+
+		// Check if user is a member (non-admin) - members can only see their assigned projects
+		const isUserMember = await isMember(ctx);
+		const currentUserId = await getCurrentUserId(ctx);
+
+		let projects = await ctx.db
 			.query("projects")
 			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
 			.collect();
+
+		// Filter by assignment if user is a member
+		if (isUserMember && currentUserId) {
+			projects = projects.filter(
+				(project) =>
+					project.assignedUserIds &&
+					project.assignedUserIds.includes(currentUserId)
+			);
+		}
 
 		const stats: ProjectStats = {
 			total: projects.length,

@@ -166,3 +166,87 @@ export async function checkFeatureAccess(
 
 	return { hasAccess: true };
 }
+
+/**
+ * Role-based permission utilities
+ */
+
+import { getCurrentUser, getCurrentUserOrgId } from "./auth";
+import { getMembership } from "./memberships";
+import type { Id } from "../_generated/dataModel";
+
+/**
+ * Get the current user's role in their active organization
+ */
+export async function getCurrentUserRole(
+	ctx: QueryCtx | MutationCtx
+): Promise<string | null> {
+	const user = await getCurrentUser(ctx);
+	if (!user) {
+		return null;
+	}
+
+	const orgId = await getCurrentUserOrgId(ctx, { require: false });
+	if (!orgId) {
+		return null;
+	}
+
+	const membership = await getMembership(ctx, user._id, orgId);
+	return membership?.role ?? null;
+}
+
+/**
+ * Check if the current user is an admin in their organization
+ * Admin is defined as any role containing "admin" (case-insensitive)
+ */
+export async function isAdmin(ctx: QueryCtx | MutationCtx): Promise<boolean> {
+	const role = await getCurrentUserRole(ctx);
+	if (!role) {
+		return false;
+	}
+
+	return role.toLowerCase().includes("admin");
+}
+
+/**
+ * Check if the current user is a member (non-admin) in their organization
+ * Member is defined as a role that explicitly includes "member" and does not include "admin"
+ * Secure-by-default: denies access if role is missing or lookup fails
+ */
+export async function isMember(ctx: QueryCtx | MutationCtx): Promise<boolean> {
+	const role = await getCurrentUserRole(ctx);
+
+	// Secure-by-default: deny if role is missing or lookup fails
+	if (!role) {
+		return false;
+	}
+
+	// Normalize role string
+	const normalizedRole = role.trim().toLowerCase();
+
+	// Only return true for explicit member roles
+	// Must include/equal "member" and must NOT include "admin"
+	return normalizedRole.includes("member") && !normalizedRole.includes("admin");
+}
+
+/**
+ * Require that the current user is an admin, throw if not
+ */
+export async function requireAdmin(ctx: QueryCtx | MutationCtx): Promise<void> {
+	const isAdminUser = await isAdmin(ctx);
+	if (!isAdminUser) {
+		throw new Error(
+			"Access denied: This action requires administrator privileges."
+		);
+	}
+}
+
+/**
+ * Get the current user's ID for filtering assigned items
+ */
+export async function getCurrentUserId(
+	ctx: QueryCtx | MutationCtx
+): Promise<Id<"users"> | null> {
+	const user = await getCurrentUser(ctx);
+	return user?._id ?? null;
+}
