@@ -11,7 +11,6 @@ import {
 	startOfDay,
 	endOfDay,
 	differenceInDays,
-	isSameDay,
 } from "date-fns";
 import type {
 	CalendarEvent,
