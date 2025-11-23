@@ -189,6 +189,47 @@ http.route({
 				break;
 			}
 
+			case "organizationMembership.updated": {
+				const membershipData = event.data;
+				const userId = membershipData.public_user_data?.user_id;
+				const orgId = membershipData.organization?.id;
+
+				console.log("Processing organizationMembership.updated webhook:", {
+					userId,
+					orgId,
+					role: membershipData.role,
+				});
+
+				if (!userId || !orgId) {
+					console.error("Missing required membership data for update:", {
+						userId,
+						orgId,
+						membershipData,
+					});
+					break;
+				}
+
+				try {
+					await ctx.runMutation(internal.users.updateUserOrganization, {
+						clerkUserId: userId,
+						clerkOrganizationId: orgId,
+						role: membershipData.role ?? undefined,
+					});
+					console.log("Successfully updated user organization membership:", {
+						userId,
+						orgId,
+						role: membershipData.role,
+					});
+				} catch (error) {
+					console.error("Failed to update user organization membership:", {
+						userId,
+						orgId,
+						error: error instanceof Error ? error.message : String(error),
+					});
+				}
+				break;
+			}
+
 			case "organizationMembership.deleted": {
 				const membershipData = event.data;
 				const userId = membershipData.public_user_data?.user_id;
