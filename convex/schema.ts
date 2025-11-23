@@ -499,7 +499,8 @@ export default defineSchema({
 		documentType: v.union(v.literal("quote"), v.literal("invoice")),
 		documentId: v.string(), // ID of the quote or invoice
 
-		storageId: v.id("_storage"), // Reference to stored PDF
+		storageId: v.id("_storage"), // Reference to stored PDF (unsigned original)
+		signedStorageId: v.optional(v.id("_storage")), // Reference to signed PDF from BoldSign
 		generatedAt: v.number(),
 		version: v.number(), // Version number for tracking PDF versions (starts at 1)
 
