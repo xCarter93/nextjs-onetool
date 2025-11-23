@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { internalMutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
-import { internal } from "./_generated/api";
+import { internal, api } from "./_generated/api";
 
 // Internal mutation to update document with BoldSign info
 export const updateDocumentWithBoldSign = internalMutation({
@@ -141,40 +141,97 @@ export const handleWebhook = internalMutation({
 
 		// If the document is associated with a quote, update quote status
 		if (document.documentType === "quote") {
-			// Validate that documentId is a proper quotes ID
-			if (
-				typeof document.documentId !== "string" ||
-				!document.documentId.startsWith("quotes|")
-			) {
+			// Try to get the quote - documentId should be a valid quote ID
+			const quote = await ctx.db.get(document.documentId as Id<"quotes">);
+
+			if (!quote) {
 				console.warn(
-					`Document ${document._id} has invalid documentId for quote: ${document.documentId}`
+					`Quote not found for document ${document._id} with documentId: ${document.documentId}`
 				);
 				return;
 			}
 
-			const quote = await ctx.db.get(document.documentId as Id<"quotes">);
-			if (quote) {
-				const quoteUpdates: {
-					status?: "approved" | "declined" | "expired";
-					approvedAt?: number;
-					declinedAt?: number;
-				} = {};
+			const quoteUpdates: {
+				status?: "approved" | "declined" | "expired";
+				approvedAt?: number;
+				declinedAt?: number;
+			} = {};
 
-				// Update quote status based on BoldSign event
-				if (args.eventType === "Completed") {
-					quoteUpdates.status = "approved";
-					quoteUpdates.approvedAt = timestamp;
-				} else if (args.eventType === "Declined") {
-					quoteUpdates.status = "declined";
-					quoteUpdates.declinedAt = timestamp;
-				} else if (args.eventType === "Expired") {
-					quoteUpdates.status = "expired";
-				}
+			// Update quote status based on BoldSign event
+			if (args.eventType === "Completed") {
+				quoteUpdates.status = "approved";
+				quoteUpdates.approvedAt = timestamp;
 
-				if (Object.keys(quoteUpdates).length > 0) {
-					await ctx.db.patch(quote._id, quoteUpdates);
+				// Download signed document if quote has a project
+				if (quote.projectId) {
+					console.log(
+						`Scheduling download of signed document for quote ${quote._id} linked to project ${quote.projectId}`
+					);
+					await ctx.scheduler.runAfter(
+						0,
+						internal.boldsign.triggerDocumentDownload,
+						{
+							documentId: document._id,
+							boldsignDocumentId: args.boldsignDocumentId,
+						}
+					);
+				} else {
+					console.log(
+						`Skipping download for quote ${quote._id} - no project linked`
+					);
 				}
+			} else if (args.eventType === "Declined") {
+				quoteUpdates.status = "declined";
+				quoteUpdates.declinedAt = timestamp;
+			} else if (args.eventType === "Expired") {
+				quoteUpdates.status = "expired";
+			}
+
+			if (Object.keys(quoteUpdates).length > 0) {
+				await ctx.db.patch(quote._id, quoteUpdates);
 			}
 		}
+	},
+});
+
+// Internal mutation to update document with signed PDF storage ID
+export const updateDocumentWithSignedPdf = internalMutation({
+	args: {
+		documentId: v.id("documents"),
+		signedStorageId: v.id("_storage"),
+	},
+	handler: async (ctx, args) => {
+		// Verify document exists before patching
+		const document = await ctx.db.get(args.documentId);
+		if (!document) {
+			throw new Error(`Document not found: ${args.documentId}`);
+		}
+
+		await ctx.db.patch(args.documentId, {
+			signedStorageId: args.signedStorageId,
+		});
+
+		console.log(
+			`Document ${args.documentId} updated with signed storage ID: ${args.signedStorageId}`
+		);
+	},
+});
+
+// Internal mutation wrapper to trigger document download action
+export const triggerDocumentDownload = internalMutation({
+	args: {
+		documentId: v.id("documents"),
+		boldsignDocumentId: v.string(),
+	},
+	handler: async (ctx, args) => {
+		// Call the download action
+		await ctx.scheduler.runAfter(
+			0,
+			api.boldsignActions.downloadCompletedDocument,
+			{
+				documentId: args.documentId,
+				boldsignDocumentId: args.boldsignDocumentId,
+			}
+		);
 	},
 });

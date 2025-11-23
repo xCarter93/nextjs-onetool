@@ -128,3 +128,86 @@ export const sendDocumentForSignature = action({
 		return { success: true, documentId: response.documentId || "" };
 	},
 });
+
+// Action to download completed/signed document from BoldSign
+export const downloadCompletedDocument = action({
+	args: {
+		documentId: v.id("documents"),
+		boldsignDocumentId: v.string(),
+	},
+	handler: async (ctx, args) => {
+		// Check if API key is configured
+		const apiKey = process.env.BOLDSIGN_API_KEY;
+		if (!apiKey) {
+			throw new Error(
+				"BOLDSIGN_API_KEY is not configured. Please add it to your environment variables."
+			);
+		}
+
+		console.log(
+			"Downloading completed document from BoldSign:",
+			args.boldsignDocumentId
+		);
+
+		try {
+			// Download the signed PDF from BoldSign API
+			const downloadUrl = `https://api.boldsign.com/v1/document/download?documentId=${args.boldsignDocumentId}`;
+
+			// Set up fetch timeout using AbortController
+			const controller = new AbortController();
+			const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+			let response;
+			try {
+				response = await fetch(downloadUrl, {
+					method: "GET",
+					headers: {
+						accept: "application/pdf, application/octet-stream",
+						"X-API-KEY": apiKey,
+					},
+					signal: controller.signal,
+				});
+			} catch (error) {
+				clearTimeout(timeoutId);
+				if ((error as Error).name === "AbortError") {
+					throw new Error(
+						"Request to download document from BoldSign timed out after 10 seconds"
+					);
+				}
+				throw error;
+			}
+
+			// Clear timeout on success
+			clearTimeout(timeoutId);
+
+			if (!response.ok) {
+				throw new Error(
+					`Failed to download document from BoldSign: ${response.status} ${response.statusText}`
+				);
+			}
+
+			// Get the PDF buffer
+			const pdfBuffer = await response.arrayBuffer();
+
+			// Store the signed PDF in Convex storage
+			const blob = new Blob([pdfBuffer], { type: "application/pdf" });
+			const signedStorageId = await ctx.storage.store(blob);
+
+			console.log(
+				"Signed document stored successfully with ID:",
+				signedStorageId
+			);
+
+			// Update the document record with the signed storage ID
+			await ctx.runMutation(internal.boldsign.updateDocumentWithSignedPdf, {
+				documentId: args.documentId,
+				signedStorageId,
+			});
+
+			return { success: true, signedStorageId };
+		} catch (error) {
+			console.error("Error downloading completed document:", error);
+			throw error;
+		}
+	},
+});

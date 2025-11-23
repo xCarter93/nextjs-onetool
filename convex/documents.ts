@@ -640,3 +640,77 @@ export const getAllDocumentsWithSignatures = query({
 		});
 	},
 });
+
+/**
+ * Get signed documents for a project
+ * Returns completed and signed quote documents that are linked to the project
+ */
+export const listSignedByProject = query({
+	args: {
+		projectId: v.id("projects"),
+	},
+	handler: async (ctx, args) => {
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return [];
+		}
+
+		// Validate project access
+		const project = await ctx.db.get(args.projectId);
+		if (!project || project.orgId !== userOrgId) {
+			throw new Error("Project not found or access denied");
+		}
+
+		// Get all quotes for this project
+		const quotes = await ctx.db
+			.query("quotes")
+			.withIndex("by_project", (q) => q.eq("projectId", args.projectId))
+			.collect();
+
+		if (quotes.length === 0) {
+			return [];
+		}
+
+		// Get all documents for these quotes that have signed PDFs
+		const quoteIds = quotes.map((q) => q._id);
+		const allDocuments = await ctx.db
+			.query("documents")
+			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
+			.collect();
+
+		// Filter to documents for our quotes that have signed storage IDs
+		const signedDocuments = allDocuments.filter(
+			(doc) =>
+				doc.documentType === "quote" &&
+				quoteIds.includes(doc.documentId as Id<"quotes">) &&
+				doc.signedStorageId !== undefined &&
+				doc.boldsign?.status === "Completed"
+		);
+
+		// Generate download URLs and return metadata
+		const results = await Promise.all(
+			signedDocuments.map(async (doc) => {
+				const quote = quotes.find((q) => q._id === doc.documentId);
+				const downloadUrl = doc.signedStorageId
+					? await ctx.storage.getUrl(doc.signedStorageId)
+					: null;
+
+				return {
+					_id: doc._id,
+					fileName: `Quote-${quote?.quoteNumber || doc.documentId.slice(-6)}-Signed.pdf`,
+					fileSize: 0, // We don't track file size for BoldSign downloads
+					mimeType: "application/pdf",
+					uploadedAt: doc.boldsign?.completedAt || doc.generatedAt,
+					downloadUrl,
+					quoteNumber: quote?.quoteNumber || null,
+					quoteId: doc.documentId as Id<"quotes">,
+					completedAt: doc.boldsign?.completedAt,
+					type: "signed-quote" as const,
+				};
+			})
+		);
+
+		// Sort by completion date (most recent first)
+		return results.sort((a, b) => b.uploadedAt - a.uploadedAt);
+	},
+});

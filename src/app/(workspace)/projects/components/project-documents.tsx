@@ -14,9 +14,11 @@ import {
 	Image as ImageIcon,
 	FolderOpen,
 	Loader2,
+	FileCheck,
 } from "lucide-react";
 import type { Id } from "../../../../../convex/_generated/dataModel";
-import { memo } from "react";
+import { memo, useMemo } from "react";
+import { Badge } from "@/components/ui/badge";
 
 interface ProjectDocumentsProps {
 	projectId: Id<"projects">;
@@ -46,22 +48,32 @@ const formatDate = (timestamp: number): string => {
 const isImage = (mimeType: string) => mimeType.startsWith("image/");
 const isPdf = (mimeType: string) => mimeType === "application/pdf";
 
+// Unified document type for both attachments and signed quotes
+type UnifiedDocument = {
+	_id: string;
+	fileName: string;
+	fileSize: number;
+	mimeType: string;
+	uploadedAt: number;
+	downloadUrl: string | null;
+	type: "attachment" | "signed-quote";
+	quoteNumber?: string | null;
+};
+
 // Attachment content component with memo optimization
-interface AttachmentContentProps {
-	attachment: {
-		_id: Id<"messageAttachments">;
-		fileName: string;
-		fileSize: number;
-		mimeType: string;
-		uploadedAt: number;
-	};
+interface DocumentContentProps {
+	document: UnifiedDocument;
 }
 
-const AttachmentContent = memo(({ attachment }: AttachmentContentProps) => (
+const DocumentContent = memo(({ document }: DocumentContentProps) => (
 	<>
 		{/* File preview/icon */}
 		<div className="flex-shrink-0">
-			{isImage(attachment.mimeType) ? (
+			{document.type === "signed-quote" ? (
+				<div className="h-16 w-16 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+					<FileCheck className="h-6 w-6 text-green-600 dark:text-green-400" />
+				</div>
+			) : isImage(document.mimeType) ? (
 				<div className="h-16 w-16 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center overflow-hidden">
 					<ImageIcon className="h-6 w-6 text-blue-500" />
 				</div>
@@ -69,7 +81,7 @@ const AttachmentContent = memo(({ attachment }: AttachmentContentProps) => (
 				<div className="h-16 w-16 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center">
 					<FileIcon
 						className={`h-6 w-6 ${
-							isPdf(attachment.mimeType) ? "text-red-500" : "text-gray-500"
+							isPdf(document.mimeType) ? "text-red-500" : "text-gray-500"
 						}`}
 					/>
 				</div>
@@ -78,17 +90,39 @@ const AttachmentContent = memo(({ attachment }: AttachmentContentProps) => (
 
 		{/* File details */}
 		<div className="flex-1 min-w-0">
-			<p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-				{attachment.fileName}
-			</p>
-			<div className="flex items-center gap-2 mt-1">
-				<p className="text-xs text-gray-500 dark:text-gray-400">
-					{formatFileSize(attachment.fileSize)}
+			<div className="flex items-center gap-2 mb-1">
+				<p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+					{document.fileName}
 				</p>
-				<span className="text-xs text-gray-400">•</span>
+				{document.type === "signed-quote" && (
+					<Badge
+						variant="outline"
+						className="flex-shrink-0 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800"
+					>
+						Signed Quote
+					</Badge>
+				)}
+			</div>
+			<div className="flex items-center gap-2">
+				{document.fileSize > 0 && (
+					<>
+						<p className="text-xs text-gray-500 dark:text-gray-400">
+							{formatFileSize(document.fileSize)}
+						</p>
+						<span className="text-xs text-gray-400">•</span>
+					</>
+				)}
 				<p className="text-xs text-gray-500 dark:text-gray-400">
-					{formatDate(attachment.uploadedAt)}
+					{formatDate(document.uploadedAt)}
 				</p>
+				{document.quoteNumber && (
+					<>
+						<span className="text-xs text-gray-400">•</span>
+						<p className="text-xs text-gray-500 dark:text-gray-400">
+							Quote #{document.quoteNumber}
+						</p>
+					</>
+				)}
 			</div>
 		</div>
 
@@ -99,17 +133,52 @@ const AttachmentContent = memo(({ attachment }: AttachmentContentProps) => (
 	</>
 ));
 
-AttachmentContent.displayName = "AttachmentContent";
+DocumentContent.displayName = "DocumentContent";
 
 export function ProjectDocuments({ projectId }: ProjectDocumentsProps) {
-	// Fetch attachments with download URLs in bulk (no N+1 query problem)
+	// Fetch both attachments and signed documents
 	const attachments = useQuery(api.messageAttachments.listByEntity, {
 		entityType: "project",
 		entityId: projectId,
 	});
+	const signedDocuments = useQuery(api.documents.listSignedByProject, {
+		projectId,
+	});
+
+	// Combine and sort documents
+	const allDocuments = useMemo(() => {
+		if (!attachments || !signedDocuments) return undefined;
+
+		const unified: UnifiedDocument[] = [
+			// Map attachments
+			...attachments.map((att) => ({
+				_id: att._id,
+				fileName: att.fileName,
+				fileSize: att.fileSize,
+				mimeType: att.mimeType,
+				uploadedAt: att.uploadedAt,
+				downloadUrl: att.downloadUrl,
+				type: "attachment" as const,
+			})),
+			// Map signed documents
+			...signedDocuments.map((doc) => ({
+				_id: doc._id,
+				fileName: doc.fileName,
+				fileSize: doc.fileSize,
+				mimeType: doc.mimeType,
+				uploadedAt: doc.uploadedAt,
+				downloadUrl: doc.downloadUrl,
+				type: "signed-quote" as const,
+				quoteNumber: doc.quoteNumber,
+			})),
+		];
+
+		// Sort by upload date (most recent first)
+		return unified.sort((a, b) => b.uploadedAt - a.uploadedAt);
+	}, [attachments, signedDocuments]);
 
 	// Loading state
-	if (attachments === undefined) {
+	if (allDocuments === undefined) {
 		return (
 			<StyledCard>
 				<StyledCardHeader>
@@ -138,7 +207,7 @@ export function ProjectDocuments({ projectId }: ProjectDocumentsProps) {
 	}
 
 	// Empty state
-	if (attachments.length === 0) {
+	if (allDocuments.length === 0) {
 		return (
 			<StyledCard>
 				<StyledCardHeader>
@@ -149,7 +218,7 @@ export function ProjectDocuments({ projectId }: ProjectDocumentsProps) {
 						</StyledCardTitle>
 					</div>
 					<p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-						Files shared in team communications
+						Files shared in team communications and signed quotes
 					</p>
 				</StyledCardHeader>
 				<StyledCardContent>
@@ -161,7 +230,7 @@ export function ProjectDocuments({ projectId }: ProjectDocumentsProps) {
 							No documents yet
 						</h3>
 						<p className="text-sm text-gray-600 dark:text-gray-400 max-w-sm">
-							Documents shared in team communications will appear here
+							Documents and signed quotes will appear here
 						</p>
 					</div>
 				</StyledCardContent>
@@ -178,21 +247,21 @@ export function ProjectDocuments({ projectId }: ProjectDocumentsProps) {
 						Project Documents
 					</StyledCardTitle>
 					<span className="text-sm text-gray-500 dark:text-gray-400">
-						({attachments.length})
+						({allDocuments.length})
 					</span>
 				</div>
 				<p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-					Files shared in team communications
+					Files shared in team communications and signed quotes
 				</p>
 			</StyledCardHeader>
 			<StyledCardContent>
 				<div className="grid grid-cols-1 gap-3">
-					{attachments.map((attachment) => (
+					{allDocuments.map((document) => (
 						<DocumentDownloadLink
-							key={attachment._id}
-							downloadUrl={attachment.downloadUrl}
+							key={document._id}
+							downloadUrl={document.downloadUrl}
 						>
-							<AttachmentContent attachment={attachment} />
+							<DocumentContent document={document} />
 						</DocumentDownloadLink>
 					))}
 				</div>
