@@ -259,7 +259,28 @@ export const get = query({
 		if (!userOrgId) {
 			return null;
 		}
-		return await getProjectWithOrgValidation(ctx, args.id, userOrgId);
+		
+		const project = await getProjectWithOrgValidation(ctx, args.id, userOrgId);
+		if (!project) {
+			return null;
+		}
+
+		// Check if user is a member (non-admin) - members can only see their assigned projects
+		const isUserMember = await isMember(ctx);
+		const currentUserId = await getCurrentUserId(ctx);
+
+		// If user is a member, verify they're assigned to this project
+		if (isUserMember && currentUserId) {
+			const isAssigned = project.assignedUserIds && 
+				project.assignedUserIds.includes(currentUserId);
+			
+			if (!isAssigned) {
+				// Return null if member is not assigned (same as project not found)
+				return null;
+			}
+		}
+
+		return project;
 	},
 });
 
@@ -601,10 +622,24 @@ export const search = query({
 		if (!userOrgId) {
 			return [];
 		}
+
+		// Check if user is a member (non-admin) - members can only see their assigned projects
+		const isUserMember = await isMember(ctx);
+		const currentUserId = await getCurrentUserId(ctx);
+
 		let projects = await ctx.db
 			.query("projects")
 			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
 			.collect();
+
+		// Filter by assignment if user is a member
+		if (isUserMember && currentUserId) {
+			projects = projects.filter(
+				(project) =>
+					project.assignedUserIds &&
+					project.assignedUserIds.includes(currentUserId)
+			);
+		}
 
 		// Filter by client if specified
 		if (args.clientId) {
@@ -736,18 +771,33 @@ export const getByAssignee = query({
 		// Validate user belongs to organization
 		await validateUserAccess(ctx, [args.userId], userOrgId);
 
+		// Check if user is a member (non-admin) - members can only see their assigned projects
+		const isUserMember = await isMember(ctx);
+		const currentUserId = await getCurrentUserId(ctx);
+
 		const projects = await ctx.db
 			.query("projects")
 			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
 			.collect();
 
 		// Filter projects where user is assigned or is the salesperson
-		return projects.filter(
+		let filteredProjects = projects.filter(
 			(project: ProjectDocument) =>
 				project.salespersonId === args.userId ||
 				(project.assignedUserIds &&
 					project.assignedUserIds.includes(args.userId))
 		);
+
+		// If requesting user is a member, further filter to only their assigned projects
+		if (isUserMember && currentUserId) {
+			filteredProjects = filteredProjects.filter(
+				(project) =>
+					project.assignedUserIds &&
+					project.assignedUserIds.includes(currentUserId)
+			);
+		}
+
+		return filteredProjects;
 	},
 });
 
@@ -762,12 +812,26 @@ export const getUpcomingDeadlines = query({
 		if (!userOrgId) {
 			return [];
 		}
+
+		// Check if user is a member (non-admin) - members can only see their assigned projects
+		const isUserMember = await isMember(ctx);
+		const currentUserId = await getCurrentUserId(ctx);
+
 		const daysAhead = args.days || 7;
 
-		const projects = await ctx.db
+		let projects = await ctx.db
 			.query("projects")
 			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
 			.collect();
+
+		// Filter by assignment if user is a member
+		if (isUserMember && currentUserId) {
+			projects = projects.filter(
+				(project) =>
+					project.assignedUserIds &&
+					project.assignedUserIds.includes(currentUserId)
+			);
+		}
 
 		const now = Date.now();
 		const deadline = DateUtils.addDays(now, daysAhead);
