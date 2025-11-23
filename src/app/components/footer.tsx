@@ -2,16 +2,11 @@ import Image from "next/image";
 
 const navigation = {
 	solutions: [
-		{ name: "Client Management", href: "#" },
-		{ name: "Project Tracking", href: "#" },
-		{ name: "Quoting & Invoicing", href: "#" },
-		{ name: "Task Scheduling", href: "#" },
-		{ name: "Mobile Access", href: "#" },
-	],
-	support: [
-		{ name: "Help Center", href: "#" },
-		{ name: "Contact Support", href: "#" },
-		{ name: "Training Guides", href: "#" },
+		"Client Management",
+		"Project Tracking",
+		"Quoting & Invoicing",
+		"Task Scheduling",
+		"Mobile Access",
 	],
 	company: [
 		{ name: "About OneTool", href: "#" },
@@ -20,9 +15,9 @@ const navigation = {
 		{ name: "News", href: "#" },
 	],
 	legal: [
-		{ name: "Terms of Service", href: "#" },
-		{ name: "Privacy Policy", href: "#" },
-		{ name: "Data Security", href: "#" },
+		{ name: "Terms of Service", href: "/terms-of-service" },
+		{ name: "Privacy Policy", href: "/privacy-policy" },
+		{ name: "Data Security", href: "/data-security" },
 	],
 	social: [
 		{
@@ -129,37 +124,15 @@ export default function Footer() {
 								</h3>
 								<ul role="list" className="mt-6 space-y-4">
 									{navigation.solutions.map((item) => (
-										<li key={item.name}>
-											<a
-												href={item.href}
-												className="text-sm/6 text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
-											>
-												{item.name}
-											</a>
+										<li key={item}>
+											<span className="text-sm/6 text-gray-600 dark:text-gray-400">
+												{item}
+											</span>
 										</li>
 									))}
 								</ul>
 							</div>
 							<div className="mt-10 md:mt-0">
-								<h3 className="text-sm/6 font-semibold text-gray-900 dark:text-white">
-									Support
-								</h3>
-								<ul role="list" className="mt-6 space-y-4">
-									{navigation.support.map((item) => (
-										<li key={item.name}>
-											<a
-												href={item.href}
-												className="text-sm/6 text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
-											>
-												{item.name}
-											</a>
-										</li>
-									))}
-								</ul>
-							</div>
-						</div>
-						<div className="md:grid md:grid-cols-2 md:gap-8">
-							<div>
 								<h3 className="text-sm/6 font-semibold text-gray-900 dark:text-white">
 									Company
 								</h3>
@@ -176,23 +149,23 @@ export default function Footer() {
 									))}
 								</ul>
 							</div>
-							<div className="mt-10 md:mt-0">
-								<h3 className="text-sm/6 font-semibold text-gray-900 dark:text-white">
-									Legal
-								</h3>
-								<ul role="list" className="mt-6 space-y-4">
-									{navigation.legal.map((item) => (
-										<li key={item.name}>
-											<a
-												href={item.href}
-												className="text-sm/6 text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
-											>
-												{item.name}
-											</a>
-										</li>
-									))}
-								</ul>
-							</div>
+						</div>
+						<div>
+							<h3 className="text-sm/6 font-semibold text-gray-900 dark:text-white">
+								Legal
+							</h3>
+							<ul role="list" className="mt-6 space-y-4">
+								{navigation.legal.map((item) => (
+									<li key={item.name}>
+										<a
+											href={item.href}
+											className="text-sm/6 text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
+										>
+											{item.name}
+										</a>
+									</li>
+								))}
+							</ul>
 						</div>
 					</div>
 				</div>

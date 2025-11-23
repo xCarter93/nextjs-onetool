@@ -20,6 +20,7 @@
 		"@headlessui/react": "^2.2.7",
 		"@heroicons/react": "^2.2.0",
 		"@intentui/icons": "^1.11.0",
+		"@lottiefiles/dotlottie-react": "^0.17.8",
 		"@mastra/ai-sdk": "^0.1.1",
 		"@mastra/core": "^0.20.2",
 		"@number-flow/react": "^0.5.10",
