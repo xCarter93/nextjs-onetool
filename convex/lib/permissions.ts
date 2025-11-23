@@ -175,24 +175,32 @@ import { getCurrentUser, getCurrentUserOrgId } from "./auth";
 import { getMembership } from "./memberships";
 import type { Id } from "../_generated/dataModel";
 
+// Extended identity type that includes organization role from Clerk JWT
+interface ClerkIdentityWithOrgRole {
+	tokenIdentifier: string;
+	subject: string;
+	orgRole?: string; // From Clerk JWT: "org:admin", "org:member", etc.
+	org_role?: string; // Alternative location
+	[key: string]: unknown;
+}
+
 /**
- * Get the current user's role in their active organization
+ * Get the current user's role in their active organization from Clerk JWT
+ * This reads directly from the Clerk authentication token, not from the database
  */
 export async function getCurrentUserRole(
 	ctx: QueryCtx | MutationCtx
 ): Promise<string | null> {
-	const user = await getCurrentUser(ctx);
-	if (!user) {
+	const identity = await ctx.auth.getUserIdentity();
+	if (!identity) {
 		return null;
 	}
 
-	const orgId = await getCurrentUserOrgId(ctx, { require: false });
-	if (!orgId) {
-		return null;
-	}
+	// Get role from Clerk JWT token (same as frontend useAuth().orgRole)
+	const clerkIdentity = identity as ClerkIdentityWithOrgRole;
+	const orgRole = clerkIdentity.orgRole ?? clerkIdentity.org_role ?? null;
 
-	const membership = await getMembership(ctx, user._id, orgId);
-	return membership?.role ?? null;
+	return orgRole;
 }
 
 /**

@@ -348,7 +348,25 @@ export const get = query({
 		if (!userOrgId) {
 			return null;
 		}
-		return await getTaskWithOrgValidation(ctx, args.id, userOrgId);
+		
+		const task = await getTaskWithOrgValidation(ctx, args.id, userOrgId);
+		if (!task) {
+			return null;
+		}
+
+		// Check if user is a member (non-admin) - members can only see their assigned tasks
+		const isUserMember = await isMember(ctx);
+		const currentUserId = await getCurrentUserId(ctx);
+
+		// If user is a member, verify they're assigned to this task
+		if (isUserMember && currentUserId) {
+			if (task.assigneeUserId !== currentUserId) {
+				// Return null if member is not assigned (same as task not found)
+				return null;
+			}
+		}
+
+		return task;
 	},
 });
 
@@ -778,6 +796,11 @@ export const getToday = query({
 		if (!userOrgId) {
 			return [];
 		}
+
+		// Check if user is a member (non-admin) - members can only see their assigned tasks
+		const isUserMember = await isMember(ctx);
+		const currentUserId = await getCurrentUserId(ctx);
+
 		const today = DateUtils.startOfDay(Date.now());
 		const tomorrow = DateUtils.addDays(today, 1);
 
@@ -794,6 +817,11 @@ export const getToday = query({
 			tasks = tasks.filter(
 				(task) => task.assigneeUserId === args.assigneeUserId
 			);
+		}
+
+		// Filter by assignment if user is a member
+		if (isUserMember && currentUserId) {
+			tasks = tasks.filter((task) => task.assigneeUserId === currentUserId);
 		}
 
 		return tasks.sort((a, b) => {
