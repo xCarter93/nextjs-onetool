@@ -44,20 +44,6 @@ const items = [
 		background: "bg-primary",
 		href: "/tasks/new",
 	},
-	{
-		title: "Create Your First Invoice",
-		description: "Generate invoices and track payments from your clients.",
-		icon: CurrencyDollarIcon,
-		background: "bg-primary",
-		href: "/invoices/new",
-	},
-	{
-		title: "View Your Dashboard",
-		description: "Check your business metrics and upcoming tasks.",
-		icon: ChartBarIcon,
-		background: "bg-primary",
-		href: "/dashboard",
-	},
 ];
 
 function classNames(

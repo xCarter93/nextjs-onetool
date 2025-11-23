@@ -70,7 +70,7 @@ function AnimatedHeroImage({
 						className="aspect-2/3 w-full rounded-xl bg-gray-900/5 object-cover shadow-lg hover:shadow-2xl dark:bg-gray-700/5"
 					/>
 					<div className="pointer-events-none absolute inset-0 rounded-xl ring-1 ring-gray-900/10 ring-inset dark:ring-white/10" />
-					<div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300" />
+					<div className="absolute inset-0 rounded-xl bg-linear-to-t from-black/20 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300" />
 				</motion.div>
 			</AnimatePresence>
 		</motion.div>
