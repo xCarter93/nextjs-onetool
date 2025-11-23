@@ -153,13 +153,32 @@ export const downloadCompletedDocument = action({
 			// Download the signed PDF from BoldSign API
 			const downloadUrl = `https://api.boldsign.com/v1/document/download?documentId=${args.boldsignDocumentId}`;
 
-			const response = await fetch(downloadUrl, {
-				method: "GET",
-				headers: {
-					accept: "application/json",
-					"X-API-KEY": apiKey,
-				},
-			});
+			// Set up fetch timeout using AbortController
+			const controller = new AbortController();
+			const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+			let response;
+			try {
+				response = await fetch(downloadUrl, {
+					method: "GET",
+					headers: {
+						accept: "application/pdf, application/octet-stream",
+						"X-API-KEY": apiKey,
+					},
+					signal: controller.signal,
+				});
+			} catch (error) {
+				clearTimeout(timeoutId);
+				if ((error as Error).name === "AbortError") {
+					throw new Error(
+						"Request to download document from BoldSign timed out after 10 seconds"
+					);
+				}
+				throw error;
+			}
+
+			// Clear timeout on success
+			clearTimeout(timeoutId);
 
 			if (!response.ok) {
 				throw new Error(
