@@ -41,7 +41,7 @@ import { SendEmailPopover } from "@/app/(workspace)/quotes/components/send-email
 import { SignatureProgressBar } from "@/app/(workspace)/quotes/components/signature-progress-bar";
 import Accordion from "@/components/ui/accordion";
 import { MentionSection } from "@/components/shared/mention-section";
-import { ProminentStatusBadge } from "@/components/shared/prominent-status-badge";
+import { StatusProgressBar } from "@/components/shared/status-progress-bar";
 import { Recipient } from "@/types/quote";
 
 type QuoteStatus = "draft" | "sent" | "approved" | "declined" | "expired";
@@ -327,8 +327,8 @@ export default function QuoteDetailPage() {
 	// Loading state
 	if (quote === undefined) {
 		return (
-			<div className="min-h-[100vh] flex-1 md:min-h-min">
-				<div className="relative bg-gradient-to-br from-background via-muted/30 to-muted/60 dark:from-background dark:via-muted/20 dark:to-muted/40 min-h-[100vh] rounded-xl">
+			<div className="min-h-screen flex-1 md:min-h-min">
+				<div className="relative bg-linear-to-br from-background via-muted/30 to-muted/60 dark:from-background dark:via-muted/20 dark:to-muted/40 min-h-screen rounded-xl">
 					<div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(120,119,198,0.08),transparent_50%)] rounded-xl" />
 					<div className="relative px-6 pt-8 pb-20">
 						<div className="animate-pulse space-y-8">
@@ -353,8 +353,8 @@ export default function QuoteDetailPage() {
 	// Quote not found
 	if (quote === null) {
 		return (
-			<div className="min-h-[100vh] flex-1 md:min-h-min">
-				<div className="relative bg-gradient-to-br from-background via-muted/30 to-muted/60 dark:from-background dark:via-muted/20 dark:to-muted/40 min-h-[100vh] rounded-xl">
+			<div className="min-h-screen flex-1 md:min-h-min">
+				<div className="relative bg-linear-to-br from-background via-muted/30 to-muted/60 dark:from-background dark:via-muted/20 dark:to-muted/40 min-h-screen rounded-xl">
 					<div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(120,119,198,0.08),transparent_50%)] rounded-xl" />
 					<div className="relative px-6 pt-8 pb-20 flex flex-col items-center justify-center h-96 space-y-4">
 						<div className="text-6xl">📄</div>
@@ -564,10 +564,10 @@ export default function QuoteDetailPage() {
 
 		try {
 			// Filter recipients to ensure signerType is present
-			const validRecipients = recipients
-				.filter((r): r is Recipient & { signerType: "Signer" | "CC" } => 
+			const validRecipients = recipients.filter(
+				(r): r is Recipient & { signerType: "Signer" | "CC" } =>
 					r.signerType === "Signer" || r.signerType === "CC"
-				);
+			);
 
 			await sendForSignature({
 				quoteId,
@@ -585,33 +585,53 @@ export default function QuoteDetailPage() {
 	};
 
 	return (
-		<div className="min-h-[100vh] flex-1 md:min-h-min">
-			<div className="relative min-h-[100vh] rounded-xl">
+		<div className="min-h-screen flex-1 md:min-h-min">
+			<div className="relative min-h-screen rounded-xl">
 				<div className="rounded-xl" />
 
 				<div className="relative px-6 pt-8 pb-20">
 					<div className="mx-auto">
 						{/* Quote Header */}
-						<div className="flex items-center mb-8">
-							<div className="flex items-center gap-4">
-								<div className="flex items-center justify-center w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-900/30">
-									<FileText className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-								</div>
-								<div>
-									<div className="flex items-center gap-3 flex-wrap mb-3">
+						<div className="mb-8">
+							<div className="flex items-center gap-8">
+								<div className="flex items-center gap-4">
+									<div className="flex items-center justify-center w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 shrink-0">
+										<FileText className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+									</div>
+									<div>
 										<h1 className="text-3xl font-bold text-gray-900 dark:text-white">
 											Quote {quote.quoteNumber || `#${quote._id.slice(-6)}`}
 										</h1>
-										<ProminentStatusBadge
-											status={currentStatus}
-											size="large"
-											showIcon={true}
-											entityType="quote"
-										/>
+										<p className="text-muted-foreground text-sm">
+											{quote.title || project?.title || "Untitled Quote"}
+										</p>
 									</div>
-									<p className="text-muted-foreground text-sm">
-										{quote.title || project?.title || "Untitled Quote"}
-									</p>
+								</div>
+								<div className="flex-1">
+									<StatusProgressBar
+										status={currentStatus}
+										steps={[
+											{ id: "draft", name: "Draft", order: 1 },
+											{ id: "sent", name: "Sent", order: 2 },
+											{ id: "approved", name: "Approved", order: 3 },
+										]}
+										events={[
+											...(quote._creationTime
+												? [{ type: "draft", timestamp: quote._creationTime }]
+												: []),
+											...(quote.sentAt
+												? [{ type: "sent", timestamp: quote.sentAt }]
+												: []),
+											...(quote.approvedAt
+												? [{ type: "approved", timestamp: quote.approvedAt }]
+												: []),
+											...(quote.declinedAt
+												? [{ type: "declined", timestamp: quote.declinedAt }]
+												: []),
+										]}
+										failureStatuses={["declined", "expired"]}
+										successStatuses={["approved"]}
+									/>
 								</div>
 							</div>
 						</div>

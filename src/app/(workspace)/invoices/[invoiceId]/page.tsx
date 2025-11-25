@@ -5,7 +5,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ProminentStatusBadge } from "@/components/shared/prominent-status-badge";
+import { StatusProgressBar } from "@/components/shared/status-progress-bar";
 import {
 	Table,
 	TableBody,
@@ -224,8 +224,8 @@ export default function InvoiceDetailPage() {
 	// Loading state
 	if (invoice === undefined) {
 		return (
-			<div className="min-h-[100vh] flex-1 md:min-h-min">
-				<div className="relative bg-gradient-to-br from-background via-muted/30 to-muted/60 dark:from-background dark:via-muted/20 dark:to-muted/40 min-h-[100vh] rounded-xl">
+			<div className="min-h-screen flex-1 md:min-h-min">
+				<div className="relative bg-linear-to-br from-background via-muted/30 to-muted/60 dark:from-background dark:via-muted/20 dark:to-muted/40 min-h-screen rounded-xl">
 					<div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(120,119,198,0.08),transparent_50%)] rounded-xl" />
 					<div className="relative px-6 pt-8 pb-20">
 						<div className="animate-pulse space-y-8">
@@ -250,8 +250,8 @@ export default function InvoiceDetailPage() {
 	// Invoice not found
 	if (invoice === null) {
 		return (
-			<div className="min-h-[100vh] flex-1 md:min-h-min">
-				<div className="relative bg-gradient-to-br from-background via-muted/30 to-muted/60 dark:from-background dark:via-muted/20 dark:to-muted/40 min-h-[100vh] rounded-xl">
+			<div className="min-h-screen flex-1 md:min-h-min">
+				<div className="relative bg-linear-to-br from-background via-muted/30 to-muted/60 dark:from-background dark:via-muted/20 dark:to-muted/40 min-h-screen rounded-xl">
 					<div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(120,119,198,0.08),transparent_50%)] rounded-xl" />
 					<div className="relative px-6 pt-8 pb-20 flex flex-col items-center justify-center h-96 space-y-4">
 						<div className="text-6xl">📄</div>
@@ -360,36 +360,53 @@ export default function InvoiceDetailPage() {
 	};
 
 	return (
-		<div className="min-h-[100vh] flex-1 md:min-h-min">
-			<div className="relative min-h-[100vh] rounded-xl">
+		<div className="min-h-screen flex-1 md:min-h-min">
+			<div className="relative min-h-screen rounded-xl">
 				<div className="rounded-xl" />
 
 				<div className="relative px-6 pt-8 pb-20">
 					<div className="mx-auto">
-				{/* Invoice Header */}
-				<div className="flex items-center mb-8">
-					<div className="flex items-center gap-4">
-						<div className="flex items-center justify-center w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-900/30">
-							<FileText className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-						</div>
-						<div>
-							<div className="flex items-center gap-3 flex-wrap mb-3">
-								<h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-									{invoice.invoiceNumber}
-								</h1>
-								<ProminentStatusBadge
-									status={currentStatus}
-									size="large"
-									showIcon={true}
-									entityType="invoice"
-								/>
+						{/* Invoice Header */}
+						<div className="mb-8">
+							<div className="flex items-center gap-8">
+								<div className="flex items-center gap-4">
+									<div className="flex items-center justify-center w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 shrink-0">
+										<FileText className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+									</div>
+									<div>
+										<h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+											{invoice.invoiceNumber}
+										</h1>
+										<p className="text-muted-foreground text-sm">
+											{project?.title || "Invoice"}
+										</p>
+									</div>
+								</div>
+								<div className="flex-1">
+									<StatusProgressBar
+										status={currentStatus}
+										steps={[
+											{ id: "draft", name: "Draft", order: 1 },
+											{ id: "sent", name: "Sent", order: 2 },
+											{ id: "paid", name: "Paid", order: 3 },
+										]}
+										events={[
+											...(invoice._creationTime
+												? [{ type: "draft", timestamp: invoice._creationTime }]
+												: []),
+											...(invoice.issuedDate
+												? [{ type: "sent", timestamp: invoice.issuedDate }]
+												: []),
+											...(invoice.paidAt
+												? [{ type: "paid", timestamp: invoice.paidAt }]
+												: []),
+										]}
+										failureStatuses={["overdue", "cancelled"]}
+										successStatuses={["paid"]}
+									/>
+								</div>
 							</div>
-							<p className="text-muted-foreground text-sm">
-								{project?.title || "Invoice"}
-							</p>
 						</div>
-						</div>
-					</div>
 
 						{/* Two Column Layout */}
 						<div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
