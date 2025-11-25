@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/sidebar";
 import { api } from "../../../convex/_generated/api";
 import { useQuery } from "convex/react";
-import { useFeatureAccess } from "@/hooks/use-feature-access";
+import { useFeatureAccess, useCanPerformAction } from "@/hooks/use-feature-access";
 import { useRoleAccess } from "@/hooks/use-role-access";
 
 // This is sample data.
@@ -122,6 +122,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 	const tasksDueToday = taskStats?.todayTasks ?? 0;
 	const { hasOrganization } = useFeatureAccess();
 	const { isAdmin, isMember } = useRoleAccess();
+	
+	// Check if user can create new clients
+	const { canPerform: canCreateClient, reason: clientLimitReason, currentUsage: clientCurrentUsage, limit: clientLimit } =
+		useCanPerformAction("create_client");
 
 	// Helper function to compare query parameters in an order-insensitive way
 	const areQueryParamsEqual = (paramsStr1: string, paramsStr2: string) => {
@@ -252,7 +256,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 				<TeamSwitcher />
 			</SidebarHeader>
 			<SidebarContent>
-				<NavMain items={navigationItems} showQuickActions={isAdmin} />
+				<NavMain 
+					items={navigationItems} 
+					showQuickActions={isAdmin}
+					canCreateClient={canCreateClient}
+					clientLimitReason={clientLimitReason}
+					clientCurrentUsage={clientCurrentUsage}
+					clientLimit={clientLimit}
+				/>
 			</SidebarContent>
 			<SidebarFooter>
 				<NavUser />

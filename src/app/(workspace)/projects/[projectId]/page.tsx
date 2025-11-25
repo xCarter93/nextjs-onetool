@@ -10,7 +10,7 @@ import { Plus, ClipboardList, Receipt } from "lucide-react";
 import { TaskSheet } from "@/components/shared/task-sheet";
 import { ProjectViewEditForm } from "@/app/(workspace)/projects/components/project-view-edit-form";
 import { MentionSection } from "@/components/shared/mention-section";
-import { ProminentStatusBadge } from "@/components/shared/prominent-status-badge";
+import { StatusProgressBar } from "@/components/shared/status-progress-bar";
 import {
 	Popover,
 	PopoverTrigger,
@@ -172,7 +172,8 @@ export default function ProjectDetailPage() {
 	};
 
 	// Filter approved quotes for invoice generation
-	const approvedQuotes = projectQuotes?.filter((quote) => quote.status === "approved") || [];
+	const approvedQuotes =
+		projectQuotes?.filter((quote) => quote.status === "approved") || [];
 
 	return (
 		<>
@@ -201,25 +202,42 @@ export default function ProjectDetailPage() {
 			/>
 			<div className="w-full px-6">
 				<div className="w-full pt-8 pb-24">
-				{/* Header */}
-				<div className="mb-8">
-					<div className="flex items-center justify-between">
-						<div>
-							<div className="flex items-center gap-3 flex-wrap mb-2">
-								<h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
+					{/* Header */}
+					<div className="mb-8">
+						<div className="flex items-center gap-8 mb-6">
+							<div>
+								<h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white mb-2">
 									{project.title}
 								</h1>
-								<ProminentStatusBadge
+								<p className="text-base text-gray-600 dark:text-gray-400">
+									Project #{project.projectNumber || projectId.slice(-6)}
+								</p>
+							</div>
+							<div className="flex-1">
+								<StatusProgressBar
 									status={project.status}
-									size="large"
-									showIcon={true}
-									entityType="project"
+									steps={[
+										{ id: "planned", name: "Planned", order: 1 },
+										{ id: "in-progress", name: "In Progress", order: 2 },
+										{ id: "completed", name: "Completed", order: 3 },
+									]}
+									events={[
+										...(project._creationTime
+											? [{ type: "planned", timestamp: project._creationTime }]
+											: []),
+										...(project.startDate
+											? [{ type: "in-progress", timestamp: project.startDate }]
+											: []),
+										...(project.completedAt
+											? [{ type: "completed", timestamp: project.completedAt }]
+											: []),
+									]}
+									failureStatuses={["cancelled"]}
+									successStatuses={["completed"]}
 								/>
 							</div>
-							<p className="text-base text-gray-600 dark:text-gray-400">
-								Project #{project.projectNumber || projectId.slice(-6)}
-							</p>
 						</div>
+						<div className="flex items-center justify-end">
 							<div className="flex items-center gap-3">
 								{/* Tasks Summary - Compact */}
 								<Popover>
@@ -281,7 +299,7 @@ export default function ProjectDetailPage() {
 														>
 															<div className="flex items-center gap-3 flex-1 min-w-0">
 																<div
-																	className={`w-2 h-2 rounded-full flex-shrink-0 ${
+																	className={`w-2 h-2 rounded-full shrink-0 ${
 																		task.status === "completed"
 																			? "bg-green-500"
 																			: task.status === "cancelled"
@@ -387,7 +405,7 @@ export default function ProjectDetailPage() {
 															}
 														>
 															<div className="flex items-center gap-3 flex-1 min-w-0">
-																<div className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />
+																<div className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
 																<div className="flex-1 min-w-0">
 																	<p className="font-medium text-sm text-gray-900 dark:text-white truncate">
 																		Quote #
@@ -398,7 +416,7 @@ export default function ProjectDetailPage() {
 																	</p>
 																</div>
 															</div>
-															<div className="text-right flex-shrink-0">
+															<div className="text-right shrink-0">
 																{quote.total && (
 																	<p className="font-medium text-sm text-gray-900 dark:text-white">
 																		${quote.total.toLocaleString()}
@@ -438,32 +456,32 @@ export default function ProjectDetailPage() {
 						</div>
 					</div>
 
-				{/* Project View/Edit Form Component */}
-				<ProjectViewEditForm
-					projectId={projectId}
-					project={project}
-					onUpdate={handleUpdate}
-					onDelete={handleDeleteProject}
-					onStatusUpdate={handleStatusUpdate}
-					isUpdating={isUpdating}
-					projectTasks={projectTasks}
-					projectQuotes={projectQuotes}
-					approvedQuotesCount={approvedQuotes.length}
-					onTaskSheetOpen={() => setIsTaskSheetOpen(true)}
-					onNavigate={(path) => router.push(path)}
-					onGenerateInvoice={() => setIsInvoiceModalOpen(true)}
-				/>
-
-				{/* Team Communication Section */}
-				<div className="mt-8">
-					<MentionSection
-						entityType="project"
-						entityId={projectId}
-						entityName={project.title}
+					{/* Project View/Edit Form Component */}
+					<ProjectViewEditForm
+						projectId={projectId}
+						project={project}
+						onUpdate={handleUpdate}
+						onDelete={handleDeleteProject}
+						onStatusUpdate={handleStatusUpdate}
+						isUpdating={isUpdating}
+						projectTasks={projectTasks}
+						projectQuotes={projectQuotes}
+						approvedQuotesCount={approvedQuotes.length}
+						onTaskSheetOpen={() => setIsTaskSheetOpen(true)}
+						onNavigate={(path) => router.push(path)}
+						onGenerateInvoice={() => setIsInvoiceModalOpen(true)}
 					/>
+
+					{/* Team Communication Section */}
+					<div className="mt-8">
+						<MentionSection
+							entityType="project"
+							entityId={projectId}
+							entityName={project.title}
+						/>
+					</div>
 				</div>
 			</div>
-		</div>
 		</>
 	);
 }

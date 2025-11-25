@@ -37,10 +37,21 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { TaskSheet } from "@/components/shared/task-sheet";
+import { useToast } from "@/hooks/use-toast";
+import { useRouter } from "next/navigation";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export function NavMain({
 	items,
 	showQuickActions = true,
+	canCreateClient = true,
+	clientLimitReason,
+	clientCurrentUsage,
+	clientLimit,
 }: {
 	items: {
 		title: string;
@@ -56,12 +67,32 @@ export function NavMain({
 		}[];
 	}[];
 	showQuickActions?: boolean;
+	canCreateClient?: boolean;
+	clientLimitReason?: string;
+	clientCurrentUsage?: number;
+	clientLimit?: number | "unlimited";
 }) {
 	const [openQuickActions, setOpenQuickActions] = React.useState(false);
 	const [taskSheetOpen, setTaskSheetOpen] = React.useState(false);
 	const isMobile = useIsMobile();
+	const toast = useToast();
+	const router = useRouter();
 	const openTimerRef = React.useRef<number | null>(null);
 	const closeTimerRef = React.useRef<number | null>(null);
+	
+	const handleNewClientClick = React.useCallback((e: React.MouseEvent) => {
+		if (!canCreateClient) {
+			e.preventDefault();
+			toast.error(
+				"Upgrade Required",
+				clientLimitReason || "You've reached your client limit"
+			);
+			setOpenQuickActions(false);
+			return;
+		}
+		setOpenQuickActions(false);
+		router.push("/clients/new");
+	}, [canCreateClient, clientLimitReason, toast, router]);
 
 	const handleOpenChange = React.useCallback((open: boolean) => {
 		// Clear any pending timers
@@ -166,28 +197,55 @@ export function NavMain({
 								>
 									<div className="flex flex-col md:flex-row gap-3">
 										{/* Create Client */}
-										<DropdownMenuItem
-											asChild
-											className="p-0"
-											onSelect={() => setOpenQuickActions(false)}
-										>
-											<Link
-												href="/clients/new"
-												className="group relative flex w-full md:w-44 flex-col items-start gap-2 rounded-lg border bg-card p-3 shadow-sm hover:bg-accent hover:text-accent-foreground transition-all duration-200"
-											>
-												<div className="flex items-center gap-2">
-													<div className="rounded-lg bg-blue-500/10 dark:bg-blue-500/20 p-2">
-														<UserPlus className="size-5 text-blue-600 dark:text-blue-400" />
+										<Tooltip>
+											<TooltipTrigger asChild>
+												<DropdownMenuItem
+													className="p-0"
+													onSelect={(e) => {
+														e.preventDefault();
+														handleNewClientClick(e as unknown as React.MouseEvent);
+													}}
+												>
+													<button
+														type="button"
+														disabled={!canCreateClient}
+														className={cn(
+															"group relative flex w-full md:w-44 flex-col items-start gap-2 rounded-lg border bg-card p-3 shadow-sm transition-all duration-200",
+															canCreateClient
+																? "hover:bg-accent hover:text-accent-foreground cursor-pointer"
+																: "opacity-50 cursor-not-allowed"
+														)}
+													>
+														<div className="flex items-center gap-2">
+															<div className="rounded-lg bg-blue-500/10 dark:bg-blue-500/20 p-2">
+																<UserPlus className="size-5 text-blue-600 dark:text-blue-400" />
+															</div>
+															<span className="font-semibold text-sm">
+																New Client
+															</span>
+														</div>
+														<p className="text-xs text-muted-foreground">
+															Add a new client to your workspace
+														</p>
+													</button>
+												</DropdownMenuItem>
+											</TooltipTrigger>
+											{!canCreateClient && (
+												<TooltipContent>
+													<div className="space-y-1">
+														<p className="font-semibold">Upgrade Required</p>
+														<p>{clientLimitReason || "You've reached your client limit"}</p>
+														{clientLimit &&
+															clientLimit !== "unlimited" &&
+															clientCurrentUsage !== undefined && (
+																<p className="text-muted-foreground">
+																	{clientCurrentUsage}/{clientLimit} clients
+																</p>
+															)}
 													</div>
-													<span className="font-semibold text-sm">
-														New Client
-													</span>
-												</div>
-												<p className="text-xs text-muted-foreground">
-													Add a new client to your workspace
-												</p>
-											</Link>
-										</DropdownMenuItem>
+												</TooltipContent>
+											)}
+										</Tooltip>
 
 										{/* Create Project */}
 										<DropdownMenuItem
