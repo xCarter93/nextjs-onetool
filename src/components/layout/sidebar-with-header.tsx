@@ -23,13 +23,13 @@ export function SidebarWithHeader({ children }: SidebarWithHeaderProps) {
 			<SidebarInset>
 				{/* Modern Header with Enhanced Design */}
 				<motion.header
-					className="sticky top-0 z-30 isolate overflow-hidden backdrop-blur-xl bg-background/80 dark:bg-background/80 border-b border-border/40 dark:border-border/20 transition-all duration-200"
+					className="sticky top-0 z-30 isolate overflow-hidden backdrop-blur-xl bg-background/95 dark:bg-background/90 border-b border-border/60 dark:border-border/40 shadow-sm dark:shadow-md transition-all duration-200"
 					initial={{ opacity: 0, y: -10 }}
 					animate={{ opacity: 1, y: 0 }}
 					transition={{ duration: 0.3 }}
 				>
-					{/* Subtle ambient lighting */}
-					<div className="absolute inset-0 bg-gradient-to-r from-primary/2 via-transparent to-primary/2" />
+					{/* Enhanced ambient lighting for better separation */}
+					<div className="absolute inset-0 bg-gradient-to-r from-primary/3 via-transparent to-primary/3 dark:from-primary/5 dark:via-transparent dark:to-primary/5" />
 
 					{/* Header Content */}
 					<div className="relative flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4">
@@ -85,8 +85,8 @@ export function SidebarWithHeader({ children }: SidebarWithHeaderProps) {
 					</div>
 					</div>
 
-					{/* Bottom Border Gradient */}
-					<div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-border/60 to-transparent" />
+					{/* Enhanced bottom border gradient for clearer separation */}
+					<div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-border/80 dark:via-border/60 to-transparent" />
 				</motion.header>
 
 				<div className="flex flex-1 flex-col gap-4 pt-0">{children}</div>
