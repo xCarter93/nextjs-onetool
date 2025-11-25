@@ -53,6 +53,11 @@ import DeleteConfirmationModal from "@/components/ui/delete-confirmation-modal";
 import { StyledButton } from "@/components/ui/styled/styled-button";
 import { CsvImportModal } from "@/app/(workspace)/clients/components/csv-import-modal";
 import { useCanPerformAction } from "@/hooks/use-feature-access";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 type Client = {
 	id: string;
@@ -258,7 +263,10 @@ export default function ClientsPage() {
 		[]
 	);
 	const [globalQuery, setGlobalQuery] = React.useState("");
-	const pageSize = 10;
+	const [pagination, setPagination] = React.useState({
+		pageIndex: 0,
+		pageSize: 10,
+	});
 
 	const handleDelete = (id: string, name: string) => {
 		setClientToDelete({ id, name });
@@ -317,11 +325,12 @@ export default function ClientsPage() {
 			sorting,
 			columnFilters,
 			globalFilter: globalQuery,
-			pagination: { pageIndex: 0, pageSize },
+			pagination,
 		},
 		onSortingChange: setSorting,
 		onColumnFiltersChange: setColumnFilters,
 		onGlobalFilterChange: setGlobalQuery,
+		onPaginationChange: setPagination,
 		globalFilterFn: (row, columnId, value) => {
 			// If no search value, show all rows
 			if (!value || value.trim() === "") return true;
@@ -359,9 +368,10 @@ export default function ClientsPage() {
 		getPaginationRowModel: getPaginationRowModel(),
 	});
 
+	// Reset to first page when switching tabs or when search changes
 	React.useEffect(() => {
-		table.setPageSize(pageSize);
-	}, [pageSize, table]);
+		setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+	}, [activeTab, globalQuery]);
 
 	// Loading state
 	if (
@@ -373,7 +383,7 @@ export default function ClientsPage() {
 			<div className="relative p-6 space-y-6">
 				<div className="flex items-center justify-between">
 					<div className="flex items-center gap-3">
-						<div className="w-1.5 h-6 bg-gradient-to-b from-primary to-primary/60 rounded-full" />
+						<div className="w-1.5 h-6 bg-linear-to-b from-primary to-primary/60 rounded-full" />
 						<div>
 							<h1 className="text-2xl font-bold text-foreground">Clients</h1>
 							<p className="text-muted-foreground text-sm">
@@ -402,7 +412,7 @@ export default function ClientsPage() {
 		<div className="relative p-6 space-y-6">
 			<div className="flex items-center justify-between">
 				<div className="flex items-center gap-3">
-					<div className="w-1.5 h-6 bg-gradient-to-b from-primary to-primary/60 rounded-full" />
+					<div className="w-1.5 h-6 bg-linear-to-b from-primary to-primary/60 rounded-full" />
 					<div>
 						<h1 className="text-2xl font-bold text-foreground">Clients</h1>
 						<p className="text-muted-foreground text-sm">
@@ -411,43 +421,81 @@ export default function ClientsPage() {
 					</div>
 				</div>
 				<div className="flex gap-2">
-					<StyledButton
-						intent="outline"
-						size="sm"
-						onClick={() => setImportModalOpen(true)}
-					>
-						<Upload className="h-4 w-4" />
-						Import Clients
-					</StyledButton>
-					<button
-						onClick={handleAddClient}
-						disabled={!canPerform}
-						className="group inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-all duration-200 px-4 py-2 rounded-lg bg-primary/10 hover:bg-primary/15 ring-1 ring-primary/30 hover:ring-primary/40 shadow-sm hover:shadow-md backdrop-blur-sm disabled:opacity-50 disabled:cursor-not-allowed"
-						title={!canPerform ? reason : undefined}
-					>
-						<Plus className="h-4 w-4" />
-						Add Client
-						{!canPerform &&
-							limit &&
-							limit !== "unlimited" &&
-							currentUsage !== undefined && (
-								<Badge variant="secondary" className="ml-1 text-xs">
-									{currentUsage}/{limit}
-								</Badge>
-							)}
-						<span
-							aria-hidden="true"
-							className="group-hover:translate-x-1 transition-transform duration-200"
-						>
-							→
-						</span>
-					</button>
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<span className="inline-block">
+								<StyledButton
+									intent="outline"
+									size="md"
+									onClick={() => setImportModalOpen(true)}
+									disabled={!canPerform}
+								>
+									<Upload className="h-4 w-4" />
+									Import Clients
+								</StyledButton>
+							</span>
+						</TooltipTrigger>
+						{!canPerform && (
+							<TooltipContent>
+								<div className="space-y-1">
+									<p className="font-semibold">Upgrade Required</p>
+									<p>{reason || "You've reached your client limit"}</p>
+									{limit &&
+										limit !== "unlimited" &&
+										currentUsage !== undefined && (
+											<p className="text-muted-foreground">
+												{currentUsage}/{limit} clients
+											</p>
+										)}
+								</div>
+							</TooltipContent>
+						)}
+					</Tooltip>
+
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<span className="inline-block">
+								<StyledButton
+									intent="primary"
+									size="md"
+									onClick={handleAddClient}
+									disabled={!canPerform}
+									icon={<Plus className="h-4 w-4" />}
+								>
+									Add Client
+									{!canPerform &&
+										limit &&
+										limit !== "unlimited" &&
+										currentUsage !== undefined && (
+											<Badge variant="secondary" className="ml-1 text-xs">
+												{currentUsage}/{limit}
+											</Badge>
+										)}
+								</StyledButton>
+							</span>
+						</TooltipTrigger>
+						{!canPerform && (
+							<TooltipContent>
+								<div className="space-y-1">
+									<p className="font-semibold">Upgrade Required</p>
+									<p>{reason || "You've reached your client limit"}</p>
+									{limit &&
+										limit !== "unlimited" &&
+										currentUsage !== undefined && (
+											<p className="text-muted-foreground">
+												{currentUsage}/{limit} clients
+											</p>
+										)}
+								</div>
+							</TooltipContent>
+						)}
+					</Tooltip>
 				</div>
 			</div>
 
 			<div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 				<Card className="group relative backdrop-blur-md overflow-hidden ring-1 ring-border/20 dark:ring-border/40">
-					<div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
+					<div className="absolute inset-0 bg-linear-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
 					<CardHeader className="relative z-10">
 						<CardTitle className="flex items-center gap-2 text-base">
 							<Users className="size-4" /> Prospective Clients
@@ -463,7 +511,7 @@ export default function ClientsPage() {
 					</CardContent>
 				</Card>
 				<Card className="group relative backdrop-blur-md overflow-hidden ring-1 ring-border/20 dark:ring-border/40">
-					<div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
+					<div className="absolute inset-0 bg-linear-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
 					<CardHeader className="relative z-10">
 						<CardTitle className="text-base">Active Clients</CardTitle>
 						<CardDescription>Clients engaged in work right now</CardDescription>
@@ -475,7 +523,7 @@ export default function ClientsPage() {
 					</CardContent>
 				</Card>
 				<Card className="group relative backdrop-blur-md overflow-hidden ring-1 ring-border/20 dark:ring-border/40">
-					<div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
+					<div className="absolute inset-0 bg-linear-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
 					<CardHeader className="relative z-10">
 						<CardTitle className="text-base">Inactive Clients</CardTitle>
 						<CardDescription>
@@ -491,7 +539,7 @@ export default function ClientsPage() {
 			</div>
 
 			<Card className="group relative backdrop-blur-md overflow-hidden ring-1 ring-border/20 dark:ring-border/40">
-				<div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
+				<div className="absolute inset-0 bg-linear-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
 				<CardHeader className="relative z-10 flex flex-col gap-2 border-b">
 					<div className="flex items-center justify-between gap-3">
 						<div>
@@ -535,21 +583,36 @@ export default function ClientsPage() {
 										Create your first client to start organizing relationships
 										and tracking activity.
 									</p>
-									<button
-										onClick={handleAddClient}
-										disabled={!canPerform}
-										className="group inline-flex items-center gap-2 rounded-lg bg-primary/10 px-4 py-2 text-sm font-semibold text-primary shadow-sm transition-all duration-200 hover:bg-primary/15 hover:text-primary/80 hover:shadow-md ring-1 ring-primary/30 hover:ring-primary/40 backdrop-blur-sm disabled:opacity-50 disabled:cursor-not-allowed"
-										title={!canPerform ? reason : undefined}
-									>
-										<Plus className="h-4 w-4" />
-										Add Your First Client
-										<span
-											aria-hidden="true"
-											className="transition-transform duration-200 group-hover:translate-x-1"
-										>
-											→
-										</span>
-									</button>
+									<Tooltip>
+										<TooltipTrigger asChild>
+											<span className="inline-block">
+												<StyledButton
+													intent="primary"
+													size="md"
+													onClick={handleAddClient}
+													disabled={!canPerform}
+													icon={<Plus className="h-4 w-4" />}
+												>
+													Add Your First Client
+												</StyledButton>
+											</span>
+										</TooltipTrigger>
+										{!canPerform && (
+											<TooltipContent>
+												<div className="space-y-1">
+													<p className="font-semibold">Upgrade Required</p>
+													<p>{reason || "You've reached your client limit"}</p>
+													{limit &&
+														limit !== "unlimited" &&
+														currentUsage !== undefined && (
+															<p className="text-muted-foreground">
+																{currentUsage}/{limit} clients
+															</p>
+														)}
+												</div>
+											</TooltipContent>
+										)}
+									</Tooltip>
 								</div>
 							) : (
 								<div className="px-6">
