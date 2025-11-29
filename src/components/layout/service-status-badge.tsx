@@ -75,9 +75,17 @@ function ServiceStatusItem({ service }: { service: Doc<"serviceStatus"> }) {
 		}
 	};
 
-	const displayName = service.serviceName
-		.replace(/_/g, " ")
-		.replace(/\b\w/g, (l) => l.toUpperCase());
+	// Custom display name mapping
+	const getDisplayName = (serviceName: string) => {
+		if (serviceName === "boldsign_esignature") {
+			return "E-Signature";
+		}
+		return serviceName
+			.replace(/_/g, " ")
+			.replace(/\b\w/g, (l) => l.toUpperCase());
+	};
+
+	const displayName = getDisplayName(service.serviceName);
 
 	return (
 		<div className="flex items-center justify-between text-sm">

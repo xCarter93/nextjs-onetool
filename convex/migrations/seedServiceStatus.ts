@@ -8,6 +8,7 @@ export const seedServiceStatus = internalMutation({
 			{ serviceName: "convex_functions", provider: "convex" },
 			{ serviceName: "clerk_auth", provider: "clerk" },
 			{ serviceName: "clerk_billing", provider: "clerk" },
+			{ serviceName: "boldsign_esignature", provider: "boldsign" },
 		];
 
 		for (const service of services) {
