@@ -40,6 +40,8 @@ import {
 	ExternalLink,
 	Trash2,
 	CheckCircle,
+	TableProperties,
+	LayoutGrid,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { Doc } from "../../../../convex/_generated/dataModel";
@@ -47,11 +49,67 @@ import { useMutation } from "convex/react";
 import { useState } from "react";
 import type { Id } from "../../../../convex/_generated/dataModel";
 import DeleteConfirmationModal from "@/components/ui/delete-confirmation-modal";
+import { StyledButton, StyledBadge } from "@/components/ui/styled";
+import {
+	KanbanBoard,
+	KanbanCard,
+	KanbanCards,
+	KanbanHeader,
+	KanbanProvider,
+} from "../projects/components/kanban";
+import { ButtonGroup } from "@/components/ui/button-group";
+import { cn } from "@/lib/utils";
 
 type InvoiceWithClient = Doc<"invoices"> & {
 	clientName: string;
 	projectName?: string;
 };
+
+type InvoiceKanbanItem = {
+	id: string;
+	name: string;
+	column: Doc<"invoices">["status"];
+	status: Doc<"invoices">["status"];
+	clientName: string;
+	total: number;
+	invoiceNumber: string;
+	dueDate: number;
+	issuedDate: number;
+};
+
+type InvoiceKanbanColumn = {
+	id: Doc<"invoices">["status"];
+	name: string;
+	description: string;
+};
+
+const kanbanColumns: InvoiceKanbanColumn[] = [
+	{
+		id: "draft",
+		name: "Draft",
+		description: "Being prepared",
+	},
+	{
+		id: "sent",
+		name: "Sent",
+		description: "Awaiting payment",
+	},
+	{
+		id: "paid",
+		name: "Paid",
+		description: "Payment received",
+	},
+	{
+		id: "overdue",
+		name: "Overdue",
+		description: "Past due date",
+	},
+	{
+		id: "cancelled",
+		name: "Cancelled",
+		description: "Voided invoices",
+	},
+];
 
 const statusVariant = (status: string, dueDate: number) => {
 	// Check if overdue
@@ -198,12 +256,15 @@ const createColumns = (
 
 export default function InvoicesPage() {
 	const router = useRouter();
+	const [viewMode, setViewMode] = useState<"table" | "kanban">("table");
 	const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 	const [invoiceToDelete, setInvoiceToDelete] = useState<{
 		id: string;
 		name: string;
 	} | null>(null);
 	const deleteInvoice = useMutation(api.invoices.remove);
+	const updateInvoiceStatus = useMutation(api.invoices.update);
+	const [kanbanData, setKanbanData] = useState<InvoiceKanbanItem[]>([]);
 
 	// Fetch data from Convex
 	const invoices = useQuery(api.invoices.list, {});
@@ -236,6 +297,46 @@ export default function InvoicesPage() {
 	const [query, setQuery] = React.useState("");
 	const pageSize = 10;
 
+	const invoiceStatusMap = React.useMemo(() => {
+		const statusMap = new Map<string, Doc<"invoices">["status"]>();
+		data.forEach((invoice) => {
+			// Check if overdue
+			const isOverdue =
+				invoice.status === "sent" && invoice.dueDate < Date.now();
+			const effectiveStatus = isOverdue ? "overdue" : invoice.status;
+			statusMap.set(invoice._id, effectiveStatus as Doc<"invoices">["status"]);
+		});
+		return statusMap;
+	}, [data]);
+
+	React.useEffect(() => {
+		if (!data || data.length === 0) {
+			setKanbanData([]);
+			return;
+		}
+
+		setKanbanData(
+			data.map((invoice) => {
+				// Check if overdue
+				const isOverdue =
+					invoice.status === "sent" && invoice.dueDate < Date.now();
+				const effectiveStatus = isOverdue ? "overdue" : invoice.status;
+
+				return {
+					id: invoice._id,
+					name: invoice.projectName || "No project",
+					column: effectiveStatus as Doc<"invoices">["status"],
+					status: effectiveStatus as Doc<"invoices">["status"],
+					clientName: invoice.clientName,
+					total: invoice.total,
+					invoiceNumber: invoice.invoiceNumber,
+					dueDate: invoice.dueDate,
+					issuedDate: invoice.issuedDate,
+				};
+			})
+		);
+	}, [data]);
+
 	const handleDelete = (id: string, name: string) => {
 		setInvoiceToDelete({ id, name });
 		setDeleteModalOpen(true);
@@ -252,6 +353,38 @@ export default function InvoicesPage() {
 			}
 		}
 	};
+
+	const handleKanbanDataChange = React.useCallback(
+		(nextData: InvoiceKanbanItem[]) => {
+			setKanbanData(nextData);
+
+			const changedItem = nextData.find((item) => {
+				const originalStatus = invoiceStatusMap.get(item.id);
+				return originalStatus && originalStatus !== item.column;
+			});
+
+			if (changedItem) {
+				// Don't allow moving from overdue to sent - that's computed
+				if (changedItem.column === "sent" || changedItem.column === "overdue") {
+					// If trying to move from/to overdue, just update to "sent"
+					updateInvoiceStatus({
+						id: changedItem.id as Id<"invoices">,
+						status: "sent",
+					}).catch((error) => {
+						console.error("Failed to update invoice status:", error);
+					});
+				} else {
+					updateInvoiceStatus({
+						id: changedItem.id as Id<"invoices">,
+						status: changedItem.column,
+					}).catch((error) => {
+						console.error("Failed to update invoice status:", error);
+					});
+				}
+			}
+		},
+		[invoiceStatusMap, updateInvoiceStatus]
+	);
 
 	const table = useReactTable({
 		data,
@@ -369,21 +502,49 @@ export default function InvoicesPage() {
 			<Card className="group relative backdrop-blur-md overflow-hidden ring-1 ring-border/20 dark:ring-border/40">
 				<div className="absolute inset-0 bg-linear-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
 				<CardHeader className="relative z-10 flex flex-col gap-2 border-b">
-					<div className="flex items-center justify-between gap-3">
-						<div>
-							<CardTitle>Invoices</CardTitle>
-							<CardDescription>
-								Search, sort, and browse your invoices
-							</CardDescription>
-						</div>
-						<div className="flex items-center gap-2">
-							<Input
-								placeholder="Search invoices..."
-								value={query}
-								onChange={(e) => setQuery(e.target.value)}
-								className="w-96"
-							/>
-						</div>
+					<div>
+						<CardTitle>Invoices</CardTitle>
+						<CardDescription>
+							Search, sort, and browse your invoices
+						</CardDescription>
+					</div>
+					<div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+						<Input
+							placeholder="Search invoices..."
+							value={query}
+							onChange={(e) => setQuery(e.target.value)}
+							className="w-full md:w-96"
+						/>
+						<ButtonGroup>
+							<button
+								onClick={() => setViewMode("table")}
+								aria-pressed={viewMode === "table"}
+								aria-label="Table view"
+								className={cn(
+									"inline-flex items-center gap-2 font-semibold transition-all duration-200 text-xs px-3 py-1.5 ring-1 shadow-sm hover:shadow-md backdrop-blur-sm",
+									viewMode === "table"
+										? "text-primary hover:text-primary/80 bg-primary/10 hover:bg-primary/15 ring-primary/30 hover:ring-primary/40"
+										: "text-gray-600 hover:text-gray-700 bg-transparent hover:bg-gray-50 ring-transparent hover:ring-gray-200 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:bg-gray-800 dark:hover:ring-gray-700"
+								)}
+							>
+								<TableProperties className="w-4 h-4" />
+								<span className="hidden sm:inline">Table</span>
+							</button>
+							<button
+								onClick={() => setViewMode("kanban")}
+								aria-pressed={viewMode === "kanban"}
+								aria-label="Kanban view"
+								className={cn(
+									"inline-flex items-center gap-2 font-semibold transition-all duration-200 text-xs px-3 py-1.5 ring-1 shadow-sm hover:shadow-md backdrop-blur-sm",
+									viewMode === "kanban"
+										? "text-primary hover:text-primary/80 bg-primary/10 hover:bg-primary/15 ring-primary/30 hover:ring-primary/40"
+										: "text-gray-600 hover:text-gray-700 bg-transparent hover:bg-gray-50 ring-transparent hover:ring-gray-200 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:bg-gray-800 dark:hover:ring-gray-700"
+								)}
+							>
+								<LayoutGrid className="w-4 h-4" />
+								<span className="hidden sm:inline">Kanban</span>
+							</button>
+						</ButtonGroup>
 					</div>
 				</CardHeader>
 				<CardContent className="relative z-10 px-0">
@@ -399,6 +560,126 @@ export default function InvoicesPage() {
 								Create invoices from approved quotes on the Projects page to get
 								started tracking payments and revenue.
 							</p>
+						</div>
+					) : viewMode === "kanban" ? (
+						<div className="px-2 py-6 h-[calc(100vh-28rem)]">
+							<KanbanProvider
+								columns={kanbanColumns}
+								data={kanbanData}
+								onDataChange={handleKanbanDataChange}
+							>
+								{(column) => {
+									const columnItems = kanbanData.filter(
+										(item) => item.column === column.id
+									);
+
+									return (
+										<KanbanBoard
+											key={column.id}
+											id={column.id}
+											className="bg-card/60 flex flex-col"
+										>
+											<KanbanHeader className="flex items-center justify-between border-b bg-muted/30 shrink-0">
+												<div>
+													<p className="font-semibold text-sm text-foreground">
+														{column.name}
+													</p>
+													<p className="text-xs text-muted-foreground">
+														{column.description}
+													</p>
+												</div>
+												<StyledBadge variant="outline">
+													{columnItems.length}
+												</StyledBadge>
+											</KanbanHeader>
+											<KanbanCards id={column.id}>
+												{(item: InvoiceKanbanItem) => (
+													<KanbanCard
+														key={item.id}
+														id={item.id}
+														name={item.name}
+														column={item.column}
+													>
+														<div className="space-y-3">
+															<div className="flex items-center justify-between gap-2">
+																<p className="text-sm font-semibold text-foreground">
+																	{item.invoiceNumber}
+																</p>
+																<StyledBadge
+																	variant={statusVariant(
+																		item.status,
+																		item.dueDate
+																	)}
+																>
+																	{formatStatus(item.status, item.dueDate)}
+																</StyledBadge>
+															</div>
+															<div className="text-xs text-muted-foreground">
+																{item.name}
+															</div>
+															<div className="flex items-center justify-between text-xs">
+																<span className="text-muted-foreground">
+																	Client: {item.clientName}
+																</span>
+															</div>
+															<div className="flex flex-col gap-1 text-xs border-t border-border/50 pt-2">
+																<div className="flex items-center justify-between">
+																	<span className="text-muted-foreground">
+																		Issued:
+																	</span>
+																	<span className="text-foreground">
+																		{new Date(
+																			item.issuedDate
+																		).toLocaleDateString()}
+																	</span>
+																</div>
+																<div className="flex items-center justify-between">
+																	<span className="text-muted-foreground">
+																		Due:
+																	</span>
+																	<span
+																		className={cn(
+																			"text-foreground",
+																			item.dueDate < Date.now() &&
+																				item.status !== "paid" &&
+																				"text-red-600 font-medium"
+																		)}
+																	>
+																		{new Date(
+																			item.dueDate
+																		).toLocaleDateString()}
+																	</span>
+																</div>
+															</div>
+															<div className="flex items-center justify-between text-xs border-t border-border/50 pt-2">
+																<span className="font-semibold text-foreground text-base">
+																	{formatCurrency(item.total)}
+																</span>
+															</div>
+															<div className="pt-2 border-t border-border/50">
+																<StyledButton
+																	intent="outline"
+																	size="sm"
+																	icon={
+																		<ExternalLink className="h-3.5 w-3.5" />
+																	}
+																	label="View Invoice"
+																	showArrow={false}
+																	onClick={(e) => {
+																		e?.stopPropagation();
+																		router.push(`/invoices/${item.id}`);
+																	}}
+																	className="w-full justify-center"
+																/>
+															</div>
+														</div>
+													</KanbanCard>
+												)}
+											</KanbanCards>
+										</KanbanBoard>
+									);
+								}}
+							</KanbanProvider>
 						</div>
 					) : (
 						<div className="px-6">

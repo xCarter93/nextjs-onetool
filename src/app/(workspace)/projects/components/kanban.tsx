@@ -188,12 +188,9 @@ export const KanbanCards = <T extends KanbanItemProps = KanbanItemProps>({
 	const items = filteredData.map((item) => item.id);
 
 	return (
-		<ScrollArea className="overflow-hidden">
+		<ScrollArea className={cn("h-full", className)}>
 			<SortableContext items={items}>
-				<div
-					className={cn("flex flex-grow flex-col gap-2 p-2", className)}
-					{...props}
-				>
+				<div className="flex flex-col gap-2 p-2 pb-16" {...props}>
 					{filteredData.map(children)}
 				</div>
 			</SortableContext>

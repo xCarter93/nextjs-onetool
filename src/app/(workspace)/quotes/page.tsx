@@ -41,6 +41,8 @@ import {
 	ExternalLink,
 	Plus,
 	Trash2,
+	TableProperties,
+	LayoutGrid,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { Doc } from "../../../../convex/_generated/dataModel";
@@ -48,11 +50,66 @@ import { useMutation } from "convex/react";
 import { useState } from "react";
 import type { Id } from "../../../../convex/_generated/dataModel";
 import DeleteConfirmationModal from "@/components/ui/delete-confirmation-modal";
+import { StyledButton, StyledBadge } from "@/components/ui/styled";
+import {
+	KanbanBoard,
+	KanbanCard,
+	KanbanCards,
+	KanbanHeader,
+	KanbanProvider,
+} from "../projects/components/kanban";
+import { ButtonGroup } from "@/components/ui/button-group";
+import { cn } from "@/lib/utils";
 
 type QuoteWithClient = Doc<"quotes"> & {
 	clientName: string;
 	projectName?: string;
 };
+
+type QuoteKanbanItem = {
+	id: string;
+	name: string;
+	column: Doc<"quotes">["status"];
+	status: Doc<"quotes">["status"];
+	clientName: string;
+	total: number;
+	quoteNumber: string;
+	validUntil?: number;
+};
+
+type QuoteKanbanColumn = {
+	id: Doc<"quotes">["status"];
+	name: string;
+	description: string;
+};
+
+const kanbanColumns: QuoteKanbanColumn[] = [
+	{
+		id: "draft",
+		name: "Draft",
+		description: "Being prepared",
+	},
+	{
+		id: "sent",
+		name: "Sent",
+		description: "Awaiting response",
+	},
+	{
+		id: "approved",
+		name: "Approved",
+		description: "Accepted by client",
+	},
+	{
+		id: "declined",
+		name: "Declined",
+		description: "Rejected by client",
+	},
+	{
+		id: "expired",
+		name: "Expired",
+		description: "Past valid date",
+	},
+];
 
 const statusVariant = (status: string) => {
 	switch (status) {
@@ -198,12 +255,15 @@ const createColumns = (
 
 export default function QuotesPage() {
 	const router = useRouter();
+	const [viewMode, setViewMode] = useState<"table" | "kanban">("table");
 	const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 	const [quoteToDelete, setQuoteToDelete] = useState<{
 		id: string;
 		name: string;
 	} | null>(null);
 	const deleteQuote = useMutation(api.quotes.remove);
+	const updateQuoteStatus = useMutation(api.quotes.update);
+	const [kanbanData, setKanbanData] = useState<QuoteKanbanItem[]>([]);
 
 	// Fetch data from Convex
 	const quotes = useQuery(api.quotes.list, {});
@@ -236,6 +296,32 @@ export default function QuotesPage() {
 	const [query, setQuery] = React.useState("");
 	const pageSize = 10;
 
+	const quoteStatusMap = React.useMemo(() => {
+		const statusMap = new Map<string, Doc<"quotes">["status"]>();
+		data.forEach((quote) => statusMap.set(quote._id, quote.status));
+		return statusMap;
+	}, [data]);
+
+	React.useEffect(() => {
+		if (!data || data.length === 0) {
+			setKanbanData([]);
+			return;
+		}
+
+		setKanbanData(
+			data.map((quote) => ({
+				id: quote._id,
+				name: quote.title || quote.projectName || "Untitled Quote",
+				column: quote.status,
+				status: quote.status,
+				clientName: quote.clientName,
+				total: quote.total,
+				quoteNumber: quote.quoteNumber || `#${quote._id.slice(-6)}`,
+				validUntil: quote.validUntil,
+			}))
+		);
+	}, [data]);
+
 	const handleDelete = (id: string, name: string) => {
 		setQuoteToDelete({ id, name });
 		setDeleteModalOpen(true);
@@ -252,6 +338,27 @@ export default function QuotesPage() {
 			}
 		}
 	};
+
+	const handleKanbanDataChange = React.useCallback(
+		(nextData: QuoteKanbanItem[]) => {
+			setKanbanData(nextData);
+
+			const changedItem = nextData.find((item) => {
+				const originalStatus = quoteStatusMap.get(item.id);
+				return originalStatus && originalStatus !== item.column;
+			});
+
+			if (changedItem) {
+				updateQuoteStatus({
+					id: changedItem.id as Id<"quotes">,
+					status: changedItem.column,
+				}).catch((error) => {
+					console.error("Failed to update quote status:", error);
+				});
+			}
+		},
+		[quoteStatusMap, updateQuoteStatus]
+	);
 
 	const table = useReactTable({
 		data,
@@ -385,21 +492,49 @@ export default function QuotesPage() {
 			<Card className="group relative backdrop-blur-md overflow-hidden ring-1 ring-border/20 dark:ring-border/40">
 				<div className="absolute inset-0 bg-linear-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
 				<CardHeader className="relative z-10 flex flex-col gap-2 border-b">
-					<div className="flex items-center justify-between gap-3">
-						<div>
-							<CardTitle>Quotes</CardTitle>
-							<CardDescription>
-								Search, sort, and browse your quotes
-							</CardDescription>
-						</div>
-						<div className="flex items-center gap-2">
-							<Input
-								placeholder="Search quotes..."
-								value={query}
-								onChange={(e) => setQuery(e.target.value)}
-								className="w-96"
-							/>
-						</div>
+					<div>
+						<CardTitle>Quotes</CardTitle>
+						<CardDescription>
+							Search, sort, and browse your quotes
+						</CardDescription>
+					</div>
+					<div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+						<Input
+							placeholder="Search quotes..."
+							value={query}
+							onChange={(e) => setQuery(e.target.value)}
+							className="w-full md:w-96"
+						/>
+						<ButtonGroup>
+							<button
+								onClick={() => setViewMode("table")}
+								aria-pressed={viewMode === "table"}
+								aria-label="Table view"
+								className={cn(
+									"inline-flex items-center gap-2 font-semibold transition-all duration-200 text-xs px-3 py-1.5 ring-1 shadow-sm hover:shadow-md backdrop-blur-sm",
+									viewMode === "table"
+										? "text-primary hover:text-primary/80 bg-primary/10 hover:bg-primary/15 ring-primary/30 hover:ring-primary/40"
+										: "text-gray-600 hover:text-gray-700 bg-transparent hover:bg-gray-50 ring-transparent hover:ring-gray-200 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:bg-gray-800 dark:hover:ring-gray-700"
+								)}
+							>
+								<TableProperties className="w-4 h-4" />
+								<span className="hidden sm:inline">Table</span>
+							</button>
+							<button
+								onClick={() => setViewMode("kanban")}
+								aria-pressed={viewMode === "kanban"}
+								aria-label="Kanban view"
+								className={cn(
+									"inline-flex items-center gap-2 font-semibold transition-all duration-200 text-xs px-3 py-1.5 ring-1 shadow-sm hover:shadow-md backdrop-blur-sm",
+									viewMode === "kanban"
+										? "text-primary hover:text-primary/80 bg-primary/10 hover:bg-primary/15 ring-primary/30 hover:ring-primary/40"
+										: "text-gray-600 hover:text-gray-700 bg-transparent hover:bg-gray-50 ring-transparent hover:ring-gray-200 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:bg-gray-800 dark:hover:ring-gray-700"
+								)}
+							>
+								<LayoutGrid className="w-4 h-4" />
+								<span className="hidden sm:inline">Kanban</span>
+							</button>
+						</ButtonGroup>
 					</div>
 				</CardHeader>
 				<CardContent className="relative z-10 px-0">
@@ -428,6 +563,102 @@ export default function QuotesPage() {
 									→
 								</span>
 							</button>
+						</div>
+					) : viewMode === "kanban" ? (
+						<div className="px-2 py-6 h-[calc(100vh-28rem)]">
+							<KanbanProvider
+								columns={kanbanColumns}
+								data={kanbanData}
+								onDataChange={handleKanbanDataChange}
+							>
+								{(column) => {
+									const columnItems = kanbanData.filter(
+										(item) => item.column === column.id
+									);
+
+									return (
+										<KanbanBoard
+											key={column.id}
+											id={column.id}
+											className="bg-card/60 flex flex-col"
+										>
+											<KanbanHeader className="flex items-center justify-between border-b bg-muted/30 shrink-0">
+												<div>
+													<p className="font-semibold text-sm text-foreground">
+														{column.name}
+													</p>
+													<p className="text-xs text-muted-foreground">
+														{column.description}
+													</p>
+												</div>
+												<StyledBadge variant="outline">
+													{columnItems.length}
+												</StyledBadge>
+											</KanbanHeader>
+											<KanbanCards id={column.id}>
+												{(item: QuoteKanbanItem) => (
+													<KanbanCard
+														key={item.id}
+														id={item.id}
+														name={item.name}
+														column={item.column}
+													>
+														<div className="space-y-3">
+															<div className="flex items-center justify-between gap-2">
+																<p className="text-sm font-semibold text-foreground">
+																	{item.quoteNumber}
+																</p>
+																<StyledBadge
+																	variant={statusVariant(item.status)}
+																>
+																	{formatStatus(item.status)}
+																</StyledBadge>
+															</div>
+															<div className="text-xs text-muted-foreground">
+																{item.name}
+															</div>
+															<div className="flex items-center justify-between text-xs">
+																<span className="text-muted-foreground">
+																	Client: {item.clientName}
+																</span>
+															</div>
+															<div className="flex items-center justify-between text-xs border-t border-border/50 pt-2">
+																<span className="font-semibold text-foreground text-base">
+																	{formatCurrency(item.total)}
+																</span>
+																{item.validUntil && (
+																	<span className="text-muted-foreground">
+																		Valid until:{" "}
+																		{new Date(
+																			item.validUntil
+																		).toLocaleDateString()}
+																	</span>
+																)}
+															</div>
+															<div className="pt-2 border-t border-border/50">
+																<StyledButton
+																	intent="outline"
+																	size="sm"
+																	icon={
+																		<ExternalLink className="h-3.5 w-3.5" />
+																	}
+																	label="View Quote"
+																	showArrow={false}
+																	onClick={(e) => {
+																		e?.stopPropagation();
+																		router.push(`/quotes/${item.id}`);
+																	}}
+																	className="w-full justify-center"
+																/>
+															</div>
+														</div>
+													</KanbanCard>
+												)}
+											</KanbanCards>
+										</KanbanBoard>
+									);
+								}}
+							</KanbanProvider>
 						</div>
 					) : (
 						<div className="px-6">
