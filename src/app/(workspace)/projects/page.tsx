@@ -628,7 +628,7 @@ export default function ProjectsPage() {
 							</div>
 						</div>
 					) : (
-						<div className="px-2 py-6">
+						<div className="px-2 py-6 h-[calc(100vh-28rem)]">
 							<KanbanProvider
 								columns={kanbanColumns}
 								data={kanbanData}
@@ -643,9 +643,9 @@ export default function ProjectsPage() {
 										<KanbanBoard
 											key={column.id}
 											id={column.id}
-											className="bg-card/60"
+											className="bg-card/60 flex flex-col"
 										>
-											<KanbanHeader className="flex items-center justify-between border-b bg-muted/30">
+											<KanbanHeader className="flex items-center justify-between border-b bg-muted/30 shrink-0">
 												<div>
 													<p className="font-semibold text-sm text-foreground">
 														{column.name}
