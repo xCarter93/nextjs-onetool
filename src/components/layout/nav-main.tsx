@@ -8,6 +8,7 @@ import {
 	FolderPlus,
 	FilePlus,
 	CheckSquare,
+	Lock,
 	type LucideIcon,
 } from "lucide-react";
 
@@ -64,6 +65,7 @@ export function NavMain({
 			title: string;
 			url: string;
 			isActive?: boolean;
+			isLocked?: boolean;
 		}[];
 	}[];
 	showQuickActions?: boolean;
@@ -353,14 +355,34 @@ export function NavMain({
 											<SidebarMenuSub>
 												{item.items.map((subItem) => (
 													<SidebarMenuSubItem key={subItem.title}>
-														<SidebarMenuSubButton
-															asChild
-															isActive={subItem.isActive}
-														>
-															<Link href={subItem.url}>
-																<span>{subItem.title}</span>
-															</Link>
-														</SidebarMenuSubButton>
+														{subItem.isLocked ? (
+															<Tooltip>
+																<TooltipTrigger asChild>
+																	<SidebarMenuSubButton
+																		className="opacity-60 cursor-not-allowed"
+																		onClick={(e) => e.preventDefault()}
+																	>
+																		<Lock className="mr-2 h-3 w-3" />
+																		<span>{subItem.title}</span>
+																	</SidebarMenuSubButton>
+																</TooltipTrigger>
+																<TooltipContent>
+																	<div className="space-y-1">
+																		<p className="font-semibold">Premium Feature</p>
+																		<p>Upgrade to access {subItem.title}</p>
+																	</div>
+																</TooltipContent>
+															</Tooltip>
+														) : (
+															<SidebarMenuSubButton
+																asChild
+																isActive={subItem.isActive}
+															>
+																<Link href={subItem.url}>
+																	<span>{subItem.title}</span>
+																</Link>
+															</SidebarMenuSubButton>
+														)}
 													</SidebarMenuSubItem>
 												))}
 											</SidebarMenuSub>

@@ -5,8 +5,6 @@ import {
 	UserGroupIcon,
 	DocumentTextIcon,
 	CalendarDaysIcon,
-	CurrencyDollarIcon,
-	ChartBarIcon,
 	WrenchScrewdriverIcon,
 	ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";

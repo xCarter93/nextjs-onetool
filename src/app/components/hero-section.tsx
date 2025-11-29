@@ -11,7 +11,7 @@ import type { UnsplashImage, UnsplashResponse } from "@/types/unsplash";
 const DEFAULT_IMAGES: UnsplashImage[] = [
 	{
 		id: "fallback-1",
-		alt: "Field service team collaboration",
+		alt: "Small business team collaboration",
 		url: "https://images.unsplash.com/photo-1557804506-669a67965ba0?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&h=528&q=80",
 	},
 	{

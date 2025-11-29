@@ -27,7 +27,10 @@ import {
 } from "@/components/ui/sidebar";
 import { api } from "../../../convex/_generated/api";
 import { useQuery } from "convex/react";
-import { useFeatureAccess, useCanPerformAction } from "@/hooks/use-feature-access";
+import {
+	useFeatureAccess,
+	useCanPerformAction,
+} from "@/hooks/use-feature-access";
 import { useRoleAccess } from "@/hooks/use-role-access";
 
 // This is sample data.
@@ -105,12 +108,18 @@ const data = {
 				{
 					title: "Documents",
 					url: "/organization/profile?tab=documents",
+					requiresPremium: true,
 				},
 				{
 					title: "SKUs",
 					url: "/organization/profile?tab=skus",
+					requiresPremium: true,
 				},
-			],
+			] as Array<{
+				title: string;
+				url: string;
+				requiresPremium?: boolean;
+			}>,
 		},
 	],
 };
@@ -120,12 +129,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 	const searchParams = useSearchParams();
 	const taskStats = useQuery(api.tasks.getStats, {});
 	const tasksDueToday = taskStats?.todayTasks ?? 0;
-	const { hasOrganization } = useFeatureAccess();
+	const { hasOrganization, hasPremiumAccess } = useFeatureAccess();
 	const { isAdmin, isMember } = useRoleAccess();
-	
+
 	// Check if user can create new clients
-	const { canPerform: canCreateClient, reason: clientLimitReason, currentUsage: clientCurrentUsage, limit: clientLimit } =
-		useCanPerformAction("create_client");
+	const {
+		canPerform: canCreateClient,
+		reason: clientLimitReason,
+		currentUsage: clientCurrentUsage,
+		limit: clientLimit,
+	} = useCanPerformAction("create_client");
 
 	// Helper function to compare query parameters in an order-insensitive way
 	const areQueryParamsEqual = (paramsStr1: string, paramsStr2: string) => {
@@ -225,6 +238,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 				return {
 					...subItem,
 					isActive: isSubItemActive,
+					isLocked: subItem.requiresPremium && !hasPremiumAccess,
 				};
 			});
 
@@ -256,8 +270,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 				<TeamSwitcher />
 			</SidebarHeader>
 			<SidebarContent>
-				<NavMain 
-					items={navigationItems} 
+				<NavMain
+					items={navigationItems}
 					showQuickActions={isAdmin}
 					canCreateClient={canCreateClient}
 					clientLimitReason={clientLimitReason}

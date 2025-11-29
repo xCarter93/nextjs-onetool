@@ -8,7 +8,7 @@ const faqs = [
 	{
 		question: "What is OneTool and who is it for?",
 		answer:
-			"OneTool is a comprehensive field service management platform designed for contractors, landscapers, HVAC technicians, electricians, and other service professionals. It streamlines client management, project tracking, quoting, invoicing, and task scheduling in one unified platform.",
+			"OneTool is a comprehensive business management platform designed for small business owners, contractors, landscapers, HVAC technicians, electricians, and other service professionals. It streamlines client management, project tracking, quoting, invoicing, and task scheduling in one unified platform.",
 	},
 	{
 		question: "How does OneTool help me manage my clients?",
@@ -81,10 +81,10 @@ export default function FAQSection() {
 					<p className="mt-2 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl dark:text-white">
 						Frequently Asked Questions
 					</p>
-					<p className="mt-6 text-lg leading-8 text-gray-600 dark:text-gray-400">
-						Everything you need to know about OneTool and how it can transform
-						your field service business.
-					</p>
+				<p className="mt-6 text-lg leading-8 text-gray-600 dark:text-gray-400">
+					Everything you need to know about OneTool and how it can transform
+					your small business.
+				</p>
 				</motion.div>
 
 				{/* FAQ Items */}

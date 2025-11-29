@@ -150,7 +150,7 @@ export function StatusProgressBar({
 	};
 
 	return (
-		<nav aria-label="Progress" className="w-full max-w-7xl">
+		<nav aria-label="Progress" className="w-full max-w-5xl mx-auto">
 			<ol
 				role="list"
 				className="flex items-stretch rounded-full shadow-sm overflow-hidden"
@@ -202,37 +202,37 @@ export function StatusProgressBar({
 							)}
 							<div
 								className={cn(
-									"relative flex w-full items-center",
-									"px-4 py-2",
+									"relative flex w-full items-center justify-between",
+									"px-3 py-1.5",
 									!isFirst && "pl-[24px]" // Adjust padding for 20px overlap
 								)}
 							>
-								<span className="flex items-center gap-2">
+								<span className="flex items-center gap-1.5">
 									{/* Icon/Badge */}
 									{stepStatus === "complete" ? (
-										<span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white/20 ring-2 ring-white/40">
+										<span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-white/20 ring-2 ring-white/40">
 											<Check
 												aria-hidden="true"
-												className="size-4 text-white stroke-[2.5]"
+												className="size-3 text-white stroke-[2.5]"
 											/>
 										</span>
 									) : stepStatus === "current" ? (
-										<span className="flex size-8 shrink-0 items-center justify-center rounded-full border-2 border-white/50 bg-white/10">
-											<Clock className="size-4 text-white" />
+										<span className="flex size-6 shrink-0 items-center justify-center rounded-full border-2 border-white/50 bg-white/10">
+											<Clock className="size-3 text-white" />
 										</span>
 									) : (
-										<span className="flex size-8 shrink-0 items-center justify-center rounded-full border-2 border-gray-300 bg-white">
-											<span className="text-gray-500 text-xs font-medium">
+										<span className="flex size-6 shrink-0 items-center justify-center rounded-full border-2 border-gray-300 bg-white">
+											<span className="text-gray-500 text-[10px] font-medium">
 												{step.order}
 											</span>
 										</span>
 									)}
 
-									{/* Step name and timestamp */}
+									{/* Step name and label */}
 									<span className="flex flex-col items-start">
 										<span
 											className={cn(
-												"text-[10px] font-semibold uppercase tracking-wide",
+												"text-[10px] font-bold uppercase tracking-wide leading-tight",
 												getLabelColor(stepStatus)
 											)}
 										>
@@ -244,25 +244,27 @@ export function StatusProgressBar({
 										</span>
 										<span
 											className={cn(
-												"text-xs font-semibold",
+												"text-sm font-bold leading-tight",
 												getTextColor(stepStatus)
 											)}
 										>
 											{step.name}
 										</span>
-										{timestamp && (
-											<span
-												className={cn(
-													"text-[10px] mt-0.5",
-													getTextColor(stepStatus),
-													"opacity-80"
-												)}
-											>
-												{formatTimestamp(timestamp)}
-											</span>
-										)}
 									</span>
 								</span>
+
+								{/* Timestamp on the right */}
+								{timestamp && (
+									<span
+										className={cn(
+											"text-xs font-medium",
+											getTextColor(stepStatus),
+											"opacity-80 ml-1.5"
+										)}
+									>
+										{formatTimestamp(timestamp)}
+									</span>
+								)}
 							</div>
 						</li>
 					);
