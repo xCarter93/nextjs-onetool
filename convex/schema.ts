@@ -706,4 +706,21 @@ export default defineSchema({
 		.index("by_uploader", ["uploadedBy"])
 		.index("by_entity", ["entityType", "entityId"]) // NEW: Efficient lookup for "all attachments on entity X"
 		.index("by_org_entity", ["orgId", "entityType", "entityId"]), // NEW: Org-scoped entity lookup
+
+	// Service Status - monitoring for external service health
+	serviceStatus: defineTable({
+		serviceName: v.string(), // "convex_database", "convex_functions", "clerk_auth", "clerk_billing"
+		provider: v.string(), // "convex" or "clerk"
+		status: v.union(
+			v.literal("operational"),
+			v.literal("degraded"),
+			v.literal("partial_outage"),
+			v.literal("major_outage"),
+			v.literal("unknown")
+		),
+		lastChecked: v.number(), // Timestamp of last check
+		lastUpdated: v.number(), // When the status was last updated (from API)
+	})
+		.index("by_service", ["serviceName"])
+		.index("by_provider", ["provider"]),
 });
