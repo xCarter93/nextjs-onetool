@@ -5,15 +5,18 @@ import { internal } from "./_generated/api";
 export const checkServiceStatus = internalAction({
 	handler: async (ctx) => {
 		try {
-			// Fetch both APIs in parallel for better performance
-			const [convexResponse, clerkResponse] = await Promise.all([
-				fetch("https://status.convex.dev/api/v2/summary.json"),
-				fetch("https://status.clerk.com/api/v2/summary.json"),
-			]);
+			// Fetch all three APIs in parallel for better performance
+			const [convexResponse, clerkResponse, boldsignResponse] =
+				await Promise.all([
+					fetch("https://status.convex.dev/api/v2/summary.json"),
+					fetch("https://status.clerk.com/api/v2/summary.json"),
+					fetch("https://status.boldsign.com/api/v2/summary.json"),
+				]);
 
-			const [convexData, clerkData] = await Promise.all([
+			const [convexData, clerkData, boldsignData] = await Promise.all([
 				convexResponse.json(),
 				clerkResponse.json(),
+				boldsignResponse.json(),
 			]);
 
 			// Extract specific service statuses
@@ -28,6 +31,10 @@ export const checkServiceStatus = internalAction({
 			);
 			const clerkBilling = clerkData.components.find(
 				(c: { name: string }) => c.name === "Billing"
+			);
+			const boldsignAPI = boldsignData.components.find(
+				(c: { name: string; group: boolean }) =>
+					c.name === "API" && c.group === true
 			);
 
 			// Update database with results (with error handling for missing data)
@@ -56,6 +63,12 @@ export const checkServiceStatus = internalAction({
 						provider: "clerk",
 						status: clerkBilling?.status || "unknown",
 						updated: clerkBilling?.updated_at,
+					},
+					{
+						name: "boldsign_esignature",
+						provider: "boldsign",
+						status: boldsignAPI?.status || "unknown",
+						updated: boldsignAPI?.updated_at,
 					},
 				],
 				checkedAt: Date.now(),
@@ -86,6 +99,12 @@ export const checkServiceStatus = internalAction({
 					{
 						name: "clerk_billing",
 						provider: "clerk",
+						status: "unknown",
+						updated: undefined,
+					},
+					{
+						name: "boldsign_esignature",
+						provider: "boldsign",
 						status: "unknown",
 						updated: undefined,
 					},
