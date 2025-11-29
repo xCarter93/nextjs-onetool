@@ -17,7 +17,7 @@ interface ClerkIdentityWithClaims {
 		has_premium_feature_access?: boolean;
 		[key: string]: unknown;
 	};
-	public_metadata?: {
+	orgPublicMetadata?: {
 		has_premium_feature_access?: boolean;
 		[key: string]: unknown;
 	};
@@ -46,15 +46,20 @@ export const debugAuthToken = query({
 			subject: tokenData.subject,
 			issuer: tokenData.issuer,
 			email: tokenData.email,
-			// Full public metadata object
+			// Full public metadata objects
 			publicMetadata:
 				tokenData.publicMetadata || tokenData.public_metadata || null,
+			orgPublicMetadata:
+				tokenData.orgPublicMetadata || tokenData.org_public_metadata || null,
 			// Check various public metadata locations
 			publicMetadataChecks: {
 				"publicMetadata.has_premium_feature_access":
 					tokenData.publicMetadata?.has_premium_feature_access,
-				"public_metadata.has_premium_feature_access":
-					tokenData.public_metadata?.has_premium_feature_access,
+			},
+			// Check org public metadata locations
+			orgPublicMetadataChecks: {
+				"orgPublicMetadata.has_premium_feature_access":
+					tokenData.orgPublicMetadata?.has_premium_feature_access,
 			},
 			// Check for plan in various locations
 			planChecks: {
@@ -83,26 +88,38 @@ export async function hasFeature(
 
 	const tokenData = identity as ClerkIdentityWithClaims;
 
-	// Check for premium feature access at the USER level
+	// Check for premium feature access at the USER or ORGANIZATION level
 	// Backend checks public metadata since we can't use Clerk's has() method here
-	// Frontend uses both has({ plan: 'onetool_business_plan' }) and publicMetadata
+	// Frontend uses has({ plan: 'onetool_business_plan' }) and publicMetadata
 	if (feature === "premium_feature_access") {
-		// Check public metadata for has_premium_feature_access flag
-		// This should be set to true when user subscribes or is granted premium access
-		const hasPremiumViaMetadata =
-			tokenData.publicMetadata?.has_premium_feature_access === true ||
-			tokenData.public_metadata?.has_premium_feature_access === true;
+		// Check user public metadata for has_premium_feature_access flag
+		const hasPremiumViaUserMetadata =
+			tokenData.publicMetadata?.has_premium_feature_access === true;
+
+		// Check organization public metadata for has_premium_feature_access flag
+		const hasPremiumViaOrgMetadata =
+			tokenData.orgPublicMetadata?.has_premium_feature_access === true;
+
+		// User has premium if EITHER user or org has the flag set
+		const hasPremiumAccess =
+			hasPremiumViaUserMetadata || hasPremiumViaOrgMetadata;
 
 		// Debug logging to help troubleshoot (remove after confirming it works)
 		console.log("Backend premium access check:", {
-			hasPremiumViaMetadata,
-			publicMetadataExists:
+			hasPremiumViaUserMetadata,
+			hasPremiumViaOrgMetadata,
+			hasPremiumAccess,
+			userPublicMetadataExists:
 				!!tokenData.publicMetadata || !!tokenData.public_metadata,
-			publicMetadataValue:
+			orgPublicMetadataExists:
+				!!tokenData.orgPublicMetadata || !!tokenData.org_public_metadata,
+			userPublicMetadataValue:
 				tokenData.publicMetadata || tokenData.public_metadata,
+			orgPublicMetadataValue:
+				tokenData.orgPublicMetadata || tokenData.org_public_metadata,
 		});
 
-		return hasPremiumViaMetadata;
+		return hasPremiumAccess;
 	}
 
 	return false;
