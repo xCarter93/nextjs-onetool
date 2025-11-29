@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useFeatureAccess } from "@/hooks/use-feature-access";
+import { useIsAdmin } from "@/hooks/use-role-access";
 import { useRouter } from "next/navigation";
 import {
 	Popover,
@@ -30,6 +31,7 @@ export function PlanBadge() {
 		isLoading,
 		hasOrganization,
 	} = useFeatureAccess();
+	const isAdmin = useIsAdmin();
 	const router = useRouter();
 
 	if (isLoading) {
@@ -201,8 +203,8 @@ export function PlanBadge() {
 					</div>
 				)}
 
-				{/* Manage Subscription Button - Shared for all users with organization */}
-				{hasOrganization && (
+				{/* Manage Subscription Button - Admin only */}
+				{hasOrganization && isAdmin && (
 					<div className="p-4 border-t border-border bg-background">
 						<StyledButton
 							onClick={handleManageSubscription}
