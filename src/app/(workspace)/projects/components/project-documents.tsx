@@ -68,7 +68,7 @@ interface DocumentContentProps {
 const DocumentContent = memo(({ document }: DocumentContentProps) => (
 	<>
 		{/* File preview/icon */}
-		<div className="flex-shrink-0">
+		<div className="shrink-0">
 			{document.type === "signed-quote" ? (
 				<div className="h-16 w-16 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
 					<FileCheck className="h-6 w-6 text-green-600 dark:text-green-400" />
@@ -97,7 +97,7 @@ const DocumentContent = memo(({ document }: DocumentContentProps) => (
 				{document.type === "signed-quote" && (
 					<Badge
 						variant="outline"
-						className="flex-shrink-0 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800"
+						className="shrink-0 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800"
 					>
 						Signed Quote
 					</Badge>
@@ -127,7 +127,7 @@ const DocumentContent = memo(({ document }: DocumentContentProps) => (
 		</div>
 
 		{/* Download button */}
-		<div className="flex-shrink-0">
+		<div className="shrink-0">
 			<Download className="h-4 w-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors" />
 		</div>
 	</>
@@ -285,7 +285,7 @@ function DocumentDownloadLink({
 				aria-busy="true"
 				aria-label="Loading download link"
 			>
-				<Loader2 className="h-4 w-4 text-gray-400 animate-spin flex-shrink-0" />
+				<Loader2 className="h-4 w-4 text-gray-400 animate-spin shrink-0" />
 				{children}
 			</div>
 		);

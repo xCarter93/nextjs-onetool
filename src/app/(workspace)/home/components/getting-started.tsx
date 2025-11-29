@@ -56,10 +56,10 @@ export default function GettingStarted() {
 	return (
 		<Card className="group relative backdrop-blur-md overflow-hidden ring-1 ring-border/20 dark:ring-border/40">
 			{/* Glass morphism overlay */}
-			<div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
+			<div className="absolute inset-0 bg-linear-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
 			<CardContent className="relative z-10">
 				<div className="flex items-center gap-3 mb-4">
-					<div className="w-1.5 h-6 bg-gradient-to-b from-primary to-primary/60 rounded-full" />
+					<div className="w-1.5 h-6 bg-linear-to-b from-primary to-primary/60 rounded-full" />
 					<h2 className="text-lg font-semibold text-foreground tracking-tight">
 						Getting Started
 					</h2>

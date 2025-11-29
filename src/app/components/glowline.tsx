@@ -61,9 +61,7 @@ const GlowLine: React.FC<GlowLineProps> = ({
 	const positionStyle: React.CSSProperties = isVertical
 		? { left: position }
 		: { top: position };
-	const gradientDirection = isVertical
-		? "bg-gradient-to-b"
-		: "bg-gradient-to-r";
+	const gradientDirection = isVertical ? "bg-linear-to-b" : "bg-gradient-to-r";
 
 	const selectedScheme = COLOR_SCHEMES[color];
 

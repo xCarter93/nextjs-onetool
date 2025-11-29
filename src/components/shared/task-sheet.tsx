@@ -264,7 +264,7 @@ export function TaskSheet({
 	const sheetContent = (
 		<SheetContent side="right" className="w-full sm:max-w-xl !bg-background">
 			<div className="flex flex-col h-full overflow-hidden">
-				<SheetHeader className="border-b border-border pb-4 flex-shrink-0">
+				<SheetHeader className="border-b border-border pb-4 shrink-0">
 					<SheetTitle className="flex items-center gap-2 text-2xl font-semibold">
 						{isEditMode ? "Edit Task" : "Create New Task"}
 					</SheetTitle>
@@ -574,7 +574,7 @@ export function TaskSheet({
 					</form>
 				</div>
 
-				<SheetFooter className="flex flex-row justify-end gap-3 border-t border-border flex-shrink-0">
+				<SheetFooter className="flex flex-row justify-end gap-3 border-t border-border shrink-0">
 					<StyledButton
 						type="button"
 						intent="outline"

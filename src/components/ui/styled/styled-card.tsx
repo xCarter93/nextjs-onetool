@@ -29,7 +29,7 @@ export function StyledCard({
 			{...props}
 		>
 			{/* Glassmorphism gradient overlay */}
-			<div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl pointer-events-none" />
+			<div className="absolute inset-0 bg-linear-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl pointer-events-none" />
 			<div className="relative z-10">{children}</div>
 		</Card>
 	);

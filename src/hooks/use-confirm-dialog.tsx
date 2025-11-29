@@ -119,7 +119,7 @@ export const ConfirmDialogProvider: React.FC<ConfirmDialogProviderProps> = ({
 				>
 					<div className="space-y-4">
 						<div className="flex items-center space-x-3">
-							<div className="flex-shrink-0">
+							<div className="shrink-0">
 								<svg
 									className={`h-10 w-10 ${styles.iconColor}`}
 									fill="none"
@@ -157,7 +157,7 @@ export const ConfirmDialogProvider: React.FC<ConfirmDialogProviderProps> = ({
 								role="alert"
 							>
 								<div className="flex">
-									<div className="flex-shrink-0">
+									<div className="shrink-0">
 										<svg
 											className="h-5 w-5 text-red-400"
 											viewBox="0 0 20 20"

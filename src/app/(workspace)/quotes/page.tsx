@@ -302,7 +302,7 @@ export default function QuotesPage() {
 		<div className="relative p-6 space-y-6">
 			<div className="flex items-center justify-between">
 				<div className="flex items-center gap-3">
-					<div className="w-1.5 h-6 bg-gradient-to-b from-primary to-primary/60 rounded-full" />
+					<div className="w-1.5 h-6 bg-linear-to-b from-primary to-primary/60 rounded-full" />
 					<div>
 						<h1 className="text-2xl font-bold text-foreground">Quotes</h1>
 						<p className="text-muted-foreground text-sm">
@@ -327,7 +327,7 @@ export default function QuotesPage() {
 
 			<div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 				<Card className="group relative backdrop-blur-md overflow-hidden ring-1 ring-border/20 dark:ring-border/40">
-					<div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
+					<div className="absolute inset-0 bg-linear-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
 					<CardHeader className="relative z-10">
 						<CardTitle className="flex items-center gap-2 text-base">
 							<FileText className="size-4" /> Total Quotes
@@ -345,7 +345,7 @@ export default function QuotesPage() {
 					</CardContent>
 				</Card>
 				<Card className="group relative backdrop-blur-md overflow-hidden ring-1 ring-border/20 dark:ring-border/40">
-					<div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
+					<div className="absolute inset-0 bg-linear-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
 					<CardHeader className="relative z-10">
 						<CardTitle className="flex items-center gap-2 text-base">
 							<Clock className="size-4" /> Pending Approval
@@ -363,7 +363,7 @@ export default function QuotesPage() {
 					</CardContent>
 				</Card>
 				<Card className="group relative backdrop-blur-md overflow-hidden ring-1 ring-border/20 dark:ring-border/40">
-					<div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
+					<div className="absolute inset-0 bg-linear-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
 					<CardHeader className="relative z-10">
 						<CardTitle className="flex items-center gap-2 text-base">
 							<DollarSign className="size-4" /> Approved Value
@@ -383,7 +383,7 @@ export default function QuotesPage() {
 			</div>
 
 			<Card className="group relative backdrop-blur-md overflow-hidden ring-1 ring-border/20 dark:ring-border/40">
-				<div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
+				<div className="absolute inset-0 bg-linear-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
 				<CardHeader className="relative z-10 flex flex-col gap-2 border-b">
 					<div className="flex items-center justify-between gap-3">
 						<div>

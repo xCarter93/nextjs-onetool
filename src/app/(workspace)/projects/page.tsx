@@ -384,7 +384,7 @@ export default function ProjectsPage() {
 		<div className="relative p-6 space-y-6">
 			<div className="flex items-center justify-between">
 				<div className="flex items-center gap-3">
-					<div className="w-1.5 h-6 bg-gradient-to-b from-primary to-primary/60 rounded-full" />
+					<div className="w-1.5 h-6 bg-linear-to-b from-primary to-primary/60 rounded-full" />
 					<div>
 						<h1 className="text-2xl font-bold text-foreground">Projects</h1>
 						<p className="text-muted-foreground text-sm">
@@ -433,7 +433,9 @@ export default function ProjectsPage() {
 					</StyledCard>
 					<StyledCard>
 						<StyledCardHeader>
-							<StyledCardTitle className="text-base">In Progress</StyledCardTitle>
+							<StyledCardTitle className="text-base">
+								In Progress
+							</StyledCardTitle>
 							<StyledCardDescription>
 								Currently active projects
 							</StyledCardDescription>
@@ -448,9 +450,7 @@ export default function ProjectsPage() {
 					<StyledCard>
 						<StyledCardHeader>
 							<StyledCardTitle className="text-base">Completed</StyledCardTitle>
-							<StyledCardDescription>
-								Finished projects
-							</StyledCardDescription>
+							<StyledCardDescription>Finished projects</StyledCardDescription>
 						</StyledCardHeader>
 						<StyledCardContent>
 							<div className="text-3xl font-semibold">
@@ -679,8 +679,7 @@ export default function ProjectsPage() {
 																</StyledBadge>
 															</div>
 															<div className="text-xs text-muted-foreground">
-																Client:{" "}
-																{item.clientName || "Unknown Client"}
+																Client: {item.clientName || "Unknown Client"}
 															</div>
 															<div className="flex items-center justify-between text-xs text-muted-foreground">
 																<span>
@@ -706,7 +705,9 @@ export default function ProjectsPage() {
 																<StyledButton
 																	intent="outline"
 																	size="sm"
-																	icon={<ExternalLink className="h-3.5 w-3.5" />}
+																	icon={
+																		<ExternalLink className="h-3.5 w-3.5" />
+																	}
 																	label="View Project"
 																	showArrow={false}
 																	onClick={(e) => {

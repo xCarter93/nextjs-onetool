@@ -27,7 +27,7 @@ const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({
 		<Modal isOpen={isOpen} onClose={onClose} title={title} size="sm">
 			<div className="space-y-4">
 				<div className="flex items-center space-x-3">
-					<div className="flex-shrink-0">
+					<div className="shrink-0">
 						<svg
 							className="h-10 w-10 text-red-500"
 							fill="none"
@@ -68,7 +68,7 @@ const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({
 				{!isArchive && (
 					<div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md p-3">
 						<div className="flex">
-							<div className="flex-shrink-0">
+							<div className="shrink-0">
 								<svg
 									className="h-5 w-5 text-red-400"
 									viewBox="0 0 20 20"
@@ -94,7 +94,7 @@ const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({
 				{isArchive && (
 					<div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md p-3">
 						<div className="flex">
-							<div className="flex-shrink-0">
+							<div className="shrink-0">
 								<svg
 									className="h-5 w-5 text-yellow-400"
 									viewBox="0 0 20 20"

@@ -30,7 +30,7 @@ export default function ProgressBarItem({
 				className={classNames(
 					stepIdx === 0 ? "rounded-t-xl border-b-0" : "",
 					stepIdx === totalSteps - 1 ? "rounded-b-xl border-t-0" : "",
-					"overflow-hidden border border-border/40 dark:border-border/30 lg:border-0 bg-gradient-to-b from-background/50 to-background/30"
+					"overflow-hidden border border-border/40 dark:border-border/30 lg:border-0 bg-linear-to-b from-background/50 to-background/30"
 				)}
 			>
 				{step.status === "complete" ? (
@@ -46,7 +46,7 @@ export default function ProgressBarItem({
 							)}
 						>
 							<span className="shrink-0">
-								<span className="flex size-10 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/80 shadow-md ring-2 ring-primary/20">
+								<span className="flex size-10 items-center justify-center rounded-full bg-linear-to-br from-primary to-primary/80 shadow-md ring-2 ring-primary/20">
 									<CheckIcon
 										aria-hidden="true"
 										className="size-5 text-primary-foreground"
@@ -67,7 +67,7 @@ export default function ProgressBarItem({
 					<Link href={step.href || "#"} aria-current="step">
 						<span
 							aria-hidden="true"
-							className="absolute top-0 left-0 h-full w-1.5 bg-gradient-to-b from-primary to-primary/80 lg:top-auto lg:bottom-0 lg:h-1.5 lg:w-full shadow-sm"
+							className="absolute top-0 left-0 h-full w-1.5 bg-linear-to-b from-primary to-primary/80 lg:top-auto lg:bottom-0 lg:h-1.5 lg:w-full shadow-sm"
 						/>
 						<span
 							className={classNames(

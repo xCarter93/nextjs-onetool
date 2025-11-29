@@ -180,7 +180,7 @@ const PricingSwitch = ({ onSwitch }: { onSwitch: (value: string) => void }) => {
 					{selected === "0" && (
 						<motion.span
 							layoutId={"switch"}
-							className="absolute top-0 left-0 sm:h-12 h-10 w-full rounded-full border-4 shadow-sm shadow-primary border-primary bg-gradient-to-t from-primary via-primary/80 to-primary"
+							className="absolute top-0 left-0 sm:h-12 h-10 w-full rounded-full border-4 shadow-sm shadow-primary border-primary bg-linear-to-t from-primary via-primary/80 to-primary"
 							transition={{ type: "spring", stiffness: 500, damping: 30 }}
 						/>
 					)}
@@ -190,7 +190,7 @@ const PricingSwitch = ({ onSwitch }: { onSwitch: (value: string) => void }) => {
 				<button
 					onClick={() => handleSwitch("1")}
 					className={cn(
-						"relative z-10 w-fit sm:h-12 h-10 flex-shrink-0 rounded-full sm:px-6 px-3 sm:py-2 py-1 font-medium transition-colors",
+						"relative z-10 w-fit sm:h-12 h-10 shrink-0 rounded-full sm:px-6 px-3 sm:py-2 py-1 font-medium transition-colors",
 						selected === "1"
 							? "text-white"
 							: "text-muted-foreground hover:text-foreground"
@@ -199,7 +199,7 @@ const PricingSwitch = ({ onSwitch }: { onSwitch: (value: string) => void }) => {
 					{selected === "1" && (
 						<motion.span
 							layoutId={"switch"}
-							className="absolute top-0 left-0 sm:h-12 h-10 w-full rounded-full border-4 shadow-sm shadow-primary border-primary bg-gradient-to-t from-primary via-primary/80 to-primary"
+							className="absolute top-0 left-0 sm:h-12 h-10 w-full rounded-full border-4 shadow-sm shadow-primary border-primary bg-linear-to-t from-primary via-primary/80 to-primary"
 							transition={{ type: "spring", stiffness: 500, damping: 30 }}
 						/>
 					)}

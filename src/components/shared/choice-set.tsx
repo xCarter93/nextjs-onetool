@@ -44,13 +44,13 @@ const SelectService: React.FC<SelectServiceProps> = ({
 							className={`group relative flex flex-col items-center justify-center p-6 rounded-2xl border transition-all duration-300 ease-in-out transform hover:scale-105 hover:z-10 shadow-lg hover:shadow-xl backdrop-blur-sm
                 ${
 									isChecked
-										? "bg-gradient-to-br from-primary/20 to-primary/30 border-primary/60 ring-2 ring-primary/40 shadow-primary/20"
+										? "bg-linear-to-br from-primary/20 to-primary/30 border-primary/60 ring-2 ring-primary/40 shadow-primary/20"
 										: "bg-card/80 border-border/60 hover:border-primary/30 hover:bg-card/90"
 								}`}
 						>
 							{/* Selection checkmark */}
 							{isChecked && (
-								<div className="absolute -top-2 -right-2 w-7 h-7 bg-gradient-to-br from-primary to-primary/80 rounded-full flex items-center justify-center shadow-lg ring-2 ring-background animate-fade-in">
+								<div className="absolute -top-2 -right-2 w-7 h-7 bg-linear-to-br from-primary to-primary/80 rounded-full flex items-center justify-center shadow-lg ring-2 ring-background animate-fade-in">
 									<Check className="w-4 h-4 text-primary-foreground" />
 								</div>
 							)}

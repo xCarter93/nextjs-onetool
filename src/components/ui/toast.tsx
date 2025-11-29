@@ -213,13 +213,11 @@ const Notification: React.FC<NotificationProps> = ({
 			className={`relative w-full max-w-sm rounded-xl p-4 backdrop-blur-xl bg-white/15 dark:bg-black/15 border border-gray-300/60 dark:border-gray-700/60 overflow-hidden ring-1 ring-gray-200/40 dark:ring-gray-700/40 drop-shadow-xl transition-all duration-300 ease-in-out transform hover:scale-105`}
 		>
 			<div
-				className={`absolute top-0 left-0 h-full w-full bg-gradient-to-br ${config.gradient} opacity-50`}
+				className={`absolute top-0 left-0 h-full w-full bg-linear-to-br ${config.gradient} opacity-50`}
 			></div>
 			<div className="relative z-10 flex items-center space-x-4">
 				{showIcon && (
-					<div className={`flex-shrink-0 ${config.iconColor}`}>
-						{config.icon}
-					</div>
+					<div className={`shrink-0 ${config.iconColor}`}>{config.icon}</div>
 				)}
 				<div className="flex-1">
 					<p className="font-normal text-gray-900 dark:text-gray-100 text-lg">
@@ -233,7 +231,7 @@ const Notification: React.FC<NotificationProps> = ({
 				</div>
 				<button
 					onClick={onClose}
-					className="flex-shrink-0 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
+					className="shrink-0 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
 				>
 					<CloseIcon className="h-5 w-5" />
 				</button>

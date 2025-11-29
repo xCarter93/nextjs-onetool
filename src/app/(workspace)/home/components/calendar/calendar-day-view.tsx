@@ -139,7 +139,7 @@ export function CalendarDayView({
 								>
 									<div className="flex">
 										{/* Time Label */}
-										<div className="w-20 flex-shrink-0 p-3 text-right">
+										<div className="w-20 shrink-0 p-3 text-right">
 											<span
 												className={`
 													text-sm font-medium
@@ -215,7 +215,7 @@ export function CalendarDayView({
 			</div>
 
 			{/* Detail Panel - Hidden on mobile, shown on large screens */}
-			<div className="hidden lg:block lg:w-80 xl:w-96 border-l border-border bg-background overflow-hidden flex-shrink-0">
+			<div className="hidden lg:block lg:w-80 xl:w-96 border-l border-border bg-background overflow-hidden shrink-0">
 				<CalendarDetailSidebar event={selectedEvent} currentDate={date} />
 			</div>
 

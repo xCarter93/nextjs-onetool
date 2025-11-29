@@ -81,10 +81,10 @@ export default function FAQSection() {
 					<p className="mt-2 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl dark:text-white">
 						Frequently Asked Questions
 					</p>
-				<p className="mt-6 text-lg leading-8 text-gray-600 dark:text-gray-400">
-					Everything you need to know about OneTool and how it can transform
-					your small business.
-				</p>
+					<p className="mt-6 text-lg leading-8 text-gray-600 dark:text-gray-400">
+						Everything you need to know about OneTool and how it can transform
+						your small business.
+					</p>
 				</motion.div>
 
 				{/* FAQ Items */}
@@ -108,7 +108,7 @@ export default function FAQSection() {
 								<motion.div
 									animate={{ rotate: openIndex === index ? 180 : 0 }}
 									transition={{ duration: 0.3 }}
-									className="ml-4 flex-shrink-0"
+									className="ml-4 shrink-0"
 								>
 									<ChevronDown className="h-5 w-5 text-primary" />
 								</motion.div>

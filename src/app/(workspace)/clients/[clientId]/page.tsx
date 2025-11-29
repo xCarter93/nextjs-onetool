@@ -389,53 +389,53 @@ export default function ClientDetailPage() {
 		<>
 			<div className="relative min-h-screen px-6 pt-8 pb-20">
 				<div className="mx-auto">
-				{/* Client Header */}
-				<div className="mb-8">
-					<div className="flex items-start justify-between gap-6 mb-4">
-						<div className="flex items-start gap-6">
-							<div className="flex items-center justify-center w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex-shrink-0">
-								<BuildingOffice2Icon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-							</div>
-							<div className="flex-1 min-w-0">
-								<div className="flex items-center gap-3 flex-wrap mb-2">
-									<h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-										{client.companyName}
-									</h1>
-									{isEditing ? (
-										<StyledSelect
-											value={form.status}
-											onValueChange={(value) =>
-												setForm((prev) => ({
-													...prev,
-													status: value as typeof form.status,
-												}))
-											}
-										>
-											<StyledSelectTrigger className="w-auto">
-												<SelectValue />
-											</StyledSelectTrigger>
-											<StyledSelectContent>
-												{STATUS_OPTIONS.map((status) => (
-													<SelectItem key={status} value={status}>
-														{formatStatus(status)}
-													</SelectItem>
-												))}
-											</StyledSelectContent>
-										</StyledSelect>
-									) : (
-										<ProminentStatusBadge
-											status={client.status}
-											size="large"
-											showIcon={true}
-											entityType="client"
-										/>
-									)}
+					{/* Client Header */}
+					<div className="mb-8">
+						<div className="flex items-start justify-between gap-6 mb-4">
+							<div className="flex items-start gap-6">
+								<div className="flex items-center justify-center w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 shrink-0">
+									<BuildingOffice2Icon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+								</div>
+								<div className="flex-1 min-w-0">
+									<div className="flex items-center gap-3 flex-wrap mb-2">
+										<h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+											{client.companyName}
+										</h1>
+										{isEditing ? (
+											<StyledSelect
+												value={form.status}
+												onValueChange={(value) =>
+													setForm((prev) => ({
+														...prev,
+														status: value as typeof form.status,
+													}))
+												}
+											>
+												<StyledSelectTrigger className="w-auto">
+													<SelectValue />
+												</StyledSelectTrigger>
+												<StyledSelectContent>
+													{STATUS_OPTIONS.map((status) => (
+														<SelectItem key={status} value={status}>
+															{formatStatus(status)}
+														</SelectItem>
+													))}
+												</StyledSelectContent>
+											</StyledSelect>
+										) : (
+											<ProminentStatusBadge
+												status={client.status}
+												size="large"
+												showIcon={true}
+												entityType="client"
+											/>
+										)}
+									</div>
 								</div>
 							</div>
-						</div>
 
 							{/* Compact Indicators with Popovers - Aligned Right */}
-							<div className="flex items-center gap-3 flex-wrap flex-shrink-0">
+							<div className="flex items-center gap-3 flex-wrap shrink-0">
 								{/* Projects Popover */}
 								<Popover>
 									<PopoverTrigger asChild>
@@ -501,7 +501,7 @@ export default function ClientDetailPage() {
 														>
 															<div className="flex items-center gap-3 flex-1 min-w-0">
 																<div
-																	className={`w-2 h-2 rounded-full flex-shrink-0 ${
+																	className={`w-2 h-2 rounded-full shrink-0 ${
 																		project.status === "completed"
 																			? "bg-green-500"
 																			: project.status === "in-progress"
@@ -607,7 +607,7 @@ export default function ClientDetailPage() {
 															}
 														>
 															<div className="flex items-center gap-3 flex-1 min-w-0">
-																<div className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />
+																<div className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
 																<div className="flex-1 min-w-0">
 																	<p className="font-medium text-sm text-gray-900 dark:text-white truncate">
 																		Quote #{quote.quoteNumber}
@@ -619,7 +619,7 @@ export default function ClientDetailPage() {
 																	)}
 																</div>
 															</div>
-															<div className="text-right flex-shrink-0">
+															<div className="text-right shrink-0">
 																{quote.total && (
 																	<p className="font-medium text-sm text-gray-900 dark:text-white">
 																		${quote.total.toLocaleString()}
@@ -722,7 +722,7 @@ export default function ClientDetailPage() {
 														>
 															<div className="flex items-center gap-3 flex-1 min-w-0">
 																<div
-																	className={`w-2 h-2 rounded-full flex-shrink-0 ${
+																	className={`w-2 h-2 rounded-full shrink-0 ${
 																		invoice.status === "paid"
 																			? "bg-green-500"
 																			: invoice.status === "sent"
@@ -739,7 +739,7 @@ export default function ClientDetailPage() {
 																	</p>
 																</div>
 															</div>
-															<div className="text-right flex-shrink-0">
+															<div className="text-right shrink-0">
 																{invoice.total && (
 																	<p className="font-medium text-sm text-gray-900 dark:text-white">
 																		${invoice.total.toLocaleString()}
@@ -829,7 +829,7 @@ export default function ClientDetailPage() {
 														>
 															<div className="flex items-center gap-3 flex-1 min-w-0">
 																<div
-																	className={`w-2 h-2 rounded-full flex-shrink-0 ${
+																	className={`w-2 h-2 rounded-full shrink-0 ${
 																		task.status === "completed"
 																			? "bg-green-500"
 																			: task.status === "cancelled"
@@ -1238,47 +1238,47 @@ export default function ClientDetailPage() {
 									</Tabs>
 								</StyledCardContent>
 							</StyledCard>
-						{/* Client Notes Card (moved under overview) */}
-						<StyledCard>
-							<StyledCardHeader>
-								<StyledCardTitle className="text-lg">
-									Client notes
-								</StyledCardTitle>
-								<p className="text-sm text-gray-600 dark:text-gray-400">
-									Internal notes visible only to your team
-								</p>
-							</StyledCardHeader>
-							<StyledCardContent>
-								{isEditing ? (
-									<textarea
-										className="w-full min-h-[100px] px-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-md text-gray-900 dark:text-white"
-										value={form.notes}
-										onChange={(e) =>
-											setForm((f) => ({ ...f, notes: e.target.value }))
-										}
-									/>
-								) : client.notes ? (
-									<div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
-										<p className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">
-											{client.notes}
-										</p>
-									</div>
-								) : (
-									<div className="text-center py-6">
-										<p className="text-sm text-gray-600 dark:text-gray-400 italic">
-											No notes added for this client yet
-										</p>
-									</div>
-								)}
-							</StyledCardContent>
-						</StyledCard>
+							{/* Client Notes Card (moved under overview) */}
+							<StyledCard>
+								<StyledCardHeader>
+									<StyledCardTitle className="text-lg">
+										Client notes
+									</StyledCardTitle>
+									<p className="text-sm text-gray-600 dark:text-gray-400">
+										Internal notes visible only to your team
+									</p>
+								</StyledCardHeader>
+								<StyledCardContent>
+									{isEditing ? (
+										<textarea
+											className="w-full min-h-[100px] px-3 py-2 bg-gray-50 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-md text-gray-900 dark:text-white"
+											value={form.notes}
+											onChange={(e) =>
+												setForm((f) => ({ ...f, notes: e.target.value }))
+											}
+										/>
+									) : client.notes ? (
+										<div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
+											<p className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">
+												{client.notes}
+											</p>
+										</div>
+									) : (
+										<div className="text-center py-6">
+											<p className="text-sm text-gray-600 dark:text-gray-400 italic">
+												No notes added for this client yet
+											</p>
+										</div>
+									)}
+								</StyledCardContent>
+							</StyledCard>
 
-						{/* Team Communication Section */}
-						<MentionSection
-							entityType="client"
-							entityId={clientId}
-							entityName={client.companyName}
-						/>
+							{/* Team Communication Section */}
+							<MentionSection
+								entityType="client"
+								entityId={clientId}
+								entityName={client.companyName}
+							/>
 						</div>
 
 						{/* Contact Info Sidebar - Right Column */}

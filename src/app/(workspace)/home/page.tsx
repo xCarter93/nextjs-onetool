@@ -81,7 +81,7 @@ export default function Page() {
 			>
 				<div className="flex items-center justify-between mb-2">
 					<div className="flex items-center gap-3">
-						<div className="w-1 h-8 bg-gradient-to-b from-primary via-primary/80 to-primary/60 rounded-full" />
+						<div className="w-1 h-8 bg-linear-to-b from-primary via-primary/80 to-primary/60 rounded-full" />
 						<time className="text-sm font-medium text-muted-foreground tracking-wide uppercase">
 							{formatDate()}
 						</time>

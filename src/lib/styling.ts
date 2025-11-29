@@ -14,42 +14,39 @@ export const stylingPatterns = {
 	 */
 	glassCard:
 		"group relative backdrop-blur-md overflow-hidden ring-1 ring-border/20 dark:ring-border/40",
-	
+
 	/**
 	 * Glassmorphism gradient overlay
 	 */
 	glassOverlay:
-		"absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl pointer-events-none",
-	
+		"absolute inset-0 bg-linear-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl pointer-events-none",
+
 	/**
 	 * Consistent button styling
 	 */
 	buttonBase:
 		"group inline-flex items-center gap-2 font-semibold transition-all duration-200 rounded-lg ring-1 shadow-sm hover:shadow-md backdrop-blur-sm",
-	
+
 	/**
 	 * Page header styling
 	 */
-	pageHeader:
-		"flex items-center gap-3",
-	
+	pageHeader: "flex items-center gap-3",
+
 	/**
 	 * Page header accent bar
 	 */
 	pageHeaderAccent:
-		"w-1.5 h-6 bg-gradient-to-b from-primary to-primary/60 rounded-full",
-	
+		"w-1.5 h-6 bg-linear-to-b from-primary to-primary/60 rounded-full",
+
 	/**
 	 * Page title styling
 	 */
-	pageTitle:
-		"text-2xl font-bold text-foreground",
-	
+	pageTitle: "text-2xl font-bold text-foreground",
+
 	/**
 	 * Page description styling
 	 */
-	pageDescription:
-		"text-muted-foreground text-sm",
+	pageDescription: "text-muted-foreground text-sm",
 } as const;
 
 /**
@@ -113,7 +110,9 @@ export function getGlassCardClasses() {
 /**
  * Helper to generate button classes with intent
  */
-export function getButtonClasses(intent: keyof typeof intentVariants, size: keyof typeof sizeVariants = "md") {
+export function getButtonClasses(
+	intent: keyof typeof intentVariants,
+	size: keyof typeof sizeVariants = "md"
+) {
 	return `${stylingPatterns.buttonBase} ${intentVariants[intent]} ${sizeVariants[size]}`;
 }
-

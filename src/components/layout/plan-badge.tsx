@@ -58,7 +58,7 @@ export function PlanBadge() {
 					whileTap={{ scale: 0.95 }}
 					className={`group inline-flex items-center gap-2.5 font-semibold transition-all duration-200 rounded-lg ring-1 shadow-sm hover:shadow-md backdrop-blur-sm ${
 						hasPremiumAccess
-							? "px-4 py-2 text-sm bg-gradient-to-br from-amber-500/10 via-amber-400/15 to-yellow-500/10 hover:from-amber-500/15 hover:via-amber-400/20 hover:to-yellow-500/15 ring-amber-500/30 hover:ring-amber-500/50 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+							? "px-4 py-2 text-sm bg-linear-to-br from-amber-500/10 via-amber-400/15 to-yellow-500/10 hover:from-amber-500/15 hover:via-amber-400/20 hover:to-yellow-500/15 ring-amber-500/30 hover:ring-amber-500/50 text-amber-600 dark:text-amber-400 border border-amber-500/20"
 							: "px-4 py-2 text-sm text-primary hover:text-primary/90 bg-primary/10 hover:bg-primary/15 ring-primary/30 hover:ring-primary/40"
 					}`}
 				>
