@@ -7,6 +7,7 @@ import { useTheme } from "next-themes";
 import { TimelineContent } from "@/components/shared/timeline-animation";
 import { StyledButton } from "@/components/ui/styled/styled-button";
 import { useAuth } from "@clerk/nextjs";
+import { usePlans } from "@clerk/nextjs/experimental";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 
@@ -130,8 +131,8 @@ const plans = [
 		name: "Business",
 		description:
 			"Best value for growing businesses that need advanced features and unlimited access",
-		price: 120,
-		yearlyPrice: 1200,
+		price: 30,
+		yearlyPrice: 300,
 		buttonText: "Get started",
 		buttonVariant: "default" as const,
 		popular: true,
@@ -223,9 +224,73 @@ export default function PricingSection() {
 	const router = useRouter();
 	const toast = useToast();
 
+	// Fetch plans from Clerk
+	const { data: clerkPlans, isLoading: isLoadingPlans } = usePlans({
+		for: "organization",
+		enabled: true,
+	});
+
 	useEffect(() => {
 		setMounted(true);
 	}, []);
+
+	// Merge Clerk plan data with our custom features
+	const getDisplayPlans = () => {
+		// Always start with the hardcoded free plan
+		const freePlan = plans.find((p) => p.name === "Free");
+		const displayPlans = freePlan ? [freePlan] : [];
+
+		// If Clerk plans are available, add them
+		if (!isLoadingPlans && clerkPlans && clerkPlans.length > 0) {
+			// Add paid plans from Clerk
+			const clerkDisplayPlans = clerkPlans
+				.filter((clerkPlan) => clerkPlan.hasBaseFee) // Only paid plans
+				.map((clerkPlan) => {
+					// Find matching hardcoded plan for custom features
+					const hardcodedPlan = plans.find(
+						(p) =>
+							p.name.toLowerCase() === clerkPlan.name.toLowerCase() ||
+							p.name === "Business"
+					);
+
+					// Use Clerk pricing data
+					const monthlyPrice = clerkPlan.fee?.amount
+						? clerkPlan.fee.amount / 100
+						: (hardcodedPlan?.price ?? 0);
+					const yearlyPrice = clerkPlan.annualFee?.amount
+						? clerkPlan.annualFee.amount / 100
+						: (hardcodedPlan?.yearlyPrice ?? 0);
+
+					return {
+						name: clerkPlan.name,
+						description:
+							clerkPlan.description || hardcodedPlan?.description || "",
+						price: monthlyPrice,
+						yearlyPrice: yearlyPrice,
+						buttonText: hardcodedPlan?.buttonText || "Get started",
+						buttonVariant: (hardcodedPlan?.buttonVariant || "default") as
+							| "default"
+							| "outline",
+						popular: hardcodedPlan?.popular,
+						features: hardcodedPlan?.features || [],
+						includes: hardcodedPlan?.includes || [],
+						clerkPlanId: clerkPlan.id,
+					} as const;
+				});
+
+			displayPlans.push(...(clerkDisplayPlans as typeof displayPlans));
+		} else {
+			// Fallback: if Clerk plans aren't loaded, show all hardcoded plans
+			const businessPlan = plans.find((p) => p.name === "Business");
+			if (businessPlan) {
+				displayPlans.push(businessPlan);
+			}
+		}
+
+		return displayPlans;
+	};
+
+	const displayPlans = getDisplayPlans();
 
 	const handlePlanSelection = async (planName: string) => {
 		// Check if user is authenticated
@@ -338,7 +403,7 @@ export default function PricingSection() {
 			</TimelineContent>
 
 			<div className="grid md:grid-cols-2 max-w-5xl gap-6 py-6 mx-auto">
-				{plans.map((plan, index) => (
+				{displayPlans.map((plan, index) => (
 					<TimelineContent
 						key={plan.name}
 						as="div"

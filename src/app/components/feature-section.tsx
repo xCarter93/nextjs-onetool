@@ -80,10 +80,10 @@ export default function FeatureSection() {
 					<p className="mt-2 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl dark:text-white">
 						Every Business, Every Stage, OneTool.
 					</p>
-					<p className="mt-6 text-lg leading-8 text-gray-600 dark:text-gray-400">
-						From client management to invoicing, OneTool provides a complete
-						solution for field service professionals.
-					</p>
+				<p className="mt-6 text-lg leading-8 text-gray-600 dark:text-gray-400">
+					From client management to invoicing, OneTool provides a complete
+					solution for small business professionals.
+				</p>
 				</motion.div>
 
 				{/* Features Bento Grid */}
@@ -135,9 +135,9 @@ export default function FeatureSection() {
 					transition={{ duration: 0.5, delay: 0.6 }}
 					className="mt-16 text-center"
 				>
-					<p className="text-base leading-7 text-gray-600 dark:text-gray-400">
-						Ready to streamline your field service business?
-					</p>
+				<p className="text-base leading-7 text-gray-600 dark:text-gray-400">
+					Ready to streamline your small business?
+				</p>
 					<div className="mt-4">
 						<StyledButton
 							label="Get Started Today"

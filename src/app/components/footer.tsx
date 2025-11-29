@@ -99,10 +99,10 @@ export default function Footer() {
 								className="rounded-md dark:brightness-0 dark:invert"
 							/>
 						</div>
-						<p className="text-sm/6 text-balance text-gray-600 dark:text-gray-400">
-							Streamlining field service operations for businesses that serve
-							their communities. Built for the trades, by the trades.
-						</p>
+					<p className="text-sm/6 text-balance text-gray-600 dark:text-gray-400">
+						Streamlining business operations for companies that serve
+						their communities. Built by entrepreneurs, for entrepreneurs.
+					</p>
 						<div className="flex gap-x-6">
 							{navigation.social.map((item) => (
 								<a

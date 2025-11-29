@@ -19,6 +19,7 @@ import {
 	Plus,
 	Check,
 	X,
+	Lock,
 } from "lucide-react";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -30,6 +31,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import SelectService from "@/components/shared/choice-set";
 import { useToast } from "@/hooks/use-toast";
 import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
+import { useFeatureAccess } from "@/hooks/use-feature-access";
 import { logError, getUserFriendlyErrorMessage } from "@/lib/error-logger";
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
@@ -129,6 +131,7 @@ export default function OrganizationProfilePage() {
 	const searchParams = useSearchParams();
 	const { organization: clerkOrganization } = useOrganization();
 	const toast = useToast();
+	const { hasPremiumAccess } = useFeatureAccess();
 
 	const organization = useQuery(api.organizations.get, {});
 	const currentUser = useQuery(api.users.current, {});
@@ -163,6 +166,16 @@ export default function OrganizationProfilePage() {
 			if (!isTabValue(value)) {
 				return;
 			}
+			
+			// Check if trying to access premium feature without premium access
+			if ((value === "documents" || value === "skus") && !hasPremiumAccess) {
+				toast.error(
+					"Premium Feature",
+					"Upgrade to access this feature"
+				);
+				return;
+			}
+			
 			// Use search params for tab navigation
 			const params = new URLSearchParams();
 			if (value !== "overview") {
@@ -174,7 +187,7 @@ export default function OrganizationProfilePage() {
 					: `/organization/profile?${params.toString()}`;
 			router.push(newUrl);
 		},
-		[router]
+		[router, hasPremiumAccess, toast]
 	);
 
 	React.useEffect(() => {
@@ -463,8 +476,22 @@ export default function OrganizationProfilePage() {
 						<TabsTrigger value="overview">Overview</TabsTrigger>
 						<TabsTrigger value="business">Business Info</TabsTrigger>
 						<TabsTrigger value="preferences">Preferences</TabsTrigger>
-						<TabsTrigger value="documents">Documents</TabsTrigger>
-						<TabsTrigger value="skus">SKUs</TabsTrigger>
+						<TabsTrigger 
+							value="documents" 
+							disabled={!hasPremiumAccess}
+							className={!hasPremiumAccess ? "cursor-not-allowed" : ""}
+						>
+							{!hasPremiumAccess && <Lock className="h-3 w-3 mr-1" />}
+							Documents
+						</TabsTrigger>
+						<TabsTrigger 
+							value="skus"
+							disabled={!hasPremiumAccess}
+							className={!hasPremiumAccess ? "cursor-not-allowed" : ""}
+						>
+							{!hasPremiumAccess && <Lock className="h-3 w-3 mr-1" />}
+							SKUs
+						</TabsTrigger>
 					</TabsList>
 
 					<div className="mt-8 space-y-8">
