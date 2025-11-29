@@ -34,6 +34,7 @@ import type * as lib_storage from "../lib/storage.js";
 import type * as messageAttachments from "../messageAttachments.js";
 import type * as migrations_initializeQuoteCounters from "../migrations/initializeQuoteCounters.js";
 import type * as migrations_populateAggregates from "../migrations/populateAggregates.js";
+import type * as migrations_seedServiceStatus from "../migrations/seedServiceStatus.js";
 import type * as notifications from "../notifications.js";
 import type * as organizationDocuments from "../organizationDocuments.js";
 import type * as organizations from "../organizations.js";
@@ -80,6 +81,7 @@ declare const fullApi: ApiFromModules<{
   messageAttachments: typeof messageAttachments;
   "migrations/initializeQuoteCounters": typeof migrations_initializeQuoteCounters;
   "migrations/populateAggregates": typeof migrations_populateAggregates;
+  "migrations/seedServiceStatus": typeof migrations_seedServiceStatus;
   notifications: typeof notifications;
   organizationDocuments: typeof organizationDocuments;
   organizations: typeof organizations;

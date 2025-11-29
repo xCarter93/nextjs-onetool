@@ -1,4 +1,4 @@
-import { internalMutation } from "./_generated/server";
+import { internalMutation } from "../_generated/server";
 
 export const seedServiceStatus = internalMutation({
 	handler: async (ctx) => {
@@ -29,4 +29,3 @@ export const seedServiceStatus = internalMutation({
 		}
 	},
 });
-
