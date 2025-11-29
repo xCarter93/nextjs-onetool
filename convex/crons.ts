@@ -10,4 +10,11 @@ crons.daily(
 	internal.clients.cleanupArchivedClients
 );
 
+// Hourly check of external service status (Convex and Clerk)
+crons.hourly(
+	"check service status",
+	{ minuteUTC: 0 }, // Run at the top of every hour
+	internal.serviceStatusActions.checkServiceStatus
+);
+
 export default crons;
