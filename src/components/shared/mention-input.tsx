@@ -567,7 +567,7 @@ export function MentionInput({
 									// Document badge
 									<div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 transition-colors max-w-[200px]">
 										<FileIcon
-											className={`h-3.5 w-3.5 flex-shrink-0 ${
+											className={`h-3.5 w-3.5 shrink-0 ${
 												isPdf ? "text-red-500" : "text-gray-500"
 											}`}
 										/>
@@ -581,17 +581,15 @@ export function MentionInput({
 											</span>
 										</div>
 										{attachment.uploading ? (
-											<Loader2 className="h-3 w-3 text-gray-400 animate-spin flex-shrink-0" />
+											<Loader2 className="h-3 w-3 text-gray-400 animate-spin shrink-0" />
 										) : attachment.error ? (
-											<span className="text-xs text-red-500 flex-shrink-0">
-												✕
-											</span>
+											<span className="text-xs text-red-500 shrink-0">✕</span>
 										) : (
 											<button
 												onClick={() =>
 													handleRemoveAttachment(attachment.tempId)
 												}
-												className="p-0.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors flex-shrink-0"
+												className="p-0.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors shrink-0"
 												type="button"
 												title="Remove"
 											>

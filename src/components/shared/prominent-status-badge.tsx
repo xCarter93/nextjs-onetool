@@ -20,7 +20,7 @@ interface ProminentStatusBadgeProps {
 }
 
 const getStatusIcon = (status: string) => {
-	const iconClass = "flex-shrink-0";
+	const iconClass = "shrink-0";
 
 	// Map common statuses to icons
 	switch (status.toLowerCase()) {

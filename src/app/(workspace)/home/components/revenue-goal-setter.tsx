@@ -74,7 +74,7 @@ export default function RevenueGoalSetter() {
 	if (organization === undefined || revenueGoalProgress === undefined) {
 		return (
 			<Card className="group relative backdrop-blur-md overflow-hidden ring-1 ring-border/20 dark:ring-border/40">
-				<div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
+				<div className="absolute inset-0 bg-linear-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
 				<CardContent className="relative z-10">
 					<div className="flex items-center justify-center h-32">
 						<div className="text-muted-foreground">Loading revenue goal...</div>
@@ -87,7 +87,7 @@ export default function RevenueGoalSetter() {
 	return (
 		<Card className="group relative backdrop-blur-md overflow-hidden ring-1 ring-border/20 dark:ring-border/40">
 			{/* Glass morphism overlay */}
-			<div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
+			<div className="absolute inset-0 bg-linear-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
 			<CardContent className="relative z-10">
 				<div className="flex items-center justify-between mb-4">
 					<div className="flex items-center space-x-3">

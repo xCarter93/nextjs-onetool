@@ -166,16 +166,13 @@ export default function OrganizationProfilePage() {
 			if (!isTabValue(value)) {
 				return;
 			}
-			
+
 			// Check if trying to access premium feature without premium access
 			if ((value === "documents" || value === "skus") && !hasPremiumAccess) {
-				toast.error(
-					"Premium Feature",
-					"Upgrade to access this feature"
-				);
+				toast.error("Premium Feature", "Upgrade to access this feature");
 				return;
 			}
-			
+
 			// Use search params for tab navigation
 			const params = new URLSearchParams();
 			if (value !== "overview") {
@@ -456,7 +453,7 @@ export default function OrganizationProfilePage() {
 			<div className="flex-1 flex flex-col py-8">
 				<div className="mb-10">
 					<div className="flex items-center gap-3 mb-3">
-						<div className="w-2 h-8 bg-gradient-to-b from-primary to-primary/60 rounded-full" />
+						<div className="w-2 h-8 bg-linear-to-b from-primary to-primary/60 rounded-full" />
 						<h1 className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent tracking-tight">
 							Organization Settings
 						</h1>
@@ -476,15 +473,15 @@ export default function OrganizationProfilePage() {
 						<TabsTrigger value="overview">Overview</TabsTrigger>
 						<TabsTrigger value="business">Business Info</TabsTrigger>
 						<TabsTrigger value="preferences">Preferences</TabsTrigger>
-						<TabsTrigger 
-							value="documents" 
+						<TabsTrigger
+							value="documents"
 							disabled={!hasPremiumAccess}
 							className={!hasPremiumAccess ? "cursor-not-allowed" : ""}
 						>
 							{!hasPremiumAccess && <Lock className="h-3 w-3 mr-1" />}
 							Documents
 						</TabsTrigger>
-						<TabsTrigger 
+						<TabsTrigger
 							value="skus"
 							disabled={!hasPremiumAccess}
 							className={!hasPremiumAccess ? "cursor-not-allowed" : ""}
@@ -593,7 +590,7 @@ export default function OrganizationProfilePage() {
 
 								<div>
 									<div className="flex items-center gap-3 mb-3">
-										<div className="w-1.5 h-6 bg-gradient-to-b from-primary to-primary/60 rounded-full" />
+										<div className="w-1.5 h-6 bg-linear-to-b from-primary to-primary/60 rounded-full" />
 										<h2 className="text-2xl font-semibold text-foreground tracking-tight">
 											Business Information
 										</h2>
@@ -876,7 +873,7 @@ export default function OrganizationProfilePage() {
 
 								<div>
 									<div className="flex items-center gap-3 mb-3">
-										<div className="w-1.5 h-6 bg-gradient-to-b from-primary to-primary/60 rounded-full" />
+										<div className="w-1.5 h-6 bg-linear-to-b from-primary to-primary/60 rounded-full" />
 										<h2 className="text-2xl font-semibold text-foreground tracking-tight">
 											Default Preferences
 										</h2>
@@ -1147,7 +1144,7 @@ function DocumentsTab() {
 		<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-2xl p-8 shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50 space-y-8">
 			<div>
 				<div className="flex items-center gap-3 mb-3">
-					<div className="w-1.5 h-6 bg-gradient-to-b from-primary to-primary/60 rounded-full" />
+					<div className="w-1.5 h-6 bg-linear-to-b from-primary to-primary/60 rounded-full" />
 					<h2 className="text-2xl font-semibold text-foreground tracking-tight">
 						Organization Documents
 					</h2>
@@ -1193,7 +1190,7 @@ function DocumentsTab() {
 
 				<div
 					className={`
-						flex items-center justify-center w-12 h-12 rounded-lg flex-shrink-0
+						flex items-center justify-center w-12 h-12 rounded-lg shrink-0
 						transition-colors duration-200
 						${isDragging ? "bg-primary/20 dark:bg-primary/30" : "bg-muted dark:bg-muted/60"}
 					`}
@@ -1303,7 +1300,7 @@ function DocumentCard({ document, onDelete }: DocumentCardProps) {
 		<Card className="group bg-card dark:bg-card/80 backdrop-blur-sm border border-border dark:border-border/60 hover:border-primary/50 shadow-sm hover:shadow-md dark:shadow-black/20 ring-1 ring-border/20 dark:ring-border/30 transition-all duration-200">
 			<CardContent className="p-4">
 				<div className="flex items-start gap-3 mb-3">
-					<div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 dark:bg-primary/20 flex-shrink-0 group-hover:bg-primary/15 dark:group-hover:bg-primary/25 transition-colors">
+					<div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 dark:bg-primary/20 shrink-0 group-hover:bg-primary/15 dark:group-hover:bg-primary/25 transition-colors">
 						<FileText className="h-5 w-5 text-primary" />
 					</div>
 					<div className="flex-1 min-w-0">
@@ -1541,7 +1538,7 @@ function SKUsTab() {
 			<div className="flex items-center justify-between">
 				<div>
 					<div className="flex items-center gap-3 mb-2">
-						<div className="w-1.5 h-6 bg-gradient-to-b from-primary to-primary/60 rounded-full" />
+						<div className="w-1.5 h-6 bg-linear-to-b from-primary to-primary/60 rounded-full" />
 						<h2 className="text-2xl font-semibold text-foreground tracking-tight">
 							SKUs (Stock Keeping Units)
 						</h2>

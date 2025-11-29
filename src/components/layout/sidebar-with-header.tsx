@@ -57,11 +57,11 @@ export function SidebarWithHeader({ children }: SidebarWithHeaderProps) {
 							<div className="relative flex items-center gap-3">
 								{/* Status Indicator with glossy overlay */}
 								<div className="relative flex items-center gap-3 bg-card/30 dark:bg-card/10 backdrop-blur-sm border border-border/30 dark:border-border/20 rounded-full px-4 py-2 shadow-sm">
-									<div className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent" />
+									<div className="pointer-events-none absolute inset-0 rounded-full bg-linear-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent" />
 									<div className="relative flex items-center gap-2">
 										<span className="relative inline-flex h-2.5 w-2.5">
 											<span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60 blur-sm" />
-											<span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-gradient-to-br from-emerald-400 to-green-500 animate-pulse" />
+											<span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-linear-to-br from-emerald-400 to-green-500 animate-pulse" />
 										</span>
 										<span className="text-sm font-medium text-foreground/80">
 											All systems operational
@@ -71,18 +71,18 @@ export function SidebarWithHeader({ children }: SidebarWithHeaderProps) {
 							</div>
 						</motion.div>
 
-					{/* Right Section - Plan Badge, Notifications & Theme Switcher */}
-					<div className="flex items-center gap-3">
-						<PlanBadge />
-						<NotificationBell />
-						<motion.div
-							whileHover={{ scale: 1.05 }}
-							whileTap={{ scale: 0.95 }}
-							transition={{ type: "spring", stiffness: 400, damping: 17 }}
-						>
-							<ThemeSwitcher className="group relative bg-card/50 hover:bg-card/80 dark:bg-card/20 dark:hover:bg-card/40 border border-border/40 dark:border-border/20 hover:border-border/60 dark:hover:border-border/40 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 ring-0 hover:ring-2 hover:ring-primary/20 dark:hover:ring-primary/30" />
-						</motion.div>
-					</div>
+						{/* Right Section - Plan Badge, Notifications & Theme Switcher */}
+						<div className="flex items-center gap-3">
+							<PlanBadge />
+							<NotificationBell />
+							<motion.div
+								whileHover={{ scale: 1.05 }}
+								whileTap={{ scale: 0.95 }}
+								transition={{ type: "spring", stiffness: 400, damping: 17 }}
+							>
+								<ThemeSwitcher className="group relative bg-card/50 hover:bg-card/80 dark:bg-card/20 dark:hover:bg-card/40 border border-border/40 dark:border-border/20 hover:border-border/60 dark:hover:border-border/40 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 ring-0 hover:ring-2 hover:ring-primary/20 dark:hover:ring-primary/30" />
+							</motion.div>
+						</div>
 					</div>
 
 					{/* Enhanced bottom border gradient for clearer separation */}

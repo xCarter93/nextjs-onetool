@@ -14,10 +14,7 @@ import { Users, Building2, Globe, Upload } from "lucide-react";
 import { api } from "../../../../../convex/_generated/api";
 import { CsvImportStep } from "@/app/(workspace)/clients/components/csv-import-step";
 import { StyledButton } from "@/components/ui/styled/styled-button";
-import type {
-	CsvAnalysisResult,
-	CsvImportState,
-} from "@/types/csv-import";
+import type { CsvAnalysisResult, CsvImportState } from "@/types/csv-import";
 import Image from "next/image";
 
 interface FormData {
@@ -457,7 +454,7 @@ export default function CompleteOrganizationMetadata() {
 		<div className="space-y-8">
 			<div>
 				<div className="flex items-center gap-3 mb-3">
-					<div className="w-1.5 h-6 bg-gradient-to-b from-primary to-primary/60 rounded-full" />
+					<div className="w-1.5 h-6 bg-linear-to-b from-primary to-primary/60 rounded-full" />
 					<h2 className="text-2xl font-semibold text-foreground tracking-tight">
 						Business Information
 					</h2>
@@ -663,7 +660,7 @@ export default function CompleteOrganizationMetadata() {
 		<div className="space-y-8">
 			<div>
 				<div className="flex items-center gap-3 mb-3">
-					<div className="w-1.5 h-6 bg-gradient-to-b from-primary to-primary/60 rounded-full" />
+					<div className="w-1.5 h-6 bg-linear-to-b from-primary to-primary/60 rounded-full" />
 					<h2 className="text-2xl font-semibold text-foreground tracking-tight">
 						Company Size
 					</h2>
@@ -712,24 +709,24 @@ export default function CompleteOrganizationMetadata() {
 			{/* CSV Import Step Component */}
 			<CsvImportStep
 				entityType={csvImportState.entityType}
-			onEntityTypeChange={(value) =>
-				setCsvImportState((prev) => ({
-					...prev,
-					entityType: value,
-					analysisResult: null,
-					mappings: [],
-				}))
-			}
-			isAnalyzing={csvImportState.isAnalyzing}
-			onFileSelect={handleFileSelect}
-			analysisResult={csvImportState.analysisResult}
-			mappings={csvImportState.mappings || []}
-			onMappingChange={handleMappingChange}
-			importResult={csvImportState.importResult ?? null}
-			error={error}
-			showTitle={true}
-			disabledEntityTypes={["projects"]}
-		/>
+				onEntityTypeChange={(value) =>
+					setCsvImportState((prev) => ({
+						...prev,
+						entityType: value,
+						analysisResult: null,
+						mappings: [],
+					}))
+				}
+				isAnalyzing={csvImportState.isAnalyzing}
+				onFileSelect={handleFileSelect}
+				analysisResult={csvImportState.analysisResult}
+				mappings={csvImportState.mappings || []}
+				onMappingChange={handleMappingChange}
+				importResult={csvImportState.importResult ?? null}
+				error={error}
+				showTitle={true}
+				disabledEntityTypes={["projects"]}
+			/>
 
 			{/* Action Buttons */}
 			<div className="flex justify-between pt-6">
@@ -849,7 +846,7 @@ export default function CompleteOrganizationMetadata() {
 				{/* Enhanced Header */}
 				<div className="mb-10">
 					<div className="flex items-center gap-3 mb-3">
-						<div className="w-2 h-8 bg-gradient-to-b from-primary to-primary/60 rounded-full" />
+						<div className="w-2 h-8 bg-linear-to-b from-primary to-primary/60 rounded-full" />
 						<h1 className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent tracking-tight">
 							Complete Your Organization Setup
 						</h1>
@@ -866,7 +863,7 @@ export default function CompleteOrganizationMetadata() {
 				</div>
 
 				{/* Enhanced Form Content */}
-				<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-2xl p-10 shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50 flex-shrink-0">
+				<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-2xl p-10 shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50 shrink-0">
 					{renderCurrentStep()}
 				</div>
 			</div>

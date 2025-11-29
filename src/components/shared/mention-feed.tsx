@@ -119,14 +119,14 @@ function AttachmentDownloadLink({
 			title={`${attachment.fileName} (${formatFileSize(attachment.fileSize)})`}
 		>
 			{isPdf ? (
-				<FileIcon className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />
+				<FileIcon className="h-3.5 w-3.5 text-red-500 shrink-0" />
 			) : (
-				<FileIcon className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+				<FileIcon className="h-3.5 w-3.5 text-gray-500 shrink-0" />
 			)}
 			<span className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">
 				{attachment.fileName}
 			</span>
-			<Download className="h-3 w-3 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 flex-shrink-0 ml-auto" />
+			<Download className="h-3 w-3 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 shrink-0 ml-auto" />
 		</a>
 	);
 }
@@ -186,7 +186,7 @@ export function MentionFeed({ entityType, entityId }: MentionFeedProps) {
 			{mentions.map((mention) => (
 				<div key={mention._id} className="flex gap-3">
 					{/* Avatar - showing the author (person who sent the message) */}
-					<Avatar className="h-10 w-10 flex-shrink-0">
+					<Avatar className="h-10 w-10 shrink-0">
 						<AvatarImage
 							src={mention.author?.image}
 							alt={mention.author?.name || mention.author?.email || "User"}

@@ -10,11 +10,11 @@ export default function CreateOrganizationPage() {
 				{/* Enhanced Header */}
 				<div className="mb-10 text-center">
 					<div className="flex items-center justify-center gap-3 mb-3">
-						<div className="w-2 h-8 bg-gradient-to-b from-primary to-primary/60 rounded-full" />
+						<div className="w-2 h-8 bg-linear-to-b from-primary to-primary/60 rounded-full" />
 						<h1 className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent tracking-tight">
 							Create Your Organization
 						</h1>
-						<div className="w-2 h-8 bg-gradient-to-b from-primary to-primary/60 rounded-full" />
+						<div className="w-2 h-8 bg-linear-to-b from-primary to-primary/60 rounded-full" />
 					</div>
 					<p className="text-muted-foreground leading-relaxed">
 						Set up your organization to get started with OneTool.

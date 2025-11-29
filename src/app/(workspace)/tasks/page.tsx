@@ -114,11 +114,7 @@ function TaskRow({
 	const todayUTC = new Date();
 	todayUTC.setHours(0, 0, 0, 0);
 	const todayUTCDate = new Date(
-		Date.UTC(
-			todayUTC.getFullYear(),
-			todayUTC.getMonth(),
-			todayUTC.getDate()
-		)
+		Date.UTC(todayUTC.getFullYear(), todayUTC.getMonth(), todayUTC.getDate())
 	);
 
 	const isOverdue =
@@ -141,7 +137,7 @@ function TaskRow({
 
 		const tomorrow = new Date(todayUTCDate);
 		tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
-		
+
 		if (date.getTime() === tomorrow.getTime()) return "Tomorrow";
 
 		// Use UTC methods to display the date consistently
@@ -150,9 +146,7 @@ function TaskRow({
 			month: "short",
 			day: "numeric",
 			year:
-				date.getFullYear() !== new Date().getFullYear()
-					? "numeric"
-					: undefined,
+				date.getFullYear() !== new Date().getFullYear() ? "numeric" : undefined,
 		});
 	};
 
@@ -209,7 +203,7 @@ function TaskRow({
 							{task.title}
 						</h3>
 						{isOverdue && (
-							<AlertTriangle className="h-4 w-4 text-red-500 flex-shrink-0" />
+							<AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />
 						)}
 					</div>
 					{task.description && (
@@ -223,7 +217,7 @@ function TaskRow({
 			{/* Client */}
 			<td className="px-4 py-3">
 				<div className="flex items-center gap-1 text-sm">
-					<Building2 className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+					<Building2 className="h-3 w-3 text-muted-foreground shrink-0" />
 					<span className="truncate">{client?.companyName || "Unknown"}</span>
 				</div>
 			</td>
@@ -232,7 +226,7 @@ function TaskRow({
 			<td className="px-4 py-3">
 				{project ? (
 					<div className="flex items-center gap-1 text-sm">
-						<FolderOpen className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+						<FolderOpen className="h-3 w-3 text-muted-foreground shrink-0" />
 						<span className="truncate">{project.title}</span>
 					</div>
 				) : (
@@ -248,7 +242,7 @@ function TaskRow({
 						isOverdue ? "text-red-600" : "text-muted-foreground"
 					)}
 				>
-					<Calendar className="h-3 w-3 flex-shrink-0" />
+					<Calendar className="h-3 w-3 shrink-0" />
 					<span>{formatDate(taskDateUTC)}</span>
 				</div>
 			</td>
@@ -257,7 +251,7 @@ function TaskRow({
 			<td className="px-4 py-3">
 				{task.startTime || task.endTime ? (
 					<div className="flex items-center gap-1 text-sm text-muted-foreground">
-						<Clock className="h-3 w-3 flex-shrink-0" />
+						<Clock className="h-3 w-3 shrink-0" />
 						<span>
 							{task.startTime && formatTime(task.startTime)}
 							{task.startTime && task.endTime && " - "}
@@ -273,7 +267,7 @@ function TaskRow({
 			<td className="px-4 py-3">
 				{assignee ? (
 					<div className="flex items-center gap-1 text-sm">
-						<User className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+						<User className="h-3 w-3 text-muted-foreground shrink-0" />
 						<span className="truncate">{assignee.name || assignee.email}</span>
 					</div>
 				) : (

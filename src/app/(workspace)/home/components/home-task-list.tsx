@@ -80,7 +80,8 @@ function TaskItem({ task, onStatusChange, isUpdating }: TaskItemProps) {
 		todayUTC.getDate()
 	);
 
-	const isOverdue = task.date < todayUTCTimestamp && task.status !== "completed";
+	const isOverdue =
+		task.date < todayUTCTimestamp && task.status !== "completed";
 	const isToday = task.date === todayUTCTimestamp;
 
 	const PriorityIcon = priorityConfig[task.priority || "medium"].icon;
@@ -99,7 +100,7 @@ function TaskItem({ task, onStatusChange, isUpdating }: TaskItemProps) {
 
 		const tomorrow = new Date(todayUTCTimestamp);
 		tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
-		
+
 		if (date.getTime() === tomorrow.getTime()) return "Tomorrow";
 
 		const dayOfWeek = date.toLocaleDateString("en-US", { weekday: "short" });
@@ -133,7 +134,7 @@ function TaskItem({ task, onStatusChange, isUpdating }: TaskItemProps) {
 					onClick={handleToggleComplete}
 					disabled={isUpdating}
 					className={cn(
-						"flex-shrink-0 p-0.5 rounded-full transition-colors",
+						"shrink-0 p-0.5 rounded-full transition-colors",
 						"hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
 						isUpdating && "opacity-50 cursor-not-allowed"
 					)}
@@ -167,7 +168,7 @@ function TaskItem({ task, onStatusChange, isUpdating }: TaskItemProps) {
 
 					{/* Column 2: Client */}
 					<div className="min-w-0 flex items-center gap-1.5">
-						<Building2 className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+						<Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
 						<span className="text-sm truncate">
 							{client?.companyName || "Unknown Client"}
 							{project && ` • ${project.title}`}
@@ -176,7 +177,7 @@ function TaskItem({ task, onStatusChange, isUpdating }: TaskItemProps) {
 
 					{/* Column 3: Date */}
 					<div className="min-w-0 flex items-center gap-1.5">
-						<Calendar className="h-3.5 w-3.5 flex-shrink-0" />
+						<Calendar className="h-3.5 w-3.5 shrink-0" />
 						<span
 							className={cn(
 								"text-sm truncate",
@@ -193,20 +194,20 @@ function TaskItem({ task, onStatusChange, isUpdating }: TaskItemProps) {
 							)}
 						</span>
 						{isOverdue && (
-							<AlertTriangle className="h-3.5 w-3.5 text-red-600 flex-shrink-0" />
+							<AlertTriangle className="h-3.5 w-3.5 text-red-600 shrink-0" />
 						)}
 					</div>
 
 					{/* Column 4: Assignee */}
 					<div className="min-w-0 flex items-center gap-1.5">
-						<User className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+						<User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
 						<span className="text-sm truncate">
 							{assignee ? assignee.name || assignee.email : "Unassigned"}
 						</span>
 					</div>
 
 					{/* Column 5: Priority Badge */}
-					<div className="flex-shrink-0">
+					<div className="shrink-0">
 						{task.priority && (
 							<Badge
 								variant="secondary"
@@ -302,7 +303,7 @@ export function HomeTaskList() {
 	}
 
 	const overdueTasksCount = (overdueTasks || []).length;
-	
+
 	// Calculate today in UTC for consistent comparisons
 	const today = new Date();
 	today.setHours(0, 0, 0, 0);
@@ -311,7 +312,7 @@ export function HomeTaskList() {
 		today.getMonth(),
 		today.getDate()
 	);
-	
+
 	const todayTasksCount = allTasks.filter((task) => {
 		return task.date === todayTimestamp;
 	}).length;
@@ -319,7 +320,7 @@ export function HomeTaskList() {
 	return (
 		<Card className="group relative backdrop-blur-md overflow-hidden ring-1 ring-border/20 dark:ring-border/40">
 			{/* Glass morphism overlay */}
-			<div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
+			<div className="absolute inset-0 bg-linear-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
 			<CardContent className="relative z-10">
 				<motion.div
 					className="space-y-6"

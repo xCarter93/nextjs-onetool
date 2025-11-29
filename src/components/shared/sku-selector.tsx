@@ -71,7 +71,7 @@ export function SKUSelector({ onSelect, disabled = false }: SKUSelectorProps) {
 					size="sq-sm"
 					isDisabled={disabled}
 					aria-label="Select SKU"
-					className="flex-shrink-0"
+					className="shrink-0"
 				>
 					<Package className="h-4 w-4" />
 				</Button>
@@ -148,7 +148,7 @@ export function SKUSelector({ onSelect, disabled = false }: SKUSelectorProps) {
 													const marginPct =
 														((sku.rate - sku.cost) / sku.rate) * 100;
 													return (
-														<div className="flex-shrink-0">
+														<div className="shrink-0">
 															<span
 																className={`text-xs font-medium ${
 																	marginPct >= 0

@@ -167,7 +167,7 @@ export default function HomeStats() {
 							tabIndex={0}
 						>
 							{/* Glass morphism overlay */}
-							<div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
+							<div className="absolute inset-0 bg-linear-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
 							<CardContent className="relative z-10 p-4">
 								<div className="flex items-center justify-between mb-3">
 									<div className="flex items-center space-x-3">

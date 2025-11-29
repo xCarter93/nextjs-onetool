@@ -44,7 +44,7 @@ export function CsvImportStep({
 			{showTitle && (
 				<div>
 					<div className="flex items-center gap-3 mb-3">
-						<div className="w-1.5 h-6 bg-gradient-to-b from-primary to-primary/60 rounded-full" />
+						<div className="w-1.5 h-6 bg-linear-to-b from-primary to-primary/60 rounded-full" />
 						<h2 className="text-2xl font-semibold text-foreground tracking-tight">
 							Import Existing Data
 						</h2>

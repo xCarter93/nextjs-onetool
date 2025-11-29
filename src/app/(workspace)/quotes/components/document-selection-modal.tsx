@@ -101,7 +101,7 @@ export function DocumentSelectionModal({
 									checked={selectedIds.includes(doc._id)}
 									onCheckedChange={() => handleToggle(doc._id)}
 								/>
-								<div className="flex items-center justify-center w-8 h-8 rounded bg-blue-100 dark:bg-blue-900/30 flex-shrink-0">
+								<div className="flex items-center justify-center w-8 h-8 rounded bg-blue-100 dark:bg-blue-900/30 shrink-0">
 									<FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
 								</div>
 								<div className="flex-1 min-w-0">

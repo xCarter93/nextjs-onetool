@@ -420,8 +420,8 @@ export default function QuoteLineEditorPage() {
 
 				{/* Unsaved Changes Notification */}
 				{hasChanges && (
-					<div className="mb-6 flex items-center gap-2.5 px-4 py-2.5 rounded-lg bg-yellow-100 dark:bg-yellow-900/40 border-2 border-yellow-400 dark:border-yellow-600 flex-shrink-0 shadow-md animate-pulse">
-						<div className="w-2.5 h-2.5 bg-yellow-500 rounded-full flex-shrink-0 animate-pulse" />
+					<div className="mb-6 flex items-center gap-2.5 px-4 py-2.5 rounded-lg bg-yellow-100 dark:bg-yellow-900/40 border-2 border-yellow-400 dark:border-yellow-600 shrink-0 shadow-md animate-pulse">
+						<div className="w-2.5 h-2.5 bg-yellow-500 rounded-full shrink-0 animate-pulse" />
 						<div className="flex flex-col">
 							<p className="text-sm font-semibold text-yellow-900 dark:text-yellow-100 leading-tight">
 								Unsaved changes

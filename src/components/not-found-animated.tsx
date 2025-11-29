@@ -10,14 +10,14 @@ export default function NotFoundAnimated() {
 			{/* Background decorative blobs */}
 			<motion.div
 				aria-hidden
-				className="pointer-events-none absolute -top-40 -left-40 h-[32rem] w-[32rem] rounded-full bg-gradient-to-br from-blue-500/25 to-indigo-500/25 blur-3xl"
+				className="pointer-events-none absolute -top-40 -left-40 h-[32rem] w-[32rem] rounded-full bg-linear-to-br from-blue-500/25 to-indigo-500/25 blur-3xl"
 				initial={{ opacity: 0.35, scale: 0.9 }}
 				animate={{ opacity: [0.35, 0.5, 0.35], scale: [0.9, 1, 0.9] }}
 				transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
 			/>
 			<motion.div
 				aria-hidden
-				className="pointer-events-none absolute -bottom-40 -right-40 h-[28rem] w-[28rem] rounded-full bg-gradient-to-tr from-cyan-400/25 to-sky-600/25 blur-3xl"
+				className="pointer-events-none absolute -bottom-40 -right-40 h-[28rem] w-[28rem] rounded-full bg-linear-to-tr from-cyan-400/25 to-sky-600/25 blur-3xl"
 				initial={{ opacity: 0.3, scale: 1 }}
 				animate={{ opacity: [0.3, 0.45, 0.3], scale: [1, 1.05, 1] }}
 				transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}

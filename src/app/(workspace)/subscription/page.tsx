@@ -147,7 +147,7 @@ export default function SubscriptionPage() {
 
 					<div className="flex items-center gap-4 mb-4">
 						{hasPremiumAccess ? (
-							<div className="p-3 rounded-xl bg-gradient-to-br from-amber-500/10 via-amber-400/15 to-yellow-500/10 border border-amber-500/20">
+							<div className="p-3 rounded-xl bg-linear-to-br from-amber-500/10 via-amber-400/15 to-yellow-500/10 border border-amber-500/20">
 								<Crown className="h-8 w-8 text-amber-500" />
 							</div>
 						) : (

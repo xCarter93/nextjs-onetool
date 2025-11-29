@@ -295,7 +295,11 @@ export default function NewQuotePage() {
 														: "Select a client first..."
 											}
 											onSelect={handleProjectSelect}
-											disabled={!selectedClient || projectOptions.length === 0 || isLoading}
+											disabled={
+												!selectedClient ||
+												projectOptions.length === 0 ||
+												isLoading
+											}
 										/>
 									</div>
 
@@ -366,7 +370,10 @@ export default function NewQuotePage() {
 										>
 											Valid Until (Optional)
 										</label>
-										<Popover open={validUntilOpen} onOpenChange={setValidUntilOpen}>
+										<Popover
+											open={validUntilOpen}
+											onOpenChange={setValidUntilOpen}
+										>
 											<PopoverTrigger asChild>
 												<Button
 													intent="outline"
@@ -450,7 +457,7 @@ export default function NewQuotePage() {
 						<Card className="shadow-sm border-gray-200/60 dark:border-white/10 bg-blue-50/50 dark:bg-blue-900/10">
 							<CardContent className="pt-6">
 								<div className="flex items-start gap-3">
-									<div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0" />
+									<div className="w-2 h-2 bg-blue-500 rounded-full mt-2 shrink-0" />
 									<div>
 										<p className="text-sm font-medium text-blue-900 dark:text-blue-200">
 											Next Steps

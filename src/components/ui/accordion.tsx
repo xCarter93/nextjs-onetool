@@ -61,7 +61,7 @@ const AccordionItem = memo(function AccordionItem({
 				id={`accordion-header-${uniqueId}`}
 			>
 				<span>{title}</span>
-				<div className="w-6 h-6 flex-shrink-0 flex items-center justify-center">
+				<div className="w-6 h-6 shrink-0 flex items-center justify-center">
 					<svg
 						className={iconClasses}
 						xmlns="http://www.w3.org/2000/svg"
