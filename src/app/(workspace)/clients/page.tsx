@@ -54,7 +54,7 @@ import type { Id } from "../../../../convex/_generated/dataModel";
 import DeleteConfirmationModal from "@/components/ui/delete-confirmation-modal";
 import { StyledButton } from "@/components/ui/styled/styled-button";
 import { StyledBadge } from "@/components/ui/styled";
-import { CsvImportModal } from "@/app/(workspace)/clients/components/csv-import-modal";
+import { CsvImportSheet } from "@/app/(workspace)/clients/components/csv-import-sheet";
 import { useCanPerformAction } from "@/hooks/use-feature-access";
 import {
 	Tooltip,
@@ -1128,10 +1128,10 @@ export default function ClientsPage() {
 				/>
 			)}
 
-			{/* Import Clients Modal */}
-			<CsvImportModal
+			{/* Import Clients Sheet */}
+			<CsvImportSheet
 				isOpen={importModalOpen}
-				onClose={() => setImportModalOpen(false)}
+				onOpenChange={setImportModalOpen}
 				onComplete={() => {
 					setImportModalOpen(false);
 					toast.success(
