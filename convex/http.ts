@@ -698,6 +698,30 @@ http.route({
 					});
 					console.log(`Processed Resend webhook: ${eventType} for ${emailId}`);
 					break;
+
+			case "email.received":
+				// Handle inbound email (use runAction instead of runMutation)
+				// Note: Webhook payload does NOT include html/text content, only metadata
+				// We need to fetch content separately using the Received emails API
+				console.log("Processing inbound email:", emailId);
+				try {
+					await ctx.runAction(internal.resendReceiving.handleInboundEmail, {
+						emailId,
+						from: event.data.from || "",
+						to: event.data.to || [],
+						subject: event.data.subject || "(No subject)",
+						messageId: event.data.message_id || emailId,
+						inReplyTo: event.data.in_reply_to,
+						references: event.data.references,
+						attachments: event.data.attachments || [],
+					});
+					console.log(`Successfully processed inbound email: ${emailId}`);
+				} catch (error) {
+					console.error("Error processing inbound email:", error);
+					// Return 200 anyway to prevent Resend from retrying
+				}
+				break;
+
 				default:
 					console.log("Unhandled Resend event type:", eventType);
 			}

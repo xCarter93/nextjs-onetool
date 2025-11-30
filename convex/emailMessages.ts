@@ -1,6 +1,7 @@
 import { query } from "./_generated/server";
 import { v } from "convex/values";
 import { getCurrentUser, getCurrentUserOrgId } from "./lib/auth";
+import type { Doc } from "./_generated/dataModel";
 
 /**
  * List emails sent to a specific client
@@ -173,5 +174,218 @@ export const getClientEmailStats = query({
 		};
 
 		return stats;
+	},
+});
+
+/**
+ * Get a single email thread with all messages
+ * Matches by threadId OR by subject (for when threadIds don't match due to batch ID issues)
+ */
+export const getEmailThread = query({
+	args: {
+		threadId: v.string(),
+	},
+	handler: async (ctx, args) => {
+		const user = await getCurrentUser(ctx);
+		if (!user) {
+			return null;
+		}
+
+		const orgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!orgId) {
+			return null;
+		}
+
+		// Get all messages in this thread by threadId
+		const messagesByThreadId = await ctx.db
+			.query("emailMessages")
+			.withIndex("by_thread", (q) => q.eq("threadId", args.threadId))
+			.collect();
+
+		// Also get the first message to extract its subject
+		const firstMessage = messagesByThreadId[0];
+
+		let allMessages = messagesByThreadId;
+
+		// If we found a message, also search by subject to catch related messages
+		if (firstMessage) {
+			const cleanSubject = firstMessage.subject.replace(/^Re:\s*/i, "").trim();
+
+			// Get client ID from first message
+			const clientId = firstMessage.clientId;
+
+			// Find all messages for this client
+			const clientMessages = await ctx.db
+				.query("emailMessages")
+				.withIndex("by_client", (q) => q.eq("clientId", clientId))
+				.collect();
+
+			// Filter by matching subject (with or without "Re:")
+			const messagesBySubject = clientMessages.filter((msg) => {
+				const msgCleanSubject = msg.subject.replace(/^Re:\s*/i, "").trim();
+				return msgCleanSubject === cleanSubject;
+			});
+
+			// Combine and deduplicate
+			const messageMap = new Map();
+			[...messagesByThreadId, ...messagesBySubject].forEach((msg) => {
+				messageMap.set(msg._id, msg);
+			});
+
+			allMessages = Array.from(messageMap.values());
+		}
+
+		// Filter to only messages from the user's organization
+		const orgMessages = allMessages
+			.filter((msg) => msg.orgId === orgId)
+			.sort((a, b) => a.sentAt - b.sentAt);
+
+		// Enrich with sender information
+		const enrichedMessages = await Promise.all(
+			orgMessages.map(async (msg) => {
+				let senderName = msg.fromName;
+				let senderAvatar = null;
+
+				// If outbound, get user info
+				if (msg.direction === "outbound" && msg.sentBy) {
+					const sender = await ctx.db.get(msg.sentBy);
+					if (sender) {
+						senderName = sender.name;
+						senderAvatar = sender.image;
+					}
+				}
+
+				return {
+					...msg,
+					senderName,
+					senderAvatar,
+				};
+			})
+		);
+
+		return enrichedMessages;
+	},
+});
+
+/**
+ * List email threads for a client (grouped conversations)
+ */
+export const listThreadsByClient = query({
+	args: {
+		clientId: v.id("clients"),
+	},
+	handler: async (ctx, args) => {
+		const user = await getCurrentUser(ctx);
+		if (!user) {
+			return [];
+		}
+
+		const orgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!orgId) {
+			return [];
+		}
+
+		// Get all emails for this client
+		const emails = await ctx.db
+			.query("emailMessages")
+			.withIndex("by_client", (q) => q.eq("clientId", args.clientId))
+			.collect();
+
+		// Filter to only emails from the user's organization
+		const orgEmails = emails.filter((email) => email.orgId === orgId);
+
+		// Group by thread
+		const threadMap = new Map<
+			string,
+			{
+				threadId: string;
+				subject: string;
+				latestMessage: string;
+				latestMessageAt: number;
+				messageCount: number;
+				hasUnread: boolean;
+				participants: string[];
+			}
+		>();
+
+		for (const email of orgEmails) {
+			const threadId = email.threadId || email._id;
+			const existing = threadMap.get(threadId);
+
+			if (!existing) {
+				threadMap.set(threadId, {
+					threadId,
+					subject: email.subject,
+					latestMessage:
+						email.messagePreview || email.messageBody.substring(0, 100),
+					latestMessageAt: email.sentAt,
+					messageCount: 1,
+					hasUnread: email.direction === "inbound" && !email.openedAt,
+					participants: [email.fromName],
+				});
+			} else {
+				// Update if this is a later message
+				if (email.sentAt > existing.latestMessageAt) {
+					existing.latestMessage =
+						email.messagePreview || email.messageBody.substring(0, 100);
+					existing.latestMessageAt = email.sentAt;
+				}
+				existing.messageCount++;
+				if (email.direction === "inbound" && !email.openedAt) {
+					existing.hasUnread = true;
+				}
+				if (!existing.participants.includes(email.fromName)) {
+					existing.participants.push(email.fromName);
+				}
+			}
+		}
+
+		// Convert to array and sort by latest message
+		const threads = Array.from(threadMap.values()).sort(
+			(a, b) => b.latestMessageAt - a.latestMessageAt
+		);
+
+		return threads;
+	},
+});
+
+/**
+ * Get an email with its attachments
+ */
+export const getEmailWithAttachments = query({
+	args: {
+		emailMessageId: v.id("emailMessages"),
+	},
+	handler: async (ctx, args) => {
+		const user = await getCurrentUser(ctx);
+		if (!user) {
+			return null;
+		}
+
+		const orgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!orgId) {
+			return null;
+		}
+
+		const email = await ctx.db.get(args.emailMessageId);
+		if (!email || email.orgId !== orgId) {
+			return null;
+		}
+
+		// Get attachments if any
+		let attachments: Doc<"emailAttachments">[] = [];
+		if (email.hasAttachments) {
+			attachments = await ctx.db
+				.query("emailAttachments")
+				.withIndex("by_email", (q) =>
+					q.eq("emailMessageId", args.emailMessageId)
+				)
+				.collect();
+		}
+
+		return {
+			...email,
+			attachments,
+		};
 	},
 });

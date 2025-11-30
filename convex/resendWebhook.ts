@@ -27,7 +27,10 @@ export const handleWebhookEvent = internalMutation({
 			.first();
 
 		if (!emailMessage) {
-			console.warn(`Email message not found for Resend ID: ${args.emailId}`);
+			// This can happen for outbound emails if the webhook arrives before we've saved the record,
+			// or if this is an email sent from another source.
+			// For inbound emails, this shouldn't happen as we create them when processing.
+			console.warn(`Email message not found for Resend ID: ${args.emailId} (event: ${args.eventType})`);
 			return { success: false, message: "Email message not found" };
 		}
 

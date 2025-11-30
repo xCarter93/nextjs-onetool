@@ -3,7 +3,6 @@ import { v } from "convex/values";
 import { components } from "./_generated/api";
 import { Resend } from "@convex-dev/resend";
 import { getCurrentUserOrThrow, getCurrentUserOrgId } from "./lib/auth";
-import { ActivityHelpers } from "./lib/activities";
 
 // Initialize Resend component
 export const resend = new Resend(components.resend, {
@@ -19,6 +18,7 @@ export const sendClientEmail = mutation({
 		clientId: v.id("clients"),
 		subject: v.string(),
 		messageBody: v.string(),
+		threadId: v.optional(v.string()), // Optional for starting a thread
 	},
 	handler: async (ctx, args) => {
 		const user = await getCurrentUserOrThrow(ctx);
@@ -71,27 +71,50 @@ export const sendClientEmail = mutation({
 		const fromEmail = "support@onetool.biz"; // Verified domain
 		const fromName = user.name || organization.name || "OneTool"; // Fallback to org name or "OneTool"
 
-		// Send email via Resend
-		const emailId = await resend.sendEmail(ctx, {
+		// Ensure organization has a receiving address
+		if (!organization.receivingAddress) {
+			throw new Error(
+				"Organization does not have a receiving email address configured. Please contact support."
+			);
+		}
+
+		// Prepare email options with threading support
+		const emailOptions: {
+			from: string;
+			to: string;
+			subject: string;
+			html: string;
+			replyTo: string[];
+		} = {
 			from: `${fromName} <${fromEmail}>`,
 			to: primaryContact.email,
 			subject: args.subject,
 			html: emailHtml,
-			// Add reply-to to ensure replies go to the user (must be an array)
-			replyTo: [user.email],
-		});
+			// Use organization's receiving address for replies
+			replyTo: [organization.receivingAddress],
+		};
+
+		// Send email via Resend
+		const emailId = await resend.sendEmail(ctx, emailOptions);
 
 		// Create message preview (first 100 chars)
 		const messagePreview = args.messageBody.substring(0, 100);
+
+		// Use provided threadId or create new one from emailId
+		const threadId = args.threadId || emailId;
 
 		// Store email record
 		const emailMessageId = await ctx.db.insert("emailMessages", {
 			orgId,
 			clientId: args.clientId,
 			resendEmailId: emailId,
+			direction: "outbound",
+			threadId,
 			subject: args.subject,
 			messageBody: args.messageBody,
 			messagePreview,
+			fromEmail: fromEmail,
+			fromName: fromName,
 			toEmail: primaryContact.email,
 			toName: `${primaryContact.firstName} ${primaryContact.lastName}`,
 			status: "sent",
@@ -111,6 +134,147 @@ export const sendClientEmail = mutation({
 			metadata: {
 				emailId: emailMessageId,
 				subject: args.subject,
+				preview: messagePreview,
+			},
+			timestamp: Date.now(),
+			isVisible: true,
+		});
+
+		return {
+			emailId,
+			emailMessageId,
+			threadId,
+		};
+	},
+});
+
+/**
+ * Reply to an email thread
+ */
+export const replyToEmail = mutation({
+	args: {
+		emailMessageId: v.id("emailMessages"), // The message being replied to
+		messageBody: v.string(),
+	},
+	handler: async (ctx, args) => {
+		const user = await getCurrentUserOrThrow(ctx);
+		const orgId = await getCurrentUserOrgId(ctx);
+
+		// Get the original email
+		const originalEmail = await ctx.db.get(args.emailMessageId);
+		if (!originalEmail) {
+			throw new Error("Original email not found");
+		}
+
+		if (originalEmail.orgId !== orgId) {
+			throw new Error("Email does not belong to your organization");
+		}
+
+		// Get organization details
+		const organization = await ctx.db.get(orgId);
+		if (!organization) {
+			throw new Error("Organization not found");
+		}
+
+		// Get client details
+		const client = await ctx.db.get(originalEmail.clientId);
+		if (!client) {
+			throw new Error("Client not found");
+		}
+
+		// Get primary contact
+		const primaryContact = await ctx.db
+			.query("clientContacts")
+			.withIndex("by_primary", (q) =>
+				q.eq("clientId", originalEmail.clientId).eq("isPrimary", true)
+			)
+			.first();
+
+		if (!primaryContact || !primaryContact.email) {
+			throw new Error("Client does not have a valid primary contact email");
+		}
+
+		// Build references chain
+		const references = originalEmail.references || [];
+		if (!references.includes(originalEmail.resendEmailId)) {
+			references.push(originalEmail.resendEmailId);
+		}
+
+		// Build email HTML with organization branding
+		const emailHtml = buildEmailHtml({
+			logoUrl: organization.logoUrl,
+			brandColor: organization.brandColor || "#3b82f6",
+			organizationName: organization.name,
+			organizationEmail: organization.email,
+			organizationPhone: organization.phone,
+			organizationAddress: organization.address,
+			clientName: `${primaryContact.firstName} ${primaryContact.lastName}`,
+			messageBody: args.messageBody,
+			senderName: user.name,
+		});
+
+		const fromEmail = "support@onetool.biz";
+		const fromName = user.name || organization.name || "OneTool";
+
+		// Ensure organization has a receiving address
+		if (!organization.receivingAddress) {
+			throw new Error(
+				"Organization does not have a receiving email address configured. Please contact support."
+			);
+		}
+
+		// Add "Re: " prefix if not already present
+		const subject = originalEmail.subject.startsWith("Re:")
+			? originalEmail.subject
+			: `Re: ${originalEmail.subject}`;
+
+		// Send email with threading headers
+		// Note: Resend doesn't directly support custom headers like In-Reply-To,
+		// but we track threading in our database
+		const emailId = await resend.sendEmail(ctx, {
+			from: `${fromName} <${fromEmail}>`,
+			to: primaryContact.email,
+			subject,
+			html: emailHtml,
+			replyTo: [organization.receivingAddress],
+		});
+
+		// Create message preview
+		const messagePreview = args.messageBody.substring(0, 100);
+
+		// Store email record with threading information
+		const emailMessageId = await ctx.db.insert("emailMessages", {
+			orgId,
+			clientId: originalEmail.clientId,
+			resendEmailId: emailId,
+			direction: "outbound",
+			threadId: originalEmail.threadId || originalEmail.resendEmailId,
+			inReplyTo: originalEmail.resendEmailId,
+			references,
+			subject,
+			messageBody: args.messageBody,
+			messagePreview,
+			fromEmail,
+			fromName,
+			toEmail: primaryContact.email,
+			toName: `${primaryContact.firstName} ${primaryContact.lastName}`,
+			status: "sent",
+			sentAt: Date.now(),
+			sentBy: user._id,
+		});
+
+		// Log activity
+		await ctx.db.insert("activities", {
+			orgId,
+			userId: user._id,
+			activityType: "email_sent",
+			entityType: "client",
+			entityId: originalEmail.clientId,
+			entityName: client.companyName,
+			description: `Replied to email: ${subject}`,
+			metadata: {
+				emailId: emailMessageId,
+				subject,
 				preview: messagePreview,
 			},
 			timestamp: Date.now(),
