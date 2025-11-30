@@ -45,6 +45,8 @@ import { PropertyTable } from "@/app/(workspace)/clients/components/property-tab
 import { ContactTable } from "@/app/(workspace)/clients/components/contact-table";
 import { TaskSheet } from "@/components/shared/task-sheet";
 import { MentionSection } from "@/components/shared/mention-section";
+import { SendClientEmailPopover } from "@/app/(workspace)/clients/components/send-client-email-popover";
+import { EmailActivityList } from "@/app/(workspace)/clients/components/email-activity-list";
 import {
 	Popover,
 	PopoverTrigger,
@@ -153,6 +155,7 @@ export default function ClientDetailPage() {
 	const updateClient = useMutation(api.clients.update);
 	const [isEditing, setIsEditing] = useState(false);
 	const [isTaskSheetOpen, setIsTaskSheetOpen] = useState(false);
+	const [isEmailPopoverOpen, setIsEmailPopoverOpen] = useState(false);
 	const [form, setForm] = useState({
 		industry: "",
 		companyDescription: "",
@@ -192,6 +195,11 @@ export default function ClientDetailPage() {
 		clientId: clientId as Id<"clients">,
 	});
 	const clientTasks = useQuery(api.tasks.list, {
+		clientId: clientId as Id<"clients">,
+	});
+
+	// Fetch email messages for this client
+	const clientEmails = useQuery(api.emailMessages.listByClient, {
 		clientId: clientId as Id<"clients">,
 	});
 
@@ -335,6 +343,17 @@ export default function ClientDetailPage() {
 			});
 		}
 
+		// Right side button - Email action
+		if (primaryContact?.email && !isEditing) {
+			buttons.push({
+				label: "Send Email",
+				onClick: () => setIsEmailPopoverOpen(true),
+				intent: "secondary" as const,
+				icon: <EnvelopeIcon className="h-4 w-4" />,
+				position: "right" as const,
+			});
+		}
+
 		return buttons;
 	};
 
@@ -347,7 +366,8 @@ export default function ClientDetailPage() {
 		quotes === undefined ||
 		projects === undefined ||
 		invoices === undefined ||
-		clientTasks === undefined
+		clientTasks === undefined ||
+		clientEmails === undefined
 	) {
 		return (
 			<div className="relative px-6 pt-8 pb-20">
@@ -1279,6 +1299,21 @@ export default function ClientDetailPage() {
 								entityId={clientId}
 								entityName={client.companyName}
 							/>
+
+							{/* Email Activity Section */}
+							<StyledCard>
+								<StyledCardHeader>
+									<StyledCardTitle className="text-xl">
+										Email Activity
+									</StyledCardTitle>
+									<p className="text-sm text-gray-600 dark:text-gray-400">
+										Emails sent to this client
+									</p>
+								</StyledCardHeader>
+								<StyledCardContent>
+									<EmailActivityList emails={clientEmails || []} />
+								</StyledCardContent>
+							</StyledCard>
 						</div>
 
 						{/* Contact Info Sidebar - Right Column */}
@@ -1563,6 +1598,18 @@ export default function ClientDetailPage() {
 					</div>
 				</div>
 			</div>
+			
+			{/* Send Email Popover - positioned at bottom right of screen to align with footer button */}
+			<SendClientEmailPopover
+				isOpen={isEmailPopoverOpen}
+				onOpenChange={setIsEmailPopoverOpen}
+				clientId={clientId as Id<"clients">}
+				clientName={client.companyName}
+				primaryContact={primaryContact}
+			>
+				<div className="fixed bottom-4 right-6 pointer-events-none" />
+			</SendClientEmailPopover>
+			
 			<StickyFormFooter
 				buttons={getFooterButtons()}
 				hasUnsavedChanges={isDirty}

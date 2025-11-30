@@ -566,7 +566,10 @@ export default defineSchema({
 			v.literal("task_completed"),
 			v.literal("user_invited"),
 			v.literal("user_removed"),
-			v.literal("organization_updated")
+			v.literal("organization_updated"),
+			v.literal("email_sent"),
+			v.literal("email_delivered"),
+			v.literal("email_opened")
 		),
 		entityType: v.union(
 			v.literal("client"),
@@ -723,4 +726,44 @@ export default defineSchema({
 	})
 		.index("by_service", ["serviceName"])
 		.index("by_provider", ["provider"]),
+
+	// Email Messages - track sent client emails via Resend
+	emailMessages: defineTable({
+		orgId: v.id("organizations"),
+		clientId: v.id("clients"),
+		resendEmailId: v.string(), // Resend's email ID for tracking
+
+		// Email content
+		subject: v.string(),
+		messageBody: v.string(),
+		messagePreview: v.optional(v.string()), // First 100 chars for display
+
+		// Recipients
+		toEmail: v.string(),
+		toName: v.string(),
+
+		// Status tracking
+		status: v.union(
+			v.literal("sent"),
+			v.literal("delivered"),
+			v.literal("opened"),
+			v.literal("bounced"),
+			v.literal("complained")
+		),
+
+		// Timestamps
+		sentAt: v.number(),
+		deliveredAt: v.optional(v.number()),
+		openedAt: v.optional(v.number()),
+		bouncedAt: v.optional(v.number()),
+		complainedAt: v.optional(v.number()),
+
+		// Tracking
+		sentBy: v.id("users"), // User who sent the email
+	})
+		.index("by_org", ["orgId"])
+		.index("by_client", ["clientId"])
+		.index("by_resend_id", ["resendEmailId"])
+		.index("by_org_status", ["orgId", "status"])
+		.index("by_client_status", ["clientId", "status"]),
 });

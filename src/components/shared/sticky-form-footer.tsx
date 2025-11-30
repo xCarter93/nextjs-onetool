@@ -19,6 +19,7 @@ interface ButtonConfig {
 	disabled?: boolean;
 	type?: "button" | "submit";
 	position?: "left" | "right";
+	customComponent?: (button: ReactNode) => ReactNode; // Wrapper for button (e.g., Popover)
 }
 
 interface StickyFormFooterProps {
@@ -103,19 +104,24 @@ export function StickyFormFooter({
 								.filter(
 									(button) => !button.position || button.position === "left"
 								)
-								.map((button, index) => (
-									<StyledButton
-										key={`left-${index}`}
-										label={button.label}
-										onClick={button.onClick}
-										intent={button.intent}
-										size={button.size}
-										icon={button.icon}
-										isLoading={button.isLoading}
-										disabled={button.disabled}
-										type={button.type}
-									/>
-								))}
+								.map((button, index) => {
+									const buttonElement = (
+										<StyledButton
+											key={`left-${index}`}
+											label={button.label}
+											onClick={button.onClick}
+											intent={button.intent}
+											size={button.size}
+											icon={button.icon}
+											isLoading={button.isLoading}
+											disabled={button.disabled}
+											type={button.type}
+										/>
+									);
+									return button.customComponent
+										? button.customComponent(buttonElement)
+										: buttonElement;
+								})}
 						</div>
 
 						{/* Unsaved Changes Notification - Centered */}
@@ -137,19 +143,24 @@ export function StickyFormFooter({
 						<div className="flex items-center gap-x-3 flex-wrap">
 							{buttonConfigs
 								.filter((button) => button.position === "right")
-								.map((button, index) => (
-									<StyledButton
-										key={`right-${index}`}
-										label={button.label}
-										onClick={button.onClick}
-										intent={button.intent}
-										size={button.size}
-										icon={button.icon}
-										isLoading={button.isLoading}
-										disabled={button.disabled}
-										type={button.type}
-									/>
-								))}
+								.map((button, index) => {
+									const buttonElement = (
+										<StyledButton
+											key={`right-${index}`}
+											label={button.label}
+											onClick={button.onClick}
+											intent={button.intent}
+											size={button.size}
+											icon={button.icon}
+											isLoading={button.isLoading}
+											disabled={button.disabled}
+											type={button.type}
+										/>
+									);
+									return button.customComponent
+										? button.customComponent(buttonElement)
+										: buttonElement;
+								})}
 						</div>
 					</div>
 				</div>
