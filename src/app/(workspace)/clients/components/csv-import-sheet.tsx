@@ -3,24 +3,31 @@
 import { useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
-import Modal from "@/components/ui/modal";
+import {
+	Sheet,
+	SheetContent,
+	SheetHeader,
+	SheetTitle,
+	SheetDescription,
+	SheetFooter,
+} from "@/components/ui/sheet";
 import { StyledButton } from "@/components/ui/styled/styled-button";
 import { useToast } from "@/hooks/use-toast";
 import { Upload } from "lucide-react";
 import { CsvImportStep } from "@/app/(workspace)/clients/components/csv-import-step";
 import type { CsvAnalysisResult, CsvImportState } from "@/types/csv-import";
 
-interface CsvImportModalProps {
+interface CsvImportSheetProps {
 	isOpen: boolean;
-	onClose: () => void;
+	onOpenChange: (open: boolean) => void;
 	onComplete?: () => void;
 }
 
-export function CsvImportModal({
+export function CsvImportSheet({
 	isOpen,
-	onClose,
+	onOpenChange,
 	onComplete,
-}: CsvImportModalProps) {
+}: CsvImportSheetProps) {
 	const toast = useToast();
 	const bulkCreateClients = useMutation(api.clients.bulkCreate);
 	const bulkCreateProjects = useMutation(api.projects.bulkCreate);
@@ -245,7 +252,7 @@ export function CsvImportModal({
 			importResult: null,
 		});
 		setError(null);
-		onClose();
+		onOpenChange(false);
 	};
 
 	const handleComplete = () => {
@@ -254,69 +261,86 @@ export function CsvImportModal({
 	};
 
 	return (
-		<Modal isOpen={isOpen} onClose={handleClose} title="Import Data" size="lg">
-			<div className="space-y-8">
-				<p className="text-sm text-muted-foreground">
-					Import your existing clients or projects from a CSV file. Our AI will
-					help map your data to the correct fields.
-				</p>
+		<Sheet open={isOpen} onOpenChange={onOpenChange}>
+			<SheetContent side="right" className="w-full sm:max-w-5xl bg-background!">
+				<div className="flex flex-col h-full overflow-hidden">
+					<SheetHeader className="border-b border-border pb-4 shrink-0">
+						<SheetTitle className="flex items-center gap-2 text-2xl font-semibold">
+							Import Data
+						</SheetTitle>
+						<SheetDescription className="text-muted-foreground">
+							Import your existing clients or projects from a CSV file. Our AI
+							will help map your data to the correct fields.
+						</SheetDescription>
+					</SheetHeader>
 
-				{/* CSV Import Step Component */}
-				<CsvImportStep
-					entityType={csvImportState.entityType}
-					onEntityTypeChange={(value) =>
-						setCsvImportState((prev) => ({
-							...prev,
-							entityType: value,
-							analysisResult: null,
-							mappings: [],
-						}))
-					}
-					isAnalyzing={csvImportState.isAnalyzing}
-					onFileSelect={handleFileSelect}
-					analysisResult={csvImportState.analysisResult}
-					mappings={csvImportState.mappings || []}
-					onMappingChange={handleMappingChange}
-					importResult={csvImportState.importResult ?? null}
-					error={error}
-					showTitle={false}
-					disabledEntityTypes={["projects"]}
-				/>
+					<div className="flex-1 overflow-y-auto pt-6 px-6">
+						<div className="space-y-6">
+							{/* CSV Import Step Component */}
+							<CsvImportStep
+								entityType={csvImportState.entityType}
+								onEntityTypeChange={(value) =>
+									setCsvImportState((prev) => ({
+										...prev,
+										entityType: value,
+										analysisResult: null,
+										mappings: [],
+									}))
+								}
+								isAnalyzing={csvImportState.isAnalyzing}
+								onFileSelect={handleFileSelect}
+								analysisResult={csvImportState.analysisResult}
+								mappings={csvImportState.mappings || []}
+								onMappingChange={handleMappingChange}
+								importResult={csvImportState.importResult ?? null}
+								error={error}
+								showTitle={false}
+								disabledEntityTypes={["projects"]}
+							/>
+						</div>
+					</div>
 
-				{/* Action Buttons */}
-				<div className="flex justify-end gap-2 pt-4 border-t border-border">
-					<StyledButton intent="outline" onClick={handleClose}>
-						Close
-					</StyledButton>
-
-					{csvImportState.analysisResult && !csvImportState.importResult && (
+					<SheetFooter className="flex flex-row justify-end gap-3 border-t border-border shrink-0">
 						<StyledButton
-							intent="primary"
-							onClick={handleImportData}
-							isLoading={csvImportState.isImporting}
-							disabled={!csvImportState.analysisResult?.validation.isValid}
-						>
-							{csvImportState.isImporting ? (
-								<>
-									<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-									Importing...
-								</>
-							) : (
-								<>
-									<Upload className="w-4 h-4" />
-									Import Data
-								</>
-							)}
-						</StyledButton>
-					)}
+							type="button"
+							intent="outline"
+							onClick={handleClose}
+							label="Close"
+							showArrow={false}
+						/>
 
-					{(csvImportState.importResult || !csvImportState.file) && (
-						<StyledButton intent="primary" onClick={handleComplete}>
-							Done
-						</StyledButton>
-					)}
+						{csvImportState.analysisResult && !csvImportState.importResult && (
+							<StyledButton
+								type="button"
+								intent="primary"
+								onClick={handleImportData}
+								isLoading={csvImportState.isImporting}
+								disabled={!csvImportState.analysisResult?.validation.isValid}
+								label={
+									csvImportState.isImporting ? "Importing..." : "Import Data"
+								}
+								icon={
+									!csvImportState.isImporting && <Upload className="w-4 h-4" />
+								}
+								showArrow={false}
+							/>
+						)}
+
+						{(csvImportState.importResult || !csvImportState.file) && (
+							<StyledButton
+								type="button"
+								intent="primary"
+								onClick={handleComplete}
+								label="Done"
+								showArrow={false}
+							/>
+						)}
+					</SheetFooter>
 				</div>
-			</div>
-		</Modal>
+			</SheetContent>
+		</Sheet>
 	);
 }
+
+// Export default for easier importing
+export default CsvImportSheet;
