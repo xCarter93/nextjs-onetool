@@ -648,9 +648,23 @@ http.route({
 			// Validate webhook signature if secret is configured
 			if (process.env.RESEND_WEBHOOK_SECRET) {
 				const signatureHeader = request.headers.get("svix-signature");
+				const svixId = request.headers.get("svix-id");
+				const svixTimestamp = request.headers.get("svix-timestamp");
 
 				if (!signatureHeader) {
 					console.warn("Resend webhook received without signature header");
+					return new Response("Unauthorized", { status: 401 });
+				}
+
+				if (!svixId) {
+					console.error("Resend webhook received without svix-id header");
+					return new Response("Unauthorized", { status: 401 });
+				}
+
+				if (!svixTimestamp) {
+					console.error(
+						"Resend webhook received without svix-timestamp header"
+					);
 					return new Response("Unauthorized", { status: 401 });
 				}
 
@@ -658,8 +672,8 @@ http.route({
 				const wh = new Webhook(process.env.RESEND_WEBHOOK_SECRET);
 				try {
 					wh.verify(payloadString, {
-						"svix-id": request.headers.get("svix-id")!,
-						"svix-timestamp": request.headers.get("svix-timestamp")!,
+						"svix-id": svixId,
+						"svix-timestamp": svixTimestamp,
 						"svix-signature": signatureHeader,
 					});
 				} catch (error) {
@@ -699,28 +713,28 @@ http.route({
 					console.log(`Processed Resend webhook: ${eventType} for ${emailId}`);
 					break;
 
-			case "email.received":
-				// Handle inbound email (use runAction instead of runMutation)
-				// Note: Webhook payload does NOT include html/text content, only metadata
-				// We need to fetch content separately using the Received emails API
-				console.log("Processing inbound email:", emailId);
-				try {
-					await ctx.runAction(internal.resendReceiving.handleInboundEmail, {
-						emailId,
-						from: event.data.from || "",
-						to: event.data.to || [],
-						subject: event.data.subject || "(No subject)",
-						messageId: event.data.message_id || emailId,
-						inReplyTo: event.data.in_reply_to,
-						references: event.data.references,
-						attachments: event.data.attachments || [],
-					});
-					console.log(`Successfully processed inbound email: ${emailId}`);
-				} catch (error) {
-					console.error("Error processing inbound email:", error);
-					// Return 200 anyway to prevent Resend from retrying
-				}
-				break;
+				case "email.received":
+					// Handle inbound email (use runAction instead of runMutation)
+					// Note: Webhook payload does NOT include html/text content, only metadata
+					// We need to fetch content separately using the Received emails API
+					console.log("Processing inbound email:", emailId);
+					try {
+						await ctx.runAction(internal.resendReceiving.handleInboundEmail, {
+							emailId,
+							from: event.data.from || "",
+							to: event.data.to || [],
+							subject: event.data.subject || "(No subject)",
+							messageId: event.data.message_id || emailId,
+							inReplyTo: event.data.in_reply_to,
+							references: event.data.references,
+							attachments: event.data.attachments || [],
+						});
+						console.log(`Successfully processed inbound email: ${emailId}`);
+					} catch (error) {
+						console.error("Error processing inbound email:", error);
+						// Return 200 anyway to prevent Resend from retrying
+					}
+					break;
 
 				default:
 					console.log("Unhandled Resend event type:", eventType);

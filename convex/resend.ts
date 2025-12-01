@@ -66,12 +66,11 @@ export const sendClientEmail = mutation({
 			senderName: user.name, // Add sender's name for personalization
 		});
 
-		// Use verified company domain with user's name for personalization
-		// Reply-to ensures responses go to the actual user
-		const fromEmail = "support@onetool.biz"; // Verified domain
+		// Resolve from email with fallback chain: receivingAddress -> env var -> default
+		const fromEmail = resolveFromEmail(organization);
 		const fromName = user.name || organization.name || "OneTool"; // Fallback to org name or "OneTool"
 
-		// Ensure organization has a receiving address
+		// Ensure organization has a receiving address for replies
 		if (!organization.receivingAddress) {
 			throw new Error(
 				"Organization does not have a receiving email address configured. Please contact support."
@@ -213,10 +212,11 @@ export const replyToEmail = mutation({
 			senderName: user.name,
 		});
 
-		const fromEmail = "support@onetool.biz";
+		// Resolve from email with fallback chain: receivingAddress -> env var -> default
+		const fromEmail = resolveFromEmail(organization);
 		const fromName = user.name || organization.name || "OneTool";
 
-		// Ensure organization has a receiving address
+		// Ensure organization has a receiving address for replies
 		if (!organization.receivingAddress) {
 			throw new Error(
 				"Organization does not have a receiving email address configured. Please contact support."
@@ -289,6 +289,21 @@ export const replyToEmail = mutation({
 });
 
 /**
+ * Resolve the from email address with proper fallback chain
+ */
+function resolveFromEmail(organization: { receivingAddress?: string }): string {
+	// Priority: organization.receivingAddress -> env var -> default
+	const fromEmail = organization.receivingAddress || "support@onetool.biz";
+
+	// Validate that we have a non-empty string
+	if (!fromEmail || fromEmail.trim().length === 0) {
+		throw new Error("Unable to resolve a valid from email address");
+	}
+
+	return fromEmail;
+}
+
+/**
  * Build email HTML with organization branding
  */
 function buildEmailHtml(options: {
@@ -314,10 +329,38 @@ function buildEmailHtml(options: {
 		senderName,
 	} = options;
 
-	// Convert message body to HTML (preserve line breaks)
+	// HTML escape helper to prevent XSS
+	const escapeHtml = (text: string): string => {
+		return text
+			.replace(/&/g, "&amp;")
+			.replace(/</g, "&lt;")
+			.replace(/>/g, "&gt;")
+			.replace(/"/g, "&quot;")
+			.replace(/'/g, "&#039;")
+			.replace(/\//g, "&#x2F;");
+	};
+
+	// Escape all user-provided content
+	const escapedClientName = escapeHtml(clientName);
+	const escapedSenderName = escapeHtml(senderName);
+	const escapedOrganizationName = escapeHtml(organizationName);
+	const escapedOrganizationEmail = organizationEmail
+		? escapeHtml(organizationEmail)
+		: undefined;
+	const escapedOrganizationPhone = organizationPhone
+		? escapeHtml(organizationPhone)
+		: undefined;
+	const escapedOrganizationAddress = organizationAddress
+		? escapeHtml(organizationAddress)
+		: undefined;
+
+	// Convert message body to HTML (preserve line breaks) with XSS protection
 	const messageHtml = messageBody
 		.split("\n")
-		.map((line) => `<p style="margin: 8px 0;">${line || "&nbsp;"}</p>`)
+		.map((line) => {
+			const escapedLine = escapeHtml(line);
+			return `<p style="margin: 8px 0;">${escapedLine || "&nbsp;"}</p>`;
+		})
 		.join("");
 
 	return `
@@ -326,7 +369,7 @@ function buildEmailHtml(options: {
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>${organizationName}</title>
+	<title>${escapedOrganizationName}</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f3f4f6; color: #1f2937;">
 	<table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f3f4f6; padding: 40px 20px;">
@@ -339,8 +382,8 @@ function buildEmailHtml(options: {
 						<td style="background-color: ${brandColor}; padding: 40px 40px 30px 40px; text-align: center;">
 							${
 								logoUrl
-									? `<img src="${logoUrl}" alt="${organizationName}" style="max-width: 180px; height: auto; display: block; margin: 0 auto;" />`
-									: `<h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700;">${organizationName}</h1>`
+									? `<img src="${logoUrl}" alt="${escapedOrganizationName}" style="max-width: 180px; height: auto; display: block; margin: 0 auto;" />`
+									: `<h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700;">${escapedOrganizationName}</h1>`
 							}
 						</td>
 					</tr>
@@ -348,15 +391,15 @@ function buildEmailHtml(options: {
 					<!-- Content -->
 					<tr>
 						<td style="padding: 40px;">
-							<p style="margin: 0 0 20px 0; font-size: 16px; line-height: 1.6;">Hi ${clientName},</p>
+							<p style="margin: 0 0 20px 0; font-size: 16px; line-height: 1.6;">Hi ${escapedClientName},</p>
 							
 							<div style="margin: 20px 0; font-size: 16px; line-height: 1.6; color: #374151;">
 								${messageHtml}
 							</div>
 							
 							<p style="margin: 30px 0 10px 0; font-size: 16px; line-height: 1.6;">Best regards,</p>
-							<p style="margin: 0 0 5px 0; font-size: 18px; line-height: 1.6; font-weight: 700; color: ${brandColor};">${senderName}</p>
-							<p style="margin: 0 0 15px 0; font-size: 14px; line-height: 1.6; color: #6b7280;">${organizationName}</p>
+							<p style="margin: 0 0 5px 0; font-size: 18px; line-height: 1.6; font-weight: 700; color: ${brandColor};">${escapedSenderName}</p>
+							<p style="margin: 0 0 15px 0; font-size: 14px; line-height: 1.6; color: #6b7280;">${escapedOrganizationName}</p>
 						</td>
 					</tr>
 					
@@ -366,10 +409,10 @@ function buildEmailHtml(options: {
 							<table width="100%" cellpadding="0" cellspacing="0">
 								<tr>
 									<td style="font-size: 14px; line-height: 1.6; color: #6b7280;">
-										<strong style="color: #1f2937;">${organizationName}</strong><br />
-										${organizationEmail ? `Email: <a href="mailto:${organizationEmail}" style="color: ${brandColor}; text-decoration: none;">${organizationEmail}</a><br />` : ""}
-										${organizationPhone ? `Phone: ${organizationPhone}<br />` : ""}
-										${organizationAddress ? `${organizationAddress}` : ""}
+										<strong style="color: #1f2937;">${escapedOrganizationName}</strong><br />
+										${escapedOrganizationEmail ? `Email: <a href="mailto:${escapedOrganizationEmail}" style="color: ${brandColor}; text-decoration: none;">${escapedOrganizationEmail}</a><br />` : ""}
+										${escapedOrganizationPhone ? `Phone: ${escapedOrganizationPhone}<br />` : ""}
+										${escapedOrganizationAddress ? `${escapedOrganizationAddress}` : ""}
 									</td>
 								</tr>
 							</table>
@@ -381,7 +424,7 @@ function buildEmailHtml(options: {
 				<table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; margin-top: 20px;">
 					<tr>
 						<td style="text-align: center; font-size: 12px; color: #9ca3af; line-height: 1.5;">
-							<p style="margin: 0;">This email was sent by ${organizationName}</p>
+							<p style="margin: 0;">This email was sent by ${escapedOrganizationName}</p>
 						</td>
 					</tr>
 				</table>

@@ -2,17 +2,26 @@ import { internalMutation, internalAction } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { Resend } from "resend";
+import type { Id } from "./_generated/dataModel";
+
+// Validate RESEND_API_KEY before initializing client
+if (!process.env.RESEND_API_KEY) {
+	throw new Error(
+		"RESEND_API_KEY environment variable is not set. " +
+			"Please configure it in your Convex dashboard under Settings > Environment Variables."
+	);
+}
 
 // Initialize Resend client for API calls
 const resendClient = new Resend(process.env.RESEND_API_KEY);
 
 /**
  * Handle inbound email from Resend webhook (Action)
- * 
+ *
  * According to Resend docs, the webhook payload contains only metadata.
  * We need to call the Resend API to get the full email content.
  * See: https://resend.com/docs/dashboard/receiving/introduction
- * 
+ *
  * This is an ACTION because it needs to fetch data from external API.
  */
 export const handleInboundEmail = internalAction({
@@ -36,7 +45,15 @@ export const handleInboundEmail = internalAction({
 			)
 		),
 	},
-	handler: async (ctx, args) => {
+	handler: async (
+		ctx,
+		args
+	): Promise<{
+		success: boolean;
+		emailMessageId?: string;
+		orgId?: string;
+		error?: string;
+	}> => {
 		// Step 1: Fetch full email content from Resend API (required for inbound emails)
 		const emailContent = await fetchEmailContent(args.emailId);
 
@@ -46,7 +63,12 @@ export const handleInboundEmail = internalAction({
 		}
 
 		// Step 2: Call mutation to process and store the email
-		const result = await ctx.runMutation(internal.resendReceiving.processInboundEmail, {
+		const result: {
+			success: boolean;
+			emailMessageId?: string;
+			orgId?: string;
+			error?: string;
+		} = await ctx.runMutation(internal.resendReceiving.processInboundEmail, {
 			emailId: args.emailId,
 			from: args.from,
 			to: args.to,
@@ -79,7 +101,7 @@ export const handleInboundEmail = internalAction({
 
 /**
  * Process and store inbound email (Mutation)
- * 
+ *
  * This is a MUTATION because it writes to the database.
  * It receives the email content from the action.
  */
@@ -108,6 +130,17 @@ export const processInboundEmail = internalMutation({
 	},
 	handler: async (ctx, args) => {
 		// Step 1: Parse recipient to identify organization
+		// Defensive bounds check for args.to array
+		if (!Array.isArray(args.to) || args.to.length === 0) {
+			console.error("Invalid or empty 'to' array in incoming email", {
+				to: args.to,
+				from: args.from,
+				subject: args.subject,
+				messageId: args.messageId,
+			});
+			throw new Error("Email must have at least one recipient in 'to' field");
+		}
+
 		const recipientEmail = args.to[0]; // Primary recipient
 
 		// Step 2: Find organization by receiving address
@@ -117,7 +150,9 @@ export const processInboundEmail = internalMutation({
 			.first();
 
 		if (!organization) {
-			console.error(`Organization not found for receiving address: ${recipientEmail}`);
+			console.error(
+				`Organization not found for receiving address: ${recipientEmail}`
+			);
 			return { success: false, error: "Organization not found" };
 		}
 
@@ -150,62 +185,67 @@ export const processInboundEmail = internalMutation({
 				timestamp: Date.now(),
 				isVisible: true,
 			});
-			return { success: false, error: "Unknown sender - no matching client contact" };
+			return {
+				success: false,
+				error: "Unknown sender - no matching client contact",
+			};
 		}
 
 		const clientId = clientContact.clientId;
 
-	// Step 5: Determine or create thread ID
-	let threadId: string;
+		// Step 5: Determine or create thread ID
+		let threadId: string;
 
-	// Check if this is a reply by looking at inReplyTo OR subject starting with "Re:"
-	const isReply = args.inReplyTo || args.subject.match(/^Re:/i);
+		// Check if this is a reply by looking at inReplyTo OR subject starting with "Re:"
+		const isReply = args.inReplyTo || args.subject.match(/^Re:/i);
 
-	if (isReply) {
-		// This is a reply - try to find the original message
-		let originalMessage = null;
+		if (isReply) {
+			// This is a reply - try to find the original message
+			let originalMessage = null;
 
-		// First, try searching by the threadId/inReplyTo field if provided
-		if (args.inReplyTo) {
-			originalMessage = await ctx.db
-				.query("emailMessages")
-				.filter((q) => q.eq(q.field("threadId"), args.inReplyTo))
-				.first();
-		}
+			// First, try searching by the threadId/inReplyTo field if provided
+			if (args.inReplyTo) {
+				originalMessage = await ctx.db
+					.query("emailMessages")
+					.filter((q) => q.eq(q.field("threadId"), args.inReplyTo))
+					.first();
+			}
 
-		// If not found, try to find by subject (removing "Re: " prefix)
-		if (!originalMessage) {
-			const cleanSubject = args.subject.replace(/^Re:\s*/i, "").trim();
-			const clientMessages = await ctx.db
-				.query("emailMessages")
-				.withIndex("by_client", (q) => q.eq("clientId", clientId))
-				.collect();
+			// If not found, try to find by subject (removing "Re: " prefix)
+			if (!originalMessage) {
+				const cleanSubject = args.subject.replace(/^Re:\s*/i, "").trim();
+				const clientMessages = await ctx.db
+					.query("emailMessages")
+					.withIndex("by_client", (q) => q.eq("clientId", clientId))
+					.collect();
 
-			// Find a message with matching subject (could be the original or any in the thread)
-			// Sort by most recent first to get the latest message in the thread
-			originalMessage = clientMessages
-				.sort((a, b) => b.sentAt - a.sentAt)
-				.find(
-					(msg) => {
+				// Find a message with matching subject (could be the original or any in the thread)
+				// Sort by most recent first to get the latest message in the thread
+				originalMessage = clientMessages
+					.sort((a, b) => b.sentAt - a.sentAt)
+					.find((msg) => {
 						const msgCleanSubject = msg.subject.replace(/^Re:\s*/i, "").trim();
-						return msg.subject === cleanSubject || msgCleanSubject === cleanSubject;
-					}
-				);
-		}
+						return (
+							msg.subject === cleanSubject || msgCleanSubject === cleanSubject
+						);
+					});
+			}
 
-		if (originalMessage?.threadId) {
-			// Use the thread ID from the original message
-			threadId = originalMessage.threadId;
+			if (originalMessage?.threadId) {
+				// Use the thread ID from the original message
+				threadId = originalMessage.threadId;
+			} else {
+				// Fall back to using the resendEmailId of the first message as thread root
+				// This creates a new thread
+				threadId = args.emailId;
+				console.warn(
+					"No original message found for reply, creating new thread"
+				);
+			}
 		} else {
-			// Fall back to using the resendEmailId of the first message as thread root
-			// This creates a new thread
+			// New conversation - use this message's Resend email ID as thread root
 			threadId = args.emailId;
-			console.warn("No original message found for reply, creating new thread");
 		}
-	} else {
-		// New conversation - use this message's Resend email ID as thread root
-		threadId = args.emailId;
-	}
 
 		// Step 6: Insert email message record
 		const messagePreview = args.textBody
@@ -265,8 +305,8 @@ export const processInboundEmail = internalMutation({
 
 /**
  * Download and store email attachment from Resend (Action)
- * 
- * This is an ACTION because it needs to fetch data from external API.
+ *
+ * This is an ACTION because it needs to fetch data from external API and store in Convex storage.
  */
 export const downloadAttachmentAction = internalAction({
 	args: {
@@ -280,21 +320,30 @@ export const downloadAttachmentAction = internalAction({
 	handler: async (ctx, args) => {
 		try {
 			// Fetch attachment from Resend API
-			const attachmentData = await fetchAttachment(args.emailId, args.attachmentId);
+			const attachmentData = await fetchAttachment(
+				args.emailId,
+				args.attachmentId
+			);
 
 			if (!attachmentData) {
 				console.error(`Failed to download attachment: ${args.filename}`);
 				return { success: false };
 			}
 
-			// Call mutation to store the attachment
-			await ctx.runMutation(internal.resendReceiving.storeAttachment, {
-				emailMessageId: args.emailMessageId as any,
-				orgId: args.orgId as any,
+			// Store in Convex storage (actions have access to store())
+			const storageId = await ctx.storage.store(
+				new Blob([attachmentData], { type: args.contentType })
+			);
+
+			// Call mutation to create the database record
+			await ctx.runMutation(internal.resendReceiving.createAttachmentRecord, {
+				emailMessageId: args.emailMessageId as Id<"emailMessages">,
+				orgId: args.orgId as Id<"organizations">,
 				attachmentId: args.attachmentId,
 				filename: args.filename,
 				contentType: args.contentType,
-				attachmentData: Array.from(new Uint8Array(attachmentData)), // Convert to array for serialization
+				storageId,
+				size: attachmentData.byteLength,
 			});
 
 			return { success: true };
@@ -306,28 +355,22 @@ export const downloadAttachmentAction = internalAction({
 });
 
 /**
- * Store attachment in Convex storage (Mutation)
- * 
- * This is a MUTATION because it writes to storage and database.
+ * Create attachment record in database (Mutation)
+ *
+ * This is a MUTATION because it writes to the database.
+ * The file is already stored in the action, so we just need to create the record.
  */
-export const storeAttachment = internalMutation({
+export const createAttachmentRecord = internalMutation({
 	args: {
 		emailMessageId: v.id("emailMessages"),
 		orgId: v.id("organizations"),
 		attachmentId: v.string(),
 		filename: v.string(),
 		contentType: v.string(),
-		attachmentData: v.array(v.number()), // Array of bytes
+		storageId: v.id("_storage"),
+		size: v.number(),
 	},
 	handler: async (ctx, args) => {
-		// Convert array back to Uint8Array
-		const uint8Array = new Uint8Array(args.attachmentData);
-
-		// Store in Convex storage
-		const storageId = await ctx.storage.store(
-			new Blob([uint8Array], { type: args.contentType })
-		);
-
 		// Create attachment record
 		await ctx.db.insert("emailAttachments", {
 			orgId: args.orgId,
@@ -335,12 +378,12 @@ export const storeAttachment = internalMutation({
 			attachmentId: args.attachmentId,
 			filename: args.filename,
 			contentType: args.contentType,
-			size: uint8Array.byteLength,
-			storageId,
+			size: args.size,
+			storageId: args.storageId,
 			receivedAt: Date.now(),
 		});
 
-		return { success: true, storageId };
+		return { success: true, storageId: args.storageId };
 	},
 });
 
@@ -399,8 +442,8 @@ async function fetchEmailContent(
 		}
 
 		return {
-			html: data.html,
-			text: data.text,
+			html: data.html || undefined,
+			text: data.text || undefined,
 		};
 	} catch (error) {
 		console.error("Error fetching email content:", error);
@@ -426,7 +469,9 @@ async function fetchAttachment(
 		);
 
 		if (!response.ok) {
-			console.error(`Resend API error: ${response.status} ${response.statusText}`);
+			console.error(
+				`Resend API error: ${response.status} ${response.statusText}`
+			);
 			return null;
 		}
 
@@ -436,4 +481,3 @@ async function fetchAttachment(
 		return null;
 	}
 }
-

@@ -96,7 +96,8 @@ export default defineSchema({
 		isMetadataComplete: v.optional(v.boolean()), // Whether user completed additional onboarding
 	})
 		.index("by_owner", ["ownerUserId"])
-		.index("by_clerk_org", ["clerkOrganizationId"]),
+		.index("by_clerk_org", ["clerkOrganizationId"])
+		.index("by_receiving_address", ["receivingAddress"]),
 
 	organizationMemberships: defineTable({
 		orgId: v.id("organizations"),
@@ -572,7 +573,8 @@ export default defineSchema({
 			v.literal("organization_updated"),
 			v.literal("email_sent"),
 			v.literal("email_delivered"),
-			v.literal("email_opened")
+			v.literal("email_opened"),
+			v.literal("email_received")
 		),
 		entityType: v.union(
 			v.literal("client"),

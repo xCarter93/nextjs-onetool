@@ -4,13 +4,13 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
+import DOMPurify from "dompurify";
 import {
 	Sheet,
 	SheetContent,
 	SheetHeader,
 	SheetTitle,
 	SheetDescription,
-	SheetFooter,
 } from "@/components/ui/sheet";
 import { StyledButton } from "@/components/ui/styled/styled-button";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,7 +23,7 @@ import {
 	SelectItem,
 } from "@/components/ui/styled/styled-select";
 import { useToast } from "@/hooks/use-toast";
-import { Send, Loader2, Paperclip, Download } from "lucide-react";
+import { Send, Paperclip, Download } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -49,7 +49,8 @@ export function EmailThreadSheet({
 	const [subject, setSubject] = useState("");
 	const [replyBody, setReplyBody] = useState("");
 	const [isSending, setIsSending] = useState(false);
-	const [selectedContactId, setSelectedContactId] = useState<Id<"clientContacts"> | null>(null);
+	const [selectedContactId, setSelectedContactId] =
+		useState<Id<"clientContacts"> | null>(null);
 	const messagesEndRef = useRef<HTMLDivElement>(null);
 
 	// Fetch thread messages (only if threadId provided)
@@ -176,10 +177,11 @@ export function EmailThreadSheet({
 	// Build email preview with auto-added content
 	const getEmailPreview = () => {
 		if (!replyBody.trim()) return "";
-		
-		const contactName = selectedContact 
-			? `${selectedContact.firstName} ${selectedContact.lastName}`.toUpperCase()
-			: "CLIENT NAME";
+
+		const contactName = selectedContact
+			? `${selectedContact.firstName || ""} ${selectedContact.lastName || ""}`.trim() ||
+				"Client Name"
+			: "Client Name";
 		const senderName = currentUser?.name || "Your Name";
 		const orgName = organization?.name || "Organization";
 
@@ -193,12 +195,12 @@ export function EmailThreadSheet({
 					{/* Header */}
 					<SheetHeader className="border-b border-border pb-4 shrink-0">
 						<SheetTitle className="text-2xl font-semibold">
-							{thread && thread.length > 0
-								? thread[0].subject
-								: "New Email"}
+							{thread && thread.length > 0 ? thread[0].subject : "New Email"}
 						</SheetTitle>
 						<SheetDescription className="text-muted-foreground">
-							{client ? `Conversation with ${client.companyName}` : "Loading..."}
+							{client
+								? `Conversation with ${client.companyName}`
+								: "Loading..."}
 							{selectedContact && (
 								<span className="block text-xs mt-1">
 									To: {selectedContact.email}
@@ -243,7 +245,9 @@ export function EmailThreadSheet({
 									</label>
 									<StyledSelect
 										value={selectedContactId || ""}
-										onValueChange={(value) => setSelectedContactId(value as Id<"clientContacts">)}
+										onValueChange={(value) =>
+											setSelectedContactId(value as Id<"clientContacts">)
+										}
 									>
 										<StyledSelectTrigger id="contact-select">
 											<SelectValue placeholder="Select a contact" />
@@ -256,7 +260,9 @@ export function EmailThreadSheet({
 															{contact.firstName} {contact.lastName}
 														</span>
 														{contact.isPrimary && (
-															<span className="text-xs text-primary">(Primary)</span>
+															<span className="text-xs text-primary">
+																(Primary)
+															</span>
 														)}
 														<span className="text-xs text-muted-foreground">
 															{contact.email}
@@ -308,7 +314,7 @@ export function EmailThreadSheet({
 									<span>{replyBody.length} characters</span>
 									{/* Future: Attachment button */}
 								</div>
-								
+
 								{/* Email Preview */}
 								{replyBody.trim() && (
 									<div className="mt-4 p-4 rounded-lg bg-muted/50 border border-border">
@@ -321,7 +327,8 @@ export function EmailThreadSheet({
 											{getEmailPreview()}
 										</div>
 										<div className="mt-2 text-xs text-muted-foreground italic">
-											This shows what your recipient will see (greeting and signature are auto-added)
+											This shows what your recipient will see (greeting and
+											signature are auto-added)
 										</div>
 									</div>
 								)}
@@ -346,7 +353,13 @@ export function EmailThreadSheet({
 										(showSubjectField && !subject.trim()) ||
 										isSending
 									}
-									label={isSending ? "Sending..." : isNewEmail ? "Send Email" : "Send Reply"}
+									label={
+										isSending
+											? "Sending..."
+											: isNewEmail
+												? "Send Email"
+												: "Send Reply"
+									}
 									icon={!isSending && <Send className="w-4 h-4" />}
 									showArrow={false}
 								/>
@@ -371,7 +384,7 @@ interface EmailMessageBubbleProps {
 		sentAt: number;
 		status: string;
 		senderName?: string;
-		senderAvatar?: string;
+		senderAvatar?: string | null;
 		hasAttachments?: boolean;
 	};
 }
@@ -387,24 +400,30 @@ function EmailMessageBubble({ message }: EmailMessageBubbleProps) {
 
 	return (
 		<div
-			className={cn(
-				"flex gap-3",
-				isInbound ? "flex-row" : "flex-row-reverse"
-			)}
+			className={cn("flex gap-3", isInbound ? "flex-row" : "flex-row-reverse")}
 		>
 			{/* Avatar */}
 			<Avatar className="w-10 h-10 shrink-0">
-				<AvatarImage src={message.senderAvatar} />
-				<AvatarFallback className={cn(
-					isInbound ? "bg-blue-100 text-blue-700" : "bg-purple-100 text-purple-700"
-				)}>
+				<AvatarImage src={message.senderAvatar || undefined} />
+				<AvatarFallback
+					className={cn(
+						isInbound
+							? "bg-blue-100 text-blue-700"
+							: "bg-purple-100 text-purple-700"
+					)}
+				>
 					{message.senderName?.[0] || message.fromName[0]}
 				</AvatarFallback>
 			</Avatar>
 
 			{/* Message Content */}
 			<div className={cn("flex-1 max-w-[85%] space-y-1")}>
-				<div className={cn("flex items-baseline gap-2", isInbound ? "flex-row" : "flex-row-reverse")}>
+				<div
+					className={cn(
+						"flex items-baseline gap-2",
+						isInbound ? "flex-row" : "flex-row-reverse"
+					)}
+				>
 					<span className="text-sm font-medium">
 						{message.senderName || message.fromName}
 					</span>
@@ -426,7 +445,9 @@ function EmailMessageBubble({ message }: EmailMessageBubbleProps) {
 						<div
 							className="prose prose-sm max-w-none dark:prose-invert [&>*:last-child]:mb-0"
 							dangerouslySetInnerHTML={{
-								__html: sanitizeHtml(extractNewMessageContent(message.htmlBody, true)),
+								__html: sanitizeHtml(
+									extractNewMessageContent(message.htmlBody, true)
+								),
 							}}
 						/>
 					) : (
@@ -439,10 +460,7 @@ function EmailMessageBubble({ message }: EmailMessageBubbleProps) {
 					{message.hasAttachments && attachments && attachments.length > 0 && (
 						<div className="mt-3 pt-3 border-t border-border/50 space-y-2">
 							{attachments.map((attachment) => (
-								<AttachmentCard
-									key={attachment._id}
-									attachment={attachment}
-								/>
+								<AttachmentCard key={attachment._id} attachment={attachment} />
 							))}
 						</div>
 					)}
@@ -463,7 +481,14 @@ function EmailMessageBubble({ message }: EmailMessageBubbleProps) {
 }
 
 // Attachment Card Component
-function AttachmentCard({ attachment }: { attachment: any }) {
+interface AttachmentData {
+	_id: Id<"emailAttachments">;
+	filename: string;
+	size: number;
+	contentType: string;
+}
+
+function AttachmentCard({ attachment }: { attachment: AttachmentData }) {
 	const downloadUrl = useQuery(api.emailAttachments.getDownloadUrl, {
 		attachmentId: attachment._id,
 	});
@@ -496,71 +521,89 @@ function AttachmentCard({ attachment }: { attachment: any }) {
 
 // Helper functions
 function sanitizeHtml(html: string): string {
-	// Basic sanitization - in production, use a library like DOMPurify
-	// For now, we'll trust Resend's content
-	return html;
+	return DOMPurify.sanitize(html, {
+		ALLOWED_TAGS: [
+			"p",
+			"br",
+			"b",
+			"i",
+			"u",
+			"strong",
+			"em",
+			"a",
+			"ul",
+			"ol",
+			"li",
+			"span",
+			"div",
+		],
+		ALLOWED_ATTR: ["href", "target", "rel", "class"],
+	});
 }
 
 /**
  * Extract the new message content from an email body, removing quoted text
  * Handles both plain text (>) and Gmail-style quotes
  */
-function extractNewMessageContent(body: string, isHtml: boolean = false): string {
+function extractNewMessageContent(
+	body: string,
+	isHtml: boolean = false
+): string {
 	if (isHtml) {
 		// For HTML, remove Gmail quote blocks
 		let cleaned = body;
-		
+
 		// Remove Gmail quote blocks (everything after and including the quote)
 		cleaned = cleaned.replace(
 			/<div class="gmail_quote[^>]*">[\s\S]*?<\/div>/gi,
-			''
+			""
 		);
 		cleaned = cleaned.replace(
 			/<blockquote[^>]*class="gmail_quote"[^>]*>[\s\S]*?<\/blockquote>/gi,
-			''
+			""
 		);
-		
+
 		// Remove "On ... wrote:" lines
 		cleaned = cleaned.replace(
 			/<div[^>]*class="gmail_attr"[^>]*>[\s\S]*?<\/div>/gi,
-			''
+			""
 		);
-		
+
 		// Remove signature divs
 		cleaned = cleaned.replace(
 			/<div[^>]*class="gmail_signature"[^>]*>[\s\S]*?<\/div>/gi,
-			''
+			""
 		);
-		
+
 		return cleaned.trim();
 	} else {
 		// For plain text, split by common quote indicators
-		const lines = body.split('\n');
+		const lines = body.split("\n");
 		const newContent: string[] = [];
 		let inQuote = false;
-		
+
 		for (const line of lines) {
 			// Check if this line starts a quote section
 			if (
-				line.trim().startsWith('>') ||
+				line.trim().startsWith(">") ||
 				line.match(/^On .+? wrote:$/i) ||
 				line.match(/^-{3,}/) // Separator lines
 			) {
 				inQuote = true;
 				break; // Stop collecting lines once we hit the quote
 			}
-			
+
 			// Skip signature markers
-			if (line.trim() === '--' || line.match(/^[-_]{2,}$/)) {
+			if (line.trim() === "--" || line.match(/^[-_]{2,}$/)) {
 				break;
 			}
-			
+
 			if (!inQuote) {
 				newContent.push(line);
 			}
 		}
-		
-		return newContent.join('\n').trim();
+
+		return newContent.join("\n").trim();
 	}
 }
 
@@ -569,8 +612,7 @@ function formatBytes(bytes: number): string {
 	const k = 1024;
 	const sizes = ["Bytes", "KB", "MB", "GB"];
 	const i = Math.floor(Math.log(bytes) / Math.log(k));
-	return Math.round(bytes / Math.pow(k, i) * 100) / 100 + " " + sizes[i];
+	return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
 }
 
 export default EmailThreadSheet;
-

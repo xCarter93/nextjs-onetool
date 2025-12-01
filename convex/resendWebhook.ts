@@ -30,7 +30,9 @@ export const handleWebhookEvent = internalMutation({
 			// This can happen for outbound emails if the webhook arrives before we've saved the record,
 			// or if this is an email sent from another source.
 			// For inbound emails, this shouldn't happen as we create them when processing.
-			console.warn(`Email message not found for Resend ID: ${args.emailId} (event: ${args.eventType})`);
+			console.warn(
+				`Email message not found for Resend ID: ${args.emailId} (event: ${args.eventType})`
+			);
 			return { success: false, message: "Email message not found" };
 		}
 
@@ -43,41 +45,16 @@ export const handleWebhookEvent = internalMutation({
 					deliveredAt: eventTimestamp,
 				});
 
-				// Create activity for delivery
-				await ctx.db.insert("activities", {
-					orgId: emailMessage.orgId,
-					userId: emailMessage.sentBy,
-					activityType: "email_delivered",
-					entityType: "client",
-					entityId: emailMessage.clientId,
-					entityName: emailMessage.toName,
-					description: `Email delivered: ${emailMessage.subject}`,
-					metadata: {
-						emailId: emailMessage._id,
-						subject: emailMessage.subject,
-					},
-					timestamp: eventTimestamp,
-					isVisible: true,
-				});
-				break;
-
-			case "email.opened":
-				// Only update if not already opened
-				if (!emailMessage.openedAt) {
-					await ctx.db.patch(emailMessage._id, {
-						status: "opened",
-						openedAt: eventTimestamp,
-					});
-
-					// Create activity for first open
+				// Create activity for delivery (only if sentBy is defined)
+				if (emailMessage.sentBy) {
 					await ctx.db.insert("activities", {
 						orgId: emailMessage.orgId,
 						userId: emailMessage.sentBy,
-						activityType: "email_opened",
+						activityType: "email_delivered",
 						entityType: "client",
 						entityId: emailMessage.clientId,
 						entityName: emailMessage.toName,
-						description: `Email opened: ${emailMessage.subject}`,
+						description: `Email delivered: ${emailMessage.subject}`,
 						metadata: {
 							emailId: emailMessage._id,
 							subject: emailMessage.subject,
@@ -85,6 +62,57 @@ export const handleWebhookEvent = internalMutation({
 						timestamp: eventTimestamp,
 						isVisible: true,
 					});
+				}
+				break;
+
+			case "email.opened":
+				// Skip if already opened or if in invalid state (bounced/complained)
+				if (
+					emailMessage.openedAt ||
+					emailMessage.status === "bounced" ||
+					emailMessage.status === "complained"
+				) {
+					break;
+				}
+
+				// Perform atomic conditional patch
+				// Re-fetch to ensure we have the latest state and can detect race conditions
+				const currentState = await ctx.db.get(emailMessage._id);
+
+				if (!currentState) {
+					console.warn(`Email message ${emailMessage._id} no longer exists`);
+					break;
+				}
+
+				// Double-check conditions: only update if openedAt is null and status is valid
+				if (
+					currentState.openedAt === undefined &&
+					currentState.status !== "bounced" &&
+					currentState.status !== "complained"
+				) {
+					await ctx.db.patch(emailMessage._id, {
+						status: "opened",
+						openedAt: eventTimestamp,
+					});
+
+					// Create activity only after successful patch (only if sentBy is defined)
+					if (emailMessage.sentBy) {
+						await ctx.db.insert("activities", {
+							orgId: emailMessage.orgId,
+							userId: emailMessage.sentBy,
+							activityType: "email_opened",
+							entityType: "client",
+							entityId: emailMessage.clientId,
+							entityName: emailMessage.toName,
+							description: `Email opened: ${emailMessage.subject}`,
+							metadata: {
+								emailId: emailMessage._id,
+								subject: emailMessage.subject,
+							},
+							timestamp: eventTimestamp,
+							isVisible: true,
+						});
+					}
 				}
 				break;
 
@@ -115,4 +143,3 @@ export const handleWebhookEvent = internalMutation({
 		return { success: true };
 	},
 });
-

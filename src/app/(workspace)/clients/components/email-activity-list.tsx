@@ -119,7 +119,7 @@ export function EmailActivityList({ emails }: EmailActivityListProps) {
 						<div className="flex-1 min-w-0">
 							<div className="flex items-start justify-between gap-2 mb-1">
 								<h4 className="font-medium text-gray-900 dark:text-white truncate">
-									{email.subject}
+									{email.subject ?? "(No Subject)"}
 								</h4>
 								{getStatusBadge(email)}
 							</div>
@@ -149,4 +149,3 @@ export function EmailActivityList({ emails }: EmailActivityListProps) {
 		</div>
 	);
 }
-

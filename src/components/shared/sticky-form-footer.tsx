@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, Fragment } from "react";
 import { useSidebar } from "@/components/ui/sidebar";
 import { StyledButton } from "@/components/ui/styled/styled-button";
 
@@ -107,7 +107,6 @@ export function StickyFormFooter({
 								.map((button, index) => {
 									const buttonElement = (
 										<StyledButton
-											key={`left-${index}`}
 											label={button.label}
 											onClick={button.onClick}
 											intent={button.intent}
@@ -118,9 +117,13 @@ export function StickyFormFooter({
 											type={button.type}
 										/>
 									);
-									return button.customComponent
-										? button.customComponent(buttonElement)
-										: buttonElement;
+									return (
+										<Fragment key={`left-${index}`}>
+											{button.customComponent
+												? button.customComponent(buttonElement)
+												: buttonElement}
+										</Fragment>
+									);
 								})}
 						</div>
 
@@ -146,7 +149,6 @@ export function StickyFormFooter({
 								.map((button, index) => {
 									const buttonElement = (
 										<StyledButton
-											key={`right-${index}`}
 											label={button.label}
 											onClick={button.onClick}
 											intent={button.intent}
@@ -157,9 +159,13 @@ export function StickyFormFooter({
 											type={button.type}
 										/>
 									);
-									return button.customComponent
-										? button.customComponent(buttonElement)
-										: buttonElement;
+									return (
+										<Fragment key={`right-${index}`}>
+											{button.customComponent
+												? button.customComponent(buttonElement)
+												: buttonElement}
+										</Fragment>
+									);
 								})}
 						</div>
 					</div>

@@ -112,22 +112,29 @@ export const countUnopened = query({
 			return 0;
 		}
 
-		const emails = await ctx.db
+		// Query for both "sent" and "delivered" emails separately
+		const sentEmails = await ctx.db
 			.query("emailMessages")
 			.withIndex("by_client_status", (q) =>
 				q.eq("clientId", args.clientId).eq("status", "sent")
 			)
 			.collect();
 
+		const deliveredEmails = await ctx.db
+			.query("emailMessages")
+			.withIndex("by_client_status", (q) =>
+				q.eq("clientId", args.clientId).eq("status", "delivered")
+			)
+			.collect();
+
+		// Merge results
+		const allEmails = [...sentEmails, ...deliveredEmails];
+
 		// Filter to only emails from the user's organization
-		const orgEmails = emails.filter((email) => email.orgId === orgId);
+		const orgEmails = allEmails.filter((email) => email.orgId === orgId);
 
 		// Count emails that are sent or delivered but not opened
-		return orgEmails.filter(
-			(email) =>
-				!email.openedAt &&
-				(email.status === "sent" || email.status === "delivered")
-		).length;
+		return orgEmails.filter((email) => !email.openedAt).length;
 	},
 });
 
