@@ -19,6 +19,8 @@ import type * as clientProperties from "../clientProperties.js";
 import type * as clients from "../clients.js";
 import type * as crons from "../crons.js";
 import type * as documents from "../documents.js";
+import type * as emailAttachments from "../emailAttachments.js";
+import type * as emailMessages from "../emailMessages.js";
 import type * as homeStats from "../homeStats.js";
 import type * as homeStatsOptimized from "../homeStatsOptimized.js";
 import type * as http from "../http.js";
@@ -32,6 +34,7 @@ import type * as lib_permissions from "../lib/permissions.js";
 import type * as lib_shared from "../lib/shared.js";
 import type * as lib_storage from "../lib/storage.js";
 import type * as messageAttachments from "../messageAttachments.js";
+import type * as migrations_addReceivingAddresses from "../migrations/addReceivingAddresses.js";
 import type * as migrations_initializeQuoteCounters from "../migrations/initializeQuoteCounters.js";
 import type * as migrations_populateAggregates from "../migrations/populateAggregates.js";
 import type * as migrations_seedServiceStatus from "../migrations/seedServiceStatus.js";
@@ -41,6 +44,9 @@ import type * as organizations from "../organizations.js";
 import type * as projects from "../projects.js";
 import type * as quoteLineItems from "../quoteLineItems.js";
 import type * as quotes from "../quotes.js";
+import type * as resend from "../resend.js";
+import type * as resendReceiving from "../resendReceiving.js";
+import type * as resendWebhook from "../resendWebhook.js";
 import type * as serviceStatus from "../serviceStatus.js";
 import type * as serviceStatusActions from "../serviceStatusActions.js";
 import type * as skus from "../skus.js";
@@ -66,6 +72,8 @@ declare const fullApi: ApiFromModules<{
   clients: typeof clients;
   crons: typeof crons;
   documents: typeof documents;
+  emailAttachments: typeof emailAttachments;
+  emailMessages: typeof emailMessages;
   homeStats: typeof homeStats;
   homeStatsOptimized: typeof homeStatsOptimized;
   http: typeof http;
@@ -79,6 +87,7 @@ declare const fullApi: ApiFromModules<{
   "lib/shared": typeof lib_shared;
   "lib/storage": typeof lib_storage;
   messageAttachments: typeof messageAttachments;
+  "migrations/addReceivingAddresses": typeof migrations_addReceivingAddresses;
   "migrations/initializeQuoteCounters": typeof migrations_initializeQuoteCounters;
   "migrations/populateAggregates": typeof migrations_populateAggregates;
   "migrations/seedServiceStatus": typeof migrations_seedServiceStatus;
@@ -88,6 +97,9 @@ declare const fullApi: ApiFromModules<{
   projects: typeof projects;
   quoteLineItems: typeof quoteLineItems;
   quotes: typeof quotes;
+  resend: typeof resend;
+  resendReceiving: typeof resendReceiving;
+  resendWebhook: typeof resendWebhook;
   serviceStatus: typeof serviceStatus;
   serviceStatusActions: typeof serviceStatusActions;
   skus: typeof skus;
@@ -1050,6 +1062,135 @@ export declare const components: {
           value: any;
         },
         any
+      >;
+    };
+  };
+  resend: {
+    lib: {
+      cancelEmail: FunctionReference<
+        "mutation",
+        "internal",
+        { emailId: string },
+        null
+      >;
+      cleanupAbandonedEmails: FunctionReference<
+        "mutation",
+        "internal",
+        { olderThan?: number },
+        null
+      >;
+      cleanupOldEmails: FunctionReference<
+        "mutation",
+        "internal",
+        { olderThan?: number },
+        null
+      >;
+      createManualEmail: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          from: string;
+          headers?: Array<{ name: string; value: string }>;
+          replyTo?: Array<string>;
+          subject: string;
+          to: string;
+        },
+        string
+      >;
+      get: FunctionReference<
+        "query",
+        "internal",
+        { emailId: string },
+        {
+          complained: boolean;
+          createdAt: number;
+          errorMessage?: string;
+          finalizedAt: number;
+          from: string;
+          headers?: Array<{ name: string; value: string }>;
+          html?: string;
+          opened: boolean;
+          replyTo: Array<string>;
+          resendId?: string;
+          segment: number;
+          status:
+            | "waiting"
+            | "queued"
+            | "cancelled"
+            | "sent"
+            | "delivered"
+            | "delivery_delayed"
+            | "bounced"
+            | "failed";
+          subject: string;
+          text?: string;
+          to: string;
+        } | null
+      >;
+      getStatus: FunctionReference<
+        "query",
+        "internal",
+        { emailId: string },
+        {
+          complained: boolean;
+          errorMessage: string | null;
+          opened: boolean;
+          status:
+            | "waiting"
+            | "queued"
+            | "cancelled"
+            | "sent"
+            | "delivered"
+            | "delivery_delayed"
+            | "bounced"
+            | "failed";
+        } | null
+      >;
+      handleEmailEvent: FunctionReference<
+        "mutation",
+        "internal",
+        { event: any },
+        null
+      >;
+      sendEmail: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          from: string;
+          headers?: Array<{ name: string; value: string }>;
+          html?: string;
+          options: {
+            apiKey: string;
+            initialBackoffMs: number;
+            onEmailEvent?: { fnHandle: string };
+            retryAttempts: number;
+            testMode: boolean;
+          };
+          replyTo?: Array<string>;
+          subject: string;
+          text?: string;
+          to: string;
+        },
+        string
+      >;
+      updateManualEmail: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          emailId: string;
+          errorMessage?: string;
+          resendId?: string;
+          status:
+            | "waiting"
+            | "queued"
+            | "cancelled"
+            | "sent"
+            | "delivered"
+            | "delivery_delayed"
+            | "bounced"
+            | "failed";
+        },
+        null
       >;
     };
   };

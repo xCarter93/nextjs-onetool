@@ -48,6 +48,9 @@ export default defineSchema({
 			v.union(v.literal("1-10"), v.literal("10-100"), v.literal("100+"))
 		),
 
+		// Email receiving configuration
+		receivingAddress: v.optional(v.string()), // Unique receiving email address (e.g., "org-abc123@onetool.biz")
+
 		// Clerk Billing & Subscription
 		clerkSubscriptionId: v.optional(v.string()), // Clerk subscription ID
 		clerkPlanId: v.optional(v.string()), // Clerk plan identifier
@@ -93,7 +96,8 @@ export default defineSchema({
 		isMetadataComplete: v.optional(v.boolean()), // Whether user completed additional onboarding
 	})
 		.index("by_owner", ["ownerUserId"])
-		.index("by_clerk_org", ["clerkOrganizationId"]),
+		.index("by_clerk_org", ["clerkOrganizationId"])
+		.index("by_receiving_address", ["receivingAddress"]),
 
 	organizationMemberships: defineTable({
 		orgId: v.id("organizations"),
@@ -566,7 +570,11 @@ export default defineSchema({
 			v.literal("task_completed"),
 			v.literal("user_invited"),
 			v.literal("user_removed"),
-			v.literal("organization_updated")
+			v.literal("organization_updated"),
+			v.literal("email_sent"),
+			v.literal("email_delivered"),
+			v.literal("email_opened"),
+			v.literal("email_received")
 		),
 		entityType: v.union(
 			v.literal("client"),
@@ -723,4 +731,80 @@ export default defineSchema({
 	})
 		.index("by_service", ["serviceName"])
 		.index("by_provider", ["provider"]),
+
+	// Email Messages - track sent and received client emails via Resend
+	emailMessages: defineTable({
+		orgId: v.id("organizations"),
+		clientId: v.id("clients"),
+		resendEmailId: v.string(), // Resend's email ID for tracking
+
+		// Direction and threading
+		direction: v.union(v.literal("outbound"), v.literal("inbound")),
+		threadId: v.optional(v.string()), // Thread identifier for grouping related emails
+		inReplyTo: v.optional(v.string()), // Message-ID this email is replying to (RFC 5322)
+		references: v.optional(v.array(v.string())), // Full chain of message IDs in thread
+
+		// Email content
+		subject: v.string(),
+		messageBody: v.string(), // Plain text body or HTML for outbound
+		messagePreview: v.optional(v.string()), // First 100 chars for display
+		htmlBody: v.optional(v.string()), // HTML body for received emails
+		textBody: v.optional(v.string()), // Plain text body for received emails
+
+		// Sender (for inbound emails)
+		fromEmail: v.string(),
+		fromName: v.string(),
+
+		// Recipients
+		toEmail: v.string(),
+		toName: v.string(),
+
+		// Attachments
+		hasAttachments: v.optional(v.boolean()),
+
+		// Status tracking
+		status: v.union(
+			v.literal("sent"),
+			v.literal("delivered"),
+			v.literal("opened"),
+			v.literal("bounced"),
+			v.literal("complained")
+		),
+
+		// Timestamps
+		sentAt: v.number(),
+		deliveredAt: v.optional(v.number()),
+		openedAt: v.optional(v.number()),
+		bouncedAt: v.optional(v.number()),
+		complainedAt: v.optional(v.number()),
+
+		// Tracking
+		sentBy: v.optional(v.id("users")), // User who sent the email (optional for inbound)
+	})
+		.index("by_org", ["orgId"])
+		.index("by_client", ["clientId"])
+		.index("by_resend_id", ["resendEmailId"])
+		.index("by_org_status", ["orgId", "status"])
+		.index("by_client_status", ["clientId", "status"])
+		.index("by_thread", ["threadId", "sentAt"]),
+
+	// Email Attachments - files attached to emails
+	emailAttachments: defineTable({
+		orgId: v.id("organizations"),
+		emailMessageId: v.id("emailMessages"),
+
+		// Attachment metadata (from Resend)
+		attachmentId: v.string(), // Resend attachment ID
+		filename: v.string(),
+		contentType: v.string(),
+		size: v.number(), // Size in bytes
+
+		// Storage
+		storageId: v.optional(v.id("_storage")), // After downloading from Resend
+
+		// Tracking
+		receivedAt: v.number(),
+	})
+		.index("by_email", ["emailMessageId"])
+		.index("by_org", ["orgId"]),
 });

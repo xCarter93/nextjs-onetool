@@ -8,6 +8,7 @@ import {
 	ClipboardDocumentListIcon,
 	BuildingOfficeIcon,
 	UserGroupIcon,
+	EnvelopeIcon,
 } from "@heroicons/react/24/solid";
 import { Doc } from "../../../../../convex/_generated/dataModel";
 
@@ -239,6 +240,9 @@ function iconForActivity(activity: ActivityItemType) {
 			return UserGroupIcon;
 		case "organization_updated":
 			return BuildingOfficeIcon;
+		case "email_sent":
+		case "email_received":
+			return EnvelopeIcon;
 		default:
 			return null;
 	}

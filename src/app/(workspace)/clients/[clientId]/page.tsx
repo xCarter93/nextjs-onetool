@@ -45,6 +45,8 @@ import { PropertyTable } from "@/app/(workspace)/clients/components/property-tab
 import { ContactTable } from "@/app/(workspace)/clients/components/contact-table";
 import { TaskSheet } from "@/components/shared/task-sheet";
 import { MentionSection } from "@/components/shared/mention-section";
+import { EmailThreadListButton } from "@/app/(workspace)/clients/components/email-thread-list-button";
+import { EmailThreadSheet } from "@/app/(workspace)/clients/components/email-thread-sheet";
 import {
 	Popover,
 	PopoverTrigger,
@@ -58,6 +60,7 @@ import {
 	EmptyDescription,
 } from "@/components/ui/empty";
 import { useEffect, useMemo, useState } from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 // Helper function to format lead source for display
 function formatLeadSource(leadSource?: string): string {
@@ -153,6 +156,9 @@ export default function ClientDetailPage() {
 	const updateClient = useMutation(api.clients.update);
 	const [isEditing, setIsEditing] = useState(false);
 	const [isTaskSheetOpen, setIsTaskSheetOpen] = useState(false);
+	const [isEmailSheetOpen, setIsEmailSheetOpen] = useState(false);
+	const [emailSheetMode, setEmailSheetMode] = useState<"new" | "reply">("new");
+	const [isLastEmailExpanded, setIsLastEmailExpanded] = useState(false);
 	const [form, setForm] = useState({
 		industry: "",
 		companyDescription: "",
@@ -192,6 +198,11 @@ export default function ClientDetailPage() {
 		clientId: clientId as Id<"clients">,
 	});
 	const clientTasks = useQuery(api.tasks.list, {
+		clientId: clientId as Id<"clients">,
+	});
+
+	// Fetch email messages for this client
+	const clientEmails = useQuery(api.emailMessages.listByClient, {
 		clientId: clientId as Id<"clients">,
 	});
 
@@ -335,6 +346,20 @@ export default function ClientDetailPage() {
 			});
 		}
 
+		// Right side button - Email action
+		if (primaryContact?.email && !isEditing) {
+			buttons.push({
+				label: "Send Email",
+				onClick: () => {
+					setEmailSheetMode("new");
+					setIsEmailSheetOpen(true);
+				},
+				intent: "secondary" as const,
+				icon: <EnvelopeIcon className="h-4 w-4" />,
+				position: "right" as const,
+			});
+		}
+
 		return buttons;
 	};
 
@@ -347,7 +372,8 @@ export default function ClientDetailPage() {
 		quotes === undefined ||
 		projects === undefined ||
 		invoices === undefined ||
-		clientTasks === undefined
+		clientTasks === undefined ||
+		clientEmails === undefined
 	) {
 		return (
 			<div className="relative px-6 pt-8 pb-20">
@@ -436,6 +462,12 @@ export default function ClientDetailPage() {
 
 							{/* Compact Indicators with Popovers - Aligned Right */}
 							<div className="flex items-center gap-3 flex-wrap shrink-0">
+								{/* Messages Button - NEW */}
+								<EmailThreadListButton
+									clientId={clientId as Id<"clients">}
+									variant="button"
+								/>
+
 								{/* Projects Popover */}
 								<Popover>
 									<PopoverTrigger asChild>
@@ -1446,9 +1478,135 @@ export default function ClientDetailPage() {
 										</StyledCardTitle>
 									</StyledCardHeader>
 									<StyledCardContent>
-										<p className="text-sm text-gray-600 dark:text-gray-400 italic">
-											You haven&apos;t sent any client communications yet
-										</p>
+										{clientEmails && clientEmails.length > 0 ? (
+											(() => {
+												const lastEmail = clientEmails[0];
+												const isInbound = lastEmail.direction === "inbound";
+												
+												return (
+													<div className="space-y-3">
+														{/* Email Header */}
+														<div className="flex items-start justify-between gap-2">
+															<div className="flex items-start gap-2 flex-1 min-w-0">
+																<div className={`w-2 h-2 rounded-full shrink-0 mt-1.5 ${
+																	isInbound 
+																		? "bg-blue-500" 
+																		: lastEmail.status === "delivered" || lastEmail.status === "opened"
+																			? "bg-green-500"
+																			: lastEmail.status === "sent"
+																				? "bg-blue-500"
+																				: "bg-red-500"
+																}`} />
+																<div className="flex-1 min-w-0">
+																	<div className="flex items-center gap-2 mb-1">
+																		<span className={`text-xs font-medium px-2 py-0.5 rounded ${
+																			isInbound
+																				? "bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400"
+																				: "bg-purple-100 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400"
+																		}`}>
+																			{isInbound ? "Inbound" : "Outbound"}
+																		</span>
+																	</div>
+																	<p className="text-sm font-medium text-gray-900 dark:text-white">
+																		{lastEmail.subject}
+																	</p>
+																	<p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+																		From: <span className="font-medium">{lastEmail.fromName}</span>
+																	</p>
+																	<p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+																		{new Date(lastEmail.sentAt).toLocaleDateString("en-US", {
+																			month: "short",
+																			day: "numeric",
+																			year: "numeric",
+																			hour: "numeric",
+																			minute: "2-digit",
+																		})}
+																	</p>
+																</div>
+															</div>
+														</div>
+
+														{/* Status Badge */}
+														{!isInbound && (
+															<div className="flex items-center gap-1.5 pl-4">
+																{lastEmail.status === "opened" && (
+																	<span className="text-xs text-purple-600 dark:text-purple-400 flex items-center gap-1">
+																		<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																			<path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+																			<path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+																		</svg>
+																		Opened
+																	</span>
+																)}
+																{lastEmail.status === "delivered" && (
+																	<span className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
+																		<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																			<path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+																		</svg>
+																		Delivered
+																	</span>
+																)}
+																{lastEmail.status === "sent" && (
+																	<span className="text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1">
+																		<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																			<path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+																		</svg>
+																		Sent
+																	</span>
+																)}
+																{lastEmail.status === "bounced" && (
+																	<span className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
+																		<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																			<path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+																		</svg>
+																		Bounced
+																	</span>
+																)}
+															</div>
+														)}
+
+														{/* Expandable Message Body */}
+														<div>
+															<button
+																onClick={() => setIsLastEmailExpanded(!isLastEmailExpanded)}
+																className="flex items-center gap-2 text-xs text-primary hover:text-primary/80 font-medium transition-colors w-full pl-4"
+															>
+																{isLastEmailExpanded ? (
+																	<>
+																		<ChevronUp className="w-3 h-3" />
+																		Hide message
+																	</>
+																) : (
+																	<>
+																		<ChevronDown className="w-3 h-3" />
+																		Show message
+																	</>
+																)}
+															</button>
+
+															{isLastEmailExpanded && (
+																<div className="mt-3 pl-4">
+																	<div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap border border-gray-200 dark:border-gray-700">
+																		{lastEmail.messageBody || lastEmail.textBody || lastEmail.messagePreview || "No message content"}
+																	</div>
+																</div>
+															)}
+														</div>
+
+														{/* Additional emails indicator */}
+														{clientEmails.length > 1 && (
+															<p className="text-xs text-gray-500 dark:text-gray-400 italic pl-4 pt-2 border-t border-gray-200 dark:border-gray-700">
+																{clientEmails.length - 1} earlier message{clientEmails.length - 1 !== 1 ? 's' : ''}
+															</p>
+														)}
+													</div>
+												);
+											})()
+										) : (
+											<p className="text-sm text-gray-600 dark:text-gray-400 italic">
+												You haven&apos;t sent any client communications yet
+											</p>
+										)}
 									</StyledCardContent>
 								</StyledCard>
 
@@ -1563,6 +1721,18 @@ export default function ClientDetailPage() {
 					</div>
 				</div>
 			</div>
+			
+			{/* Email Thread Sheet - for both new emails and replies */}
+			<EmailThreadSheet
+				isOpen={isEmailSheetOpen}
+				onOpenChange={setIsEmailSheetOpen}
+				clientId={clientId as Id<"clients">}
+				mode={emailSheetMode}
+				onComplete={() => {
+					setIsEmailSheetOpen(false);
+				}}
+			/>
+			
 			<StickyFormFooter
 				buttons={getFooterButtons()}
 				hasUnsavedChanges={isDirty}
