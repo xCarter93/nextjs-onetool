@@ -35,6 +35,7 @@ import type * as lib_shared from "../lib/shared.js";
 import type * as lib_storage from "../lib/storage.js";
 import type * as messageAttachments from "../messageAttachments.js";
 import type * as migrations_addReceivingAddresses from "../migrations/addReceivingAddresses.js";
+import type * as migrations_fixInvoiceTotals from "../migrations/fixInvoiceTotals.js";
 import type * as migrations_initializeQuoteCounters from "../migrations/initializeQuoteCounters.js";
 import type * as migrations_populateAggregates from "../migrations/populateAggregates.js";
 import type * as migrations_seedServiceStatus from "../migrations/seedServiceStatus.js";
@@ -88,6 +89,7 @@ declare const fullApi: ApiFromModules<{
   "lib/storage": typeof lib_storage;
   messageAttachments: typeof messageAttachments;
   "migrations/addReceivingAddresses": typeof migrations_addReceivingAddresses;
+  "migrations/fixInvoiceTotals": typeof migrations_fixInvoiceTotals;
   "migrations/initializeQuoteCounters": typeof migrations_initializeQuoteCounters;
   "migrations/populateAggregates": typeof migrations_populateAggregates;
   "migrations/seedServiceStatus": typeof migrations_seedServiceStatus;

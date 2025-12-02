@@ -102,6 +102,44 @@ async function createInvoiceWithOrg(
 	return await ctx.db.insert("invoices", invoiceData);
 }
 
+/**
+ * Calculate invoice totals based on line items
+ * This ensures totals are always accurate by calculating from line items (source of truth)
+ */
+async function calculateInvoiceTotals(
+	ctx: QueryCtx | MutationCtx,
+	invoiceId: Id<"invoices">
+): Promise<{ subtotal: number; total: number }> {
+	// Get all line items for the invoice
+	const lineItems = await ctx.db
+		.query("invoiceLineItems")
+		.withIndex("by_invoice", (q) => q.eq("invoiceId", invoiceId))
+		.collect();
+
+	// Calculate subtotal from line items
+	const subtotal = lineItems.reduce((sum, item) => sum + item.total, 0);
+
+	// Get invoice to check for discount and tax
+	const invoice = await ctx.db.get(invoiceId);
+	if (!invoice) {
+		throw new Error("Invoice not found");
+	}
+
+	// Calculate total with discount and tax
+	let total = subtotal;
+	if (invoice.discountAmount) {
+		total -= invoice.discountAmount;
+	}
+	if (invoice.taxAmount) {
+		total += invoice.taxAmount;
+	}
+
+	return {
+		subtotal,
+		total,
+	};
+}
+
 // Define specific types for invoice operations
 type InvoiceDocument = Doc<"invoices">;
 type InvoiceId = Id<"invoices">;
@@ -141,6 +179,7 @@ function createEmptyInvoiceStats(): InvoiceStats {
 
 /**
  * Get all invoices for the current user's organization
+ * Totals are calculated dynamically from line items to ensure accuracy
  */
 export const list = query({
 	args: {
@@ -192,13 +231,52 @@ export const list = query({
 			);
 		}
 
+		// Fetch all line items for these invoices in one query
+		const allLineItems = await ctx.db
+			.query("invoiceLineItems")
+			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
+			.collect();
+
+		// Group line items by invoice ID for efficient lookup
+		const lineItemsByInvoice = new Map<Id<"invoices">, typeof allLineItems>();
+		for (const item of allLineItems) {
+			const existing = lineItemsByInvoice.get(item.invoiceId) || [];
+			existing.push(item);
+			lineItemsByInvoice.set(item.invoiceId, existing);
+		}
+
+		// Calculate totals for each invoice using in-memory data
+		const invoicesWithCalculatedTotals = invoices.map((invoice) => {
+			const lineItems = lineItemsByInvoice.get(invoice._id) || [];
+
+			// Calculate subtotal from line items
+			const subtotal = lineItems.reduce((sum, item) => sum + item.total, 0);
+
+			// Calculate total with discount and tax
+			let total = subtotal;
+			if (invoice.discountAmount) {
+				total -= invoice.discountAmount;
+			}
+			if (invoice.taxAmount) {
+				total += invoice.taxAmount;
+			}
+
+			return {
+				...invoice,
+				subtotal,
+				total,
+			};
+		});
+
 		// Sort by creation time (newest first)
-		return invoices.sort((a, b) => b._creationTime - a._creationTime);
+		return invoicesWithCalculatedTotals.sort(
+			(a, b) => b._creationTime - a._creationTime
+		);
 	},
 });
 
 /**
- * Get a specific invoice by ID
+ * Get a specific invoice by ID with calculated totals from line items
  */
 // TODO: Candidate for deletion if confirmed unused.
 export const get = query({
@@ -208,7 +286,19 @@ export const get = query({
 		if (!userOrgId) {
 			return null;
 		}
-		return await getInvoiceWithOrgValidation(ctx, args.id);
+		const invoice = await getInvoiceWithOrgValidation(ctx, args.id);
+		if (!invoice) {
+			return null;
+		}
+
+		// Calculate totals from line items
+		const { subtotal, total } = await calculateInvoiceTotals(ctx, args.id);
+
+		return {
+			...invoice,
+			subtotal,
+			total,
+		};
 	},
 });
 
@@ -537,6 +627,27 @@ export const getOverdue = query({
 });
 
 /**
+ * Recalculate invoice totals from line items
+ * Useful for fixing invoices with incorrect stored totals
+ */
+export const recalculateTotals = mutation({
+	args: { id: v.id("invoices") },
+	handler: async (ctx, args): Promise<void> => {
+		// Validate access
+		await getInvoiceOrThrow(ctx, args.id);
+
+		// Calculate totals from line items
+		const { subtotal, total } = await calculateInvoiceTotals(ctx, args.id);
+
+		// Update the invoice with calculated totals
+		await ctx.db.patch(args.id, {
+			subtotal,
+			total,
+		});
+	},
+});
+
+/**
  * Generate next invoice number for organization
  */
 export const generateInvoiceNumber = mutation({
@@ -647,7 +758,16 @@ export const createFromQuote = mutation({
 			});
 		}
 
-		// Log activity and add to aggregates
+		// Calculate accurate totals from the copied line items
+		const { subtotal, total } = await calculateInvoiceTotals(ctx, invoiceId);
+
+		// Update invoice with calculated totals (overwrite the copied quote values)
+		await ctx.db.patch(invoiceId, {
+			subtotal,
+			total,
+		});
+
+		// Log activity and add to aggregates with updated totals
 		const invoice = await ctx.db.get(invoiceId);
 		if (invoice) {
 			const client = await ctx.db.get(invoice.clientId);
