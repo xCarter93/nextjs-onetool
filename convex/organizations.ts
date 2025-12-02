@@ -111,6 +111,8 @@ export const createFromClerk = internalMutation({
 			ownerUserId: ownerUser._id,
 			logoUrl: args.logoUrl,
 			isMetadataComplete: false, // User needs to complete additional setup
+			// Generate unique receiving address for this organization
+			receivingAddress: `org-${crypto.randomUUID().slice(0, 8)}@onetool.biz`,
 			// Initialize usage tracking
 			usageTracking: {
 				clientsCount: 0,
@@ -358,6 +360,39 @@ export const update = mutation({
 		}
 
 		return userOrgId;
+	},
+});
+
+/**
+ * Regenerate the receiving email address for the organization
+ * Only organization owner can perform this action
+ */
+export const regenerateReceivingAddress = mutation({
+	args: {},
+	handler: async (ctx) => {
+		const user = await getCurrentUserOrThrow(ctx);
+		const userOrgId = await getCurrentUserOrgId(ctx);
+
+		const organization = await ctx.db.get(userOrgId);
+		if (!organization) {
+			throw new Error("Organization not found");
+		}
+
+		// Only organization owner can regenerate receiving address
+		if (organization.ownerUserId !== user._id) {
+			throw new Error(
+				"Only organization owner can regenerate receiving address"
+			);
+		}
+
+		// Generate new receiving address
+		const newReceivingAddress = `org-${crypto.randomUUID().slice(0, 8)}@onetool.biz`;
+
+		await ctx.db.patch(userOrgId, {
+			receivingAddress: newReceivingAddress,
+		});
+
+		return newReceivingAddress;
 	},
 });
 

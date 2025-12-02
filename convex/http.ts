@@ -626,4 +626,126 @@ http.route({
 	}),
 });
 
+/**
+ * Resend Email Webhook Handler
+ *
+ * Handles Resend email events for tracking:
+ * - email.sent: Email was accepted by Resend
+ * - email.delivered: Email was delivered to recipient
+ * - email.opened: Email was opened by recipient
+ * - email.bounced: Email bounced
+ * - email.complained: Recipient marked as spam
+ */
+http.route({
+	path: "/resend-webhook",
+	method: "POST",
+	handler: httpAction(async (ctx, request) => {
+		const payloadString = await request.text();
+
+		try {
+			const event = JSON.parse(payloadString);
+
+			// Validate webhook signature if secret is configured
+			if (process.env.RESEND_WEBHOOK_SECRET) {
+				const signatureHeader = request.headers.get("svix-signature");
+				const svixId = request.headers.get("svix-id");
+				const svixTimestamp = request.headers.get("svix-timestamp");
+
+				if (!signatureHeader) {
+					console.warn("Resend webhook received without signature header");
+					return new Response("Unauthorized", { status: 401 });
+				}
+
+				if (!svixId) {
+					console.error("Resend webhook received without svix-id header");
+					return new Response("Unauthorized", { status: 401 });
+				}
+
+				if (!svixTimestamp) {
+					console.error(
+						"Resend webhook received without svix-timestamp header"
+					);
+					return new Response("Unauthorized", { status: 401 });
+				}
+
+				// Use svix to validate (Resend uses Svix for webhooks)
+				const wh = new Webhook(process.env.RESEND_WEBHOOK_SECRET);
+				try {
+					wh.verify(payloadString, {
+						"svix-id": svixId,
+						"svix-timestamp": svixTimestamp,
+						"svix-signature": signatureHeader,
+					});
+				} catch (error) {
+					console.error("Resend webhook signature verification failed:", error);
+					return new Response("Unauthorized", { status: 401 });
+				}
+			}
+
+			console.log("Resend webhook event received:", event.type);
+
+			const eventType = event.type;
+			const emailId = event.data?.email_id;
+
+			if (!emailId) {
+				console.warn("No email_id in Resend webhook event");
+				return new Response("Bad Request", { status: 400 });
+			}
+
+			// Resend timestamps are in ISO format, convert to milliseconds
+			const eventTimestamp = event.created_at
+				? new Date(event.created_at).getTime()
+				: Date.now();
+
+			// Handle email events
+			switch (eventType) {
+				case "email.sent":
+				case "email.delivered":
+				case "email.delivered_delayed":
+				case "email.opened":
+				case "email.bounced":
+				case "email.complained":
+					await ctx.runMutation(internal.resendWebhook.handleWebhookEvent, {
+						eventType,
+						emailId,
+						timestamp: eventTimestamp,
+					});
+					console.log(`Processed Resend webhook: ${eventType} for ${emailId}`);
+					break;
+
+				case "email.received":
+					// Handle inbound email (use runAction instead of runMutation)
+					// Note: Webhook payload does NOT include html/text content, only metadata
+					// We need to fetch content separately using the Received emails API
+					console.log("Processing inbound email:", emailId);
+					try {
+						await ctx.runAction(internal.resendReceiving.handleInboundEmail, {
+							emailId,
+							from: event.data.from || "",
+							to: event.data.to || [],
+							subject: event.data.subject || "(No subject)",
+							messageId: event.data.message_id || emailId,
+							inReplyTo: event.data.in_reply_to,
+							references: event.data.references,
+							attachments: event.data.attachments || [],
+						});
+						console.log(`Successfully processed inbound email: ${emailId}`);
+					} catch (error) {
+						console.error("Error processing inbound email:", error);
+						// Return 200 anyway to prevent Resend from retrying
+					}
+					break;
+
+				default:
+					console.log("Unhandled Resend event type:", eventType);
+			}
+
+			return new Response("OK", { status: 200 });
+		} catch (error) {
+			console.error("Error processing Resend webhook:", error);
+			return new Response("Internal Server Error", { status: 500 });
+		}
+	}),
+});
+
 export default http;

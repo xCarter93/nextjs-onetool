@@ -1,0 +1,145 @@
+import { internalMutation } from "./_generated/server";
+import { v } from "convex/values";
+
+/**
+ * Process Resend webhook events for email tracking
+ */
+export const handleWebhookEvent = internalMutation({
+	args: {
+		eventType: v.union(
+			v.literal("email.sent"),
+			v.literal("email.delivered"),
+			v.literal("email.delivered_delayed"),
+			v.literal("email.complained"),
+			v.literal("email.bounced"),
+			v.literal("email.opened")
+		),
+		emailId: v.string(),
+		timestamp: v.optional(v.number()),
+	},
+	handler: async (ctx, args) => {
+		const eventTimestamp = args.timestamp || Date.now();
+
+		// Find the email message by Resend email ID
+		const emailMessage = await ctx.db
+			.query("emailMessages")
+			.withIndex("by_resend_id", (q) => q.eq("resendEmailId", args.emailId))
+			.first();
+
+		if (!emailMessage) {
+			// This can happen for outbound emails if the webhook arrives before we've saved the record,
+			// or if this is an email sent from another source.
+			// For inbound emails, this shouldn't happen as we create them when processing.
+			console.warn(
+				`Email message not found for Resend ID: ${args.emailId} (event: ${args.eventType})`
+			);
+			return { success: false, message: "Email message not found" };
+		}
+
+		// Update email status based on event type
+		switch (args.eventType) {
+			case "email.delivered":
+			case "email.delivered_delayed":
+				await ctx.db.patch(emailMessage._id, {
+					status: "delivered",
+					deliveredAt: eventTimestamp,
+				});
+
+				// Create activity for delivery (only if sentBy is defined)
+				if (emailMessage.sentBy) {
+					await ctx.db.insert("activities", {
+						orgId: emailMessage.orgId,
+						userId: emailMessage.sentBy,
+						activityType: "email_delivered",
+						entityType: "client",
+						entityId: emailMessage.clientId,
+						entityName: emailMessage.toName,
+						description: `Email delivered: ${emailMessage.subject}`,
+						metadata: {
+							emailId: emailMessage._id,
+							subject: emailMessage.subject,
+						},
+						timestamp: eventTimestamp,
+						isVisible: true,
+					});
+				}
+				break;
+
+			case "email.opened":
+				// Skip if already opened or if in invalid state (bounced/complained)
+				if (
+					emailMessage.openedAt ||
+					emailMessage.status === "bounced" ||
+					emailMessage.status === "complained"
+				) {
+					break;
+				}
+
+				// Perform atomic conditional patch
+				// Re-fetch to ensure we have the latest state and can detect race conditions
+				const currentState = await ctx.db.get(emailMessage._id);
+
+				if (!currentState) {
+					console.warn(`Email message ${emailMessage._id} no longer exists`);
+					break;
+				}
+
+				// Double-check conditions: only update if openedAt is null and status is valid
+				if (
+					currentState.openedAt === undefined &&
+					currentState.status !== "bounced" &&
+					currentState.status !== "complained"
+				) {
+					await ctx.db.patch(emailMessage._id, {
+						status: "opened",
+						openedAt: eventTimestamp,
+					});
+
+					// Create activity only after successful patch (only if sentBy is defined)
+					if (emailMessage.sentBy) {
+						await ctx.db.insert("activities", {
+							orgId: emailMessage.orgId,
+							userId: emailMessage.sentBy,
+							activityType: "email_opened",
+							entityType: "client",
+							entityId: emailMessage.clientId,
+							entityName: emailMessage.toName,
+							description: `Email opened: ${emailMessage.subject}`,
+							metadata: {
+								emailId: emailMessage._id,
+								subject: emailMessage.subject,
+							},
+							timestamp: eventTimestamp,
+							isVisible: true,
+						});
+					}
+				}
+				break;
+
+			case "email.bounced":
+				await ctx.db.patch(emailMessage._id, {
+					status: "bounced",
+					bouncedAt: eventTimestamp,
+				});
+				break;
+
+			case "email.complained":
+				await ctx.db.patch(emailMessage._id, {
+					status: "complained",
+					complainedAt: eventTimestamp,
+				});
+				break;
+
+			case "email.sent":
+				// Update sent timestamp if needed
+				if (!emailMessage.sentAt) {
+					await ctx.db.patch(emailMessage._id, {
+						sentAt: eventTimestamp,
+					});
+				}
+				break;
+		}
+
+		return { success: true };
+	},
+});
