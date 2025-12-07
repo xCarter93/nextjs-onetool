@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import {
 	Popover,
@@ -124,12 +124,16 @@ export default function DatePickerRange({
 	align = "start",
 	showArrow = true,
 }: DatePickerRangeProps) {
-	const defaultRange = useMemo<DateRange | undefined>(
-		() =>
-			value ??
-			presets.find((preset) => preset.label === "This month")?.getRange(),
-		[presets, value]
+	const defaultPresetRange = useMemo<DateRange | undefined>(
+		() => presets.find((preset) => preset.label === "This month")?.getRange(),
+		[presets]
 	);
+
+	const initialDefaultRef = useRef<DateRange | undefined>(undefined);
+	if (!initialDefaultRef.current) {
+		initialDefaultRef.current = value ?? defaultPresetRange;
+	}
+	const defaultRange = initialDefaultRef.current;
 
 	const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 	const [draftRange, setDraftRange] = useState<DateRange | undefined>(
@@ -138,12 +142,44 @@ export default function DatePickerRange({
 	const [activePreset, setActivePreset] = useState<string | undefined>(
 		undefined
 	);
+	const [committedPreset, setCommittedPreset] = useState<string | undefined>(
+		undefined
+	);
+
+	const committedRange = useMemo(
+		() => normalizeRange(value ?? defaultRange),
+		[value, defaultRange]
+	);
 
 	useEffect(() => {
-		if (value) {
-			setDraftRange(normalizeRange(value));
+		setDraftRange(committedRange);
+
+		const normalizedValue =
+			value === undefined ? undefined : normalizeRange(value);
+
+		if (!normalizedValue) {
+			if (value === undefined) return;
+			setCommittedPreset(undefined);
+			return;
 		}
-	}, [value]);
+
+		const matchingPreset = presets.find((preset) => {
+			const presetRange = normalizeRange(preset.getRange());
+			return (
+				presetRange?.from?.getTime() === normalizedValue.from?.getTime() &&
+				presetRange?.to?.getTime() === normalizedValue.to?.getTime()
+			);
+		});
+
+		setCommittedPreset(matchingPreset?.label);
+	}, [committedRange, presets, value]);
+
+	useEffect(() => {
+		if (!isPopoverOpen) {
+			setDraftRange(committedRange);
+			setActivePreset(committedPreset);
+		}
+	}, [isPopoverOpen, committedRange, committedPreset]);
 
 	const handleSelect = (selected: DateRange | undefined) => {
 		setDraftRange(normalizeRange(selected));
@@ -152,6 +188,8 @@ export default function DatePickerRange({
 
 	const applyRange = (range?: DateRange, presetLabel?: string) => {
 		const normalized = normalizeRange(range);
+		setCommittedPreset(presetLabel);
+		setActivePreset(presetLabel);
 		onChange?.(normalized, presetLabel);
 		setIsPopoverOpen(false);
 	};
@@ -162,6 +200,7 @@ export default function DatePickerRange({
 		const resetRange = normalizeRange(defaultRange);
 		setDraftRange(resetRange);
 		setActivePreset(undefined);
+		setCommittedPreset(undefined);
 		onChange?.(resetRange, undefined);
 		setIsPopoverOpen(false);
 	};
@@ -173,9 +212,9 @@ export default function DatePickerRange({
 	};
 
 	const displayLabel = useMemo(() => {
-		if (activePreset) return activePreset;
-		const from = draftRange?.from;
-		const to = draftRange?.to;
+		if (committedPreset) return committedPreset;
+		const from = committedRange?.from;
+		const to = committedRange?.to;
 		if (from && to) {
 			return `${format(from, "LLL d, yyyy")} - ${format(to, "LLL d, yyyy")}`;
 		}
@@ -183,7 +222,7 @@ export default function DatePickerRange({
 			return format(from, "LLL d, yyyy");
 		}
 		return "Pick a date range";
-	}, [activePreset, draftRange]);
+	}, [committedPreset, committedRange]);
 
 	return (
 		<Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>

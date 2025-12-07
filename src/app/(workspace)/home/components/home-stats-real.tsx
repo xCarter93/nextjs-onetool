@@ -196,6 +196,8 @@ export default function HomeStatsReal() {
 	const isProjectsLoading = isLoading || projectsSeries === undefined;
 	const isQuotesLoading = isLoading || quotesSeries === undefined;
 	const isInvoicesLoading = isLoading || invoicesSeries === undefined;
+	const isRevenueLoading = isLoading || revenueThisMonth === undefined;
+	const isTasksLoading = isLoading || tasksThisMonth === undefined;
 
 	const clientsChartData = useMemo(
 		() =>
@@ -393,7 +395,7 @@ export default function HomeStatsReal() {
 				subtitle: homeStats
 					? `Progress: ${homeStats.revenueGoal.percentage}% of target`
 					: undefined,
-				isLoading,
+				isLoading: isRevenueLoading,
 			},
 			{
 				key: "tasks",
@@ -405,7 +407,7 @@ export default function HomeStatsReal() {
 				subtitle: homeStats
 					? `Due this week: ${homeStats.pendingTasks.dueThisWeek}`
 					: undefined,
-				isLoading,
+				isLoading: isTasksLoading,
 			},
 		];
 	}, [
@@ -415,6 +417,10 @@ export default function HomeStatsReal() {
 		invoicesTotals,
 		homeStats,
 		isLoading,
+		isClientsLoading,
+		isProjectsLoading,
+		isQuotesLoading,
+		isInvoicesLoading,
 		revenueTotal,
 	]);
 

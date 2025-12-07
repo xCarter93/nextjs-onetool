@@ -640,6 +640,7 @@ export const getProjectsCompletedByDateRange = query({
 			.filter((q) =>
 				q.and(
 					q.eq(q.field("status"), "completed"),
+					q.neq(q.field("completedAt"), null),
 					q.gte(q.field("completedAt"), start),
 					q.lte(q.field("completedAt"), end)
 				)
@@ -652,19 +653,36 @@ export const getProjectsCompletedByDateRange = query({
 			.filter((q) =>
 				q.and(
 					q.eq(q.field("status"), "completed"),
+					q.neq(q.field("completedAt"), null),
 					q.lt(q.field("completedAt"), start)
 				)
 			)
 			.collect();
 
-		const data = projectsThisMonth.map((project) => ({
-			date: DateUtils.toLocalDateString(project.completedAt!, timezone),
+		const projectsThisMonthWithCompletedAt = projectsThisMonth.filter(
+			(
+				project
+			): project is (typeof projectsThisMonth)[number] & {
+				completedAt: number;
+			} => typeof project.completedAt === "number"
+		);
+
+		const projectsBeforeRangeWithCompletedAt = projectsBeforeRange.filter(
+			(
+				project
+			): project is (typeof projectsBeforeRange)[number] & {
+				completedAt: number;
+			} => typeof project.completedAt === "number"
+		);
+
+		const data = projectsThisMonthWithCompletedAt.map((project) => ({
+			date: DateUtils.toLocalDateString(project.completedAt, timezone),
 			count: 1,
-			_creationTime: project.completedAt!,
+			_creationTime: project.completedAt,
 		}));
 
 		const totalInRange = data.reduce((sum, item) => sum + item.count, 0);
-		const baselineCount = projectsBeforeRange.length;
+		const baselineCount = projectsBeforeRangeWithCompletedAt.length;
 
 		return {
 			baselineCount,
@@ -798,6 +816,7 @@ export const getInvoicesPaidByDateRange = query({
 			.filter((q) =>
 				q.and(
 					q.eq(q.field("status"), "paid"),
+					q.neq(q.field("paidAt"), null),
 					q.gte(q.field("paidAt"), start),
 					q.lte(q.field("paidAt"), end)
 				)
@@ -808,18 +827,36 @@ export const getInvoicesPaidByDateRange = query({
 			.query("invoices")
 			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
 			.filter((q) =>
-				q.and(q.eq(q.field("status"), "paid"), q.lt(q.field("paidAt"), start))
+				q.and(
+					q.eq(q.field("status"), "paid"),
+					q.neq(q.field("paidAt"), null),
+					q.lt(q.field("paidAt"), start)
+				)
 			)
 			.collect();
 
-		const data = invoicesThisMonth.map((invoice) => ({
-			date: DateUtils.toLocalDateString(invoice.paidAt!, timezone),
+		const invoicesThisMonthWithPaidAt = invoicesThisMonth.filter(
+			(
+				invoice
+			): invoice is (typeof invoicesThisMonth)[number] & { paidAt: number } =>
+				typeof invoice.paidAt === "number"
+		);
+
+		const invoicesBeforeRangeWithPaidAt = invoicesBeforeRange.filter(
+			(
+				invoice
+			): invoice is (typeof invoicesBeforeRange)[number] & { paidAt: number } =>
+				typeof invoice.paidAt === "number"
+		);
+
+		const data = invoicesThisMonthWithPaidAt.map((invoice) => ({
+			date: DateUtils.toLocalDateString(invoice.paidAt, timezone),
 			count: 1,
-			_creationTime: invoice.paidAt!,
+			_creationTime: invoice.paidAt,
 		}));
 
 		const totalInRange = data.reduce((sum, item) => sum + item.count, 0);
-		const baselineCount = invoicesBeforeRange.length;
+		const baselineCount = invoicesBeforeRangeWithPaidAt.length;
 
 		return {
 			baselineCount,
@@ -829,12 +866,6 @@ export const getInvoicesPaidByDateRange = query({
 		};
 	},
 });
-
-/**
- * @deprecated Use getInvoicesPaidByDateRange instead
- * Backwards compatibility alias
- */
-export const getInvoicesSentByDateRange = getInvoicesPaidByDateRange;
 
 /**
  * Get revenue received by date range for daily chart visualization
