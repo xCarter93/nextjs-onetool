@@ -1,7 +1,24 @@
+import { v } from "convex/values";
 import { query } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
 import { getCurrentUserOrgId } from "./lib/auth";
 import { DateUtils } from "./lib/shared";
+
+/**
+ * Normalize incoming date range args to timestamps (start/end of day).
+ */
+const getRangeBounds = (from?: number, to?: number) => {
+	const now = Date.now();
+	const defaultStart = DateUtils.startOfDay(
+		new Date(new Date(now).setDate(1)).getTime()
+	);
+	const defaultEnd = DateUtils.endOfDay(now);
+
+	const start = from ? DateUtils.startOfDay(from) : defaultStart;
+	const end = to ? DateUtils.endOfDay(to) : defaultEnd;
+
+	return { start, end };
+};
 
 /**
  * Home dashboard statistics queries
@@ -259,6 +276,18 @@ export const getHomeStats = query({
 		);
 		const revenuePercentageChange = currentPercentage - lastMonthPercentage;
 
+		const totalCompletedProjects = allProjects.filter(
+			(project) => project.status === "completed" && project.completedAt
+		).length;
+
+		const totalApprovedQuotes = allQuotes.filter(
+			(quote) => quote.status === "approved" && quote.approvedAt
+		).length;
+
+		const totalPaidInvoices = allInvoices.filter(
+			(invoice) => invoice.status === "paid" && invoice.paidAt
+		).length;
+
 		// Calculate pending tasks
 		const today = DateUtils.startOfDay(now);
 		const nextWeek = DateUtils.addDays(today, 7);
@@ -286,22 +315,22 @@ export const getHomeStats = query({
 				changeType: getChangeType(clientsChange),
 			},
 			completedProjects: {
-				current: completedProjectsThisMonth.length,
-				previous: completedProjectsLastMonth.length,
+				current: totalCompletedProjects,
+				previous: totalCompletedProjects - completedProjectsThisMonth.length,
 				change: Math.abs(projectsChange),
 				changeType: getChangeType(projectsChange),
 				totalValue: projectsValue,
 			},
 			approvedQuotes: {
-				current: approvedQuotesThisMonth.length,
-				previous: approvedQuotesLastMonth.length,
+				current: totalApprovedQuotes,
+				previous: totalApprovedQuotes - approvedQuotesThisMonth.length,
 				change: Math.abs(quotesChange),
 				changeType: getChangeType(quotesChange),
 				totalValue: quotesTotalValue,
 			},
 			invoicesSent: {
-				current: invoicesThisMonth.length,
-				previous: invoicesLastMonth.length,
+				current: totalPaidInvoices,
+				previous: totalPaidInvoices - invoicesThisMonth.length,
 				change: Math.abs(invoicesChange),
 				changeType: getChangeType(invoicesChange),
 				totalValue: invoicesTotalValue,
@@ -489,215 +518,366 @@ export const getRevenueGoalProgress = query({
 });
 
 /**
- * Get clients created this month for daily chart visualization
+ * Get clients created by date range for daily chart visualization
  */
-export const getClientsCreatedThisMonth = query({
-	args: {},
+export const getClientsCreatedByDateRange = query({
+	args: {
+		from: v.optional(v.number()),
+		to: v.optional(v.number()),
+	},
 	handler: async (
-		ctx
-	): Promise<
-		Array<{
+		ctx,
+		args
+	): Promise<{
+		baselineCount: number;
+		totalInRange: number;
+		totalThroughEnd: number;
+		data: Array<{
 			date: string; // YYYY-MM-DD format
 			count: number;
 			_creationTime: number;
 			clientType?: string;
 			status?: "lead" | "prospect" | "active" | "inactive" | "archived";
-		}>
-	> => {
+		}>;
+	}> => {
 		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
 		if (!userOrgId) {
-			return [];
+			return {
+				baselineCount: 0,
+				totalInRange: 0,
+				totalThroughEnd: 0,
+				data: [],
+			};
 		}
+		const { from, to } = args;
+		const { start, end } = getRangeBounds(from, to);
 
 		// Get organization timezone
 		const organization = await ctx.db.get(userOrgId);
 		const timezone = organization?.timezone;
 
-		// Calculate start of current month
-		const now = new Date();
-		const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-		startOfThisMonth.setHours(0, 0, 0, 0);
-		const startOfThisMonthTimestamp = startOfThisMonth.getTime();
-
-		// Get all clients created this month
+		// Get all clients created in range
 		const clientsThisMonth = await ctx.db
 			.query("clients")
 			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
-			.filter((q) => q.gte(q.field("_creationTime"), startOfThisMonthTimestamp))
+			.filter((q) =>
+				q.and(
+					q.gte(q.field("_creationTime"), start),
+					q.lte(q.field("_creationTime"), end)
+				)
+			)
 			.collect();
 
-		// Return the raw data with creation timestamps, using timezone-aware dates
-		return clientsThisMonth.map((client: Doc<"clients">) => ({
+		const clientsBeforeRange = await ctx.db
+			.query("clients")
+			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
+			.filter((q) => q.lt(q.field("_creationTime"), start))
+			.collect();
+
+		const data = clientsThisMonth.map((client: Doc<"clients">) => ({
 			date: DateUtils.toLocalDateString(client._creationTime, timezone),
 			count: 1, // Each client counts as 1
 			_creationTime: client._creationTime,
 			clientType: client.clientType ?? undefined,
 			status: client.status,
 		}));
+
+		const totalInRange = data.reduce((sum, item) => sum + item.count, 0);
+		const baselineCount = clientsBeforeRange.length;
+
+		// Include baseline so charts can render cumulative totals across the selected window
+		return {
+			baselineCount,
+			totalInRange,
+			totalThroughEnd: baselineCount + totalInRange,
+			data,
+		};
 	},
 });
 
 /**
- * Get projects completed this month for daily chart visualization
+ * Get projects completed by date range for daily chart visualization
  * Uses completedAt timestamp to show when projects were marked as completed
  */
-export const getProjectsCompletedThisMonth = query({
-	args: {},
+export const getProjectsCompletedByDateRange = query({
+	args: {
+		from: v.optional(v.number()),
+		to: v.optional(v.number()),
+	},
 	handler: async (
-		ctx
-	): Promise<
-		Array<{
+		ctx,
+		args
+	): Promise<{
+		baselineCount: number;
+		totalInRange: number;
+		totalThroughEnd: number;
+		data: Array<{
 			date: string; // YYYY-MM-DD format
 			count: number;
 			_creationTime: number;
-		}>
-	> => {
+		}>;
+	}> => {
 		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
 		if (!userOrgId) {
-			return [];
+			return {
+				baselineCount: 0,
+				totalInRange: 0,
+				totalThroughEnd: 0,
+				data: [],
+			};
 		}
+		const { from, to } = args;
+		const { start, end } = getRangeBounds(from, to);
 
 		// Get organization timezone
 		const organization = await ctx.db.get(userOrgId);
 		const timezone = organization?.timezone;
 
-		// Calculate start of current month
-		const now = new Date();
-		const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-		startOfThisMonth.setHours(0, 0, 0, 0);
-		const startOfThisMonthTimestamp = startOfThisMonth.getTime();
-
-		// Get all projects with status = 'completed' that were completed this month
+		// Get all projects with status = 'completed' in range
 		const projectsThisMonth = await ctx.db
 			.query("projects")
 			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
 			.filter((q) =>
 				q.and(
 					q.eq(q.field("status"), "completed"),
-					q.gte(q.field("completedAt"), startOfThisMonthTimestamp)
+					q.neq(q.field("completedAt"), null),
+					q.gte(q.field("completedAt"), start),
+					q.lte(q.field("completedAt"), end)
 				)
 			)
 			.collect();
 
-		return projectsThisMonth.map((project) => ({
-			date: DateUtils.toLocalDateString(project.completedAt!, timezone),
+		const projectsBeforeRange = await ctx.db
+			.query("projects")
+			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
+			.filter((q) =>
+				q.and(
+					q.eq(q.field("status"), "completed"),
+					q.neq(q.field("completedAt"), null),
+					q.lt(q.field("completedAt"), start)
+				)
+			)
+			.collect();
+
+		const projectsThisMonthWithCompletedAt = projectsThisMonth.filter(
+			(
+				project
+			): project is (typeof projectsThisMonth)[number] & {
+				completedAt: number;
+			} => typeof project.completedAt === "number"
+		);
+
+		const projectsBeforeRangeWithCompletedAt = projectsBeforeRange.filter(
+			(
+				project
+			): project is (typeof projectsBeforeRange)[number] & {
+				completedAt: number;
+			} => typeof project.completedAt === "number"
+		);
+
+		const data = projectsThisMonthWithCompletedAt.map((project) => ({
+			date: DateUtils.toLocalDateString(project.completedAt, timezone),
 			count: 1,
-			_creationTime: project.completedAt!,
+			_creationTime: project.completedAt,
 		}));
+
+		const totalInRange = data.reduce((sum, item) => sum + item.count, 0);
+		const baselineCount = projectsBeforeRangeWithCompletedAt.length;
+
+		return {
+			baselineCount,
+			totalInRange,
+			totalThroughEnd: baselineCount + totalInRange,
+			data,
+		};
 	},
 });
 
 /**
- * Get quotes approved this month for daily chart visualization
+ * Get quotes approved by date range for daily chart visualization
  */
-export const getQuotesApprovedThisMonth = query({
-	args: {},
+export const getQuotesApprovedByDateRange = query({
+	args: {
+		from: v.optional(v.number()),
+		to: v.optional(v.number()),
+	},
 	handler: async (
-		ctx
-	): Promise<
-		Array<{
+		ctx,
+		args
+	): Promise<{
+		baselineCount: number;
+		totalInRange: number;
+		totalThroughEnd: number;
+		data: Array<{
 			date: string; // YYYY-MM-DD format
 			count: number;
 			_creationTime: number;
-		}>
-	> => {
+		}>;
+	}> => {
 		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
 		if (!userOrgId) {
-			return [];
+			return {
+				baselineCount: 0,
+				totalInRange: 0,
+				totalThroughEnd: 0,
+				data: [],
+			};
 		}
+		const { from, to } = args;
+		const { start, end } = getRangeBounds(from, to);
 
 		// Get organization timezone
 		const organization = await ctx.db.get(userOrgId);
 		const timezone = organization?.timezone;
 
-		// Calculate start of current month
-		const now = new Date();
-		const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-		startOfThisMonth.setHours(0, 0, 0, 0);
-		const startOfThisMonthTimestamp = startOfThisMonth.getTime();
-
-		// Get all quotes approved this month
+		// Get all quotes approved in range
 		const quotesThisMonth = await ctx.db
 			.query("quotes")
 			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
 			.filter((q) =>
 				q.and(
 					q.eq(q.field("status"), "approved"),
-					q.gte(q.field("approvedAt"), startOfThisMonthTimestamp)
+					q.gte(q.field("approvedAt"), start),
+					q.lte(q.field("approvedAt"), end)
 				)
 			)
 			.collect();
 
-		return quotesThisMonth.map((quote) => ({
+		const quotesBeforeRange = await ctx.db
+			.query("quotes")
+			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
+			.filter((q) =>
+				q.and(
+					q.eq(q.field("status"), "approved"),
+					q.lt(q.field("approvedAt"), start)
+				)
+			)
+			.collect();
+
+		const data = quotesThisMonth.map((quote) => ({
 			date: DateUtils.toLocalDateString(quote.approvedAt!, timezone),
 			count: 1,
 			_creationTime: quote.approvedAt!,
 		}));
+
+		const totalInRange = data.reduce((sum, item) => sum + item.count, 0);
+		const baselineCount = quotesBeforeRange.length;
+
+		return {
+			baselineCount,
+			totalInRange,
+			totalThroughEnd: baselineCount + totalInRange,
+			data,
+		};
 	},
 });
 
 /**
- * Get invoices paid this month for daily chart visualization
+ * Get invoices paid by date range for daily chart visualization
  */
-export const getInvoicesPaidThisMonth = query({
-	args: {},
+export const getInvoicesPaidByDateRange = query({
+	args: {
+		from: v.optional(v.number()),
+		to: v.optional(v.number()),
+	},
 	handler: async (
-		ctx
-	): Promise<
-		Array<{
+		ctx,
+		args
+	): Promise<{
+		baselineCount: number;
+		totalInRange: number;
+		totalThroughEnd: number;
+		data: Array<{
 			date: string; // YYYY-MM-DD format
 			count: number;
 			_creationTime: number;
-		}>
-	> => {
+		}>;
+	}> => {
 		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
 		if (!userOrgId) {
-			return [];
+			return {
+				baselineCount: 0,
+				totalInRange: 0,
+				totalThroughEnd: 0,
+				data: [],
+			};
 		}
+		const { from, to } = args;
+		const { start, end } = getRangeBounds(from, to);
 
 		// Get organization timezone
 		const organization = await ctx.db.get(userOrgId);
 		const timezone = organization?.timezone;
 
-		// Calculate start of current month
-		const now = new Date();
-		const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-		startOfThisMonth.setHours(0, 0, 0, 0);
-		const startOfThisMonthTimestamp = startOfThisMonth.getTime();
-
-		// Get all invoices with status = 'paid' this month
+		// Get all invoices with status = 'paid' in range
 		const invoicesThisMonth = await ctx.db
 			.query("invoices")
 			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
 			.filter((q) =>
 				q.and(
 					q.eq(q.field("status"), "paid"),
-					q.gte(q.field("paidAt"), startOfThisMonthTimestamp)
+					q.neq(q.field("paidAt"), null),
+					q.gte(q.field("paidAt"), start),
+					q.lte(q.field("paidAt"), end)
 				)
 			)
 			.collect();
 
-		return invoicesThisMonth.map((invoice) => ({
-			date: DateUtils.toLocalDateString(invoice.paidAt!, timezone),
+		const invoicesBeforeRange = await ctx.db
+			.query("invoices")
+			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
+			.filter((q) =>
+				q.and(
+					q.eq(q.field("status"), "paid"),
+					q.neq(q.field("paidAt"), null),
+					q.lt(q.field("paidAt"), start)
+				)
+			)
+			.collect();
+
+		const invoicesThisMonthWithPaidAt = invoicesThisMonth.filter(
+			(
+				invoice
+			): invoice is (typeof invoicesThisMonth)[number] & { paidAt: number } =>
+				typeof invoice.paidAt === "number"
+		);
+
+		const invoicesBeforeRangeWithPaidAt = invoicesBeforeRange.filter(
+			(
+				invoice
+			): invoice is (typeof invoicesBeforeRange)[number] & { paidAt: number } =>
+				typeof invoice.paidAt === "number"
+		);
+
+		const data = invoicesThisMonthWithPaidAt.map((invoice) => ({
+			date: DateUtils.toLocalDateString(invoice.paidAt, timezone),
 			count: 1,
-			_creationTime: invoice.paidAt!,
+			_creationTime: invoice.paidAt,
 		}));
+
+		const totalInRange = data.reduce((sum, item) => sum + item.count, 0);
+		const baselineCount = invoicesBeforeRangeWithPaidAt.length;
+
+		return {
+			baselineCount,
+			totalInRange,
+			totalThroughEnd: baselineCount + totalInRange,
+			data,
+		};
 	},
 });
 
 /**
- * @deprecated Use getInvoicesPaidThisMonth instead
- * Backwards compatibility alias
+ * Get revenue received by date range for daily chart visualization
  */
-export const getInvoicesSentThisMonth = getInvoicesPaidThisMonth;
-
-/**
- * Get revenue received this month for daily chart visualization
- */
-export const getRevenueThisMonth = query({
-	args: {},
+export const getRevenueByDateRange = query({
+	args: {
+		from: v.optional(v.number()),
+		to: v.optional(v.number()),
+	},
 	handler: async (
-		ctx
+		ctx,
+		args
 	): Promise<
 		Array<{
 			date: string; // YYYY-MM-DD format
@@ -709,25 +889,22 @@ export const getRevenueThisMonth = query({
 		if (!userOrgId) {
 			return [];
 		}
+		const { from, to } = args;
+		const { start, end } = getRangeBounds(from, to);
 
 		// Get organization timezone
 		const organization = await ctx.db.get(userOrgId);
 		const timezone = organization?.timezone;
 
-		// Calculate start of current month
-		const now = new Date();
-		const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-		startOfThisMonth.setHours(0, 0, 0, 0);
-		const startOfThisMonthTimestamp = startOfThisMonth.getTime();
-
-		// Get all paid invoices this month
+		// Get all paid invoices in range
 		const paidInvoicesThisMonth = await ctx.db
 			.query("invoices")
 			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
 			.filter((q) =>
 				q.and(
 					q.eq(q.field("status"), "paid"),
-					q.gte(q.field("paidAt"), startOfThisMonthTimestamp)
+					q.gte(q.field("paidAt"), start),
+					q.lte(q.field("paidAt"), end)
 				)
 			)
 			.collect();
@@ -742,12 +919,16 @@ export const getRevenueThisMonth = query({
 });
 
 /**
- * Get tasks created this month for daily chart visualization
+ * Get tasks created by date range for daily chart visualization
  */
-export const getTasksCreatedThisMonth = query({
-	args: {},
+export const getTasksCreatedByDateRange = query({
+	args: {
+		from: v.optional(v.number()),
+		to: v.optional(v.number()),
+	},
 	handler: async (
-		ctx
+		ctx,
+		args
 	): Promise<
 		Array<{
 			date: string; // YYYY-MM-DD format
@@ -759,22 +940,23 @@ export const getTasksCreatedThisMonth = query({
 		if (!userOrgId) {
 			return [];
 		}
+		const { from, to } = args;
+		const { start, end } = getRangeBounds(from, to);
 
 		// Get organization timezone
 		const organization = await ctx.db.get(userOrgId);
 		const timezone = organization?.timezone;
 
-		// Calculate start of current month
-		const now = new Date();
-		const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-		startOfThisMonth.setHours(0, 0, 0, 0);
-		const startOfThisMonthTimestamp = startOfThisMonth.getTime();
-
-		// Get all tasks created this month
+		// Get all tasks created in range
 		const tasksThisMonth = await ctx.db
 			.query("tasks")
 			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
-			.filter((q) => q.gte(q.field("_creationTime"), startOfThisMonthTimestamp))
+			.filter((q) =>
+				q.and(
+					q.gte(q.field("_creationTime"), start),
+					q.lte(q.field("_creationTime"), end)
+				)
+			)
 			.collect();
 
 		return tasksThisMonth.map((task) => ({
