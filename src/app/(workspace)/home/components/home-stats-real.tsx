@@ -416,7 +416,6 @@ export default function HomeStatsReal() {
 		quotesTotals,
 		invoicesTotals,
 		homeStats,
-		isLoading,
 		isClientsLoading,
 		isProjectsLoading,
 		isQuotesLoading,

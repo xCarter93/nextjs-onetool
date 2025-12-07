@@ -29,7 +29,6 @@ export function SendClientEmailPopover({
 	isOpen,
 	onOpenChange,
 	clientId,
-	clientName: _clientName,
 	primaryContact,
 	children,
 }: SendClientEmailPopoverProps) {
