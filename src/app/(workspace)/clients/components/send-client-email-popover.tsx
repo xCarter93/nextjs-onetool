@@ -29,7 +29,7 @@ export function SendClientEmailPopover({
 	isOpen,
 	onOpenChange,
 	clientId,
-	clientName,
+	clientName: _clientName,
 	primaryContact,
 	children,
 }: SendClientEmailPopoverProps) {
@@ -50,7 +50,10 @@ export function SendClientEmailPopover({
 
 	const handleSend = async () => {
 		if (!primaryContact?.email) {
-			toast.error("Error", "Client does not have a valid primary contact email");
+			toast.error(
+				"Error",
+				"Client does not have a valid primary contact email"
+			);
 			return;
 		}
 
@@ -90,13 +93,12 @@ export function SendClientEmailPopover({
 		onOpenChange(false);
 	};
 
-	const canSend = primaryContact?.email && subject.trim() && message.trim() && !isSending;
+	const canSend =
+		primaryContact?.email && subject.trim() && message.trim() && !isSending;
 
 	return (
 		<Popover open={isOpen} onOpenChange={onOpenChange}>
-			<PopoverTrigger asChild>
-				{children}
-			</PopoverTrigger>
+			<PopoverTrigger asChild>{children}</PopoverTrigger>
 			<PopoverContent
 				align="end"
 				side="top"
@@ -219,4 +221,3 @@ export function SendClientEmailPopover({
 		</Popover>
 	);
 }
-

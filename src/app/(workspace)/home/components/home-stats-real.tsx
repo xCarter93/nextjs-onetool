@@ -421,6 +421,8 @@ export default function HomeStatsReal() {
 		isProjectsLoading,
 		isQuotesLoading,
 		isInvoicesLoading,
+		isRevenueLoading,
+		isTasksLoading,
 		revenueTotal,
 	]);
 

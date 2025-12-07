@@ -129,7 +129,10 @@ export default function LineChart6({
 		[metrics, activeMetricKey]
 	);
 
-	const chartData = dataByMetric[activeMetricKey] ?? [];
+	const chartData = useMemo(
+		() => dataByMetric[activeMetricKey] ?? [],
+		[dataByMetric, activeMetricKey]
+	);
 	const activeColor = getMetricColor();
 
 	const { isFlatLine, flatValue } = useMemo(() => {
