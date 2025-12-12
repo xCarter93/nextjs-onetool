@@ -78,6 +78,7 @@ export default defineSchema({
 
 		// Legacy fields (keeping for backwards compatibility)
 		stripeCustomerId: v.optional(v.string()),
+		stripeConnectAccountId: v.optional(v.string()),
 		plan: v.optional(
 			v.union(v.literal("trial"), v.literal("pro"), v.literal("cancelled"))
 		), // Deprecated: Use Clerk billing fields instead

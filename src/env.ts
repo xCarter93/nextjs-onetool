@@ -15,11 +15,13 @@ export const env = createEnv({
 		CLERK_ISSUER_DOMAIN: z.string().min(1),
 		RESEND_API_KEY: z.string().min(1),
 		RESEND_WEBHOOK_SECRET: z.string().min(1),
+		STRIPE_APPLICATION_FEE_CENTS: z.string().optional().default("100"),
 	},
 	client: {
 		NEXT_PUBLIC_CONVEX_URL: z.string().min(1),
 		NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().min(1),
 		NEXT_PUBLIC_CLERK_FRONTEND_API_URL: z.string().min(1),
+		NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().min(1),
 	},
 	experimental__runtimeEnv: {
 		NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:
@@ -27,5 +29,7 @@ export const env = createEnv({
 		NEXT_PUBLIC_CONVEX_URL: process.env.NEXT_PUBLIC_CONVEX_URL,
 		NEXT_PUBLIC_CLERK_FRONTEND_API_URL:
 			process.env.NEXT_PUBLIC_CLERK_FRONTEND_API_URL,
+		NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY:
+			process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
 	},
 });

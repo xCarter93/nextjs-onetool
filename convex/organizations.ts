@@ -386,13 +386,44 @@ export const regenerateReceivingAddress = mutation({
 		}
 
 		// Generate new receiving address
-		const newReceivingAddress = `org-${crypto.randomUUID().slice(0, 8)}@onetool.biz`;
+		const newReceivingAddress = `org-${crypto
+			.randomUUID()
+			.slice(0, 8)}@onetool.biz`;
 
 		await ctx.db.patch(userOrgId, {
 			receivingAddress: newReceivingAddress,
 		});
 
 		return newReceivingAddress;
+	},
+});
+
+/**
+ * Persist the Stripe Connect account ID for the current organization.
+ * Only the organization owner can set this value.
+ */
+export const setStripeConnectAccountId = mutation({
+	args: {
+		accountId: v.string(),
+	},
+	handler: async (ctx, args) => {
+		const user = await getCurrentUserOrThrow(ctx);
+		const userOrgId = await getCurrentUserOrgId(ctx);
+
+		const organization = await ctx.db.get(userOrgId);
+		if (!organization) {
+			throw new Error("Organization not found");
+		}
+
+		if (organization.ownerUserId !== user._id) {
+			throw new Error("Only organization owner can manage payments onboarding");
+		}
+
+		await ctx.db.patch(userOrgId, {
+			stripeConnectAccountId: args.accountId,
+		});
+
+		return args.accountId;
 	},
 });
 

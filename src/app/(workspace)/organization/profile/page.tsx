@@ -20,7 +20,11 @@ import {
 	Check,
 	X,
 	Lock,
+	Loader2,
+	RefreshCcw,
+	ExternalLink,
 } from "lucide-react";
+import { ConnectPayouts, ConnectComponentsProvider } from "@stripe/react-connect-js";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -33,6 +37,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
 import { useFeatureAccess } from "@/hooks/use-feature-access";
 import { logError, getUserFriendlyErrorMessage } from "@/lib/error-logger";
+import { StripeConnectProvider } from "@/components/stripe/StripeConnectProvider";
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 
@@ -40,6 +45,7 @@ const TAB_VALUES = [
 	"overview",
 	"business",
 	"preferences",
+	"payments",
 	"documents",
 	"skus",
 ] as const;
@@ -83,6 +89,18 @@ type PreferencesFormState = {
 	defaultReminderTiming: string;
 	smsEnabled: boolean;
 	monthlyRevenueTarget: string;
+};
+
+type StripeAccountStatus = {
+	accountId: string;
+	chargesEnabled: boolean;
+	payoutsEnabled: boolean;
+	detailsSubmitted: boolean;
+	requirements?: {
+		currently_due?: string[];
+		eventually_due?: string[];
+		past_due?: string[];
+	};
 };
 
 const initialBusinessForm: BusinessFormState = {
@@ -136,6 +154,9 @@ export default function OrganizationProfilePage() {
 	const organization = useQuery(api.organizations.get, {});
 	const currentUser = useQuery(api.users.current, {});
 	const updateOrganization = useMutation(api.organizations.update);
+	const setStripeConnectAccountId = useMutation(
+		api.organizations.setStripeConnectAccountId
+	);
 
 	const [businessForm, setBusinessForm] =
 		React.useState<BusinessFormState>(initialBusinessForm);
@@ -145,7 +166,22 @@ export default function OrganizationProfilePage() {
 	const [preferencesDirty, setPreferencesDirty] = React.useState(false);
 	const [savingBusiness, setSavingBusiness] = React.useState(false);
 	const [savingPreferences, setSavingPreferences] = React.useState(false);
+	const [onboardingLoading, setOnboardingLoading] = React.useState(false);
+	const [statusLoading, setStatusLoading] = React.useState(false);
+	const [stripeStatus, setStripeStatus] =
+		React.useState<StripeAccountStatus | null>(null);
 	const lastOrganizationId = React.useRef<string | null>(null);
+	const onboardingComplete = Boolean(
+		stripeStatus?.detailsSubmitted &&
+			stripeStatus?.chargesEnabled &&
+			stripeStatus?.payoutsEnabled
+	);
+
+	const statusTone = React.useCallback((flag?: boolean) => {
+		return flag
+			? "border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-800/70 dark:bg-emerald-950/40 dark:text-emerald-100"
+			: "border-rose-200 bg-rose-50 text-rose-900 dark:border-rose-800/70 dark:bg-rose-950/40 dark:text-rose-100";
+	}, []);
 
 	// Get active tab from search params
 	const tabParam = searchParams.get("tab");
@@ -158,6 +194,7 @@ export default function OrganizationProfilePage() {
 			lastOrganizationId.current = currentOrgId;
 			setBusinessDirty(false);
 			setPreferencesDirty(false);
+			setStripeStatus(null);
 		}
 	}, [organization?._id]);
 
@@ -415,6 +452,158 @@ export default function OrganizationProfilePage() {
 		}
 	}, [isOwner, preferencesForm, toast, updateOrganization]);
 
+	const handleStartStripeOnboarding = React.useCallback(async () => {
+		if (!isOwner) {
+			toast.error(
+				"Permission required",
+				"Only the organization owner can manage payments."
+			);
+			return;
+		}
+
+		setOnboardingLoading(true);
+
+		try {
+			// 1) Create or retrieve the connected account.
+			const accountResponse = await fetch("/api/stripe-connect/account", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					accountId: organization?.stripeConnectAccountId ?? undefined,
+					email: organization?.email ?? currentUser?.email,
+				}),
+			});
+
+			const accountData = await accountResponse.json();
+			if (!accountResponse.ok) {
+				throw new Error(
+					accountData?.error ??
+						"Stripe could not create or retrieve the connected account."
+				);
+			}
+
+			const accountId: string | undefined = accountData?.accountId;
+			if (!accountId) {
+				throw new Error("Stripe did not return an account ID.");
+			}
+
+			// Persist the account ID on the organization so future calls can reuse it.
+			if (organization?.stripeConnectAccountId !== accountId) {
+				await setStripeConnectAccountId({ accountId });
+			}
+
+			// 2) Generate an onboarding link and redirect the user.
+			const linkResponse = await fetch("/api/stripe-connect/account-link", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ accountId }),
+			});
+
+			const linkData = await linkResponse.json();
+			if (!linkResponse.ok) {
+				throw new Error(
+					linkData?.error ??
+						"Stripe could not generate an onboarding link. Try again."
+				);
+			}
+
+			if (!linkData?.url) {
+				throw new Error("Stripe did not return an onboarding URL.");
+			}
+
+			// Capture a quick snapshot of status so we have something to show in the UI.
+			if (accountData?.account) {
+				setStripeStatus({
+					accountId,
+					chargesEnabled: Boolean(accountData.account.charges_enabled),
+					payoutsEnabled: Boolean(accountData.account.payouts_enabled),
+					detailsSubmitted: Boolean(accountData.account.details_submitted),
+					requirements: accountData.account.requirements,
+				});
+			}
+
+			window.location.href = linkData.url;
+		} catch (error) {
+			logError(error, { action: "stripe_onboarding" });
+			toast.error(
+				"Stripe onboarding failed",
+				getUserFriendlyErrorMessage(error) ??
+					"Unable to start Stripe onboarding right now."
+			);
+		} finally {
+			setOnboardingLoading(false);
+		}
+	}, [
+		currentUser?.email,
+		isOwner,
+		organization?.email,
+		organization?.stripeConnectAccountId,
+		setStripeConnectAccountId,
+		toast,
+	]);
+
+	const refreshStripeAccountStatus = React.useCallback(async () => {
+		if (!organization?.stripeConnectAccountId) {
+			toast.warning(
+				"No Stripe account yet",
+				"Create an account first to check status."
+			);
+			return;
+		}
+
+		setStatusLoading(true);
+		try {
+			const statusResponse = await fetch("/api/stripe-connect/status", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					accountId: organization.stripeConnectAccountId,
+				}),
+			});
+
+			const statusData = await statusResponse.json();
+			if (!statusResponse.ok) {
+				throw new Error(
+					statusData?.error ??
+						"Stripe could not provide the latest onboarding status."
+				);
+			}
+
+			setStripeStatus({
+				accountId: statusData.accountId,
+				chargesEnabled: Boolean(statusData.chargesEnabled),
+				payoutsEnabled: Boolean(statusData.payoutsEnabled),
+				detailsSubmitted: Boolean(statusData.detailsSubmitted),
+				requirements: statusData.requirements,
+			});
+		} catch (error) {
+			logError(error, { action: "stripe_status" });
+			toast.error(
+				"Unable to load Stripe status",
+				getUserFriendlyErrorMessage(error) ?? "Try again in a moment."
+			);
+		} finally {
+			setStatusLoading(false);
+		}
+	}, [organization?.stripeConnectAccountId, toast]);
+
+	React.useEffect(() => {
+		if (
+			activeTab === "payments" &&
+			organization?.stripeConnectAccountId &&
+			!stripeStatus &&
+			!statusLoading
+		) {
+			void refreshStripeAccountStatus();
+		}
+	}, [
+		activeTab,
+		organization?.stripeConnectAccountId,
+		refreshStripeAccountStatus,
+		statusLoading,
+		stripeStatus,
+	]);
+
 	if (isLoading) {
 		return (
 			<div className="min-h-screen flex-1 flex items-center justify-center">
@@ -454,7 +643,7 @@ export default function OrganizationProfilePage() {
 				<div className="mb-10">
 					<div className="flex items-center gap-3 mb-3">
 						<div className="w-2 h-8 bg-linear-to-b from-primary to-primary/60 rounded-full" />
-						<h1 className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent tracking-tight">
+						<h1 className="text-3xl font-bold bg-linear-to-r from-foreground to-foreground/70 bg-clip-text text-transparent tracking-tight">
 							Organization Settings
 						</h1>
 					</div>
@@ -473,6 +662,7 @@ export default function OrganizationProfilePage() {
 						<TabsTrigger value="overview">Overview</TabsTrigger>
 						<TabsTrigger value="business">Business Info</TabsTrigger>
 						<TabsTrigger value="preferences">Preferences</TabsTrigger>
+						<TabsTrigger value="payments">Payments</TabsTrigger>
 						<TabsTrigger
 							value="documents"
 							disabled={!hasPremiumAccess}
@@ -520,7 +710,7 @@ export default function OrganizationProfilePage() {
 											formFieldInputShowPasswordButton:
 												"text-muted-foreground hover:text-foreground dark:text-muted-foreground dark:hover:text-foreground",
 											formButtonPrimary:
-												"bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-primary-foreground font-medium py-2.5 px-6 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 border-0",
+												"bg-linear-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-primary-foreground font-medium py-2.5 px-6 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 border-0",
 											formButtonSecondary:
 												"bg-muted/80 hover:bg-muted/70 dark:bg-muted/40 dark:hover:bg-muted/30 text-muted-foreground hover:text-foreground dark:text-muted-foreground dark:hover:text-foreground font-medium py-2.5 px-6 rounded-lg border border-border/60 dark:border-border/40 transition-all duration-200",
 											table: "w-full border-collapse",
@@ -540,7 +730,7 @@ export default function OrganizationProfilePage() {
 												"bg-muted dark:bg-muted/40 text-muted-foreground dark:text-muted-foreground",
 											badgePrimary: "bg-primary text-primary-foreground",
 											membersPageInviteButton:
-												"bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-primary-foreground font-medium py-2.5 px-6 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 border-0",
+												"bg-linear-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-primary-foreground font-medium py-2.5 px-6 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 border-0",
 											avatarBox:
 												"w-10 h-10 rounded-lg bg-muted dark:bg-muted/40 flex items-center justify-center",
 											avatarImage: "w-10 h-10 rounded-lg object-cover",
@@ -830,7 +1020,11 @@ export default function OrganizationProfilePage() {
 																alt="Logo preview dark"
 																width={64}
 																height={64}
-																className={`max-h-12 max-w-full object-contain transition-all duration-200 ${businessForm.logoInvertInDarkMode ? "invert brightness-0" : ""}`}
+																className={`max-h-12 max-w-full object-contain transition-all duration-200 ${
+																	businessForm.logoInvertInDarkMode
+																		? "invert brightness-0"
+																		: ""
+																}`}
 															/>
 														) : (
 															<span className="text-xs text-muted-foreground">
@@ -988,6 +1182,240 @@ export default function OrganizationProfilePage() {
 										{savingPreferences ? "Saving..." : "Save Preferences"}
 									</button>
 								</div>
+							</div>
+						</TabsContent>
+
+						<TabsContent value="payments">
+							<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-2xl p-8 shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50 space-y-6">
+								<div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+									<div className="space-y-2">
+										<div className="flex items-center gap-3">
+											<div className="w-1.5 h-6 bg-linear-to-b from-primary to-primary/60 rounded-full" />
+											<h2 className="text-2xl font-semibold text-foreground tracking-tight">
+												Payments (Stripe Connect)
+											</h2>
+										</div>
+										<p className="text-muted-foreground ml-5 leading-relaxed">
+											Onboard to Stripe to accept payments on behalf of your
+											organization. Status is fetched live from Stripe each time
+											you refresh this tab.
+										</p>
+									</div>
+
+									{organization?.stripeConnectAccountId && (
+										<div className="flex flex-wrap gap-3 justify-end">
+											<Button
+												intent="outline"
+												onClick={refreshStripeAccountStatus}
+												isDisabled={statusLoading}
+											>
+												{statusLoading ? (
+													<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+												) : (
+													<RefreshCcw className="mr-2 h-4 w-4" />
+												)}
+												Refresh status
+											</Button>
+										{!onboardingComplete && (
+											<StyledButton
+												size="md"
+												intent="secondary"
+												onClick={handleStartStripeOnboarding}
+												disabled={onboardingLoading}
+											>
+												{onboardingLoading ? (
+													<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+												) : (
+													<ExternalLink className="mr-2 h-4 w-4" />
+												)}
+											Continue onboarding
+										</StyledButton>
+									)}
+								</div>
+							)}
+						</div>
+
+								{!organization?.stripeConnectAccountId ? (
+									<div className="rounded-xl border border-border/60 dark:border-border/50 bg-muted/20 dark:bg-muted/10 p-6 space-y-4">
+										<p className="text-sm text-foreground leading-relaxed">
+											Start by creating a connected account. You&apos;ll be
+											redirected to Stripe&apos;s hosted onboarding to provide
+											verification details. Fees are paid by the connected
+											account; disputes are handled by Stripe.
+										</p>
+										<StyledButton
+											size="md"
+											onClick={handleStartStripeOnboarding}
+											disabled={onboardingLoading}
+										>
+											{onboardingLoading ? (
+												<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+											) : (
+												<ExternalLink className="mr-2 h-4 w-4" />
+											)}
+											Onboard to collect payments
+										</StyledButton>
+										<p className="text-xs text-muted-foreground">
+											Note: The account ID will be stored on this organization
+											so future visits reuse the same Stripe account.
+										</p>
+									</div>
+								) : (
+									<div className="space-y-4">
+										<div className="rounded-xl border border-border/60 dark:border-border/40 p-5 bg-background/60 dark:bg-card/70">
+											<div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+												<div className="space-y-1">
+													<p className="text-xs uppercase tracking-wide text-muted-foreground">
+														Connected Account
+													</p>
+													<p className="font-mono text-sm text-foreground break-all">
+														{organization.stripeConnectAccountId}
+													</p>
+												</div>
+											{!onboardingComplete && (
+												<Button
+													intent="plain"
+													className="text-sm"
+													onClick={handleStartStripeOnboarding}
+													isDisabled={onboardingLoading}
+												>
+													{onboardingLoading ? (
+														<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+													) : (
+														<ExternalLink className="mr-2 h-4 w-4" />
+													)}
+												Open onboarding
+											</Button>
+										)}
+									</div>
+
+											<div className="grid gap-3 sm:grid-cols-3 mt-4">
+												<div
+													className={`rounded-lg border p-3 ${statusTone(
+														stripeStatus?.detailsSubmitted
+													)}`}
+												>
+													<p className="text-xs text-muted-foreground uppercase tracking-wide">
+														Details submitted
+													</p>
+													<p className="text-sm font-semibold text-foreground">
+														{stripeStatus?.detailsSubmitted ? "Yes" : "Pending"}
+													</p>
+												</div>
+												<div
+													className={`rounded-lg border p-3 ${statusTone(
+														stripeStatus?.chargesEnabled
+													)}`}
+												>
+													<p className="text-xs text-muted-foreground uppercase tracking-wide">
+														Charges enabled
+													</p>
+													<p className="text-sm font-semibold text-foreground">
+														{stripeStatus?.chargesEnabled ? "Yes" : "No"}
+													</p>
+												</div>
+												<div
+													className={`rounded-lg border p-3 ${statusTone(
+														stripeStatus?.payoutsEnabled
+													)}`}
+												>
+													<p className="text-xs text-muted-foreground uppercase tracking-wide">
+														Payouts enabled
+													</p>
+													<p className="text-sm font-semibold text-foreground">
+														{stripeStatus?.payoutsEnabled ? "Yes" : "No"}
+													</p>
+												</div>
+											</div>
+
+											<div className="mt-4 space-y-2">
+												<p className="text-sm font-medium text-foreground">
+													Requirements
+												</p>
+												{stripeStatus?.requirements?.currently_due?.length ? (
+													<ul className="list-disc pl-5 text-sm text-muted-foreground space-y-1">
+														{stripeStatus.requirements.currently_due.map(
+															(item) => (
+																<li key={item}>{item}</li>
+															)
+														)}
+													</ul>
+												) : (
+													<p className="text-sm text-muted-foreground">
+														No outstanding requirements reported.
+													</p>
+												)}
+												<p className="text-xs text-muted-foreground flex items-center gap-2">
+													<AlertTriangle className="h-4 w-4" />
+													Status is always fetched directly from Stripe; reload
+													if you make changes in the dashboard.
+												</p>
+											</div>
+										</div>
+
+										{/* Stripe Connect Payouts Component */}
+										{onboardingComplete && isOwner && (
+											<div className="rounded-xl border border-border/60 dark:border-border/40 p-5 bg-background/60 dark:bg-card/70">
+												<div className="mb-4">
+													<h3 className="text-lg font-semibold text-foreground">
+														Payouts
+													</h3>
+													<p className="text-sm text-muted-foreground">
+														Manage your payout schedule, view payout history, and perform instant or manual payouts.
+													</p>
+												</div>
+												<StripeConnectProvider accountId={organization.stripeConnectAccountId}>
+													{(connectInstance) => {
+														if (!connectInstance) {
+															return (
+																<div className="flex items-center justify-center py-8">
+																	<Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+																	<span className="ml-2 text-sm text-muted-foreground">
+																		Loading payouts...
+																	</span>
+																</div>
+															);
+														}
+														return (
+															<ConnectComponentsProvider connectInstance={connectInstance}>
+																<ConnectPayouts />
+															</ConnectComponentsProvider>
+														);
+													}}
+												</StripeConnectProvider>
+											</div>
+										)}
+
+										<div className="flex flex-wrap gap-3">
+											<Button
+												intent="outline"
+												onClick={refreshStripeAccountStatus}
+												isDisabled={statusLoading}
+											>
+												{statusLoading ? (
+													<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+												) : (
+													<RefreshCcw className="mr-2 h-4 w-4" />
+												)}
+												Refresh status
+											</Button>
+											{!onboardingComplete && (
+												<StyledButton
+													size="md"
+													onClick={handleStartStripeOnboarding}
+													disabled={onboardingLoading}
+												>
+													{onboardingLoading ? (
+														<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+													) : (
+														<ExternalLink className="mr-2 h-4 w-4" />
+													)}
+													Continue onboarding
+												</StyledButton>
+											)}
+										</div>
+									</div>
+								)}
 							</div>
 						</TabsContent>
 
@@ -1258,7 +1686,7 @@ function DocumentsTab() {
 						</p>
 					</div>
 					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-						{documents.map((doc) => (
+						{documents.map((doc: DocumentCardProps["document"]) => (
 							<DocumentCard
 								key={doc._id}
 								document={doc}

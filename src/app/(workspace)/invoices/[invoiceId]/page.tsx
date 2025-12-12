@@ -1,6 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
+import { useMemo } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import { Badge } from "@/components/ui/badge";
@@ -33,6 +34,7 @@ import { pdf } from "@react-pdf/renderer";
 import InvoicePDF from "@/app/(workspace)/invoices/components/InvoicePDF";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import type { Id as StorageId } from "../../../../../convex/_generated/dataModel";
+import { StyledButton } from "@/components/ui/styled/styled-button";
 
 type InvoiceStatus = "draft" | "sent" | "paid" | "overdue" | "cancelled";
 
@@ -127,6 +129,15 @@ export default function InvoiceDetailPage() {
 		api.documents.getDocumentUrl,
 		latestDocument ? { id: latestDocument._id } : "skip"
 	);
+
+	const payUrl = useMemo(() => {
+		if (!invoice?.publicToken) return "";
+		const origin =
+			typeof window !== "undefined"
+				? window.location.origin
+				: process.env.NEXT_PUBLIC_APP_URL ?? "";
+		return origin ? `${origin}/pay/${invoice.publicToken}` : "";
+	}, [invoice?.publicToken]);
 
 	const handleStatusChange = async (status: InvoiceStatus) => {
 		try {
@@ -300,7 +311,7 @@ export default function InvoiceDetailPage() {
 									address: organization.address || undefined,
 									phone: organization.phone || undefined,
 									email: organization.email || undefined,
-								}
+							  }
 							: undefined
 					}
 				/>
@@ -345,7 +356,9 @@ export default function InvoiceDetailPage() {
 			const blobUrl = URL.createObjectURL(blob);
 			const link = document.createElement("a");
 			link.href = blobUrl;
-			link.download = `Invoice-${invoice?.invoiceNumber || invoice?._id.slice(-6) || "document"}.pdf`;
+			link.download = `Invoice-${
+				invoice?.invoiceNumber || invoice?._id.slice(-6) || "document"
+			}.pdf`;
 			document.body.appendChild(link);
 			link.click();
 
@@ -584,8 +597,8 @@ export default function InvoiceDetailPage() {
 																		project.status === "in-progress"
 																			? "default"
 																			: project.status === "completed"
-																				? "secondary"
-																				: "outline"
+																			? "secondary"
+																			: "outline"
 																	}
 																>
 																	{project.status}
@@ -782,6 +795,75 @@ export default function InvoiceDetailPage() {
 										</Card>
 									</div>
 
+									{/* Public Payment Link */}
+									<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-xl shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50">
+										<Card className="bg-transparent border-none shadow-none ring-0">
+											<CardHeader>
+												<CardTitle className="text-lg">Payment Link</CardTitle>
+											</CardHeader>
+											<CardContent className="space-y-3">
+												{!organization?.stripeConnectAccountId ? (
+													<p className="text-sm text-muted-foreground">
+														Connect Stripe payments to enable the public
+														checkout link for this invoice.
+													</p>
+												) : payUrl ? (
+													<>
+														<p className="text-sm text-muted-foreground break-all">
+															{payUrl}
+														</p>
+														<div className="flex flex-col gap-2">
+															<StyledButton
+																intent="outline"
+																size="sm"
+																onClick={() => {
+																	navigator.clipboard
+																		.writeText(payUrl)
+																		.then(() =>
+																			toast.success(
+																				"Link copied",
+																				"Public payment link copied."
+																			)
+																		)
+																		.catch(() =>
+																			toast.error(
+																				"Copy failed",
+																				"Unable to copy the link."
+																			)
+																		);
+																}}
+															>
+																Copy link
+															</StyledButton>
+															<StyledButton
+																size="sm"
+																intent="primary"
+																showArrow={false}
+																onClick={() => {
+																	window.open(
+																		payUrl,
+																		"_blank",
+																		"noopener,noreferrer"
+																	);
+																}}
+															>
+																Open test link
+															</StyledButton>
+														</div>
+														<p className="text-xs text-muted-foreground">
+															This public link uses the invoice token; share it
+															with your client to pay via Stripe.
+														</p>
+													</>
+												) : (
+													<p className="text-sm text-muted-foreground">
+														No payment link available for this invoice.
+													</p>
+												)}
+											</CardContent>
+										</Card>
+									</div>
+
 									{/* Generated PDF */}
 									<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-xl shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50">
 										<Card className="bg-transparent border-none shadow-none ring-0">
@@ -872,16 +954,16 @@ export default function InvoiceDetailPage() {
 										currentStatus === "draft"
 											? "Mark as Sent"
 											: currentStatus === "sent" || currentStatus === "overdue"
-												? "Mark as Paid"
-												: currentStatus === "paid"
-													? "Reopen"
-													: "Update Status",
+											? "Mark as Paid"
+											: currentStatus === "paid"
+											? "Reopen"
+											: "Update Status",
 									intent:
 										currentStatus === "draft"
 											? ("primary" as const)
 											: currentStatus === "sent" || currentStatus === "overdue"
-												? ("success" as const)
-												: ("outline" as const),
+											? ("success" as const)
+											: ("outline" as const),
 									icon:
 										currentStatus === "draft" ? (
 											<Mail className="h-4 w-4" />
@@ -905,7 +987,7 @@ export default function InvoiceDetailPage() {
 									},
 									position: "left" as const,
 								},
-							]
+						  ]
 						: []),
 					// Right side buttons - Actions
 					{
@@ -925,7 +1007,7 @@ export default function InvoiceDetailPage() {
 									onClick: () => handleStatusChange("cancelled"),
 									position: "right" as const,
 								},
-							]
+						  ]
 						: []),
 				]}
 				fullWidth
