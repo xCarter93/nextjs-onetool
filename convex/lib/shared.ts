@@ -6,11 +6,14 @@
 /**
  * Generate a random public token for public access
  * Used by quotes and invoices for client-facing URLs
+ * Uses cryptographically secure random generation
  */
 export function generatePublicToken(): string {
-	return (
-		Math.random().toString(36).substring(2, 15) +
-		Math.random().toString(36).substring(2, 15)
+	// Use Web Crypto API for cryptographically secure random generation
+	const array = new Uint8Array(32);
+	crypto.getRandomValues(array);
+	return Array.from(array, (byte) => byte.toString(16).padStart(2, "0")).join(
+		""
 	);
 }
 

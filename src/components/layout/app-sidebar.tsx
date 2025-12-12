@@ -106,6 +106,10 @@ const data = {
 					url: "/organization/profile?tab=preferences",
 				},
 				{
+					title: "Payments",
+					url: "/organization/profile?tab=payments",
+				},
+				{
 					title: "Documents",
 					url: "/organization/profile?tab=documents",
 					requiresPremium: true,
