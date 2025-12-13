@@ -21,6 +21,16 @@ const faqs = [
 			"Yes! OneTool includes a powerful quoting and invoicing system. Create customized quotes with line items, taxes, and your company branding. Send them directly via email with e-signature capabilities for quick approvals. Convert approved quotes to invoices with one click and track payment status.",
 	},
 	{
+		question: "Can I receive payments directly to my bank account?",
+		answer:
+			"Paid users of OneTool have access to our Stripe Connect integration which allows you to connect a bank account and send invoice payment links to clients.",
+	},
+	{
+		question: "Can I email clients directly from OneTool?",
+		answer:
+			"Yes, we offer the ability to draft professional emails to clients from directly within OneTool. We also support email threads so you can keep track of responses and replies without having to leave OneTool.",
+	},
+	{
 		question: "Is OneTool accessible on mobile devices?",
 		answer:
 			"Absolutely. OneTool is built as a responsive web application that works seamlessly on smartphones, tablets, and desktop computers. Access your client data, update project statuses, create quotes, and manage tasks from anywhere with an internet connection.",
@@ -147,7 +157,7 @@ export default function FAQSection() {
 						Still have questions?
 					</p>
 					<a
-						href="mailto:support@onetool.com"
+						href="mailto:support@onetool.biz"
 						className="mt-2 inline-flex items-center text-base font-semibold text-primary transition-colors hover:text-primary/80"
 					>
 						Contact our support team →
