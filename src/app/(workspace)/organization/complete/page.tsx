@@ -2,6 +2,8 @@
 
 import React, { useMemo, useState } from "react";
 import { useUser, useOrganization } from "@clerk/nextjs";
+import { PricingTable } from "@clerk/nextjs";
+import { useTheme } from "next-themes";
 import { useMutation, useQuery } from "convex/react";
 import { useRouter } from "next/navigation";
 import ProgressBar, { ProgressStep } from "@/components/shared/progress-bar";
@@ -10,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useAutoTimezone } from "@/hooks/use-auto-timezone";
+import { useFeatureAccess } from "@/hooks/use-feature-access";
 import { Users, Building2, Globe, Upload } from "lucide-react";
 import { api } from "../../../../../convex/_generated/api";
 import { CsvImportStep } from "@/app/(workspace)/clients/components/csv-import-step";
@@ -26,16 +29,13 @@ interface FormData {
 	addressState: string;
 	addressZip: string;
 	companySize: string;
-	defaultTaxRate: number;
-	defaultReminderTiming: number;
-	smsEnabled: boolean;
-	monthlyRevenueTarget: number;
 	logoInvertInDarkMode: boolean;
 }
 
 export default function CompleteOrganizationMetadata() {
 	const { user } = useUser();
 	const { organization: clerkOrganization } = useOrganization();
+	const { resolvedTheme } = useTheme();
 	const router = useRouter();
 	const completeMetadata = useMutation(api.organizations.completeMetadata);
 	const bulkCreateClients = useMutation(api.clients.bulkCreate);
@@ -44,12 +44,16 @@ export default function CompleteOrganizationMetadata() {
 	const needsCompletion = useQuery(api.organizations.needsMetadataCompletion);
 	const toast = useToast();
 
+	// Check if user has premium access for import feature
+	const { hasPremiumAccess } = useFeatureAccess();
+
 	// Automatically detect and save timezone if not set
 	useAutoTimezone();
 
 	const [currentStep, setCurrentStep] = useState(1);
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [mounted, setMounted] = useState(false);
 	const [formData, setFormData] = useState<FormData>({
 		email: user?.primaryEmailAddress?.emailAddress || "",
 		website: "",
@@ -59,10 +63,6 @@ export default function CompleteOrganizationMetadata() {
 		addressState: "",
 		addressZip: "",
 		companySize: "",
-		defaultTaxRate: 0,
-		defaultReminderTiming: 24, // 24 hours default
-		smsEnabled: false,
-		monthlyRevenueTarget: 0,
 		logoInvertInDarkMode: true,
 	});
 
@@ -88,6 +88,14 @@ export default function CompleteOrganizationMetadata() {
 		}
 	}, [needsCompletion, organization, router]);
 
+	// Prevent hydration mismatch
+	React.useEffect(() => {
+		setMounted(true);
+	}, []);
+
+	const currentTheme = mounted ? resolvedTheme : "light";
+	const isDark = currentTheme === "dark";
+
 	const progressSteps: ProgressStep[] = [
 		{
 			id: "1",
@@ -97,8 +105,8 @@ export default function CompleteOrganizationMetadata() {
 				currentStep === 1
 					? "current"
 					: currentStep > 1
-						? "complete"
-						: "upcoming",
+					? "complete"
+					: "upcoming",
 		},
 		{
 			id: "2",
@@ -108,19 +116,30 @@ export default function CompleteOrganizationMetadata() {
 				currentStep === 2
 					? "current"
 					: currentStep > 2
-						? "complete"
-						: "upcoming",
+					? "complete"
+					: "upcoming",
 		},
 		{
 			id: "3",
-			name: "Import Data",
-			description: "Import existing clients or projects (optional)",
+			name: "Choose Your Plan",
+			description: "Select the plan that fits your needs",
 			status:
 				currentStep === 3
 					? "current"
 					: currentStep > 3
-						? "complete"
-						: "upcoming",
+					? "complete"
+					: "upcoming",
+		},
+		{
+			id: "4",
+			name: "Import Data",
+			description: "Import existing clients or projects (optional)",
+			status:
+				currentStep === 4
+					? "current"
+					: currentStep > 4
+					? "complete"
+					: "upcoming",
 		},
 	];
 
@@ -164,7 +183,7 @@ export default function CompleteOrganizationMetadata() {
 			return;
 		}
 
-		if (currentStep < 3) {
+		if (currentStep < 4) {
 			setCurrentStep(currentStep + 1);
 		}
 	};
@@ -429,10 +448,6 @@ export default function CompleteOrganizationMetadata() {
 						.filter(Boolean)
 						.join(", ") || undefined,
 				companySize: formData.companySize as "1-10" | "10-100" | "100+",
-				defaultTaxRate: formData.defaultTaxRate || undefined,
-				defaultReminderTiming: formData.defaultReminderTiming,
-				smsEnabled: formData.smsEnabled,
-				monthlyRevenueTarget: formData.monthlyRevenueTarget || undefined,
 				logoUrl: clerkOrganization?.imageUrl || undefined,
 				logoInvertInDarkMode: formData.logoInvertInDarkMode,
 			});
@@ -706,6 +721,340 @@ export default function CompleteOrganizationMetadata() {
 
 	const renderStep3 = () => (
 		<div className="space-y-8">
+			<div>
+				<div className="flex items-center gap-3 mb-3">
+					<div className="w-1.5 h-6 bg-linear-to-b from-primary to-primary/60 rounded-full" />
+					<h2 className="text-2xl font-semibold text-foreground tracking-tight">
+						Choose Your Plan
+					</h2>
+				</div>
+				<p className="text-muted-foreground ml-5 leading-relaxed">
+					Select the plan that best fits your business needs. You can upgrade or
+					downgrade anytime.
+				</p>
+			</div>
+
+			<div className="mt-8">
+				<PricingTable
+					for="organization"
+					newSubscriptionRedirectUrl="/organization/complete"
+					fallback={
+						<div className="flex items-center justify-center py-12">
+							<div className="text-center">
+								<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+								<p className="text-muted-foreground">Loading plans...</p>
+							</div>
+						</div>
+					}
+					appearance={{
+						elements: {
+							// Root container
+							rootBox: {
+								backgroundColor: "transparent",
+								border: "none",
+							},
+							// Card styling
+							card: {
+								backgroundColor: isDark
+									? "oklch(0.21 0.006 285.885)"
+									: "oklch(1 0 0)",
+								border: `1px solid ${
+									isDark
+										? "oklch(0.27 0.013 285.805)"
+										: "oklch(0.911 0.006 286.286)"
+								}`,
+								borderRadius: "var(--radius-lg)",
+								boxShadow: isDark
+									? "0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -1px rgb(0 0 0 / 0.2)"
+									: "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -1px rgb(0 0 0 / 0.06)",
+							},
+							cardBox: {
+								padding: "1.5rem",
+							},
+							// Popular badge
+							badge: {
+								backgroundColor: "rgb(0, 166, 244)",
+								color: "white",
+								borderRadius: "9999px",
+								padding: "0.25rem 0.75rem",
+								fontSize: "0.875rem",
+								fontWeight: "500",
+							},
+							// Plan name
+							planName: {
+								color: isDark
+									? "oklch(0.985 0 0)"
+									: "oklch(0.141 0.005 285.823)",
+								fontSize: "1.875rem",
+								fontWeight: "600",
+								marginBottom: "0.5rem",
+							},
+							// Plan description
+							planDescription: {
+								color: isDark
+									? "oklch(0.705 0.015 286.067)"
+									: "oklch(0.552 0.016 285.938)",
+								fontSize: "0.875rem",
+								lineHeight: "1.25rem",
+								marginBottom: "1rem",
+							},
+							// Price
+							planPrice: {
+								color: isDark
+									? "oklch(0.985 0 0)"
+									: "oklch(0.141 0.005 285.823)",
+								fontSize: "2.25rem",
+								fontWeight: "600",
+								display: "flex",
+								alignItems: "baseline",
+							},
+							planPriceCurrency: {
+								fontSize: "2.25rem",
+							},
+							planPriceText: {
+								fontSize: "2.25rem",
+							},
+							planPricePeriod: {
+								color: isDark
+									? "oklch(0.705 0.015 286.067)"
+									: "oklch(0.552 0.016 285.938)",
+								fontSize: "1rem",
+								marginLeft: "0.25rem",
+							},
+							// CTA Button
+							buttonPrimary: {
+								backgroundColor: "rgb(0, 166, 244)",
+								color: "white",
+								borderRadius: "var(--radius-md)",
+								padding: "0.625rem 3rem",
+								fontSize: "1rem",
+								fontWeight: "500",
+								transition: "all 0.2s",
+								border: "none",
+								"&:hover": {
+									opacity: "0.9",
+									transform: "translateY(-1px)",
+								},
+								"&:focus": {
+									outline: "2px solid rgb(0, 166, 244)",
+									outlineOffset: "2px",
+								},
+							},
+							buttonSecondary: {
+								backgroundColor: isDark
+									? "oklch(0.244 0.006 286.033)"
+									: "oklch(0.92 0.004 286.32)",
+								color: isDark
+									? "oklch(0.985 0 0)"
+									: "oklch(0.141 0.005 285.823)",
+								border: `1px solid ${
+									isDark
+										? "oklch(0.27 0.013 285.805)"
+										: "oklch(0.911 0.006 286.286)"
+								}`,
+								borderRadius: "var(--radius-md)",
+								padding: "0.625rem 3rem",
+								fontSize: "1rem",
+								fontWeight: "500",
+								transition: "all 0.2s",
+								"&:hover": {
+									backgroundColor: isDark
+										? "oklch(0.274 0.006 286.033)"
+										: "oklch(0.92 0.004 286.32)",
+								},
+								"&:focus": {
+									outline: "2px solid rgb(0, 166, 244)",
+									outlineOffset: "2px",
+								},
+							},
+							// Features list
+							featureList: {
+								marginTop: "1.5rem",
+								display: "flex",
+								flexDirection: "column",
+								gap: "0.5rem",
+							},
+							featureListItem: {
+								color: isDark
+									? "oklch(0.705 0.015 286.067)"
+									: "oklch(0.552 0.016 285.938)",
+								fontSize: "0.875rem",
+								display: "flex",
+								alignItems: "center",
+								gap: "0.75rem",
+							},
+							featureListItemIcon: {
+								color: "rgb(0, 166, 244)",
+								width: "1.25rem",
+								height: "1.25rem",
+								flexShrink: "0",
+							},
+							// Billing period toggle
+							switchContainer: {
+								display: "flex",
+								justifyContent: "center",
+								marginBottom: "2rem",
+							},
+							switchButton: {
+								backgroundColor: isDark
+									? "oklch(0.21 0.006 285.885)"
+									: "oklch(0.967 0.001 286.375)",
+								color: isDark
+									? "oklch(0.705 0.015 286.067)"
+									: "oklch(0.552 0.016 285.938)",
+								borderRadius: "9999px",
+								padding: "0.25rem",
+								border: `1px solid ${
+									isDark
+										? "oklch(0.27 0.013 285.805)"
+										: "oklch(0.911 0.006 286.286)"
+								}`,
+							},
+							switchButtonActive: {
+								backgroundColor: "rgb(0, 166, 244)",
+								color: "white",
+								boxShadow: "0 1px 3px 0 rgb(0 0 0 / 0.1)",
+							},
+						},
+						variables: {
+							colorPrimary: "rgb(0, 166, 244)",
+							colorText: isDark
+								? "oklch(0.985 0 0)"
+								: "oklch(0.141 0.005 285.823)",
+							colorTextSecondary: isDark
+								? "oklch(0.705 0.015 286.067)"
+								: "oklch(0.552 0.016 285.938)",
+							colorBackground: isDark
+								? "oklch(0.091 0.005 285.823)"
+								: "oklch(1 0 0)",
+							colorInputBackground: isDark
+								? "oklch(0.32 0.013 285.805)"
+								: "oklch(0.871 0.006 286.286)",
+							colorInputText: isDark
+								? "oklch(0.985 0 0)"
+								: "oklch(0.141 0.005 285.823)",
+							borderRadius: "0.5rem",
+							fontFamily: "var(--font-geist-sans)",
+							fontSize: "1rem",
+						},
+					}}
+					checkoutProps={{
+						appearance: {
+							elements: {
+								// Make checkout modal completely opaque
+								modalBackdrop: {
+									backgroundColor: isDark
+										? "rgba(0, 0, 0, 0.9)"
+										: "rgba(0, 0, 0, 0.7)",
+									backdropFilter: "blur(8px)",
+								},
+								modalContent: {
+									backgroundColor: isDark
+										? "oklch(0.21 0.006 285.885)"
+										: "oklch(1 0 0)",
+									opacity: "1",
+								},
+								card: {
+									backgroundColor: isDark
+										? "oklch(0.21 0.006 285.885)"
+										: "oklch(1 0 0)",
+									border: `1px solid ${
+										isDark
+											? "oklch(0.27 0.013 285.805)"
+											: "oklch(0.911 0.006 286.286)"
+									}`,
+									borderRadius: "var(--radius-lg)",
+									opacity: "1",
+								},
+								rootBox: {
+									backgroundColor: isDark
+										? "oklch(0.21 0.006 285.885)"
+										: "oklch(1 0 0)",
+									opacity: "1",
+								},
+								formButtonPrimary: {
+									backgroundColor: "rgb(0, 166, 244)",
+									color: "white",
+									borderRadius: "var(--radius-md)",
+									fontSize: "1rem",
+									fontWeight: "500",
+									"&:hover": {
+										opacity: "0.9",
+									},
+								},
+								headerTitle: {
+									color: isDark
+										? "oklch(0.985 0 0)"
+										: "oklch(0.141 0.005 285.823)",
+									fontSize: "1.5rem",
+									fontWeight: "600",
+								},
+								headerSubtitle: {
+									color: isDark
+										? "oklch(0.705 0.015 286.067)"
+										: "oklch(0.552 0.016 285.938)",
+									fontSize: "0.875rem",
+								},
+							},
+							variables: {
+								colorPrimary: "rgb(0, 166, 244)",
+								colorText: isDark
+									? "oklch(0.985 0 0)"
+									: "oklch(0.141 0.005 285.823)",
+								colorBackground: isDark
+									? "oklch(0.21 0.006 285.885)"
+									: "oklch(1 0 0)",
+								borderRadius: "0.5rem",
+								fontFamily: "var(--font-geist-sans)",
+							},
+						},
+					}}
+				/>
+			</div>
+
+			<div className="flex justify-between pt-6">
+				<StyledButton
+					type="button"
+					onClick={handlePrevious}
+					intent="secondary"
+					size="md"
+					showArrow={false}
+				>
+					Previous
+				</StyledButton>
+				<StyledButton
+					type="button"
+					onClick={handleNext}
+					intent="primary"
+					size="md"
+					showArrow={false}
+				>
+					Next Step
+				</StyledButton>
+			</div>
+		</div>
+	);
+
+	const renderStep4 = () => (
+		<div className="space-y-8">
+			{!hasPremiumAccess && (
+				<div className="border border-border/60 dark:border-border/40 rounded-xl p-6 flex items-start gap-3 bg-muted/20">
+					<div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 dark:bg-primary/20 shrink-0">
+						<Upload className="h-5 w-5 text-primary" />
+					</div>
+					<div className="flex-1">
+						<p className="font-semibold text-foreground mb-1">
+							Premium Feature
+						</p>
+						<p className="text-sm text-muted-foreground">
+							CSV import is a premium feature. Upgrade your plan to import
+							clients and projects in bulk. You can skip this step and add them
+							manually later.
+						</p>
+					</div>
+				</div>
+			)}
+
 			{/* CSV Import Step Component */}
 			<CsvImportStep
 				entityType={csvImportState.entityType}
@@ -726,6 +1075,7 @@ export default function CompleteOrganizationMetadata() {
 				error={error}
 				showTitle={true}
 				disabledEntityTypes={["projects"]}
+				disabled={!hasPremiumAccess}
 			/>
 
 			{/* Action Buttons */}
@@ -757,26 +1107,28 @@ export default function CompleteOrganizationMetadata() {
 					</button>
 
 					{/* Import Data Button */}
-					{csvImportState.analysisResult && !csvImportState.importResult && (
-						<StyledButton
-							intent="primary"
-							onClick={handleImportData}
-							isLoading={csvImportState.isImporting}
-							disabled={!csvImportState.analysisResult?.validation.isValid}
-						>
-							{csvImportState.isImporting ? (
-								<>
-									<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-									Importing...
-								</>
-							) : (
-								<>
-									<Upload className="w-4 h-4" />
-									Import Data
-								</>
-							)}
-						</StyledButton>
-					)}
+					{hasPremiumAccess &&
+						csvImportState.analysisResult &&
+						!csvImportState.importResult && (
+							<StyledButton
+								intent="primary"
+								onClick={handleImportData}
+								isLoading={csvImportState.isImporting}
+								disabled={!csvImportState.analysisResult?.validation.isValid}
+							>
+								{csvImportState.isImporting ? (
+									<>
+										<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+										Importing...
+									</>
+								) : (
+									<>
+										<Upload className="w-4 h-4" />
+										Import Data
+									</>
+								)}
+							</StyledButton>
+						)}
 
 					{/* Complete Setup Button (shown after import or if no file uploaded) */}
 					{(csvImportState.importResult || !csvImportState.file) && (
@@ -801,6 +1153,8 @@ export default function CompleteOrganizationMetadata() {
 				return renderStep2();
 			case 3:
 				return renderStep3();
+			case 4:
+				return renderStep4();
 			default:
 				return renderStep1();
 		}

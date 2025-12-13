@@ -55,7 +55,10 @@ import DeleteConfirmationModal from "@/components/ui/delete-confirmation-modal";
 import { StyledButton } from "@/components/ui/styled/styled-button";
 import { StyledBadge } from "@/components/ui/styled";
 import { CsvImportSheet } from "@/app/(workspace)/clients/components/csv-import-sheet";
-import { useCanPerformAction } from "@/hooks/use-feature-access";
+import {
+	useCanPerformAction,
+	useFeatureAccess,
+} from "@/hooks/use-feature-access";
 import {
 	Tooltip,
 	TooltipContent,
@@ -311,6 +314,9 @@ export default function ClientsPage() {
 	const { canPerform, reason, currentUsage, limit } =
 		useCanPerformAction("create_client");
 
+	// Check if user has premium access for import feature
+	const { hasPremiumAccess } = useFeatureAccess();
+
 	const handleAddClient = () => {
 		if (!canPerform) {
 			toast.error(
@@ -409,7 +415,7 @@ export default function ClientsPage() {
 							? {
 									name: client.primaryContact.name,
 									email: client.primaryContact.email,
-								}
+							  }
 							: null,
 					};
 				})
@@ -618,25 +624,18 @@ export default function ClientsPage() {
 									intent="outline"
 									size="md"
 									onClick={() => setImportModalOpen(true)}
-									disabled={!canPerform}
+									disabled={!hasPremiumAccess}
 								>
 									<Upload className="h-4 w-4" />
 									Import Clients
 								</StyledButton>
 							</span>
 						</TooltipTrigger>
-						{!canPerform && (
+						{!hasPremiumAccess && (
 							<TooltipContent>
 								<div className="space-y-1">
-									<p className="font-semibold">Upgrade Required</p>
-									<p>{reason || "You've reached your client limit"}</p>
-									{limit &&
-										limit !== "unlimited" &&
-										currentUsage !== undefined && (
-											<p className="text-muted-foreground">
-												{currentUsage}/{limit} clients
-											</p>
-										)}
+									<p className="font-semibold">Premium Feature</p>
+									<p>Upgrade to access client import functionality</p>
 								</div>
 							</TooltipContent>
 						)}
@@ -836,7 +835,11 @@ export default function ClientsPage() {
 																<span className="text-muted-foreground">
 																	{item.activeProjects === 0
 																		? "No active projects"
-																		: `${item.activeProjects} active ${item.activeProjects === 1 ? "project" : "projects"}`}
+																		: `${item.activeProjects} active ${
+																				item.activeProjects === 1
+																					? "project"
+																					: "projects"
+																		  }`}
 																</span>
 															</div>
 															{item.primaryContact && (
@@ -944,7 +947,7 @@ export default function ClientsPage() {
 																		: flexRender(
 																				header.column.columnDef.header,
 																				header.getContext()
-																			)}
+																		  )}
 																</TableHead>
 															))}
 														</TableRow>
@@ -1041,7 +1044,7 @@ export default function ClientsPage() {
 																		: flexRender(
 																				header.column.columnDef.header,
 																				header.getContext()
-																			)}
+																		  )}
 																</TableHead>
 															))}
 														</TableRow>

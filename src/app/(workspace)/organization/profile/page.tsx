@@ -24,7 +24,10 @@ import {
 	RefreshCcw,
 	ExternalLink,
 } from "lucide-react";
-import { ConnectPayouts, ConnectComponentsProvider } from "@stripe/react-connect-js";
+import {
+	ConnectPayouts,
+	ConnectComponentsProvider,
+} from "@stripe/react-connect-js";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -44,7 +47,6 @@ import type { Id } from "../../../../../convex/_generated/dataModel";
 const TAB_VALUES = [
 	"overview",
 	"business",
-	"preferences",
 	"payments",
 	"documents",
 	"skus",
@@ -84,13 +86,6 @@ type BusinessFormState = {
 	logoInvertInDarkMode: boolean;
 };
 
-type PreferencesFormState = {
-	defaultTaxRate: string;
-	defaultReminderTiming: string;
-	smsEnabled: boolean;
-	monthlyRevenueTarget: string;
-};
-
 type StripeAccountStatus = {
 	accountId: string;
 	chargesEnabled: boolean;
@@ -113,13 +108,6 @@ const initialBusinessForm: BusinessFormState = {
 	addressZip: "",
 	companySize: "",
 	logoInvertInDarkMode: true,
-};
-
-const initialPreferencesForm: PreferencesFormState = {
-	defaultTaxRate: "",
-	defaultReminderTiming: "24",
-	smsEnabled: false,
-	monthlyRevenueTarget: "",
 };
 
 function parseAddress(address?: string) {
@@ -160,12 +148,8 @@ export default function OrganizationProfilePage() {
 
 	const [businessForm, setBusinessForm] =
 		React.useState<BusinessFormState>(initialBusinessForm);
-	const [preferencesForm, setPreferencesForm] =
-		React.useState<PreferencesFormState>(initialPreferencesForm);
 	const [businessDirty, setBusinessDirty] = React.useState(false);
-	const [preferencesDirty, setPreferencesDirty] = React.useState(false);
 	const [savingBusiness, setSavingBusiness] = React.useState(false);
-	const [savingPreferences, setSavingPreferences] = React.useState(false);
 	const [onboardingLoading, setOnboardingLoading] = React.useState(false);
 	const [statusLoading, setStatusLoading] = React.useState(false);
 	const [stripeStatus, setStripeStatus] =
@@ -193,7 +177,6 @@ export default function OrganizationProfilePage() {
 		if (lastOrganizationId.current !== currentOrgId) {
 			lastOrganizationId.current = currentOrgId;
 			setBusinessDirty(false);
-			setPreferencesDirty(false);
 			setStripeStatus(null);
 		}
 	}, [organization?._id]);
@@ -205,7 +188,10 @@ export default function OrganizationProfilePage() {
 			}
 
 			// Check if trying to access premium feature without premium access
-			if ((value === "documents" || value === "skus") && !hasPremiumAccess) {
+			if (
+				(value === "documents" || value === "skus" || value === "payments") &&
+				!hasPremiumAccess
+			) {
 				toast.error("Premium Feature", "Upgrade to access this feature");
 				return;
 			}
@@ -243,25 +229,7 @@ export default function OrganizationProfilePage() {
 				logoInvertInDarkMode: organization?.logoInvertInDarkMode ?? true,
 			});
 		}
-
-		if (!preferencesDirty) {
-			setPreferencesForm({
-				defaultTaxRate:
-					organization?.defaultTaxRate !== undefined
-						? organization.defaultTaxRate.toString()
-						: "",
-				defaultReminderTiming:
-					organization?.defaultReminderTiming !== undefined
-						? organization.defaultReminderTiming.toString()
-						: "24",
-				smsEnabled: organization?.smsEnabled ?? false,
-				monthlyRevenueTarget:
-					organization?.monthlyRevenueTarget !== undefined
-						? organization.monthlyRevenueTarget.toString()
-						: "",
-			});
-		}
-	}, [organization, businessDirty, preferencesDirty]);
+	}, [organization, businessDirty]);
 
 	const isLoading = organization === undefined || currentUser === undefined;
 	const isOwner = Boolean(
@@ -367,90 +335,6 @@ export default function OrganizationProfilePage() {
 		updateOrganization,
 		validateBusinessForm,
 	]);
-
-	const handleSavePreferences = React.useCallback(async () => {
-		if (!isOwner) {
-			toast.error(
-				"Permission required",
-				"Only the organization owner can update preferences."
-			);
-			return;
-		}
-
-		const defaultTaxRate = preferencesForm.defaultTaxRate.trim();
-		const defaultReminderTiming = preferencesForm.defaultReminderTiming.trim();
-		const monthlyRevenueTarget = preferencesForm.monthlyRevenueTarget.trim();
-
-		const parsedTaxRate = defaultTaxRate ? Number(defaultTaxRate) : undefined;
-		const parsedReminder = defaultReminderTiming
-			? Number(defaultReminderTiming)
-			: undefined;
-		const parsedMonthlyRevenue = monthlyRevenueTarget
-			? Number(monthlyRevenueTarget)
-			: undefined;
-
-		if (parsedTaxRate !== undefined && Number.isNaN(parsedTaxRate)) {
-			toast.warning("Invalid tax rate", "Please enter a valid number.");
-			return;
-		}
-
-		if (parsedReminder !== undefined && Number.isNaN(parsedReminder)) {
-			toast.warning("Invalid reminder timing", "Please enter a valid number.");
-			return;
-		}
-
-		if (
-			parsedMonthlyRevenue !== undefined &&
-			Number.isNaN(parsedMonthlyRevenue)
-		) {
-			toast.warning("Invalid target", "Please enter a valid number.");
-			return;
-		}
-
-		if (
-			parsedTaxRate !== undefined &&
-			(parsedTaxRate < 0 || parsedTaxRate > 100)
-		) {
-			toast.warning("Invalid tax rate", "Enter a value between 0 and 100.");
-			return;
-		}
-
-		if (parsedReminder !== undefined && parsedReminder < 0) {
-			toast.warning(
-				"Invalid reminder timing",
-				"Reminder timing cannot be negative."
-			);
-			return;
-		}
-
-		if (parsedMonthlyRevenue !== undefined && parsedMonthlyRevenue < 0) {
-			toast.warning(
-				"Invalid target",
-				"Monthly revenue target cannot be negative."
-			);
-			return;
-		}
-
-		setSavingPreferences(true);
-
-		try {
-			await updateOrganization({
-				defaultTaxRate: parsedTaxRate,
-				defaultReminderTiming: parsedReminder,
-				smsEnabled: preferencesForm.smsEnabled,
-				monthlyRevenueTarget: parsedMonthlyRevenue,
-			});
-
-			setPreferencesDirty(false);
-			toast.success("Preferences updated", "Default settings have been saved.");
-		} catch (error) {
-			const message =
-				error instanceof Error ? error.message : "Failed to save preferences.";
-			toast.error("Update failed", message);
-		} finally {
-			setSavingPreferences(false);
-		}
-	}, [isOwner, preferencesForm, toast, updateOrganization]);
 
 	const handleStartStripeOnboarding = React.useCallback(async () => {
 		if (!isOwner) {
@@ -661,8 +545,14 @@ export default function OrganizationProfilePage() {
 					<TabsList>
 						<TabsTrigger value="overview">Overview</TabsTrigger>
 						<TabsTrigger value="business">Business Info</TabsTrigger>
-						<TabsTrigger value="preferences">Preferences</TabsTrigger>
-						<TabsTrigger value="payments">Payments</TabsTrigger>
+						<TabsTrigger
+							value="payments"
+							disabled={!hasPremiumAccess}
+							className={!hasPremiumAccess ? "cursor-not-allowed" : ""}
+						>
+							{!hasPremiumAccess && <Lock className="h-3 w-3 mr-1" />}
+							Payments
+						</TabsTrigger>
 						<TabsTrigger
 							value="documents"
 							disabled={!hasPremiumAccess}
@@ -1051,140 +941,6 @@ export default function OrganizationProfilePage() {
 							</div>
 						</TabsContent>
 
-						<TabsContent value="preferences">
-							<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-2xl p-8 shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50 space-y-8">
-								{!isOwner && (
-									<div className="border border-border/60 dark:border-border/40 rounded-xl p-4 flex items-start gap-3 bg-muted/40 text-muted-foreground">
-										<AlertTriangle className="w-5 h-5 mt-0.5" />
-										<div>
-											<p className="font-medium text-foreground">View only</p>
-											<p className="text-sm">
-												Only the organization owner can update preferences.
-											</p>
-										</div>
-									</div>
-								)}
-
-								<div>
-									<div className="flex items-center gap-3 mb-3">
-										<div className="w-1.5 h-6 bg-linear-to-b from-primary to-primary/60 rounded-full" />
-										<h2 className="text-2xl font-semibold text-foreground tracking-tight">
-											Default Preferences
-										</h2>
-									</div>
-									<p className="text-muted-foreground ml-5 leading-relaxed">
-										Configure defaults for invoices, reminders, and performance
-										goals.
-									</p>
-								</div>
-
-								<div className="grid gap-6 md:grid-cols-2">
-									<div>
-										<label className="block text-sm font-semibold text-foreground mb-3 tracking-wide">
-											Default Tax Rate (%)
-										</label>
-										<Input
-											value={preferencesForm.defaultTaxRate}
-											onChange={(event) => {
-												setPreferencesDirty(true);
-												setPreferencesForm((prev) => ({
-													...prev,
-													defaultTaxRate: event.target.value,
-												}));
-											}}
-											disabled={!isOwner || savingPreferences}
-											className="w-full border-border dark:border-border bg-background dark:bg-background focus:bg-background dark:focus:bg-background transition-colors shadow-sm ring-1 ring-border/10"
-											placeholder="8.5"
-											type="number"
-											step="0.1"
-											min="0"
-											max="100"
-										/>
-									</div>
-
-									<div>
-										<label className="block text-sm font-semibold text-foreground mb-3 tracking-wide">
-											Invoice Reminder Timing (hours before due)
-										</label>
-										<Input
-											value={preferencesForm.defaultReminderTiming}
-											onChange={(event) => {
-												setPreferencesDirty(true);
-												setPreferencesForm((prev) => ({
-													...prev,
-													defaultReminderTiming: event.target.value,
-												}));
-											}}
-											disabled={!isOwner || savingPreferences}
-											className="w-full border-border dark:border-border bg-background dark:bg-background focus:bg-background dark:focus:bg-background transition-colors shadow-sm ring-1 ring-border/10"
-											placeholder="24"
-											type="number"
-											min="0"
-										/>
-									</div>
-
-									<div>
-										<label className="block text-sm font-semibold text-foreground mb-3 tracking-wide">
-											Monthly Revenue Target ($)
-										</label>
-										<Input
-											value={preferencesForm.monthlyRevenueTarget}
-											onChange={(event) => {
-												setPreferencesDirty(true);
-												setPreferencesForm((prev) => ({
-													...prev,
-													monthlyRevenueTarget: event.target.value,
-												}));
-											}}
-											disabled={!isOwner || savingPreferences}
-											className="w-full border-border dark:border-border bg-background dark:bg-background focus:bg-background dark:focus:bg-background transition-colors shadow-sm ring-1 ring-border/10"
-											placeholder="10000"
-											type="number"
-											min="0"
-										/>
-									</div>
-
-									<div className="border border-border/60 dark:border-border/40 rounded-xl p-5 flex items-start gap-4">
-										<Checkbox
-											checked={preferencesForm.smsEnabled}
-											onCheckedChange={(checked) => {
-												if (!isOwner || savingPreferences) {
-													return;
-												}
-												setPreferencesDirty(true);
-												setPreferencesForm((prev) => ({
-													...prev,
-													smsEnabled: Boolean(checked),
-												}));
-											}}
-											disabled={!isOwner || savingPreferences}
-											className="size-5 mt-1"
-										/>
-										<div>
-											<p className="text-sm font-semibold text-foreground">
-												Enable SMS Reminders
-											</p>
-											<p className="text-xs text-muted-foreground">
-												Send clients automatic SMS reminders ahead of invoice
-												due dates.
-											</p>
-										</div>
-									</div>
-								</div>
-
-								<div className="flex justify-end pt-4">
-									<button
-										type="button"
-										onClick={handleSavePreferences}
-										disabled={!isOwner || savingPreferences}
-										className={primaryActionButtonClasses}
-									>
-										{savingPreferences ? "Saving..." : "Save Preferences"}
-									</button>
-								</div>
-							</div>
-						</TabsContent>
-
 						<TabsContent value="payments">
 							<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-2xl p-8 shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50 space-y-6">
 								<div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -1216,24 +972,24 @@ export default function OrganizationProfilePage() {
 												)}
 												Refresh status
 											</Button>
-										{!onboardingComplete && (
-											<StyledButton
-												size="md"
-												intent="secondary"
-												onClick={handleStartStripeOnboarding}
-												disabled={onboardingLoading}
-											>
-												{onboardingLoading ? (
-													<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-												) : (
-													<ExternalLink className="mr-2 h-4 w-4" />
-												)}
-											Continue onboarding
-										</StyledButton>
+											{!onboardingComplete && (
+												<StyledButton
+													size="md"
+													intent="secondary"
+													onClick={handleStartStripeOnboarding}
+													disabled={onboardingLoading}
+												>
+													{onboardingLoading ? (
+														<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+													) : (
+														<ExternalLink className="mr-2 h-4 w-4" />
+													)}
+													Continue onboarding
+												</StyledButton>
+											)}
+										</div>
 									)}
 								</div>
-							)}
-						</div>
 
 								{!organization?.stripeConnectAccountId ? (
 									<div className="rounded-xl border border-border/60 dark:border-border/50 bg-muted/20 dark:bg-muted/10 p-6 space-y-4">
@@ -1272,22 +1028,22 @@ export default function OrganizationProfilePage() {
 														{organization.stripeConnectAccountId}
 													</p>
 												</div>
-											{!onboardingComplete && (
-												<Button
-													intent="plain"
-													className="text-sm"
-													onClick={handleStartStripeOnboarding}
-													isDisabled={onboardingLoading}
-												>
-													{onboardingLoading ? (
-														<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-													) : (
-														<ExternalLink className="mr-2 h-4 w-4" />
-													)}
-												Open onboarding
-											</Button>
-										)}
-									</div>
+												{!onboardingComplete && (
+													<Button
+														intent="plain"
+														className="text-sm"
+														onClick={handleStartStripeOnboarding}
+														isDisabled={onboardingLoading}
+													>
+														{onboardingLoading ? (
+															<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+														) : (
+															<ExternalLink className="mr-2 h-4 w-4" />
+														)}
+														Open onboarding
+													</Button>
+												)}
+											</div>
 
 											<div className="grid gap-3 sm:grid-cols-3 mt-4">
 												<div
@@ -1361,10 +1117,13 @@ export default function OrganizationProfilePage() {
 														Payouts
 													</h3>
 													<p className="text-sm text-muted-foreground">
-														Manage your payout schedule, view payout history, and perform instant or manual payouts.
+														Manage your payout schedule, view payout history,
+														and perform instant or manual payouts.
 													</p>
 												</div>
-												<StripeConnectProvider accountId={organization.stripeConnectAccountId}>
+												<StripeConnectProvider
+													accountId={organization.stripeConnectAccountId}
+												>
 													{(connectInstance) => {
 														if (!connectInstance) {
 															return (
@@ -1377,7 +1136,9 @@ export default function OrganizationProfilePage() {
 															);
 														}
 														return (
-															<ConnectComponentsProvider connectInstance={connectInstance}>
+															<ConnectComponentsProvider
+																connectInstance={connectInstance}
+															>
 																<ConnectPayouts />
 															</ConnectComponentsProvider>
 														);
