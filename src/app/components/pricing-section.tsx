@@ -1,6 +1,12 @@
 "use client";
 
-import { Briefcase, CheckCheck, Database, Server } from "lucide-react";
+import {
+	Briefcase,
+	CheckCheck,
+	Database,
+	FileText,
+	Server,
+} from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { motion } from "motion/react";
 import { useTheme } from "next-themes";
@@ -122,6 +128,10 @@ const plans = [
 				icon: <Database size={20} />,
 			},
 			{ text: "5 E-signature requests per month", icon: <Server size={20} /> },
+			{
+				text: "Custom Invoice & Quote PDF Generation",
+				icon: <FileText size={20} />,
+			},
 		],
 		includes: [],
 	},
@@ -150,6 +160,7 @@ const plans = [
 			"Custom SKU Creation",
 			"Unlimited Saved Organization Documents",
 			"AI Import for Existing Clients/Projects",
+			"Stripe Connect Integration - Send & Receive Payments",
 			"Priority Support - 24 hour SLAs",
 		],
 	},
@@ -204,7 +215,7 @@ const PricingSwitch = ({ onSwitch }: { onSwitch: (value: string) => void }) => {
 					<span className="relative flex items-center gap-2">
 						Yearly
 						<span className="rounded-full bg-white dark:bg-gray-900 px-2 py-0.5 text-xs font-medium text-primary border border-primary/20">
-							Save 20%
+							Save 17%
 						</span>
 					</span>
 				</button>
@@ -421,6 +432,11 @@ export default function PricingSection() {
 										/{isYearly ? "year" : "month"}
 									</span>
 								</div>
+								{plan.price > 0 && (
+									<p className="text-xs text-muted-foreground mt-2">
+										Per organization • Unlimited users included
+									</p>
+								)}
 							</CardHeader>
 
 							<CardContent className="pt-0">

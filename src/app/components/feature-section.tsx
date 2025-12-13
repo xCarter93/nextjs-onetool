@@ -474,7 +474,7 @@ export default function FeatureSection() {
 					transition={{ duration: 0.5 }}
 					className="text-center"
 				>
-					<h2 className="text-base/7 font-semibold text-blue-600 dark:text-blue-400">
+					<h2 className="text-base/7 font-semibold text-primary">
 						Streamline operations
 					</h2>
 					<p className="mt-2 text-4xl font-semibold tracking-tight text-pretty text-gray-950 sm:text-5xl dark:text-white">
