@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Outfit } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import { ClerkProvider } from "@clerk/nextjs";
 import ConvexClientProvider from "@/providers/ConvexClientProvider";
 import { ThemeProvider } from "@/providers/ThemeProvider";
@@ -43,6 +44,7 @@ export default function RootLayout({
 						</ThemeProvider>
 					</ConvexClientProvider>
 				</ClerkProvider>
+				<Analytics />
 			</body>
 		</html>
 	);
