@@ -80,13 +80,20 @@ export default function CompleteOrganizationMetadata() {
 	});
 
 	// Redirect if metadata is already complete
-	// Only redirect when we're sure the data has loaded (not undefined) AND user has a Clerk org
+	// Only redirect when organization exists in Convex AND metadata is marked complete
 	React.useEffect(() => {
-		if (
-			needsCompletion === false &&
-			organization !== undefined &&
-			clerkOrganization
-		) {
+		// Don't redirect if we're still loading data
+		if (needsCompletion === undefined || organization === undefined) {
+			return;
+		}
+
+		// Don't redirect if no Convex org exists yet (webhook still processing)
+		if (!organization) {
+			return;
+		}
+
+		// Only redirect if metadata is actually complete
+		if (needsCompletion === false && clerkOrganization) {
 			// If needsCompletion is false and we have organization data,
 			// it means the metadata is already complete
 			router.push("/home");
@@ -1372,10 +1379,15 @@ export default function CompleteOrganizationMetadata() {
 	};
 
 	// Show loading state while webhook is processing organization creation
-	// Only show loading if user has created an org but we're waiting for the webhook
+	// Show loading if:
+	// 1. User has created a Clerk org AND
+	// 2. Either needsCompletion or organization data hasn't loaded yet (undefined) OR
+	// 3. Organization doesn't exist in Convex yet (null) - waiting for webhook
 	if (
 		clerkOrganization &&
-		(needsCompletion === undefined || organization === undefined)
+		(needsCompletion === undefined ||
+			organization === undefined ||
+			organization === null)
 	) {
 		return (
 			<div className="min-h-screen flex-1 flex items-center justify-center">
@@ -1386,23 +1398,6 @@ export default function CompleteOrganizationMetadata() {
 					</h2>
 					<p className="text-muted-foreground">
 						Please wait while we prepare your workspace.
-					</p>
-				</div>
-			</div>
-		);
-	}
-
-	// If we reach here and needsCompletion is false AND user has an org, redirect to home
-	if (needsCompletion === false && clerkOrganization && organization) {
-		return (
-			<div className="min-h-screen flex-1 flex items-center justify-center">
-				<div className="text-center">
-					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-					<h2 className="text-xl font-semibold text-foreground mb-2">
-						Redirecting...
-					</h2>
-					<p className="text-muted-foreground">
-						Your organization is already set up!
 					</p>
 				</div>
 			</div>
