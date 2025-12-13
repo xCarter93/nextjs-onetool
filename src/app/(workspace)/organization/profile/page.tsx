@@ -24,7 +24,10 @@ import {
 	RefreshCcw,
 	ExternalLink,
 } from "lucide-react";
-import { ConnectPayouts, ConnectComponentsProvider } from "@stripe/react-connect-js";
+import {
+	ConnectPayouts,
+	ConnectComponentsProvider,
+} from "@stripe/react-connect-js";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -44,7 +47,6 @@ import type { Id } from "../../../../../convex/_generated/dataModel";
 const TAB_VALUES = [
 	"overview",
 	"business",
-	"preferences",
 	"payments",
 	"documents",
 	"skus",
@@ -84,13 +86,6 @@ type BusinessFormState = {
 	logoInvertInDarkMode: boolean;
 };
 
-type PreferencesFormState = {
-	defaultTaxRate: string;
-	defaultReminderTiming: string;
-	smsEnabled: boolean;
-	monthlyRevenueTarget: string;
-};
-
 type StripeAccountStatus = {
 	accountId: string;
 	chargesEnabled: boolean;
@@ -115,13 +110,6 @@ const initialBusinessForm: BusinessFormState = {
 	logoInvertInDarkMode: true,
 };
 
-const initialPreferencesForm: PreferencesFormState = {
-	defaultTaxRate: "",
-	defaultReminderTiming: "24",
-	smsEnabled: false,
-	monthlyRevenueTarget: "",
-};
-
 function parseAddress(address?: string) {
 	if (!address) {
 		return {
@@ -144,6 +132,81 @@ function parseAddress(address?: string) {
 const isTabValue = (value: string): value is TabValue =>
 	TAB_VALUES.includes(value as TabValue);
 
+// Helper component to render onboarding button with consistent behavior
+interface OnboardingButtonProps {
+	onboardingLoading: boolean;
+	onboardingComplete: boolean;
+	onClick: () => void;
+	disabled?: boolean;
+	variant?: "styled" | "plain";
+	size?: "md" | "sm";
+	intent?: "secondary" | "plain";
+	className?: string;
+}
+
+function OnboardingButton({
+	onboardingLoading,
+	onboardingComplete,
+	onClick,
+	disabled = false,
+	variant = "styled",
+	size = "md",
+	intent = "secondary",
+	className = "",
+}: OnboardingButtonProps) {
+	// Don't render if onboarding is complete
+	if (onboardingComplete) return null;
+
+	const isDisabled = onboardingLoading || disabled;
+	const buttonText = onboardingLoading
+		? null
+		: onboardingComplete
+		? "Open onboarding"
+		: "Continue onboarding";
+	const ariaLabel = onboardingLoading
+		? "Loading onboarding..."
+		: onboardingComplete
+		? "Open onboarding in Stripe"
+		: "Continue onboarding in Stripe";
+
+	if (variant === "plain") {
+		return (
+			<Button
+				intent="plain"
+				className={`text-sm ${className}`}
+				onClick={onClick}
+				isDisabled={isDisabled}
+				aria-label={ariaLabel}
+			>
+				{onboardingLoading ? (
+					<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+				) : (
+					<ExternalLink className="mr-2 h-4 w-4" />
+				)}
+				{buttonText}
+			</Button>
+		);
+	}
+
+	return (
+		<StyledButton
+			size={size}
+			intent={intent}
+			onClick={onClick}
+			disabled={isDisabled}
+			aria-label={ariaLabel}
+			className={className}
+		>
+			{onboardingLoading ? (
+				<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+			) : (
+				<ExternalLink className="mr-2 h-4 w-4" />
+			)}
+			{buttonText}
+		</StyledButton>
+	);
+}
+
 export default function OrganizationProfilePage() {
 	const router = useRouter();
 	const searchParams = useSearchParams();
@@ -160,12 +223,8 @@ export default function OrganizationProfilePage() {
 
 	const [businessForm, setBusinessForm] =
 		React.useState<BusinessFormState>(initialBusinessForm);
-	const [preferencesForm, setPreferencesForm] =
-		React.useState<PreferencesFormState>(initialPreferencesForm);
 	const [businessDirty, setBusinessDirty] = React.useState(false);
-	const [preferencesDirty, setPreferencesDirty] = React.useState(false);
 	const [savingBusiness, setSavingBusiness] = React.useState(false);
-	const [savingPreferences, setSavingPreferences] = React.useState(false);
 	const [onboardingLoading, setOnboardingLoading] = React.useState(false);
 	const [statusLoading, setStatusLoading] = React.useState(false);
 	const [stripeStatus, setStripeStatus] =
@@ -193,7 +252,6 @@ export default function OrganizationProfilePage() {
 		if (lastOrganizationId.current !== currentOrgId) {
 			lastOrganizationId.current = currentOrgId;
 			setBusinessDirty(false);
-			setPreferencesDirty(false);
 			setStripeStatus(null);
 		}
 	}, [organization?._id]);
@@ -205,7 +263,10 @@ export default function OrganizationProfilePage() {
 			}
 
 			// Check if trying to access premium feature without premium access
-			if ((value === "documents" || value === "skus") && !hasPremiumAccess) {
+			if (
+				(value === "documents" || value === "skus" || value === "payments") &&
+				!hasPremiumAccess
+			) {
 				toast.error("Premium Feature", "Upgrade to access this feature");
 				return;
 			}
@@ -243,25 +304,7 @@ export default function OrganizationProfilePage() {
 				logoInvertInDarkMode: organization?.logoInvertInDarkMode ?? true,
 			});
 		}
-
-		if (!preferencesDirty) {
-			setPreferencesForm({
-				defaultTaxRate:
-					organization?.defaultTaxRate !== undefined
-						? organization.defaultTaxRate.toString()
-						: "",
-				defaultReminderTiming:
-					organization?.defaultReminderTiming !== undefined
-						? organization.defaultReminderTiming.toString()
-						: "24",
-				smsEnabled: organization?.smsEnabled ?? false,
-				monthlyRevenueTarget:
-					organization?.monthlyRevenueTarget !== undefined
-						? organization.monthlyRevenueTarget.toString()
-						: "",
-			});
-		}
-	}, [organization, businessDirty, preferencesDirty]);
+	}, [organization, businessDirty]);
 
 	const isLoading = organization === undefined || currentUser === undefined;
 	const isOwner = Boolean(
@@ -367,90 +410,6 @@ export default function OrganizationProfilePage() {
 		updateOrganization,
 		validateBusinessForm,
 	]);
-
-	const handleSavePreferences = React.useCallback(async () => {
-		if (!isOwner) {
-			toast.error(
-				"Permission required",
-				"Only the organization owner can update preferences."
-			);
-			return;
-		}
-
-		const defaultTaxRate = preferencesForm.defaultTaxRate.trim();
-		const defaultReminderTiming = preferencesForm.defaultReminderTiming.trim();
-		const monthlyRevenueTarget = preferencesForm.monthlyRevenueTarget.trim();
-
-		const parsedTaxRate = defaultTaxRate ? Number(defaultTaxRate) : undefined;
-		const parsedReminder = defaultReminderTiming
-			? Number(defaultReminderTiming)
-			: undefined;
-		const parsedMonthlyRevenue = monthlyRevenueTarget
-			? Number(monthlyRevenueTarget)
-			: undefined;
-
-		if (parsedTaxRate !== undefined && Number.isNaN(parsedTaxRate)) {
-			toast.warning("Invalid tax rate", "Please enter a valid number.");
-			return;
-		}
-
-		if (parsedReminder !== undefined && Number.isNaN(parsedReminder)) {
-			toast.warning("Invalid reminder timing", "Please enter a valid number.");
-			return;
-		}
-
-		if (
-			parsedMonthlyRevenue !== undefined &&
-			Number.isNaN(parsedMonthlyRevenue)
-		) {
-			toast.warning("Invalid target", "Please enter a valid number.");
-			return;
-		}
-
-		if (
-			parsedTaxRate !== undefined &&
-			(parsedTaxRate < 0 || parsedTaxRate > 100)
-		) {
-			toast.warning("Invalid tax rate", "Enter a value between 0 and 100.");
-			return;
-		}
-
-		if (parsedReminder !== undefined && parsedReminder < 0) {
-			toast.warning(
-				"Invalid reminder timing",
-				"Reminder timing cannot be negative."
-			);
-			return;
-		}
-
-		if (parsedMonthlyRevenue !== undefined && parsedMonthlyRevenue < 0) {
-			toast.warning(
-				"Invalid target",
-				"Monthly revenue target cannot be negative."
-			);
-			return;
-		}
-
-		setSavingPreferences(true);
-
-		try {
-			await updateOrganization({
-				defaultTaxRate: parsedTaxRate,
-				defaultReminderTiming: parsedReminder,
-				smsEnabled: preferencesForm.smsEnabled,
-				monthlyRevenueTarget: parsedMonthlyRevenue,
-			});
-
-			setPreferencesDirty(false);
-			toast.success("Preferences updated", "Default settings have been saved.");
-		} catch (error) {
-			const message =
-				error instanceof Error ? error.message : "Failed to save preferences.";
-			toast.error("Update failed", message);
-		} finally {
-			setSavingPreferences(false);
-		}
-	}, [isOwner, preferencesForm, toast, updateOrganization]);
 
 	const handleStartStripeOnboarding = React.useCallback(async () => {
 		if (!isOwner) {
@@ -661,8 +620,14 @@ export default function OrganizationProfilePage() {
 					<TabsList>
 						<TabsTrigger value="overview">Overview</TabsTrigger>
 						<TabsTrigger value="business">Business Info</TabsTrigger>
-						<TabsTrigger value="preferences">Preferences</TabsTrigger>
-						<TabsTrigger value="payments">Payments</TabsTrigger>
+						<TabsTrigger
+							value="payments"
+							disabled={!hasPremiumAccess}
+							className={!hasPremiumAccess ? "cursor-not-allowed" : ""}
+						>
+							{!hasPremiumAccess && <Lock className="h-3 w-3 mr-1" />}
+							Payments
+						</TabsTrigger>
 						<TabsTrigger
 							value="documents"
 							disabled={!hasPremiumAccess}
@@ -689,69 +654,73 @@ export default function OrganizationProfilePage() {
 									appearance={{
 										elements: {
 											rootBox: "w-full text-foreground",
-											card: "w-full rounded-2xl bg-card/95 dark:bg-card/70 border border-border/70 dark:border-border/50 shadow-xl p-0 backdrop-blur-md",
+											card: "w-full !shadow-none !bg-transparent !border-none !p-0",
 											headerTitle:
-												"text-2xl font-bold text-foreground dark:text-foreground mb-2 tracking-tight",
+												"text-2xl font-bold !text-foreground dark:!text-foreground mb-2 tracking-tight",
 											headerSubtitle:
-												"text-sm text-muted-foreground dark:text-muted-foreground mb-6 leading-relaxed",
+												"text-sm !text-muted-foreground dark:!text-muted-foreground mb-6 leading-relaxed",
 											navbar:
-												"border-b border-border/60 dark:border-border/40 mb-8 pb-4 bg-transparent",
+												"border-b !border-border/60 dark:!border-border/40 mb-8 pb-4 !bg-transparent",
 											navbarButton:
-												"px-4 py-2 text-muted-foreground dark:text-muted-foreground hover:text-foreground dark:hover:text-foreground hover:bg-muted/40 dark:hover:bg-muted/20 rounded-lg transition-all duration-200 font-medium",
+												"px-4 py-2 !text-muted-foreground dark:!text-muted-foreground hover:!text-foreground dark:hover:!text-foreground hover:!bg-muted/40 dark:hover:!bg-muted/20 rounded-lg transition-all duration-200 font-medium",
 											navbarButtonActive:
-												"bg-primary text-primary-foreground px-4 py-2 rounded-lg font-medium shadow-sm",
-											pageScrollBox: "bg-transparent",
-											page: "space-y-8 bg-transparent",
+												"!bg-primary/10 dark:!bg-primary/20 !text-primary dark:!text-primary px-4 py-2 rounded-lg font-medium !shadow-none ring-1 !ring-primary/20",
+											pageScrollBox: "!bg-transparent",
+											page: "space-y-8 !bg-transparent",
 											form: "space-y-6",
 											formFieldLabel:
-												"text-sm font-semibold text-foreground tracking-wide",
+												"text-sm font-semibold !text-foreground tracking-wide",
 											formFieldInput:
-												"w-full bg-background/95 dark:bg-card/60 border border-border dark:border-border/60 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-lg px-3 py-2.5 text-foreground dark:text-foreground placeholder:text-muted-foreground dark:placeholder:text-muted-foreground transition-all duration-200 shadow-sm dark:shadow-none",
+												"w-full !bg-background/95 dark:!bg-card/60 border !border-border dark:!border-border/60 focus:!border-primary focus:!ring-2 focus:!ring-primary/20 rounded-lg px-3 py-2.5 !text-foreground dark:!text-foreground placeholder:!text-muted-foreground dark:!placeholder:text-muted-foreground transition-all duration-200 shadow-sm dark:!shadow-none",
 											formFieldInputShowPasswordButton:
-												"text-muted-foreground hover:text-foreground dark:text-muted-foreground dark:hover:text-foreground",
+												"!text-muted-foreground hover:!text-foreground dark:!text-muted-foreground dark:hover:!text-foreground",
 											formButtonPrimary:
-												"bg-linear-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-primary-foreground font-medium py-2.5 px-6 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 border-0",
+												"bg-linear-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary !text-primary-foreground font-medium py-2.5 px-6 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 border-0",
 											formButtonSecondary:
-												"bg-muted/80 hover:bg-muted/70 dark:bg-muted/40 dark:hover:bg-muted/30 text-muted-foreground hover:text-foreground dark:text-muted-foreground dark:hover:text-foreground font-medium py-2.5 px-6 rounded-lg border border-border/60 dark:border-border/40 transition-all duration-200",
+												"!bg-muted/80 hover:!bg-muted/70 dark:!bg-muted/40 dark:hover:!bg-muted/30 !text-muted-foreground hover:!text-foreground dark:!text-muted-foreground dark:hover:!text-foreground font-medium py-2.5 px-6 rounded-lg border !border-border/60 dark:!border-border/40 transition-all duration-200",
 											table: "w-full border-collapse",
 											tableHead:
-												"border-b border-border dark:border-border bg-muted/30 dark:bg-muted/20",
-											tableHeadRow: "border-b border-border dark:border-border",
+												"border-b !border-border dark:!border-border !bg-muted/30 dark:!bg-muted/20",
+											tableHeadRow:
+												"border-b !border-border dark:!border-border",
 											tableHeadCell:
-												"text-left p-4 font-semibold text-foreground dark:text-foreground text-sm",
-											tableBody: "divide-y divide-border dark:divide-border/60",
+												"text-left p-4 font-semibold !text-foreground dark:!text-foreground text-sm",
+											tableBody:
+												"divide-y !divide-border dark:!divide-border/60",
 											tableRow:
-												"hover:bg-muted/30 dark:hover:bg-muted/20 transition-colors",
+												"hover:!bg-muted/30 dark:hover:!bg-muted/20 transition-colors",
 											tableCell:
-												"p-4 text-sm text-foreground dark:text-foreground",
+												"p-4 text-sm !text-foreground dark:!text-foreground",
 											badge:
 												"inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium",
 											badgeSecondary:
-												"bg-muted dark:bg-muted/40 text-muted-foreground dark:text-muted-foreground",
-											badgePrimary: "bg-primary text-primary-foreground",
+												"!bg-muted dark:!bg-muted/40 !text-muted-foreground dark:!text-muted-foreground",
+											badgePrimary: "!bg-primary !text-primary-foreground",
 											membersPageInviteButton:
-												"bg-linear-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-primary-foreground font-medium py-2.5 px-6 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 border-0",
+												"bg-linear-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary !text-primary-foreground font-medium py-2.5 px-6 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 border-0",
 											avatarBox:
-												"w-10 h-10 rounded-lg bg-muted dark:bg-muted/40 flex items-center justify-center",
+												"w-10 h-10 rounded-lg !bg-muted dark:!bg-muted/40 flex items-center justify-center",
 											avatarImage: "w-10 h-10 rounded-lg object-cover",
 											footer:
-												"mt-8 pt-6 border-t border-border dark:border-border/60",
+												"mt-8 pt-6 border-t !border-border dark:!border-border/60",
 											footerActionText:
-												"text-xs text-muted-foreground dark:text-muted-foreground",
+												"text-xs !text-muted-foreground dark:!text-muted-foreground",
 											footerActionLink:
-												"text-primary hover:text-primary/80 dark:text-primary dark:hover:text-primary/80 font-medium text-xs",
-											spinner: "text-primary dark:text-primary",
+												"!text-primary hover:!text-primary/80 dark:!text-primary dark:hover:!text-primary/80 font-medium text-xs",
+											spinner: "!text-primary dark:!text-primary",
 											modalContent:
-												"bg-card dark:bg-card/80 border border-border/60 dark:border-border/40 shadow-xl dark:shadow-xl rounded-xl",
+												"!bg-card dark:!bg-card border !border-border/60 dark:!border-border/40 shadow-xl dark:!shadow-xl rounded-xl",
 											modalCloseButton:
-												"text-muted-foreground hover:text-foreground dark:text-muted-foreground dark:hover:text-foreground",
+												"!text-muted-foreground hover:!text-foreground dark:!text-muted-foreground dark:hover:!text-foreground",
+											selectOptionsContainer:
+												"!bg-background border !border-border/60 dark:!border-border/40 rounded-lg p-2",
 										},
 										variables: {
 											colorPrimary: "hsl(var(--primary))",
 											colorText: "hsl(var(--foreground))",
 											colorTextSecondary: "hsl(var(--muted-foreground))",
 											colorNeutral: "hsl(var(--muted-foreground))",
-											colorBackground: "hsl(var(--card))",
+											colorBackground: "transparent",
 											colorInputBackground: "hsl(var(--background))",
 											colorInputText: "hsl(var(--foreground))",
 											fontFamily: "inherit",
@@ -759,7 +728,7 @@ export default function OrganizationProfilePage() {
 											spacingUnit: "1rem",
 										},
 									}}
-									afterLeaveOrganizationUrl="/organization/new"
+									afterLeaveOrganizationUrl="/organization/complete"
 								/>
 							</div>
 						</TabsContent>
@@ -1051,140 +1020,6 @@ export default function OrganizationProfilePage() {
 							</div>
 						</TabsContent>
 
-						<TabsContent value="preferences">
-							<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-2xl p-8 shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50 space-y-8">
-								{!isOwner && (
-									<div className="border border-border/60 dark:border-border/40 rounded-xl p-4 flex items-start gap-3 bg-muted/40 text-muted-foreground">
-										<AlertTriangle className="w-5 h-5 mt-0.5" />
-										<div>
-											<p className="font-medium text-foreground">View only</p>
-											<p className="text-sm">
-												Only the organization owner can update preferences.
-											</p>
-										</div>
-									</div>
-								)}
-
-								<div>
-									<div className="flex items-center gap-3 mb-3">
-										<div className="w-1.5 h-6 bg-linear-to-b from-primary to-primary/60 rounded-full" />
-										<h2 className="text-2xl font-semibold text-foreground tracking-tight">
-											Default Preferences
-										</h2>
-									</div>
-									<p className="text-muted-foreground ml-5 leading-relaxed">
-										Configure defaults for invoices, reminders, and performance
-										goals.
-									</p>
-								</div>
-
-								<div className="grid gap-6 md:grid-cols-2">
-									<div>
-										<label className="block text-sm font-semibold text-foreground mb-3 tracking-wide">
-											Default Tax Rate (%)
-										</label>
-										<Input
-											value={preferencesForm.defaultTaxRate}
-											onChange={(event) => {
-												setPreferencesDirty(true);
-												setPreferencesForm((prev) => ({
-													...prev,
-													defaultTaxRate: event.target.value,
-												}));
-											}}
-											disabled={!isOwner || savingPreferences}
-											className="w-full border-border dark:border-border bg-background dark:bg-background focus:bg-background dark:focus:bg-background transition-colors shadow-sm ring-1 ring-border/10"
-											placeholder="8.5"
-											type="number"
-											step="0.1"
-											min="0"
-											max="100"
-										/>
-									</div>
-
-									<div>
-										<label className="block text-sm font-semibold text-foreground mb-3 tracking-wide">
-											Invoice Reminder Timing (hours before due)
-										</label>
-										<Input
-											value={preferencesForm.defaultReminderTiming}
-											onChange={(event) => {
-												setPreferencesDirty(true);
-												setPreferencesForm((prev) => ({
-													...prev,
-													defaultReminderTiming: event.target.value,
-												}));
-											}}
-											disabled={!isOwner || savingPreferences}
-											className="w-full border-border dark:border-border bg-background dark:bg-background focus:bg-background dark:focus:bg-background transition-colors shadow-sm ring-1 ring-border/10"
-											placeholder="24"
-											type="number"
-											min="0"
-										/>
-									</div>
-
-									<div>
-										<label className="block text-sm font-semibold text-foreground mb-3 tracking-wide">
-											Monthly Revenue Target ($)
-										</label>
-										<Input
-											value={preferencesForm.monthlyRevenueTarget}
-											onChange={(event) => {
-												setPreferencesDirty(true);
-												setPreferencesForm((prev) => ({
-													...prev,
-													monthlyRevenueTarget: event.target.value,
-												}));
-											}}
-											disabled={!isOwner || savingPreferences}
-											className="w-full border-border dark:border-border bg-background dark:bg-background focus:bg-background dark:focus:bg-background transition-colors shadow-sm ring-1 ring-border/10"
-											placeholder="10000"
-											type="number"
-											min="0"
-										/>
-									</div>
-
-									<div className="border border-border/60 dark:border-border/40 rounded-xl p-5 flex items-start gap-4">
-										<Checkbox
-											checked={preferencesForm.smsEnabled}
-											onCheckedChange={(checked) => {
-												if (!isOwner || savingPreferences) {
-													return;
-												}
-												setPreferencesDirty(true);
-												setPreferencesForm((prev) => ({
-													...prev,
-													smsEnabled: Boolean(checked),
-												}));
-											}}
-											disabled={!isOwner || savingPreferences}
-											className="size-5 mt-1"
-										/>
-										<div>
-											<p className="text-sm font-semibold text-foreground">
-												Enable SMS Reminders
-											</p>
-											<p className="text-xs text-muted-foreground">
-												Send clients automatic SMS reminders ahead of invoice
-												due dates.
-											</p>
-										</div>
-									</div>
-								</div>
-
-								<div className="flex justify-end pt-4">
-									<button
-										type="button"
-										onClick={handleSavePreferences}
-										disabled={!isOwner || savingPreferences}
-										className={primaryActionButtonClasses}
-									>
-										{savingPreferences ? "Saving..." : "Save Preferences"}
-									</button>
-								</div>
-							</div>
-						</TabsContent>
-
 						<TabsContent value="payments">
 							<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-2xl p-8 shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50 space-y-6">
 								<div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -1216,24 +1051,17 @@ export default function OrganizationProfilePage() {
 												)}
 												Refresh status
 											</Button>
-										{!onboardingComplete && (
-											<StyledButton
+											<OnboardingButton
+												onboardingLoading={onboardingLoading}
+												onboardingComplete={onboardingComplete}
+												onClick={handleStartStripeOnboarding}
+												variant="styled"
 												size="md"
 												intent="secondary"
-												onClick={handleStartStripeOnboarding}
-												disabled={onboardingLoading}
-											>
-												{onboardingLoading ? (
-													<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-												) : (
-													<ExternalLink className="mr-2 h-4 w-4" />
-												)}
-											Continue onboarding
-										</StyledButton>
+											/>
+										</div>
 									)}
 								</div>
-							)}
-						</div>
 
 								{!organization?.stripeConnectAccountId ? (
 									<div className="rounded-xl border border-border/60 dark:border-border/50 bg-muted/20 dark:bg-muted/10 p-6 space-y-4">
@@ -1272,22 +1100,7 @@ export default function OrganizationProfilePage() {
 														{organization.stripeConnectAccountId}
 													</p>
 												</div>
-											{!onboardingComplete && (
-												<Button
-													intent="plain"
-													className="text-sm"
-													onClick={handleStartStripeOnboarding}
-													isDisabled={onboardingLoading}
-												>
-													{onboardingLoading ? (
-														<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-													) : (
-														<ExternalLink className="mr-2 h-4 w-4" />
-													)}
-												Open onboarding
-											</Button>
-										)}
-									</div>
+											</div>
 
 											<div className="grid gap-3 sm:grid-cols-3 mt-4">
 												<div
@@ -1361,10 +1174,13 @@ export default function OrganizationProfilePage() {
 														Payouts
 													</h3>
 													<p className="text-sm text-muted-foreground">
-														Manage your payout schedule, view payout history, and perform instant or manual payouts.
+														Manage your payout schedule, view payout history,
+														and perform instant or manual payouts.
 													</p>
 												</div>
-												<StripeConnectProvider accountId={organization.stripeConnectAccountId}>
+												<StripeConnectProvider
+													accountId={organization.stripeConnectAccountId}
+												>
 													{(connectInstance) => {
 														if (!connectInstance) {
 															return (
@@ -1377,7 +1193,9 @@ export default function OrganizationProfilePage() {
 															);
 														}
 														return (
-															<ConnectComponentsProvider connectInstance={connectInstance}>
+															<ConnectComponentsProvider
+																connectInstance={connectInstance}
+															>
 																<ConnectPayouts />
 															</ConnectComponentsProvider>
 														);
@@ -1399,20 +1217,14 @@ export default function OrganizationProfilePage() {
 												)}
 												Refresh status
 											</Button>
-											{!onboardingComplete && (
-												<StyledButton
-													size="md"
-													onClick={handleStartStripeOnboarding}
-													disabled={onboardingLoading}
-												>
-													{onboardingLoading ? (
-														<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-													) : (
-														<ExternalLink className="mr-2 h-4 w-4" />
-													)}
-													Continue onboarding
-												</StyledButton>
-											)}
+											<OnboardingButton
+												onboardingLoading={onboardingLoading}
+												onboardingComplete={onboardingComplete}
+												onClick={handleStartStripeOnboarding}
+												variant="styled"
+												size="md"
+												intent="secondary"
+											/>
 										</div>
 									</div>
 								)}

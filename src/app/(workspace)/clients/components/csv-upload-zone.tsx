@@ -7,11 +7,13 @@ import { Button } from "@/components/ui/button";
 interface CsvUploadZoneProps {
 	onFileSelect: (file: File, content: string) => void;
 	maxSizeMB?: number;
+	disabled?: boolean;
 }
 
 export function CsvUploadZone({
 	onFileSelect,
 	maxSizeMB = 5,
+	disabled = false,
 }: CsvUploadZoneProps) {
 	const [isDragging, setIsDragging] = useState(false);
 	const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -54,19 +56,26 @@ export function CsvUploadZone({
 			e.stopPropagation();
 			setIsDragging(false);
 
+			if (disabled) return;
+
 			const files = Array.from(e.dataTransfer.files);
 			if (files.length > 0) {
 				handleFileRead(files[0]);
 			}
 		},
-		[handleFileRead]
+		[disabled, handleFileRead]
 	);
 
-	const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-		e.preventDefault();
-		e.stopPropagation();
-		setIsDragging(true);
-	}, []);
+	const handleDragOver = useCallback(
+		(e: React.DragEvent<HTMLDivElement>) => {
+			e.preventDefault();
+			e.stopPropagation();
+			if (!disabled) {
+				setIsDragging(true);
+			}
+		},
+		[disabled]
+	);
 
 	const handleDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
 		e.preventDefault();
@@ -76,12 +85,14 @@ export function CsvUploadZone({
 
 	const handleFileInput = useCallback(
 		(e: React.ChangeEvent<HTMLInputElement>) => {
+			if (disabled) return;
+
 			const files = e.target.files;
 			if (files && files.length > 0) {
 				handleFileRead(files[0]);
 			}
 		},
-		[handleFileRead]
+		[disabled, handleFileRead]
 	);
 
 	const handleClear = useCallback(() => {
@@ -100,6 +111,7 @@ export function CsvUploadZone({
 					${isDragging ? "border-primary bg-primary/5 scale-[1.02]" : "border-border"}
 					${selectedFile ? "bg-muted/30" : "hover:border-primary/50 hover:bg-muted/20"}
 				`}
+				aria-disabled={disabled}
 			>
 				<input
 					type="file"
@@ -107,6 +119,9 @@ export function CsvUploadZone({
 					onChange={handleFileInput}
 					className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
 					id="csv-upload"
+					disabled={disabled}
+					tabIndex={disabled ? -1 : 0}
+					aria-disabled={disabled}
 				/>
 
 				{!selectedFile ? (
@@ -143,6 +158,7 @@ export function CsvUploadZone({
 								handleClear();
 							}}
 							className="hover:bg-destructive/10 hover:text-destructive"
+							isDisabled={disabled}
 						>
 							<X className="w-4 h-4" />
 						</Button>

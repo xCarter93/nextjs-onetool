@@ -80,7 +80,7 @@ export default function GettingStarted() {
 							Complete your organization setup to unlock all features and
 							customize OneTool for your business.
 							<Link
-								href="/organization/new"
+								href="/organization/complete"
 								className="inline-flex items-center gap-1 text-amber-900 hover:text-amber-950 dark:text-amber-200 dark:hover:text-amber-50 font-semibold underline underline-offset-2 transition-colors ml-1"
 							>
 								Click here to set up organization →

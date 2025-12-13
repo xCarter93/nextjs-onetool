@@ -13,12 +13,12 @@ export default function Home() {
 			<AppNavbar />
 
 			{/* Hero Section */}
-			<section id="home">
+			<section id="home" className="relative">
 				<HeroSection />
 			</section>
 
 			{/* Blue glowline separator */}
-			<div className="relative w-full">
+			<div className="relative w-full h-px">
 				<GlowLine
 					orientation="horizontal"
 					position="50%"
@@ -28,12 +28,12 @@ export default function Home() {
 			</div>
 
 			{/* Features Section */}
-			<section id="features">
+			<section id="features" className="relative">
 				<FeatureSection />
 			</section>
 
 			{/* Blue glowline separator */}
-			<div className="relative w-full">
+			<div className="relative w-full h-px">
 				<GlowLine
 					orientation="horizontal"
 					position="50%"
@@ -43,12 +43,12 @@ export default function Home() {
 			</div>
 
 			{/* FAQ Section */}
-			<section id="faq">
+			<section id="faq" className="relative">
 				<FAQSection />
 			</section>
 
 			{/* Blue glowline separator */}
-			<div className="relative w-full">
+			<div className="relative w-full h-px">
 				<GlowLine
 					orientation="horizontal"
 					position="50%"
@@ -58,12 +58,12 @@ export default function Home() {
 			</div>
 
 			{/* Pricing Section */}
-			<section id="pricing">
+			<section id="pricing" className="relative">
 				<PricingSection />
 			</section>
 
 			{/* Blue glowline separator */}
-			<div className="relative w-full">
+			<div className="relative w-full h-px">
 				<GlowLine
 					orientation="horizontal"
 					position="50%"

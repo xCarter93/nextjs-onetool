@@ -102,12 +102,9 @@ const data = {
 					url: "/organization/profile?tab=business",
 				},
 				{
-					title: "Preferences",
-					url: "/organization/profile?tab=preferences",
-				},
-				{
 					title: "Payments",
 					url: "/organization/profile?tab=payments",
+					requiresPremium: true,
 				},
 				{
 					title: "Documents",

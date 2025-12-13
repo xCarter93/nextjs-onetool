@@ -6,10 +6,8 @@ import { motion } from "motion/react";
 import { useTheme } from "next-themes";
 import { TimelineContent } from "@/components/shared/timeline-animation";
 import { StyledButton } from "@/components/ui/styled/styled-button";
-import { useAuth } from "@clerk/nextjs";
 import { usePlans } from "@clerk/nextjs/experimental";
 import { useRouter } from "next/navigation";
-import { useToast } from "@/hooks/use-toast";
 
 // Utility function for conditional class names
 function cn(...classes: (string | undefined | null | false)[]): string {
@@ -220,9 +218,7 @@ export default function PricingSection() {
 	const [mounted, setMounted] = useState(false);
 	const pricingRef = useRef<HTMLDivElement>(null);
 	const { resolvedTheme } = useTheme();
-	const { isLoaded, userId } = useAuth();
 	const router = useRouter();
-	const toast = useToast();
 
 	// Fetch plans from Clerk
 	const { data: clerkPlans, isLoading: isLoadingPlans } = usePlans({
@@ -256,10 +252,10 @@ export default function PricingSection() {
 					// Use Clerk pricing data
 					const monthlyPrice = clerkPlan.fee?.amount
 						? clerkPlan.fee.amount / 100
-						: (hardcodedPlan?.price ?? 0);
+						: hardcodedPlan?.price ?? 0;
 					const yearlyPrice = clerkPlan.annualFee?.amount
 						? clerkPlan.annualFee.amount / 100
-						: (hardcodedPlan?.yearlyPrice ?? 0);
+						: hardcodedPlan?.yearlyPrice ?? 0;
 
 					return {
 						name: clerkPlan.name,
@@ -292,36 +288,10 @@ export default function PricingSection() {
 
 	const displayPlans = getDisplayPlans();
 
-	const handlePlanSelection = async (planName: string) => {
-		// Check if user is authenticated
-		if (!isLoaded) {
-			return;
-		}
-
-		if (!userId) {
-			// Redirect to sign-in with return to pricing
-			router.push("/sign-in?redirect_url=/pricing");
-			return;
-		}
-
-		// Handle plan selection based on plan type
-		if (planName === "Free") {
-			// User is authenticated and selecting free plan
-			toast.success("Already on Free Plan", "You're already on the free plan!");
-			router.push("/home");
-		} else if (planName === "Business") {
-			// User is authenticated and wants to upgrade
-			// This will be handled by Clerk's checkout flow
-			// For now, we'll show a message and redirect to home
-			// In production, you'd call Clerk's checkout API here
-			toast.info(
-				"Coming Soon",
-				"Business plan checkout coming soon! Contact support to upgrade."
-			);
-
-			// Example of how to trigger Clerk checkout (to be implemented):
-			// await clerk.checkout({ planId: 'onetool_business_plan' });
-		}
+	const handleGetStarted = () => {
+		// Always redirect to sign-up page
+		// Users can choose to sign in if they already have an account
+		router.push("/sign-up");
 	};
 
 	// Render nothing until the component is mounted and theme is resolved to prevent hydration mismatches
@@ -351,7 +321,7 @@ export default function PricingSection() {
 
 	return (
 		<div
-			className="not-prose relative flex w-full flex-col gap-16 overflow-hidden bg-white px-4 py-24 text-center sm:px-8 min-h-screen mx-auto dark:bg-gray-900"
+			className="not-prose relative flex w-full flex-col gap-12 bg-white px-4 py-16 text-center sm:px-8 mx-auto dark:bg-gray-900"
 			ref={pricingRef}
 		>
 			{/* Background gradient effects for visual appeal */}
@@ -454,18 +424,7 @@ export default function PricingSection() {
 							</CardHeader>
 
 							<CardContent className="pt-0">
-								<div className="flex justify-center mb-6">
-									<StyledButton
-										intent={plan.popular ? "primary" : "secondary"}
-										size="lg"
-										className="px-12"
-										onClick={() => handlePlanSelection(plan.name)}
-										disabled={!isLoaded}
-									>
-										{plan.buttonText}
-									</StyledButton>
-								</div>
-								<ul className="space-y-2 font-semibold py-5">
+								<ul className="space-y-2 font-semibold py-5 mt-6">
 									{plan.features.map((feature, featureIndex) => (
 										<li key={featureIndex} className="flex items-center">
 											<span className="text-foreground grid place-content-center mt-0.5 mr-3">
@@ -502,6 +461,24 @@ export default function PricingSection() {
 					</TimelineContent>
 				))}
 			</div>
+
+			{/* Single Get Started Button */}
+			<TimelineContent
+				as="div"
+				animationNum={6}
+				timelineRef={pricingRef}
+				customVariants={revealVariants}
+				className="flex justify-center mt-2 mb-8"
+			>
+				<StyledButton
+					intent="primary"
+					size="lg"
+					className="px-16"
+					onClick={handleGetStarted}
+				>
+					Get Started
+				</StyledButton>
+			</TimelineContent>
 		</div>
 	);
 }

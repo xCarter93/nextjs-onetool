@@ -4,7 +4,6 @@ import { NextResponse } from "next/server";
 const isPublicRoute = createRouteMatcher([
 	"/sign-in(.*)",
 	"/sign-up(.*)",
-	"/pricing(.*)",
 	"/api/clerk-users-webhook(.*)",
 	"/api/stripe-webhook(.*)",
 	"/api/pay(.*)",
@@ -16,7 +15,8 @@ const isPublicRoute = createRouteMatcher([
 ]);
 
 export default clerkMiddleware(async (auth, request) => {
-	const { userId, redirectToSignIn, orgRole, sessionClaims } = await auth();
+	const { userId, redirectToSignIn, orgRole, sessionClaims, orgId } =
+		await auth();
 
 	// If not logged in and not a public route, redirect to sign in
 	if (!isPublicRoute(request) && !userId) {
@@ -27,14 +27,40 @@ export default clerkMiddleware(async (auth, request) => {
 	if (userId) {
 		const pathname = request.nextUrl.pathname;
 
+		// Check if user has an organization
+		const hasOrganization = !!orgId;
+
 		// Check if user is an admin (role contains "admin")
 		const role = orgRole || sessionClaims?.org_role;
 		const isAdmin = role ? String(role).toLowerCase().includes("admin") : false;
 
-		// Redirect from root based on role
+		// If user has no organization and tries to access workspace routes, redirect to org creation
+		if (
+			!hasOrganization &&
+			!pathname.startsWith("/organization/") &&
+			!pathname.startsWith("/sign-") &&
+			!isPublicRoute(request)
+		) {
+			const redirectUrl = request.nextUrl.clone();
+			redirectUrl.pathname = "/organization/complete";
+			return NextResponse.redirect(redirectUrl);
+		}
+
+		// Redirect from root based on organization status and role
 		if (pathname === "/") {
 			const redirectUrl = request.nextUrl.clone();
-			redirectUrl.pathname = isAdmin ? "/home" : "/projects";
+
+			if (!hasOrganization) {
+				// No organization exists - send to organization creation
+				redirectUrl.pathname = "/organization/complete";
+			} else if (!isAdmin) {
+				// Has organization but not an admin - send to projects
+				redirectUrl.pathname = "/projects";
+			} else {
+				// Has organization and is an admin - send to home
+				redirectUrl.pathname = "/home";
+			}
+
 			return NextResponse.redirect(redirectUrl);
 		}
 

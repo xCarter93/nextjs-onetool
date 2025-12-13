@@ -96,8 +96,8 @@ export function PlanBadge() {
 						{!hasOrganization
 							? "Create an organization to start using OneTool"
 							: hasPremiumAccess
-								? "Enjoy unlimited access to all features"
-								: "You're on the free plan with limited features"}
+							? "Enjoy unlimited access to all features"
+							: "You're on the free plan with limited features"}
 					</p>
 				</div>
 
@@ -158,7 +158,7 @@ export function PlanBadge() {
 						<StyledButton
 							onClick={() => {
 								setOpen(false);
-								router.push("/organization/new");
+								router.push("/organization/complete");
 							}}
 							intent="primary"
 							size="md"

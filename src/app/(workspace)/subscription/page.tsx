@@ -178,7 +178,7 @@ export default function SubscriptionPage() {
 								subscriptions.
 							</p>
 							<StyledButton
-								onClick={() => router.push("/organization/new")}
+								onClick={() => router.push("/organization/complete")}
 								intent="primary"
 								size="lg"
 							>
@@ -239,7 +239,11 @@ export default function SubscriptionPage() {
 																		backgroundColor: isDark
 																			? "oklch(0.21 0.006 285.885)"
 																			: "oklch(1 0 0)",
-																		border: `1px solid ${isDark ? "oklch(0.27 0.013 285.805)" : "oklch(0.911 0.006 286.286)"}`,
+																		border: `1px solid ${
+																			isDark
+																				? "oklch(0.27 0.013 285.805)"
+																				: "oklch(0.911 0.006 286.286)"
+																		}`,
 																		borderRadius: "var(--radius-lg)",
 																		opacity: "1",
 																		zIndex: "99999",

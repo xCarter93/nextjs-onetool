@@ -24,6 +24,7 @@ interface CsvImportStepProps {
 	error?: string | null;
 	showTitle?: boolean;
 	disabledEntityTypes?: EntityType[];
+	disabled?: boolean;
 }
 
 export function CsvImportStep({
@@ -38,9 +39,13 @@ export function CsvImportStep({
 	error,
 	showTitle = true,
 	disabledEntityTypes = [],
+	disabled = false,
 }: CsvImportStepProps) {
 	return (
-		<div className="space-y-8">
+		<div
+			className={`space-y-8 ${disabled ? "opacity-50" : ""}`}
+			aria-disabled={disabled}
+		>
 			{showTitle && (
 				<div>
 					<div className="flex items-center gap-3 mb-3">
@@ -65,6 +70,7 @@ export function CsvImportStep({
 					value={entityType}
 					onValueChange={(value) => onEntityTypeChange(value as EntityType)}
 					className="grid grid-cols-2 gap-4"
+					disabled={disabled}
 				>
 					<div>
 						<RadioGroupItem
@@ -126,7 +132,11 @@ export function CsvImportStep({
 				<label className="block text-sm font-semibold text-foreground mb-4 tracking-wide">
 					Upload CSV File
 				</label>
-				<CsvUploadZone onFileSelect={onFileSelect} maxSizeMB={5} />
+				<CsvUploadZone
+					onFileSelect={onFileSelect}
+					maxSizeMB={5}
+					disabled={disabled}
+				/>
 			</div>
 
 			{/* AI Analysis Loading */}
