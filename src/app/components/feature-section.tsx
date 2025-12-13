@@ -46,26 +46,43 @@ function ClientWidget() {
 
 function ProjectWidget() {
 	return (
-		<div className="w-full p-4 flex gap-3 h-full">
-			<div className="flex-1 flex flex-col gap-2">
-				<div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
-					To Do
+		<div className="w-full p-4 flex flex-col justify-center h-full gap-4">
+			{/* Project A */}
+			<div className="space-y-1.5">
+				<div className="flex justify-between items-center px-1">
+					<div className="text-[10px] font-semibold text-gray-600 dark:text-gray-300">
+						Smith Residence Reno
+					</div>
+					<div className="text-[9px] font-medium text-gray-400">75%</div>
 				</div>
-				<div className="p-2 rounded bg-white/50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/50 space-y-1">
-					<div className="h-1.5 w-12 bg-indigo-200 dark:bg-indigo-900/50 rounded-full" />
-					<div className="h-1 w-full bg-gray-100 dark:bg-gray-800 rounded-full" />
-				</div>
-				<div className="p-2 rounded bg-white/50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/50 space-y-1">
-					<div className="h-1.5 w-16 bg-orange-200 dark:bg-orange-900/50 rounded-full" />
+				<div className="h-2 w-full bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+					<div className="h-full w-3/4 bg-indigo-500 rounded-full" />
 				</div>
 			</div>
-			<div className="flex-1 flex flex-col gap-2">
-				<div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
-					Done
+
+			{/* Project B */}
+			<div className="space-y-1.5">
+				<div className="flex justify-between items-center px-1">
+					<div className="text-[10px] font-semibold text-gray-600 dark:text-gray-300">
+						Office HVAC Install
+					</div>
+					<div className="text-[9px] font-medium text-gray-400">30%</div>
 				</div>
-				<div className="p-2 rounded bg-white/50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/50 space-y-1 opacity-60">
-					<div className="h-1.5 w-10 bg-green-200 dark:bg-green-900/50 rounded-full" />
-					<div className="h-1 w-16 bg-gray-100 dark:bg-gray-800 rounded-full" />
+				<div className="h-2 w-full bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+					<div className="h-full w-[30%] bg-purple-500 rounded-full" />
+				</div>
+			</div>
+
+			{/* Project C */}
+			<div className="space-y-1.5">
+				<div className="flex justify-between items-center px-1">
+					<div className="text-[10px] font-semibold text-gray-600 dark:text-gray-300">
+						Downtown Lawn Service
+					</div>
+					<div className="text-[9px] font-medium text-gray-400">90%</div>
+				</div>
+				<div className="h-2 w-full bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+					<div className="h-full w-[90%] bg-green-500 rounded-full" />
 				</div>
 			</div>
 		</div>
@@ -96,18 +113,27 @@ function InvoiceWidget() {
 
 function TaskWidget() {
 	return (
-		<div className="w-full p-4 flex items-center justify-center">
-			<div className="grid grid-cols-4 gap-1.5 w-3/4">
-				{Array.from({ length: 12 }).map((_, i) => (
-					<div
-						key={i}
-						className={`aspect-square rounded-md ${
-							i === 3 || i === 7
-								? "bg-orange-500"
-								: "bg-gray-100 dark:bg-gray-800"
-						}`}
-					/>
-				))}
+		<div className="w-full p-4 flex gap-3 h-full">
+			<div className="flex-1 flex flex-col gap-2">
+				<div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
+					To Do
+				</div>
+				<div className="p-2 rounded bg-white/50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/50 space-y-1">
+					<div className="h-1.5 w-12 bg-orange-200 dark:bg-orange-900/50 rounded-full" />
+					<div className="h-1 w-full bg-gray-100 dark:bg-gray-800 rounded-full" />
+				</div>
+				<div className="p-2 rounded bg-white/50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/50 space-y-1">
+					<div className="h-1.5 w-16 bg-orange-300 dark:bg-orange-800/50 rounded-full" />
+				</div>
+			</div>
+			<div className="flex-1 flex flex-col gap-2">
+				<div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
+					Done
+				</div>
+				<div className="p-2 rounded bg-white/50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/50 space-y-1 opacity-60">
+					<div className="h-1.5 w-10 bg-green-200 dark:bg-green-900/50 rounded-full" />
+					<div className="h-1 w-16 bg-gray-100 dark:bg-gray-800 rounded-full" />
+				</div>
 			</div>
 		</div>
 	);
