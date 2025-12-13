@@ -42,7 +42,7 @@ export default clerkMiddleware(async (auth, request) => {
 			!isPublicRoute(request)
 		) {
 			const redirectUrl = request.nextUrl.clone();
-			redirectUrl.pathname = "/organization/new";
+			redirectUrl.pathname = "/organization/complete";
 			return NextResponse.redirect(redirectUrl);
 		}
 
@@ -52,7 +52,7 @@ export default clerkMiddleware(async (auth, request) => {
 
 			if (!hasOrganization) {
 				// No organization exists - send to organization creation
-				redirectUrl.pathname = "/organization/new";
+				redirectUrl.pathname = "/organization/complete";
 			} else if (!isAdmin) {
 				// Has organization but not an admin - send to projects
 				redirectUrl.pathname = "/projects";

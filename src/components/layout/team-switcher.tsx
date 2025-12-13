@@ -105,7 +105,7 @@ export function TeamSwitcher() {
 								spacingUnit: "0.5rem",
 							},
 						}}
-						createOrganizationUrl="/organization/new"
+						createOrganizationUrl="/organization/complete"
 						organizationProfileUrl="/organization/profile"
 						afterCreateOrganizationUrl="/organization/complete"
 						afterSelectOrganizationUrl="/home"

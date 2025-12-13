@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
-import { useUser, useOrganization } from "@clerk/nextjs";
+import React, { useMemo, useState, useEffect } from "react";
+import { useUser, useOrganization, CreateOrganization } from "@clerk/nextjs";
 import { PricingTable } from "@clerk/nextjs";
 import { useTheme } from "next-themes";
 import { useMutation, useQuery } from "convex/react";
@@ -54,6 +54,7 @@ export default function CompleteOrganizationMetadata() {
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [mounted, setMounted] = useState(false);
+	const [hasCreatedOrg, setHasCreatedOrg] = useState(false);
 	const [formData, setFormData] = useState<FormData>({
 		email: user?.primaryEmailAddress?.emailAddress || "",
 		website: "",
@@ -79,14 +80,29 @@ export default function CompleteOrganizationMetadata() {
 	});
 
 	// Redirect if metadata is already complete
-	// Only redirect when we're sure the data has loaded (not undefined)
+	// Only redirect when we're sure the data has loaded (not undefined) AND user has a Clerk org
 	React.useEffect(() => {
-		if (needsCompletion === false && organization !== undefined) {
+		if (
+			needsCompletion === false &&
+			organization !== undefined &&
+			clerkOrganization
+		) {
 			// If needsCompletion is false and we have organization data,
 			// it means the metadata is already complete
 			router.push("/home");
 		}
-	}, [needsCompletion, organization, router]);
+	}, [needsCompletion, organization, clerkOrganization, router]);
+
+	// Check if user already has an organization - if so, skip step 1
+	useEffect(() => {
+		if (clerkOrganization && !hasCreatedOrg) {
+			setHasCreatedOrg(true);
+			// Only auto-advance if we're on step 1
+			if (currentStep === 1) {
+				setCurrentStep(2);
+			}
+		}
+	}, [clerkOrganization, hasCreatedOrg, currentStep]);
 
 	// Prevent hydration mismatch
 	React.useEffect(() => {
@@ -99,8 +115,8 @@ export default function CompleteOrganizationMetadata() {
 	const progressSteps: ProgressStep[] = [
 		{
 			id: "1",
-			name: "Business Info",
-			description: "Company details and contact information",
+			name: "Create Organization",
+			description: "Set up your organization",
 			status:
 				currentStep === 1
 					? "current"
@@ -110,8 +126,8 @@ export default function CompleteOrganizationMetadata() {
 		},
 		{
 			id: "2",
-			name: "Company Size",
-			description: "Help us understand your team",
+			name: "Business Info",
+			description: "Company details and contact information",
 			status:
 				currentStep === 2
 					? "current"
@@ -121,8 +137,8 @@ export default function CompleteOrganizationMetadata() {
 		},
 		{
 			id: "3",
-			name: "Choose Your Plan",
-			description: "Select the plan that fits your needs",
+			name: "Company Size",
+			description: "Help us understand your team",
 			status:
 				currentStep === 3
 					? "current"
@@ -132,12 +148,23 @@ export default function CompleteOrganizationMetadata() {
 		},
 		{
 			id: "4",
-			name: "Import Data",
-			description: "Import existing clients or projects (optional)",
+			name: "Choose Your Plan",
+			description: "Select the plan that fits your needs",
 			status:
 				currentStep === 4
 					? "current"
 					: currentStep > 4
+					? "complete"
+					: "upcoming",
+		},
+		{
+			id: "5",
+			name: "Import Data",
+			description: "Import existing clients or projects (optional)",
+			status:
+				currentStep === 5
+					? "current"
+					: currentStep > 5
 					? "complete"
 					: "upcoming",
 		},
@@ -161,7 +188,7 @@ export default function CompleteOrganizationMetadata() {
 		},
 	];
 
-	const isStep1Complete = () => {
+	const isStep2Complete = () => {
 		const requiredFields = [
 			formData.email.trim(),
 			formData.phone.trim(),
@@ -175,7 +202,7 @@ export default function CompleteOrganizationMetadata() {
 
 	const handleNext = () => {
 		setError(null);
-		if (currentStep === 1 && !isStep1Complete()) {
+		if (currentStep === 2 && !isStep2Complete()) {
 			toast.warning(
 				"Missing Required Information",
 				"Please complete business email, phone number, and full address to continue."
@@ -183,7 +210,7 @@ export default function CompleteOrganizationMetadata() {
 			return;
 		}
 
-		if (currentStep < 4) {
+		if (currentStep < 5) {
 			setCurrentStep(currentStep + 1);
 		}
 	};
@@ -418,7 +445,7 @@ export default function CompleteOrganizationMetadata() {
 		setError(null);
 
 		// Basic validation
-		if (!isStep1Complete()) {
+		if (!isStep2Complete()) {
 			toast.warning(
 				"Missing Required Information",
 				"Please complete business email, phone number, and full address to finish setup."
@@ -466,6 +493,188 @@ export default function CompleteOrganizationMetadata() {
 	};
 
 	const renderStep1 = () => (
+		<div className="space-y-8 flex flex-col items-center">
+			<div className="w-full max-w-2xl text-center">
+				<div className="flex items-center justify-center gap-3 mb-3">
+					<div className="w-1.5 h-6 bg-linear-to-b from-primary to-primary/60 rounded-full" />
+					<h2 className="text-2xl font-semibold text-foreground tracking-tight">
+						Create Your Organization
+					</h2>
+				</div>
+				<p className="text-muted-foreground leading-relaxed">
+					Set up your organization to get started with OneTool.
+				</p>
+			</div>
+
+			{/* Clerk Create Organization Component */}
+			<div className="mt-6 w-full max-w-2xl">
+				<CreateOrganization
+					appearance={{
+						elements: {
+							rootBox: {
+								width: "100%",
+								margin: "0 auto",
+							},
+							card: {
+								backgroundColor: "transparent",
+								border: "none",
+								boxShadow: "none",
+								padding: "0",
+								width: "100%",
+							},
+							cardBox: {
+								padding: "0",
+								width: "100%",
+							},
+							headerTitle: {
+								display: "none", // Hide default header since we have our own
+							},
+							headerSubtitle: {
+								display: "none", // Hide default subtitle
+							},
+							form: {
+								gap: "1.5rem",
+								width: "100%",
+							},
+							formFieldRow: {
+								width: "100%",
+							},
+							formContainer: {
+								width: "100%",
+								height: "100%",
+								display: "flex",
+								justifyContent: "center",
+								padding: "5px",
+							},
+
+							// Form styling
+							formButtonPrimary: {
+								backgroundColor: "rgb(0, 166, 244)",
+								color: "white",
+								borderRadius: "var(--radius-md)",
+								padding: "0.625rem 3rem",
+								fontSize: "1rem",
+								fontWeight: "500",
+								transition: "all 0.2s",
+								border: "none",
+								"&:hover": {
+									opacity: "0.9",
+									transform: "translateY(-1px)",
+								},
+								"&:focus": {
+									outline: "2px solid rgb(0, 166, 244)",
+									outlineOffset: "2px",
+								},
+								width: "100%",
+							},
+							formFieldInput: {
+								backgroundColor: isDark
+									? "oklch(0.32 0.013 285.805)"
+									: "oklch(0.871 0.006 286.286)",
+								color: isDark
+									? "oklch(0.985 0 0)"
+									: "oklch(0.141 0.005 285.823)",
+								border: `1px solid ${
+									isDark
+										? "oklch(0.27 0.013 285.805)"
+										: "oklch(0.911 0.006 286.286)"
+								}`,
+								borderRadius: "var(--radius-md)",
+								padding: "0.625rem 1rem",
+								width: "100%",
+							},
+							formFieldLabel: {
+								color: isDark
+									? "oklch(0.985 0 0)"
+									: "oklch(0.141 0.005 285.823)",
+								fontSize: "0.875rem",
+								fontWeight: "500",
+								marginBottom: "0.5rem",
+							},
+
+							// Footer styling
+							footer: "mt-8 pt-6 border-t border-border dark:border-border",
+							footerActionText:
+								"text-xs text-muted-foreground dark:text-muted-foreground",
+							footerActionLink:
+								"text-primary hover:text-primary/80 dark:text-primary dark:hover:text-primary/80 font-medium text-xs",
+
+							// Error and success styling
+							formFieldSuccessText:
+								"text-green-600 dark:text-green-400 text-sm",
+							formFieldErrorText: "text-red-600 dark:text-red-400 text-sm",
+							formFieldWarningText:
+								"text-yellow-600 dark:text-yellow-400 text-sm",
+
+							// Loading states
+							formFieldInputPlaceholder:
+								"text-muted-foreground dark:text-muted-foreground",
+							spinner: "text-primary dark:text-primary",
+
+							// Modal/popover styling (if any)
+							modalContent:
+								"bg-card dark:bg-card border-border dark:border-border shadow-xl dark:shadow-xl",
+							modalCloseButton:
+								"text-muted-foreground hover:text-foreground dark:text-muted-foreground dark:hover:text-foreground",
+
+							// Additional dark mode elements
+							identityPreview:
+								"bg-background dark:bg-card border-border dark:border-border",
+							identityPreviewText: "text-foreground dark:text-foreground",
+							identityPreviewEditButton:
+								"text-primary hover:text-primary/80 dark:text-primary dark:hover:text-primary/80",
+						},
+						variables: {
+							// Color system that works in both light and dark mode
+							colorPrimary: "rgb(0, 166, 244)",
+							colorDanger: "hsl(var(--destructive))",
+							colorSuccess: "hsl(var(--green-600))",
+							colorWarning: "hsl(var(--yellow-600))",
+							colorNeutral: "hsl(var(--muted-foreground))",
+
+							// Background colors
+							colorBackground: "transparent",
+							colorInputBackground: "hsl(var(--background))",
+
+							// Text colors
+							colorText: "hsl(var(--foreground))",
+							colorTextSecondary: "hsl(var(--muted-foreground))",
+							colorInputText: "hsl(var(--foreground))",
+							colorTextOnPrimaryBackground: "hsl(var(--primary-foreground))",
+
+							// Typography
+							fontFamily: "inherit",
+							fontFamilyButtons: "inherit",
+							fontSize: "0.875rem",
+							fontWeight: {
+								normal: "400",
+								medium: "500",
+								semibold: "600",
+								bold: "700",
+							},
+
+							// Spacing and shapes
+							borderRadius: "0.5rem",
+							spacingUnit: "1rem",
+						},
+					}}
+					afterCreateOrganizationUrl="/organization/complete"
+					skipInvitationScreen={true}
+					hideSlug={true}
+				/>
+			</div>
+
+			{/* Help Text */}
+			<div className="mt-6 text-center">
+				<p className="text-xs text-muted-foreground">
+					After creating your organization, you&apos;ll continue to the next
+					steps to complete setup.
+				</p>
+			</div>
+		</div>
+	);
+
+	const renderStep2 = () => (
 		<div className="space-y-8">
 			<div>
 				<div className="flex items-center gap-3 mb-3">
@@ -671,7 +880,7 @@ export default function CompleteOrganizationMetadata() {
 		</div>
 	);
 
-	const renderStep2 = () => (
+	const renderStep3 = () => (
 		<div className="space-y-8">
 			<div>
 				<div className="flex items-center gap-3 mb-3">
@@ -719,7 +928,7 @@ export default function CompleteOrganizationMetadata() {
 		</div>
 	);
 
-	const renderStep3 = () => (
+	const renderStep4 = () => (
 		<div className="space-y-8">
 			<div>
 				<div className="flex items-center gap-3 mb-3">
@@ -1035,7 +1244,7 @@ export default function CompleteOrganizationMetadata() {
 		</div>
 	);
 
-	const renderStep4 = () => (
+	const renderStep5 = () => (
 		<div className="space-y-8">
 			{!hasPremiumAccess && (
 				<div className="border border-border/60 dark:border-border/40 rounded-xl p-6 flex items-start gap-3 bg-muted/20">
@@ -1155,13 +1364,19 @@ export default function CompleteOrganizationMetadata() {
 				return renderStep3();
 			case 4:
 				return renderStep4();
+			case 5:
+				return renderStep5();
 			default:
 				return renderStep1();
 		}
 	};
 
 	// Show loading state while webhook is processing organization creation
-	if (needsCompletion === undefined || organization === undefined) {
+	// Only show loading if user has created an org but we're waiting for the webhook
+	if (
+		clerkOrganization &&
+		(needsCompletion === undefined || organization === undefined)
+	) {
 		return (
 			<div className="min-h-screen flex-1 flex items-center justify-center">
 				<div className="text-center">
@@ -1177,8 +1392,8 @@ export default function CompleteOrganizationMetadata() {
 		);
 	}
 
-	// If we reach here and needsCompletion is false, redirect to home
-	if (needsCompletion === false) {
+	// If we reach here and needsCompletion is false AND user has an org, redirect to home
+	if (needsCompletion === false && clerkOrganization && organization) {
 		return (
 			<div className="min-h-screen flex-1 flex items-center justify-center">
 				<div className="text-center">
@@ -1201,13 +1416,18 @@ export default function CompleteOrganizationMetadata() {
 				<div className="mb-10">
 					<div className="flex items-center gap-3 mb-3">
 						<div className="w-2 h-8 bg-linear-to-b from-primary to-primary/60 rounded-full" />
-						<h1 className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent tracking-tight">
-							Complete Your Organization Setup
+						<h1 className="text-3xl font-bold bg-linear-to-r from-foreground to-foreground/70 bg-clip-text text-transparent tracking-tight">
+							{currentStep === 1
+								? "Create Your Organization"
+								: "Complete Your Organization Setup"}
 						</h1>
 					</div>
 					<p className="text-muted-foreground ml-5 leading-relaxed">
-						Welcome to {organization?.name}! Let&apos;s finish setting up your
-						organization.
+						{currentStep === 1
+							? "Let's get started by setting up your organization."
+							: organization?.name
+							? `Welcome to ${organization.name}! Let's finish setting up your organization.`
+							: "Let's finish setting up your organization."}
 					</p>
 				</div>
 

@@ -11,7 +11,7 @@ import {
 	Smartphone,
 	Users,
 } from "lucide-react";
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { StyledButton } from "@/components/ui/styled/styled-button";
 
 // --- Widgets ---
@@ -207,6 +207,76 @@ function RBACWidget() {
 	);
 }
 
+// Color styles mapping for Tailwind JIT compiler
+const colorStyles = {
+	blue: {
+		gradient:
+			"from-blue-50/50 to-transparent dark:from-blue-900/10 dark:to-transparent",
+		iconBg: "bg-blue-500/10",
+		iconText: "text-blue-600 dark:text-blue-400",
+		cardBorder: "border-blue-100 dark:border-blue-900/50",
+		cardBg: "bg-blue-50/50 dark:bg-blue-900/10",
+		titleText: "text-blue-900 dark:text-blue-100",
+	},
+	indigo: {
+		gradient:
+			"from-indigo-50/50 to-transparent dark:from-indigo-900/10 dark:to-transparent",
+		iconBg: "bg-indigo-500/10",
+		iconText: "text-indigo-600 dark:text-indigo-400",
+		cardBorder: "border-indigo-100 dark:border-indigo-900/50",
+		cardBg: "bg-indigo-50/50 dark:bg-indigo-900/10",
+		titleText: "text-indigo-900 dark:text-indigo-100",
+	},
+	green: {
+		gradient:
+			"from-green-50/50 to-transparent dark:from-green-900/10 dark:to-transparent",
+		iconBg: "bg-green-500/10",
+		iconText: "text-green-600 dark:text-green-400",
+		cardBorder: "border-green-100 dark:border-green-900/50",
+		cardBg: "bg-green-50/50 dark:bg-green-900/10",
+		titleText: "text-green-900 dark:text-green-100",
+	},
+	orange: {
+		gradient:
+			"from-orange-50/50 to-transparent dark:from-orange-900/10 dark:to-transparent",
+		iconBg: "bg-orange-500/10",
+		iconText: "text-orange-600 dark:text-orange-400",
+		cardBorder: "border-orange-100 dark:border-orange-900/50",
+		cardBg: "bg-orange-50/50 dark:bg-orange-900/10",
+		titleText: "text-orange-900 dark:text-orange-100",
+	},
+	purple: {
+		gradient:
+			"from-purple-50/50 to-transparent dark:from-purple-900/10 dark:to-transparent",
+		iconBg: "bg-purple-500/10",
+		iconText: "text-purple-600 dark:text-purple-400",
+		cardBorder: "border-purple-100 dark:border-purple-900/50",
+		cardBg: "bg-purple-50/50 dark:bg-purple-900/10",
+		titleText: "text-purple-900 dark:text-purple-100",
+	},
+	red: {
+		gradient:
+			"from-red-50/50 to-transparent dark:from-red-900/10 dark:to-transparent",
+		iconBg: "bg-red-500/10",
+		iconText: "text-red-600 dark:text-red-400",
+		cardBorder: "border-red-100 dark:border-red-900/50",
+		cardBg: "bg-red-50/50 dark:bg-red-900/10",
+		titleText: "text-red-900 dark:text-red-100",
+	},
+	// Default fallback for unknown colors
+	gray: {
+		gradient:
+			"from-gray-50/50 to-transparent dark:from-gray-900/10 dark:to-transparent",
+		iconBg: "bg-gray-500/10",
+		iconText: "text-gray-600 dark:text-gray-400",
+		cardBorder: "border-gray-100 dark:border-gray-900/50",
+		cardBg: "bg-gray-50/50 dark:bg-gray-900/10",
+		titleText: "text-gray-900 dark:text-gray-100",
+	},
+} as const;
+
+type ColorKey = keyof typeof colorStyles;
+
 const features = [
 	{
 		title: "Client Management",
@@ -215,7 +285,7 @@ const features = [
 			"Store comprehensive client data including contact info, service history, and communication logs. Never miss a follow-up with automated reminders.",
 		icon: Users,
 		widget: <ClientWidget />,
-		color: "blue",
+		color: "blue" as ColorKey,
 	},
 	{
 		title: "Project Tracking",
@@ -224,7 +294,7 @@ const features = [
 			"Visual Kanban boards and list views help you manage projects from lead to completion. Track time, expenses, and milestones in real-time.",
 		icon: Briefcase,
 		widget: <ProjectWidget />,
-		color: "indigo",
+		color: "indigo" as ColorKey,
 	},
 	{
 		title: "Quoting & Invoicing",
@@ -233,7 +303,7 @@ const features = [
 			"Generate professional estimates and invoices in seconds. Accept credit cards and bank transfers directly through the secure client portal.",
 		icon: FileText,
 		widget: <InvoiceWidget />,
-		color: "green",
+		color: "green" as ColorKey,
 	},
 	{
 		title: "Task Scheduling",
@@ -242,7 +312,7 @@ const features = [
 			"Use the calendar view to keep tasks top of mind. Assignment and recurring tasks are also available to help stay on top of recurring items that need to be addressed.",
 		icon: Calendar,
 		widget: <TaskWidget />,
-		color: "orange",
+		color: "orange" as ColorKey,
 	},
 	{
 		title: "Mobile Access",
@@ -251,7 +321,7 @@ const features = [
 			"Developed with mobile first in mind so you can access the site directly from your phone to continue pushing projects further.",
 		icon: Smartphone,
 		widget: <MobileWidget />,
-		color: "purple",
+		color: "purple" as ColorKey,
 	},
 	{
 		title: "Stripe Connect",
@@ -260,7 +330,7 @@ const features = [
 			"Integrated payments mean faster cash flow. set up recurring billing, deposits, and instant payouts to your bank account via Stripe.",
 		icon: CreditCard,
 		widget: <StripeWidget />,
-		color: "blue",
+		color: "blue" as ColorKey,
 	},
 	{
 		title: "Email Hub",
@@ -269,7 +339,7 @@ const features = [
 			"Draft and respond to email threads directly within OneTool so you don't need to jump between multiple platforms.",
 		icon: Mail,
 		widget: <EmailWidget />,
-		color: "purple",
+		color: "purple" as ColorKey,
 	},
 	{
 		title: "Role-Based Access",
@@ -278,7 +348,7 @@ const features = [
 			"Distinct views between admins and employees ensure admins have a full view while employees can see only what they need.",
 		icon: Shield,
 		widget: <RBACWidget />,
-		color: "red",
+		color: "red" as ColorKey,
 	},
 ];
 
@@ -291,6 +361,9 @@ function FeatureCard({
 	onMouseEnter: () => void;
 	onMouseLeave: () => void;
 }) {
+	// Get color styles with fallback to gray if color is missing or unknown
+	const styles = colorStyles[feature.color] || colorStyles.gray;
+
 	return (
 		<div
 			onMouseEnter={onMouseEnter}
@@ -303,7 +376,7 @@ function FeatureCard({
 				<div className="flex-1 relative overflow-hidden">
 					{/* Gradient Backdrop */}
 					<div
-						className={`absolute inset-0 bg-linear-to-b from-${feature.color}-50/50 to-transparent dark:from-${feature.color}-900/10 dark:to-transparent opacity-50`}
+						className={`absolute inset-0 bg-linear-to-b ${styles.gradient} opacity-50`}
 					/>
 					<div className="relative z-10 h-full w-full transform transition-transform duration-500 group-hover:scale-105">
 						{feature.widget}
@@ -314,7 +387,7 @@ function FeatureCard({
 				<div className="relative z-20 p-6 bg-white/40 dark:bg-gray-900/40 backdrop-blur-sm border-t border-gray-100 dark:border-gray-800">
 					<div className="flex items-center gap-3 mb-3">
 						<div
-							className={`p-2 rounded-xl bg-${feature.color}-500/10 text-${feature.color}-600 dark:text-${feature.color}-400`}
+							className={`p-2 rounded-xl ${styles.iconBg} ${styles.iconText}`}
 						>
 							<feature.icon className="w-5 h-5" />
 						</div>
@@ -338,6 +411,18 @@ export default function FeatureSection() {
 	const [isPaused, setIsPaused] = useState(false);
 	const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 	const leaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+	// Cleanup timeouts on unmount to prevent state updates after unmount
+	useEffect(() => {
+		return () => {
+			if (hoverTimeoutRef.current) {
+				clearTimeout(hoverTimeoutRef.current);
+			}
+			if (leaveTimeoutRef.current) {
+				clearTimeout(leaveTimeoutRef.current);
+			}
+		};
+	}, []);
 
 	const handleMouseEnter = (feature: (typeof features)[0]) => {
 		// Clear any pending leave timeout
@@ -446,10 +531,16 @@ export default function FeatureSection() {
 							animate={{ opacity: 1, y: 0 }}
 							exit={{ opacity: 0, y: -10 }}
 							transition={{ duration: 0.3 }}
-							className={`rounded-2xl border border-${hoveredFeature.color}-100 dark:border-${hoveredFeature.color}-900/50 bg-${hoveredFeature.color}-50/50 dark:bg-${hoveredFeature.color}-900/10 p-6 text-center shadow-sm backdrop-blur-sm`}
+							className={`rounded-2xl border ${
+								colorStyles[hoveredFeature.color || "gray"].cardBorder
+							} ${
+								colorStyles[hoveredFeature.color || "gray"].cardBg
+							} p-6 text-center shadow-sm backdrop-blur-sm`}
 						>
 							<h4
-								className={`text-lg font-semibold text-${hoveredFeature.color}-900 dark:text-${hoveredFeature.color}-100 mb-2`}
+								className={`text-lg font-semibold ${
+									colorStyles[hoveredFeature.color || "gray"].titleText
+								} mb-2`}
 							>
 								More about {hoveredFeature.title}
 							</h4>

@@ -43,9 +43,8 @@ export function CsvImportStep({
 }: CsvImportStepProps) {
 	return (
 		<div
-			className={`space-y-8 ${
-				disabled ? "opacity-50 pointer-events-none" : ""
-			}`}
+			className={`space-y-8 ${disabled ? "opacity-50" : ""}`}
+			aria-disabled={disabled}
 		>
 			{showTitle && (
 				<div>
@@ -71,6 +70,7 @@ export function CsvImportStep({
 					value={entityType}
 					onValueChange={(value) => onEntityTypeChange(value as EntityType)}
 					className="grid grid-cols-2 gap-4"
+					disabled={disabled}
 				>
 					<div>
 						<RadioGroupItem
@@ -132,7 +132,11 @@ export function CsvImportStep({
 				<label className="block text-sm font-semibold text-foreground mb-4 tracking-wide">
 					Upload CSV File
 				</label>
-				<CsvUploadZone onFileSelect={onFileSelect} maxSizeMB={5} />
+				<CsvUploadZone
+					onFileSelect={onFileSelect}
+					maxSizeMB={5}
+					disabled={disabled}
+				/>
 			</div>
 
 			{/* AI Analysis Loading */}
