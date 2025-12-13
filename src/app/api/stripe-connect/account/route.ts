@@ -39,6 +39,11 @@ export async function POST(request: NextRequest) {
 				losses: { payments: "stripe" },
 				stripe_dashboard: { type: "none" },
 			},
+			// Required when stripe_dashboard.type is "none" (Custom accounts)
+			capabilities: {
+				card_payments: { requested: true },
+				transfers: { requested: true },
+			},
 		});
 
 		return NextResponse.json({
