@@ -20,7 +20,7 @@ export interface CalendarEvent {
 	endTime?: string;
 	status: string;
 	priority?: string; // For tasks
-	clientId: Id<"clients">;
+	clientId?: Id<"clients">; // Optional for internal tasks
 	clientName: string;
 	assignedUserIds?: Id<"users">[];
 	projectId?: Id<"projects">; // For tasks linked to projects

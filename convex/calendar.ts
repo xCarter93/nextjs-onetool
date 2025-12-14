@@ -50,7 +50,9 @@ export const getCalendarEvents = query({
 		// Get client data for all events
 		const clientIds = new Set<string>();
 		projects.forEach((p) => clientIds.add(p.clientId));
-		allTasks.forEach((t) => clientIds.add(t.clientId));
+		allTasks.forEach((t) => {
+			if (t.clientId) clientIds.add(t.clientId);
+		});
 
 		const clientPromises = Array.from(clientIds).map(async (id) => {
 			const client = await ctx.db.get(id as Id<"clients">);
@@ -86,7 +88,7 @@ export const getCalendarEvents = query({
 
 		// Transform tasks to calendar events
 		const taskEvents = allTasks.map((task) => {
-			const client = clientMap.get(task.clientId);
+			const client = task.clientId ? clientMap.get(task.clientId) : undefined;
 			return {
 				id: task._id,
 				type: "task" as const,
@@ -98,7 +100,9 @@ export const getCalendarEvents = query({
 				status: task.status,
 				priority: task.priority,
 				clientId: task.clientId,
-				clientName: client?.companyName || "Unknown Client",
+				clientName:
+					client?.companyName ||
+					(task.type === "internal" ? "Internal Task" : "Unknown Client"),
 				assigneeUserId: task.assigneeUserId,
 				projectId: task.projectId,
 			};

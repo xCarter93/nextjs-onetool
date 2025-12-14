@@ -77,10 +77,11 @@ export const sendClientEmail = mutation({
 			);
 		}
 
-		// Prepare email options with threading support
+		// Prepare email options with threading support and CC to sending user
 		const emailOptions: {
 			from: string;
 			to: string;
+			cc?: string[];
 			subject: string;
 			html: string;
 			replyTo: string[];
@@ -92,6 +93,11 @@ export const sendClientEmail = mutation({
 			// Use organization's receiving address for replies
 			replyTo: [organization.receivingAddress],
 		};
+
+		// Add CC to sending user if they have an email
+		if (user.email) {
+			emailOptions.cc = [user.email];
+		}
 
 		// Send email via Resend
 		const emailId = await resend.sendEmail(ctx, emailOptions);
@@ -228,16 +234,31 @@ export const replyToEmail = mutation({
 			? originalEmail.subject
 			: `Re: ${originalEmail.subject}`;
 
-		// Send email with threading headers
-		// Note: Resend doesn't directly support custom headers like In-Reply-To,
-		// but we track threading in our database
-		const emailId = await resend.sendEmail(ctx, {
+		// Prepare email options with CC to sending user
+		const emailOptions: {
+			from: string;
+			to: string;
+			cc?: string[];
+			subject: string;
+			html: string;
+			replyTo: string[];
+		} = {
 			from: `${fromName} <${fromEmail}>`,
 			to: primaryContact.email,
 			subject,
 			html: emailHtml,
 			replyTo: [organization.receivingAddress],
-		});
+		};
+
+		// Add CC to sending user if they have an email
+		if (user.email) {
+			emailOptions.cc = [user.email];
+		}
+
+		// Send email with threading headers
+		// Note: Resend doesn't directly support custom headers like In-Reply-To,
+		// but we track threading in our database
+		const emailId = await resend.sendEmail(ctx, emailOptions);
 
 		// Create message preview
 		const messagePreview = args.messageBody.substring(0, 100);
@@ -410,7 +431,11 @@ function buildEmailHtml(options: {
 								<tr>
 									<td style="font-size: 14px; line-height: 1.6; color: #6b7280;">
 										<strong style="color: #1f2937;">${escapedOrganizationName}</strong><br />
-										${escapedOrganizationEmail ? `Email: <a href="mailto:${escapedOrganizationEmail}" style="color: ${brandColor}; text-decoration: none;">${escapedOrganizationEmail}</a><br />` : ""}
+										${
+											escapedOrganizationEmail
+												? `Email: <a href="mailto:${escapedOrganizationEmail}" style="color: ${brandColor}; text-decoration: none;">${escapedOrganizationEmail}</a><br />`
+												: ""
+										}
 										${escapedOrganizationPhone ? `Phone: ${escapedOrganizationPhone}<br />` : ""}
 										${escapedOrganizationAddress ? `${escapedOrganizationAddress}` : ""}
 									</td>
