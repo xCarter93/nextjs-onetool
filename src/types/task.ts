@@ -7,8 +7,9 @@ export interface Task {
 	_id: Id<"tasks">;
 	title: string;
 	description?: string;
-	clientId: Id<"clients">;
+	clientId?: Id<"clients">;
 	projectId?: Id<"projects">;
+	type?: "internal" | "external";
 	date: number;
 	startTime?: string;
 	endTime?: string;
@@ -33,4 +34,3 @@ export type TaskPriority = Task["priority"];
  * Task repeat type for use in components
  */
 export type TaskRepeat = Task["repeat"];
-

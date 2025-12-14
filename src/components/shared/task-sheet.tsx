@@ -88,6 +88,7 @@ export function TaskSheet({
 	const [formData, setFormData] = useState({
 		title: "",
 		description: "",
+		type: "external" as "internal" | "external",
 		clientId: "" as Id<"clients"> | "",
 		projectId: "" as Id<"projects"> | "",
 		date: undefined as Date | undefined,
@@ -125,7 +126,8 @@ export function TaskSheet({
 			setFormData({
 				title: task.title,
 				description: task.description || "",
-				clientId: task.clientId,
+				type: task.type || "external",
+				clientId: task.clientId || "",
 				projectId: task.projectId || "",
 				date: taskDate,
 				assigneeUserId: task.assigneeUserId || "",
@@ -141,6 +143,7 @@ export function TaskSheet({
 			setFormData({
 				title: "",
 				description: "",
+				type: "external",
 				clientId: initialValues?.clientId || "",
 				projectId: initialValues?.projectId || "",
 				date: today,
@@ -170,8 +173,8 @@ export function TaskSheet({
 			return;
 		}
 
-		if (!formData.clientId) {
-			error("Error", "Please select a client");
+		if (formData.type === "external" && !formData.clientId) {
+			error("Error", "Please select a client for external tasks");
 			return;
 		}
 
@@ -211,7 +214,10 @@ export function TaskSheet({
 			const taskData = {
 				title: formData.title.trim(),
 				description: formData.description.trim() || undefined,
-				clientId: formData.clientId as Id<"clients">,
+				type: formData.type,
+				clientId: formData.clientId
+					? (formData.clientId as Id<"clients">)
+					: undefined,
 				projectId: formData.projectId
 					? (formData.projectId as Id<"projects">)
 					: undefined,
@@ -277,6 +283,34 @@ export function TaskSheet({
 
 				<div className="flex-1 overflow-y-auto pt-6 px-6">
 					<form onSubmit={handleSubmit} className="space-y-6">
+						{/* Task Type Selector */}
+						<div className="space-y-2.5">
+							<label className="text-sm font-semibold text-foreground">
+								Task Type
+							</label>
+							<StyledSelect
+								value={formData.type}
+								onValueChange={(value) =>
+									handleInputChange("type", value as "internal" | "external")
+								}
+							>
+								<StyledSelectTrigger className="w-full">
+									<SelectValue />
+								</StyledSelectTrigger>
+								<StyledSelectContent>
+									<SelectItem value="external">
+										External (Client Task)
+									</SelectItem>
+									<SelectItem value="internal">Internal (Team Task)</SelectItem>
+								</StyledSelectContent>
+							</StyledSelect>
+							<p className="text-xs text-muted-foreground">
+								{formData.type === "external"
+									? "External tasks require a client and can be linked to projects"
+									: "Internal tasks are for your team and don't require a client"}
+							</p>
+						</div>
+
 						{/* Title */}
 						<div className="space-y-2.5">
 							<label className="text-sm font-semibold text-foreground flex items-center gap-1.5">
@@ -313,63 +347,71 @@ export function TaskSheet({
 							/>
 						</div>
 
-						{/* Client Selection */}
-						<div className="space-y-2.5">
-							<label className="text-sm font-semibold text-foreground flex items-center gap-2">
-								<Building2 className="h-4 w-4 text-primary" />
-								Client <span className="text-danger">*</span>
-							</label>
-							<StyledSelect
-								value={formData.clientId}
-								onValueChange={(value) => handleInputChange("clientId", value)}
-							>
-								<StyledSelectTrigger className="w-full">
-									<SelectValue placeholder="Select a client..." />
-								</StyledSelectTrigger>
-								<StyledSelectContent>
-									{clients?.map((client) => (
-										<SelectItem key={client._id} value={client._id}>
-											{client.companyName}
-										</SelectItem>
-									))}
-								</StyledSelectContent>
-							</StyledSelect>
-						</div>
+						{/* Client Selection - Only for External Tasks */}
+						{formData.type === "external" && (
+							<div className="space-y-2.5">
+								<label className="text-sm font-semibold text-foreground flex items-center gap-2">
+									<Building2 className="h-4 w-4 text-primary" />
+									Client <span className="text-danger">*</span>
+								</label>
+								<StyledSelect
+									value={formData.clientId}
+									onValueChange={(value) =>
+										handleInputChange("clientId", value)
+									}
+								>
+									<StyledSelectTrigger className="w-full">
+										<SelectValue placeholder="Select a client..." />
+									</StyledSelectTrigger>
+									<StyledSelectContent>
+										{clients?.map((client) => (
+											<SelectItem key={client._id} value={client._id}>
+												{client.companyName}
+											</SelectItem>
+										))}
+									</StyledSelectContent>
+								</StyledSelect>
+							</div>
+						)}
 
-						{/* Project Selection */}
-						<div className="space-y-2.5">
-							<label className="text-sm font-semibold text-foreground flex items-center gap-2">
-								<FolderOpen className="h-4 w-4 text-primary" />
-								Project{" "}
-								<span className="text-muted-foreground text-xs">
-									(Optional)
-								</span>
-							</label>
-							<StyledSelect
-								value={formData.projectId}
-								onValueChange={(value) => handleInputChange("projectId", value)}
-								disabled={!formData.clientId}
-							>
-								<StyledSelectTrigger
-									className="w-full"
+						{/* Project Selection - Only for External Tasks */}
+						{formData.type === "external" && (
+							<div className="space-y-2.5">
+								<label className="text-sm font-semibold text-foreground flex items-center gap-2">
+									<FolderOpen className="h-4 w-4 text-primary" />
+									Project{" "}
+									<span className="text-muted-foreground text-xs">
+										(Optional)
+									</span>
+								</label>
+								<StyledSelect
+									value={formData.projectId}
+									onValueChange={(value) =>
+										handleInputChange("projectId", value)
+									}
 									disabled={!formData.clientId}
 								>
-									<SelectValue placeholder="No project selected" />
-								</StyledSelectTrigger>
-								<StyledSelectContent>
-									{projects?.map((project) => (
-										<SelectItem key={project._id} value={project._id}>
-											{project.title}
-										</SelectItem>
-									))}
-								</StyledSelectContent>
-							</StyledSelect>
-							{!formData.clientId && (
-								<p className="text-xs text-muted-foreground">
-									Select a client first to choose a project
-								</p>
-							)}
-						</div>
+									<StyledSelectTrigger
+										className="w-full"
+										disabled={!formData.clientId}
+									>
+										<SelectValue placeholder="No project selected" />
+									</StyledSelectTrigger>
+									<StyledSelectContent>
+										{projects?.map((project) => (
+											<SelectItem key={project._id} value={project._id}>
+												{project.title}
+											</SelectItem>
+										))}
+									</StyledSelectContent>
+								</StyledSelect>
+								{!formData.clientId && (
+									<p className="text-xs text-muted-foreground">
+										Select a client first to choose a project
+									</p>
+								)}
+							</div>
+						)}
 
 						{/* Date */}
 						<div className="space-y-2.5">
@@ -390,7 +432,7 @@ export function TaskSheet({
 													year: "numeric",
 													month: "long",
 													day: "numeric",
-												})
+											  })
 											: "Select date"}
 									</Button>
 								</PopoverTrigger>
@@ -536,7 +578,7 @@ export function TaskSheet({
 															year: "numeric",
 															month: "long",
 															day: "numeric",
-														})
+													  })
 													: "Select end date"}
 											</Button>
 										</PopoverTrigger>
@@ -591,7 +633,7 @@ export function TaskSheet({
 						disabled={
 							isSubmitting ||
 							!formData.title.trim() ||
-							!formData.clientId ||
+							(formData.type === "external" && !formData.clientId) ||
 							(formData.repeat !== "none" && !formData.repeatUntil)
 						}
 						label={
@@ -600,8 +642,8 @@ export function TaskSheet({
 									? "Updating..."
 									: "Creating..."
 								: isEditMode
-									? "Update Task"
-									: "Create Task"
+								? "Update Task"
+								: "Create Task"
 						}
 						className="min-w-[120px]"
 						showArrow={false}

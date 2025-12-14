@@ -160,8 +160,14 @@ async function createTaskWithOrg(
 ): Promise<Id<"tasks">> {
 	const userOrgId = await getCurrentUserOrgId(ctx);
 
-	// Validate client access
-	await validateClientAccess(ctx, data.clientId);
+	// For external tasks (or untyped legacy tasks), validate client access
+	const taskType = data.type || "external"; // Default to external for backward compatibility
+	if (taskType === "external") {
+		if (!data.clientId) {
+			throw new Error("External tasks require a client");
+		}
+		await validateClientAccess(ctx, data.clientId);
+	}
 
 	// Validate project access if provided
 	if (data.projectId) {
@@ -190,11 +196,24 @@ async function updateTaskWithValidation(
 	updates: Partial<Doc<"tasks">>
 ): Promise<void> {
 	// Validate task exists and belongs to user's org
-	await getTaskOrThrow(ctx, id);
+	const existingTask = await getTaskOrThrow(ctx, id);
 
-	// Validate new client if being updated
-	if (updates.clientId) {
-		await validateClientAccess(ctx, updates.clientId);
+	// Determine task type (use updated type if provided, otherwise use existing)
+	const taskType =
+		updates.type !== undefined ? updates.type : existingTask.type || "external";
+
+	// For external tasks, validate client
+	if (taskType === "external") {
+		// If changing to external, must have a client
+		const clientId =
+			updates.clientId !== undefined ? updates.clientId : existingTask.clientId;
+		if (!clientId) {
+			throw new Error("External tasks require a client");
+		}
+		// Validate new client if being updated
+		if (updates.clientId) {
+			await validateClientAccess(ctx, updates.clientId);
+		}
 	}
 
 	// Validate new project if being updated
@@ -348,7 +367,7 @@ export const get = query({
 		if (!userOrgId) {
 			return null;
 		}
-		
+
 		const task = await getTaskWithOrgValidation(ctx, args.id, userOrgId);
 		if (!task) {
 			return null;
@@ -375,8 +394,9 @@ export const get = query({
  */
 export const create = mutation({
 	args: {
-		clientId: v.id("clients"),
+		clientId: v.optional(v.id("clients")),
 		projectId: v.optional(v.id("projects")),
+		type: v.optional(v.union(v.literal("internal"), v.literal("external"))),
 		title: v.string(),
 		description: v.optional(v.string()),
 		date: v.number(),
@@ -412,6 +432,14 @@ export const create = mutation({
 		// Validate title is not empty
 		if (!args.title.trim()) {
 			throw new Error("Task title is required");
+		}
+
+		// Default to external type for backward compatibility
+		const taskType = args.type || "external";
+
+		// Validate client requirement for external tasks
+		if (taskType === "external" && !args.clientId) {
+			throw new Error("External tasks require a client");
 		}
 
 		// Validate time format if provided
@@ -502,6 +530,7 @@ export const update = mutation({
 		id: v.id("tasks"),
 		clientId: v.optional(v.id("clients")),
 		projectId: v.optional(v.id("projects")),
+		type: v.optional(v.union(v.literal("internal"), v.literal("external"))),
 		title: v.optional(v.string()),
 		description: v.optional(v.string()),
 		date: v.optional(v.number()),

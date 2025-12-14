@@ -298,7 +298,8 @@ export default defineSchema({
 	tasks: defineTable({
 		orgId: v.id("organizations"),
 		projectId: v.optional(v.id("projects")),
-		clientId: v.id("clients"),
+		clientId: v.optional(v.id("clients")), // Optional to support internal tasks
+		type: v.optional(v.union(v.literal("internal"), v.literal("external"))),
 
 		title: v.string(),
 		description: v.optional(v.string()),
