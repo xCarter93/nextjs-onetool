@@ -71,7 +71,7 @@ export default function GettingStarted() {
 
 				{/* Enhanced Organization Setup Alert - Only show if no organization exists */}
 				{isLoaded && !organization && (
-					<Alert className="mt-6 border-amber-300 dark:border-amber-700 bg-gradient-to-r from-amber-50 to-amber-100 text-amber-900 dark:bg-gradient-to-r dark:from-amber-950 dark:to-amber-900 dark:text-amber-100 ring-1 ring-amber-200 dark:ring-amber-800 backdrop-blur-sm">
+					<Alert className="mt-6 border-amber-300 dark:border-amber-700 bg-linear-to-r from-amber-50 to-amber-100 text-amber-900 dark:bg-linear-to-r dark:from-amber-950 dark:to-amber-900 dark:text-amber-100 ring-1 ring-amber-200 dark:ring-amber-800 backdrop-blur-sm">
 						<ExclamationTriangleIcon className="h-5 w-5 text-amber-600 dark:text-amber-400" />
 						<AlertTitle className="text-amber-900 dark:text-amber-100 font-semibold">
 							Set Up Your Organization
@@ -95,7 +95,7 @@ export default function GettingStarted() {
 					{items.map((item, itemIdx) => (
 						<li key={itemIdx} className="flow-root">
 							<Link href={item.href} className="block group">
-								<div className="relative -m-2 flex items-center space-x-4 rounded-2xl p-4 bg-gradient-to-r from-card/80 to-card/60 dark:from-card/70 dark:to-card/50 border border-border/80 dark:border-border hover:-translate-y-1 focus-within:outline-2 focus-within:outline-primary hover:bg-gradient-to-r hover:from-card hover:to-card/80 transition-all duration-300 ring-1 ring-border/20 dark:ring-border/40 backdrop-blur-md">
+								<div className="relative -m-2 flex items-center space-x-4 rounded-2xl p-4 bg-linear-to-r from-card/80 to-card/60 dark:from-card/70 dark:to-card/50 border border-border/80 dark:border-border hover:-translate-y-1 focus-within:outline-2 focus-within:outline-primary hover:bg-linear-to-r hover:from-card hover:to-card/80 transition-all duration-300 ring-1 ring-border/20 dark:ring-border/40 backdrop-blur-md">
 									<div
 										className={classNames(
 											item.background,

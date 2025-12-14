@@ -268,7 +268,7 @@ export function TaskSheet({
 	};
 
 	const sheetContent = (
-		<SheetContent side="right" className="w-full sm:max-w-xl !bg-background">
+		<SheetContent side="right" className="w-full sm:max-w-xl bg-background!">
 			<div className="flex flex-col h-full overflow-hidden">
 				<SheetHeader className="border-b border-border pb-4 shrink-0">
 					<SheetTitle className="flex items-center gap-2 text-2xl font-semibold">
@@ -449,7 +449,7 @@ export function TaskSheet({
 												setDatePopoverOpen(false);
 											}
 										}}
-										className="!bg-white dark:!bg-gray-950"
+										className="bg-white! dark:bg-gray-950!"
 									/>
 								</PopoverContent>
 							</Popover>
@@ -606,7 +606,7 @@ export function TaskSheet({
 													checkDate.setHours(0, 0, 0, 0);
 													return checkDate < taskDate;
 												}}
-												className="!bg-white dark:!bg-gray-950"
+												className="bg-white! dark:bg-gray-950!"
 											/>
 										</PopoverContent>
 									</Popover>

@@ -112,7 +112,9 @@ export const createFromClerk = internalMutation({
 			logoUrl: args.logoUrl,
 			isMetadataComplete: false, // User needs to complete additional setup
 			// Generate unique receiving address for this organization
-			receivingAddress: `org-${crypto.randomUUID().slice(0, 8)}@onetool.biz`,
+			receivingAddress: `org-${crypto
+				.randomUUID()
+				.slice(0, 8)}@inbound.onetool.biz`,
 			// Initialize usage tracking
 			usageTracking: {
 				clientsCount: 0,
