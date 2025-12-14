@@ -78,7 +78,7 @@ export function PlanBadge() {
 				</motion.button>
 			</PopoverTrigger>
 			<PopoverContent
-				className="w-80 p-0 !bg-background backdrop-blur-xl border-border shadow-xl"
+				className="w-80 p-0 bg-background! backdrop-blur-xl border-border shadow-xl"
 				align="end"
 			>
 				<div className="p-4 border-b border-border bg-background">

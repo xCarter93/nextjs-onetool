@@ -276,28 +276,6 @@ export function EmailThreadSheet({
 								</div>
 							)}
 
-							{/* CC Field - Read-only, showing auto-CC */}
-							{currentUser?.email && (
-								<div className="space-y-2">
-									<label
-										htmlFor="cc-field"
-										className="text-sm font-medium text-foreground"
-									>
-										CC (You will be automatically copied)
-									</label>
-									<StyledInput
-										id="cc-field"
-										value={currentUser.email}
-										readOnly
-										disabled
-										className="bg-muted/50 cursor-not-allowed text-muted-foreground"
-									/>
-									<p className="text-xs text-muted-foreground">
-										You'll receive a copy of this email for your records
-									</p>
-								</div>
-							)}
-
 							{/* Subject field (only for new emails) */}
 							{showSubjectField && (
 								<div className="space-y-2">

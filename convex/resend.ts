@@ -77,11 +77,10 @@ export const sendClientEmail = mutation({
 			);
 		}
 
-		// Prepare email options with threading support and CC to sending user
+		// Prepare email options
 		const emailOptions: {
 			from: string;
 			to: string;
-			cc?: string[];
 			subject: string;
 			html: string;
 			replyTo: string[];
@@ -93,11 +92,6 @@ export const sendClientEmail = mutation({
 			// Use organization's receiving address for replies
 			replyTo: [organization.receivingAddress],
 		};
-
-		// Add CC to sending user if they have an email
-		if (user.email) {
-			emailOptions.cc = [user.email];
-		}
 
 		// Send email via Resend
 		const emailId = await resend.sendEmail(ctx, emailOptions);
@@ -234,11 +228,10 @@ export const replyToEmail = mutation({
 			? originalEmail.subject
 			: `Re: ${originalEmail.subject}`;
 
-		// Prepare email options with CC to sending user
+		// Prepare email options
 		const emailOptions: {
 			from: string;
 			to: string;
-			cc?: string[];
 			subject: string;
 			html: string;
 			replyTo: string[];
@@ -249,11 +242,6 @@ export const replyToEmail = mutation({
 			html: emailHtml,
 			replyTo: [organization.receivingAddress],
 		};
-
-		// Add CC to sending user if they have an email
-		if (user.email) {
-			emailOptions.cc = [user.email];
-		}
 
 		// Send email with threading headers
 		// Note: Resend doesn't directly support custom headers like In-Reply-To,

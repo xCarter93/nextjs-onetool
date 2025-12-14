@@ -143,6 +143,21 @@ export const processInboundEmail = internalMutation({
 
 		const recipientEmail = args.to[0]; // Primary recipient
 
+		// Special handling for support@onetool.biz - these are general inquiries/demo requests
+		// that aren't associated with a specific organization, so we skip processing them
+		if (recipientEmail === "support@onetool.biz") {
+			console.log(
+				`Skipping inbound email processing for support@onetool.biz - ` +
+					`this is a general inquiry/demo request, not organization-specific. ` +
+					`From: ${args.from}, Subject: ${args.subject}`
+			);
+			return {
+				success: true,
+				skipped: true,
+				reason: "General support email - not organization-specific",
+			};
+		}
+
 		// Step 2: Find organization by receiving address
 		const organization = await ctx.db
 			.query("organizations")
@@ -251,8 +266,8 @@ export const processInboundEmail = internalMutation({
 		const messagePreview = args.textBody
 			? args.textBody.substring(0, 100)
 			: args.htmlBody
-				? stripHtml(args.htmlBody).substring(0, 100)
-				: "";
+			? stripHtml(args.htmlBody).substring(0, 100)
+			: "";
 
 		const emailMessageId = await ctx.db.insert("emailMessages", {
 			orgId: organization._id,
