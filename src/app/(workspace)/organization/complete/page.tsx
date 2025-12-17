@@ -55,6 +55,10 @@ export default function CompleteOrganizationMetadata() {
 	const [error, setError] = useState<string | null>(null);
 	const [mounted, setMounted] = useState(false);
 	const [hasCreatedOrg, setHasCreatedOrg] = useState(false);
+
+	// Track the initial org ID when in "creating new" mode to detect when a new org is created
+	const initialOrgIdRef = React.useRef<string | null>(null);
+	const hasInitializedRef = React.useRef(false);
 	const [formData, setFormData] = useState<FormData>({
 		email: user?.primaryEmailAddress?.emailAddress || "",
 		website: "",
@@ -79,9 +83,32 @@ export default function CompleteOrganizationMetadata() {
 		skipImport: false,
 	});
 
+	// Check if we're creating a new organization (from query param)
+	const [isCreatingNew, setIsCreatingNew] = useState(false);
+	const [queryParamsInitialized, setQueryParamsInitialized] = useState(false);
+
+	// Initialize the creating flag from query parameter after mount
+	useEffect(() => {
+		if (typeof window !== "undefined") {
+			const searchParams = new URLSearchParams(window.location.search);
+			setIsCreatingNew(searchParams.get("creating") === "true");
+			setQueryParamsInitialized(true);
+		}
+	}, []);
+
 	// Redirect if metadata is already complete
 	// Only redirect when organization exists in Convex AND metadata is marked complete
 	React.useEffect(() => {
+		// Wait for query params to be initialized before running this logic
+		if (!queryParamsInitialized) {
+			return;
+		}
+
+		// Don't redirect if we're in the process of creating a new organization
+		if (isCreatingNew) {
+			return;
+		}
+
 		// Don't redirect if we're still loading data
 		if (needsCompletion === undefined || organization === undefined) {
 			return;
@@ -98,18 +125,66 @@ export default function CompleteOrganizationMetadata() {
 			// it means the metadata is already complete
 			router.push("/home");
 		}
-	}, [needsCompletion, organization, clerkOrganization, router]);
+	}, [
+		needsCompletion,
+		organization,
+		clerkOrganization,
+		router,
+		isCreatingNew,
+		queryParamsInitialized,
+	]);
+
+	// Initialize tracking of the initial org when in "creating new" mode
+	useEffect(() => {
+		// Wait for query params to be initialized
+		if (!queryParamsInitialized) {
+			return;
+		}
+
+		if (!hasInitializedRef.current && isCreatingNew) {
+			initialOrgIdRef.current = clerkOrganization?.id || null;
+			hasInitializedRef.current = true;
+		}
+	}, [clerkOrganization, isCreatingNew, queryParamsInitialized]);
 
 	// Check if user already has an organization - if so, skip step 1
+	// BUT: If creating a new org, wait until the org ID changes (indicating new org was created)
 	useEffect(() => {
+		// Wait for query params to be initialized before running this logic
+		if (!queryParamsInitialized) {
+			return;
+		}
+
 		if (clerkOrganization && !hasCreatedOrg) {
-			setHasCreatedOrg(true);
-			// Only auto-advance if we're on step 1
-			if (currentStep === 1) {
-				setCurrentStep(2);
+			// If we're in "creating new org" mode
+			if (isCreatingNew) {
+				// Check if the org ID has changed from the initial one
+				const currentOrgId = clerkOrganization.id;
+				const initialOrgId = initialOrgIdRef.current;
+
+				// Only advance if the org ID changed (meaning they created a new org)
+				if (initialOrgId && currentOrgId !== initialOrgId) {
+					setHasCreatedOrg(true);
+					if (currentStep === 1) {
+						setCurrentStep(2);
+					}
+				}
+				// If org ID hasn't changed, stay on step 1
+			} else {
+				// Normal flow: user already has an org, skip step 1
+				setHasCreatedOrg(true);
+				if (currentStep === 1) {
+					setCurrentStep(2);
+				}
 			}
 		}
-	}, [clerkOrganization, hasCreatedOrg, currentStep]);
+	}, [
+		clerkOrganization,
+		hasCreatedOrg,
+		currentStep,
+		isCreatingNew,
+		queryParamsInitialized,
+	]);
 
 	// Prevent hydration mismatch
 	React.useEffect(() => {

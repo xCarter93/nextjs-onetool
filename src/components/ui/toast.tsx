@@ -223,7 +223,7 @@ const Notification: React.FC<NotificationProps> = ({
 			className={`relative w-full max-w-sm rounded-xl p-4 backdrop-blur-xl ${config.bgColor} border-2 ${config.borderColor} overflow-hidden drop-shadow-xl transition-all duration-300 ease-in-out transform hover:scale-105`}
 		>
 			<div
-				className={`absolute top-0 left-0 h-full w-full bg-gradient-to-br ${config.gradient}`}
+				className={`absolute top-0 left-0 h-full w-full bg-linear-to-br ${config.gradient}`}
 			></div>
 			<div className="relative z-10 flex items-center space-x-4">
 				{showIcon && (

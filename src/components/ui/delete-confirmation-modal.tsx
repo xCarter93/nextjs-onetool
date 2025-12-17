@@ -2,7 +2,8 @@
 
 import React from "react";
 import Modal from "./modal";
-import { Button } from "./button";
+import { StyledButton } from "./styled/styled-button";
+import { useToast } from "@/hooks/use-toast";
 
 interface DeleteConfirmationModalProps {
 	isOpen: boolean;
@@ -23,6 +24,39 @@ const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({
 	itemType,
 	isArchive = false,
 }) => {
+	const toast = useToast();
+
+	const handleConfirm = async () => {
+		try {
+			// Execute the confirm action
+			await onConfirm();
+
+			// Show success toast
+			if (isArchive) {
+				toast.success(
+					`${itemType} Archived`,
+					`"${itemName}" has been archived successfully. You can restore it within 7 days.`
+				);
+			} else {
+				toast.success(
+					`${itemType} Deleted`,
+					`"${itemName}" has been permanently deleted.`
+				);
+			}
+
+			// Close the modal
+			onClose();
+		} catch (error) {
+			// Show error toast if something goes wrong
+			toast.error(
+				`Failed to ${
+					isArchive ? "archive" : "delete"
+				} ${itemType.toLowerCase()}`,
+				error instanceof Error ? error.message : "An unexpected error occurred"
+			);
+		}
+	};
+
 	return (
 		<Modal isOpen={isOpen} onClose={onClose} title={title} size="sm">
 			<div className="space-y-4">
@@ -119,15 +153,15 @@ const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({
 				)}
 
 				<div className="flex justify-end space-x-3">
-					<Button onPress={onClose} intent="secondary">
+					<StyledButton onClick={onClose} intent="secondary">
 						Cancel
-					</Button>
-					<Button
-						onPress={onConfirm}
+					</StyledButton>
+					<StyledButton
+						onClick={handleConfirm}
 						intent={isArchive ? "warning" : "destructive"}
 					>
 						{isArchive ? `Archive ${itemType}` : `Delete ${itemType}`}
-					</Button>
+					</StyledButton>
 				</div>
 			</div>
 		</Modal>
