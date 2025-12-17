@@ -159,28 +159,28 @@ const notificationConfig = {
 			"from-blue-100/60 to-transparent dark:from-blue-900/20 dark:to-transparent",
 	},
 	success: {
-		bgColor: "bg-green-50 dark:bg-green-950/20",
-		borderColor: "border-green-200 dark:border-green-800/50",
-		iconColor: "text-green-500 dark:text-green-400",
+		bgColor: "bg-green-100 dark:bg-green-900/40",
+		borderColor: "border-green-400 dark:border-green-600",
+		iconColor: "text-green-700 dark:text-green-300",
 		icon: <SuccessIcon className="h-6 w-6" />,
 		gradient:
-			"from-green-100/60 to-transparent dark:from-green-900/20 dark:to-transparent",
+			"from-green-200/80 to-green-100/40 dark:from-green-800/60 dark:to-green-900/30",
 	},
 	warning: {
-		bgColor: "bg-yellow-50 dark:bg-yellow-950/20",
-		borderColor: "border-yellow-200 dark:border-yellow-800/50",
-		iconColor: "text-yellow-500 dark:text-yellow-400",
+		bgColor: "bg-yellow-100 dark:bg-yellow-900/40",
+		borderColor: "border-yellow-400 dark:border-yellow-600",
+		iconColor: "text-yellow-700 dark:text-yellow-300",
 		icon: <WarningIcon className="h-6 w-6" />,
 		gradient:
-			"from-yellow-100/60 to-transparent dark:from-yellow-900/20 dark:to-transparent",
+			"from-yellow-200/80 to-yellow-100/40 dark:from-yellow-800/60 dark:to-yellow-900/30",
 	},
 	error: {
-		bgColor: "bg-red-50 dark:bg-red-950/20",
-		borderColor: "border-red-200 dark:border-red-800/50",
-		iconColor: "text-red-500 dark:text-red-400",
+		bgColor: "bg-red-100 dark:bg-red-900/40",
+		borderColor: "border-red-400 dark:border-red-600",
+		iconColor: "text-red-700 dark:text-red-300",
 		icon: <ErrorIcon className="h-6 w-6" />,
 		gradient:
-			"from-red-100/60 to-transparent dark:from-red-900/20 dark:to-transparent",
+			"from-red-200/80 to-red-100/40 dark:from-red-800/60 dark:to-red-900/30",
 	},
 	loading: {
 		// New loading configuration
@@ -203,50 +203,49 @@ const Notification: React.FC<NotificationProps> = ({
 }) => {
 	const config = notificationConfig[type];
 
+	// Auto-dismiss after duration if provided
+	React.useEffect(() => {
+		if (duration) {
+			const timer = setTimeout(() => {
+				onClose();
+			}, duration);
+			return () => clearTimeout(timer);
+		}
+	}, [duration, onClose]);
+
 	return (
-		// Wrap with motion.div for animations and apply glassy styles with dark mode support
+		// Wrap with motion.div for animations and apply colorful styles with dark mode support
 		<motion.div
 			initial={{ opacity: 0, x: 100 }}
 			animate={{ opacity: 1, x: 0 }}
 			exit={{ opacity: 0, x: 100 }}
 			transition={{ duration: 0.3 }}
-			className={`relative w-full max-w-sm rounded-xl p-4 backdrop-blur-xl bg-white/15 dark:bg-black/15 border border-gray-300/60 dark:border-gray-700/60 overflow-hidden ring-1 ring-gray-200/40 dark:ring-gray-700/40 drop-shadow-xl transition-all duration-300 ease-in-out transform hover:scale-105`}
+			className={`relative w-full max-w-sm rounded-xl p-4 backdrop-blur-xl ${config.bgColor} border-2 ${config.borderColor} overflow-hidden drop-shadow-xl transition-all duration-300 ease-in-out transform hover:scale-105`}
 		>
 			<div
-				className={`absolute top-0 left-0 h-full w-full bg-linear-to-br ${config.gradient} opacity-50`}
+				className={`absolute top-0 left-0 h-full w-full bg-gradient-to-br ${config.gradient}`}
 			></div>
 			<div className="relative z-10 flex items-center space-x-4">
 				{showIcon && (
 					<div className={`shrink-0 ${config.iconColor}`}>{config.icon}</div>
 				)}
 				<div className="flex-1">
-					<p className="font-normal text-gray-900 dark:text-gray-100 text-lg">
+					<p className="font-semibold text-gray-900 dark:text-gray-100 text-lg">
 						{title}
 					</p>
 					{message && (
-						<p className="text-sm text-gray-800 dark:text-gray-300 mt-1">
+						<p className="text-sm text-gray-800 dark:text-gray-200 mt-1">
 							{message}
 						</p>
 					)}
 				</div>
 				<button
 					onClick={onClose}
-					className="shrink-0 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
+					className="shrink-0 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors p-1.5 rounded-full hover:bg-white/50 dark:hover:bg-black/30"
 				>
 					<CloseIcon className="h-5 w-5" />
 				</button>
 			</div>
-			{duration && ( // Render progress bar only if duration is provided
-				<div className="absolute bottom-0 left-0 h-1 w-full bg-gray-300/50 dark:bg-gray-600/50 rounded-b-xl overflow-hidden">
-					<motion.div
-						initial={{ width: 0 }}
-						animate={{ width: "100%" }}
-						transition={{ duration: duration / 1000, ease: "linear" }}
-						onAnimationComplete={() => onClose()} // Call onClose when progress bar animation completes
-						className={`h-full bg-gradient-to-r from-green-400 via-blue-400 to-sky-400 dark:from-green-500 dark:via-blue-500 dark:to-sky-500`}
-					></motion.div>
-				</div>
-			)}
 		</motion.div>
 	);
 };
