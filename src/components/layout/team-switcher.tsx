@@ -105,10 +105,10 @@ export function TeamSwitcher() {
 								spacingUnit: "0.5rem",
 							},
 						}}
-						createOrganizationUrl="/organization/complete"
+						createOrganizationMode="navigation"
+						createOrganizationUrl="/organization/complete?creating=true"
 						organizationProfileUrl="/organization/profile"
 						afterCreateOrganizationUrl="/organization/complete"
-						afterSelectOrganizationUrl="/home"
 						hidePersonal={true}
 					/>
 				</div>

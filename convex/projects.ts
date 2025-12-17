@@ -204,7 +204,7 @@ export const list = query({
 		),
 		clientId: v.optional(v.id("clients")),
 	},
-	handler: async (ctx, args): Promise<ProjectDocument[]> => {
+	handler: async (ctx: QueryCtx, args: any): Promise<ProjectDocument[]> => {
 		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
 		if (!userOrgId) {
 			return [];
@@ -220,19 +220,19 @@ export const list = query({
 			await validateClientAccess(ctx, args.clientId, userOrgId);
 			projects = await ctx.db
 				.query("projects")
-				.withIndex("by_client", (q) => q.eq("clientId", args.clientId!))
+				.withIndex("by_client", (q: any) => q.eq("clientId", args.clientId!))
 				.collect();
 		} else if (args.status) {
 			projects = await ctx.db
 				.query("projects")
-				.withIndex("by_status", (q) =>
+				.withIndex("by_status", (q: any) =>
 					q.eq("orgId", userOrgId).eq("status", args.status!)
 				)
 				.collect();
 		} else {
 			projects = await ctx.db
 				.query("projects")
-				.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
+				.withIndex("by_org", (q: any) => q.eq("orgId", userOrgId))
 				.collect();
 		}
 
@@ -254,12 +254,15 @@ export const list = query({
  */
 export const get = query({
 	args: { id: v.id("projects") },
-	handler: async (ctx, args): Promise<ProjectDocument | null> => {
+	handler: async (
+		ctx: QueryCtx,
+		args: any
+	): Promise<ProjectDocument | null> => {
 		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
 		if (!userOrgId) {
 			return null;
 		}
-		
+
 		const project = await getProjectWithOrgValidation(ctx, args.id, userOrgId);
 		if (!project) {
 			return null;
@@ -271,9 +274,10 @@ export const get = query({
 
 		// If user is a member, verify they're assigned to this project
 		if (isUserMember && currentUserId) {
-			const isAssigned = project.assignedUserIds && 
+			const isAssigned =
+				project.assignedUserIds &&
 				project.assignedUserIds.includes(currentUserId);
-			
+
 			if (!isAssigned) {
 				// Return null if member is not assigned (same as project not found)
 				return null;
@@ -308,7 +312,7 @@ export const create = mutation({
 		invoiceReminderEnabled: v.optional(v.boolean()),
 		scheduleForLater: v.optional(v.boolean()),
 	},
-	handler: async (ctx, args): Promise<ProjectId> => {
+	handler: async (ctx: MutationCtx, args: any): Promise<ProjectId> => {
 		// Validate title is not empty
 		if (!args.title.trim()) {
 			throw new Error("Project title is required");
@@ -362,8 +366,8 @@ export const bulkCreate = mutation({
 		),
 	},
 	handler: async (
-		ctx,
-		args
+		ctx: MutationCtx,
+		args: any
 	): Promise<Array<{ success: boolean; id?: ProjectId; error?: string }>> => {
 		const results: Array<{
 			success: boolean;
@@ -389,11 +393,11 @@ export const bulkCreate = mutation({
 				if (!clientId && projectData.clientName) {
 					const clients = await ctx.db
 						.query("clients")
-						.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
+						.withIndex("by_org", (q: any) => q.eq("orgId", userOrgId))
 						.collect();
 
 					const matchedClient = clients.find(
-						(c) =>
+						(c: any) =>
 							c.companyName.toLowerCase() ===
 							projectData.clientName!.toLowerCase()
 					);
@@ -491,7 +495,7 @@ export const update = mutation({
 		invoiceReminderEnabled: v.optional(v.boolean()),
 		scheduleForLater: v.optional(v.boolean()),
 	},
-	handler: async (ctx, args): Promise<ProjectId> => {
+	handler: async (ctx: MutationCtx, args: any): Promise<ProjectId> => {
 		const { id, ...updates } = args;
 
 		// Validate title is not empty if being updated
@@ -557,40 +561,107 @@ export const update = mutation({
 });
 
 /**
- * Delete a project with relationship validation
+ * Delete a project with cascading deletion of related entities
  */
 export const remove = mutation({
 	args: { id: v.id("projects") },
-	handler: async (ctx, args): Promise<ProjectId> => {
-		// First check if project has any related data
-		const tasks = await ctx.db
-			.query("tasks")
-			.withIndex("by_project", (q) => q.eq("projectId", args.id))
-			.collect();
-
-		const quotes = await ctx.db
-			.query("quotes")
-			.withIndex("by_project", (q) => q.eq("projectId", args.id))
-			.collect();
-
-		const invoices = await ctx.db
-			.query("invoices")
-			.withIndex("by_project", (q) => q.eq("projectId", args.id))
-			.collect();
-
-		// Prevent deletion if project has related data
-		if (tasks.length > 0 || quotes.length > 0 || invoices.length > 0) {
-			throw new Error(
-				"Cannot delete project with existing tasks, quotes, or invoices. " +
-					"Please remove or transfer these items first."
-			);
-		}
-
+	handler: async (ctx: MutationCtx, args: any): Promise<ProjectId> => {
 		const project = await getProjectOrThrow(ctx, args.id); // Validate access
 
-		// Remove from aggregates before deleting
+		// 1. Delete all tasks associated with this project
+		const tasks = await ctx.db
+			.query("tasks")
+			.withIndex("by_project", (q: any) => q.eq("projectId", args.id))
+			.collect();
+
+		for (const task of tasks) {
+			await ctx.db.delete(task._id);
+		}
+
+		// 2. Delete all quotes and their line items
+		const quotes = await ctx.db
+			.query("quotes")
+			.withIndex("by_project", (q: any) => q.eq("projectId", args.id))
+			.collect();
+
+		for (const quote of quotes) {
+			// Delete quote line items first
+			const quoteLineItems = await ctx.db
+				.query("quoteLineItems")
+				.withIndex("by_quote", (q: any) => q.eq("quoteId", quote._id))
+				.collect();
+
+			for (const lineItem of quoteLineItems) {
+				await ctx.db.delete(lineItem._id);
+			}
+
+			// Delete documents (PDFs) associated with this quote
+			const quoteDocuments = await ctx.db
+				.query("documents")
+				.withIndex("by_document", (q: any) =>
+					q.eq("documentType", "quote").eq("documentId", quote._id)
+				)
+				.collect();
+
+			for (const doc of quoteDocuments) {
+				// Delete the stored files
+				if (doc.storageId) {
+					await ctx.storage.delete(doc.storageId);
+				}
+				if (doc.signedStorageId) {
+					await ctx.storage.delete(doc.signedStorageId);
+				}
+				await ctx.db.delete(doc._id);
+			}
+
+			// Delete the quote itself
+			await ctx.db.delete(quote._id);
+		}
+
+		// 3. Delete all invoices and their line items
+		const invoices = await ctx.db
+			.query("invoices")
+			.withIndex("by_project", (q: any) => q.eq("projectId", args.id))
+			.collect();
+
+		for (const invoice of invoices) {
+			// Delete invoice line items first
+			const invoiceLineItems = await ctx.db
+				.query("invoiceLineItems")
+				.withIndex("by_invoice", (q: any) => q.eq("invoiceId", invoice._id))
+				.collect();
+
+			for (const lineItem of invoiceLineItems) {
+				await ctx.db.delete(lineItem._id);
+			}
+
+			// Delete documents (PDFs) associated with this invoice
+			const invoiceDocuments = await ctx.db
+				.query("documents")
+				.withIndex("by_document", (q: any) =>
+					q.eq("documentType", "invoice").eq("documentId", invoice._id)
+				)
+				.collect();
+
+			for (const doc of invoiceDocuments) {
+				// Delete the stored files
+				if (doc.storageId) {
+					await ctx.storage.delete(doc.storageId);
+				}
+				if (doc.signedStorageId) {
+					await ctx.storage.delete(doc.signedStorageId);
+				}
+				await ctx.db.delete(doc._id);
+			}
+
+			// Delete the invoice itself
+			await ctx.db.delete(invoice._id);
+		}
+
+		// 4. Remove from aggregates before deleting the project
 		await AggregateHelpers.removeProject(ctx, project as ProjectDocument);
 
+		// 5. Finally, delete the project itself
 		await ctx.db.delete(args.id);
 
 		return args.id;
@@ -617,7 +688,7 @@ export const search = query({
 		),
 		clientId: v.optional(v.id("clients")),
 	},
-	handler: async (ctx, args): Promise<ProjectDocument[]> => {
+	handler: async (ctx: QueryCtx, args: any): Promise<ProjectDocument[]> => {
 		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
 		if (!userOrgId) {
 			return [];
@@ -629,13 +700,13 @@ export const search = query({
 
 		let projects = await ctx.db
 			.query("projects")
-			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
+			.withIndex("by_org", (q: any) => q.eq("orgId", userOrgId))
 			.collect();
 
 		// Filter by assignment if user is a member
 		if (isUserMember && currentUserId) {
 			projects = projects.filter(
-				(project) =>
+				(project: any) =>
 					project.assignedUserIds &&
 					project.assignedUserIds.includes(currentUserId)
 			);
@@ -683,7 +754,7 @@ export const search = query({
  */
 export const getStats = query({
 	args: {},
-	handler: async (ctx): Promise<ProjectStats> => {
+	handler: async (ctx: QueryCtx): Promise<ProjectStats> => {
 		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
 		if (!userOrgId) {
 			return createEmptyProjectStats();
@@ -695,13 +766,13 @@ export const getStats = query({
 
 		let projects = await ctx.db
 			.query("projects")
-			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
+			.withIndex("by_org", (q: any) => q.eq("orgId", userOrgId))
 			.collect();
 
 		// Filter by assignment if user is a member
 		if (isUserMember && currentUserId) {
 			projects = projects.filter(
-				(project) =>
+				(project: any) =>
 					project.assignedUserIds &&
 					project.assignedUserIds.includes(currentUserId)
 			);
@@ -726,12 +797,12 @@ export const getStats = query({
 		const now = Date.now();
 		const nextWeek = DateUtils.addDays(now, 7);
 
-		projects.forEach((project: ProjectDocument) => {
+		projects.forEach((project: any) => {
 			// Count by status
-			stats.byStatus[project.status]++;
+			stats.byStatus[project.status as keyof typeof stats.byStatus]++;
 
 			// Count by type
-			stats.byType[project.projectType]++;
+			stats.byType[project.projectType as keyof typeof stats.byType]++;
 
 			// Count upcoming deadlines (next 7 days) - based on end date
 			if (
@@ -762,7 +833,7 @@ export const getStats = query({
 // TODO: Candidate for deletion if confirmed unused.
 export const getByAssignee = query({
 	args: { userId: v.id("users") },
-	handler: async (ctx, args): Promise<ProjectDocument[]> => {
+	handler: async (ctx: QueryCtx, args: any): Promise<ProjectDocument[]> => {
 		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
 		if (!userOrgId) {
 			return [];
@@ -777,12 +848,12 @@ export const getByAssignee = query({
 
 		const projects = await ctx.db
 			.query("projects")
-			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
+			.withIndex("by_org", (q: any) => q.eq("orgId", userOrgId))
 			.collect();
 
 		// Filter projects where user is assigned or is the salesperson
 		let filteredProjects = projects.filter(
-			(project: ProjectDocument) =>
+			(project: any) =>
 				project.salespersonId === args.userId ||
 				(project.assignedUserIds &&
 					project.assignedUserIds.includes(args.userId))
@@ -791,7 +862,7 @@ export const getByAssignee = query({
 		// If requesting user is a member, further filter to only their assigned projects
 		if (isUserMember && currentUserId) {
 			filteredProjects = filteredProjects.filter(
-				(project) =>
+				(project: any) =>
 					project.assignedUserIds &&
 					project.assignedUserIds.includes(currentUserId)
 			);
@@ -807,7 +878,7 @@ export const getByAssignee = query({
 // TODO: Candidate for deletion if confirmed unused.
 export const getUpcomingDeadlines = query({
 	args: { days: v.optional(v.number()) },
-	handler: async (ctx, args): Promise<ProjectDocument[]> => {
+	handler: async (ctx: QueryCtx, args: any): Promise<ProjectDocument[]> => {
 		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
 		if (!userOrgId) {
 			return [];
@@ -821,13 +892,13 @@ export const getUpcomingDeadlines = query({
 
 		let projects = await ctx.db
 			.query("projects")
-			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
+			.withIndex("by_org", (q: any) => q.eq("orgId", userOrgId))
 			.collect();
 
 		// Filter by assignment if user is a member
 		if (isUserMember && currentUserId) {
 			projects = projects.filter(
-				(project) =>
+				(project: any) =>
 					project.assignedUserIds &&
 					project.assignedUserIds.includes(currentUserId)
 			);
@@ -853,7 +924,7 @@ export const getUpcomingDeadlines = query({
 // TODO: Candidate for deletion if confirmed unused.
 export const getOverdue = query({
 	args: {},
-	handler: async (ctx): Promise<ProjectDocument[]> => {
+	handler: async (ctx: QueryCtx): Promise<ProjectDocument[]> => {
 		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
 		if (!userOrgId) {
 			return [];
@@ -861,13 +932,13 @@ export const getOverdue = query({
 
 		const projects = await ctx.db
 			.query("projects")
-			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
+			.withIndex("by_org", (q: any) => q.eq("orgId", userOrgId))
 			.collect();
 
 		const now = Date.now();
 
 		return projects.filter(
-			(project: ProjectDocument) =>
+			(project: any) =>
 				project.endDate &&
 				project.endDate < now &&
 				project.status !== "completed" &&
