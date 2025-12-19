@@ -1,6 +1,12 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
+import {
+	AnimatePresence,
+	motion,
+	useMotionValue,
+	useTransform,
+	useMotionValueEvent,
+} from "framer-motion";
 import {
 	Briefcase,
 	Calendar,
@@ -11,7 +17,7 @@ import {
 	Smartphone,
 	Users,
 } from "lucide-react";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { StyledButton } from "@/components/ui/styled/styled-button";
 
 // --- Widgets ---
@@ -233,7 +239,7 @@ function RBACWidget() {
 	);
 }
 
-// Color styles mapping for Tailwind JIT compiler
+// Color styles mapping
 const colorStyles = {
 	blue: {
 		gradient:
@@ -289,7 +295,6 @@ const colorStyles = {
 		cardBg: "bg-red-50/50 dark:bg-red-900/10",
 		titleText: "text-red-900 dark:text-red-100",
 	},
-	// Default fallback for unknown colors
 	gray: {
 		gradient:
 			"from-gray-50/50 to-transparent dark:from-gray-900/10 dark:to-transparent",
@@ -378,38 +383,69 @@ const features = [
 	},
 ];
 
+const CARD_WIDTH = 320; // w-80 = 20rem = 320px
+const CARD_HEIGHT = 320; // h-80
+const ORBIT_RADIUS_X = 500; // Wider orbit
+const ORBIT_RADIUS_Z = 200; // Depth of orbit
+
 function FeatureCard({
 	feature,
-	onMouseEnter,
-	onMouseLeave,
+	index,
+	rotation,
+	total,
 }: {
 	feature: (typeof features)[0];
-	onMouseEnter: () => void;
-	onMouseLeave: () => void;
+	index: number;
+	rotation: any;
+	total: number;
 }) {
-	// Get color styles with fallback to gray if color is missing or unknown
 	const styles = colorStyles[feature.color] || colorStyles.gray;
+	const angleStep = 360 / total;
+	const baseAngle = index * angleStep;
+
+	const transform = useTransform(rotation, (r: number) => {
+		const currentAngle = (baseAngle + r) * (Math.PI / 180);
+
+		// Calculate orbital position (0° = front, 180° = back)
+		const x = Math.sin(currentAngle) * ORBIT_RADIUS_X;
+		const z = Math.cos(currentAngle) * ORBIT_RADIUS_Z;
+		const normalizedZ = Math.cos(currentAngle);
+
+		// Scale cards based on depth (front = 1.0, back = 0.6)
+		const scale = 0.6 + ((normalizedZ + 1) / 2) * 0.4;
+
+		return `translateX(${x}px) translateZ(${z}px) scale(${scale})`;
+	});
+
+	const zIndex = useTransform(rotation, (r: number) => {
+		const currentAngle = (baseAngle + r) * (Math.PI / 180);
+		const normalizedZ = Math.cos(currentAngle);
+		return Math.round((normalizedZ + 1) * 100);
+	});
 
 	return (
-		<div
-			onMouseEnter={onMouseEnter}
-			onMouseLeave={onMouseLeave}
-			className="relative h-80 w-80 shrink-0 overflow-hidden rounded-3xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 group hover:border-blue-500/50 dark:hover:border-blue-500/50 transition-colors cursor-pointer"
+		<motion.div
+			style={{
+				transform,
+				zIndex,
+				position: "absolute",
+				width: CARD_WIDTH,
+				height: CARD_HEIGHT,
+				left: "50%",
+				top: "50%",
+				marginLeft: -CARD_WIDTH / 2,
+				marginTop: -CARD_HEIGHT / 2,
+			}}
+			className="overflow-hidden rounded-3xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 transition-colors"
 		>
-			{/* Content Layer */}
 			<div className="absolute inset-0 flex flex-col">
-				{/* Widget Area - Top 60% */}
 				<div className="flex-1 relative overflow-hidden">
-					{/* Gradient Backdrop */}
 					<div
 						className={`absolute inset-0 bg-linear-to-b ${styles.gradient} opacity-50`}
 					/>
-					<div className="relative z-10 h-full w-full transform transition-transform duration-500 group-hover:scale-105">
-						{feature.widget}
-					</div>
+					<div className="relative z-10 h-full w-full">{feature.widget}</div>
 				</div>
 
-				{/* Text Area - Bottom 40% */}
 				<div className="relative z-20 p-6 bg-white/40 dark:bg-gray-900/40 backdrop-blur-sm border-t border-gray-100 dark:border-gray-800">
 					<div className="flex items-center gap-3 mb-3">
 						<div
@@ -421,78 +457,61 @@ function FeatureCard({
 							{feature.title}
 						</h3>
 					</div>
-					<p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
-						{feature.description}
-					</p>
+					{/* Description removed from card, shown in center focus area instead */}
 				</div>
 			</div>
-		</div>
+		</motion.div>
 	);
 }
 
 export default function FeatureSection() {
-	const [hoveredFeature, setHoveredFeature] = useState<
-		(typeof features)[0] | null
-	>(null);
-	const [isPaused, setIsPaused] = useState(false);
-	const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-	const leaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+	const [activeFeature, setActiveFeature] = useState<(typeof features)[0]>(
+		features[0]
+	);
 
-	// Cleanup timeouts on unmount to prevent state updates after unmount
+	const rotation = useMotionValue(0);
+
+	// Animate rotation
 	useEffect(() => {
-		return () => {
-			if (hoverTimeoutRef.current) {
-				clearTimeout(hoverTimeoutRef.current);
-			}
-			if (leaveTimeoutRef.current) {
-				clearTimeout(leaveTimeoutRef.current);
-			}
+		let lastTime = performance.now();
+		let animationFrame: number;
+
+		const loop = (time: number) => {
+			const delta = time - lastTime;
+			const speed = 0.005; // slower rotation speed
+			rotation.set(rotation.get() + delta * speed);
+			lastTime = time;
+			animationFrame = requestAnimationFrame(loop);
 		};
-	}, []);
 
-	const handleMouseEnter = (feature: (typeof features)[0]) => {
-		// Clear any pending leave timeout
-		if (leaveTimeoutRef.current) {
-			clearTimeout(leaveTimeoutRef.current);
-			leaveTimeoutRef.current = null;
+		animationFrame = requestAnimationFrame(loop);
+
+		return () => cancelAnimationFrame(animationFrame);
+	}, [rotation]);
+
+	// Detect which feature is closest to the front (angle 0) and set as active
+	useMotionValueEvent(rotation, "change", (latest) => {
+		const step = 360 / features.length;
+		let closestIndex = 0;
+		let minDist = 360;
+
+		features.forEach((_, i) => {
+			const itemAngle = (i * step + latest) % 360;
+			const dist = Math.min(Math.abs(itemAngle), Math.abs(itemAngle - 360));
+			if (dist < minDist) {
+				minDist = dist;
+				closestIndex = i;
+			}
+		});
+
+		if (features[closestIndex] !== activeFeature) {
+			setActiveFeature(features[closestIndex]);
 		}
-
-		// Pause immediately
-		setIsPaused(true);
-
-		// Start 1s timer to show details
-		if (!hoverTimeoutRef.current) {
-			hoverTimeoutRef.current = setTimeout(() => {
-				setHoveredFeature(feature);
-			}, 1000);
-		} else {
-			// If already hovering another one, switch immediately or handle grace period?
-			// The requirement says "one second delay... display info".
-			// If switching fast, we might want to reset the timer.
-			clearTimeout(hoverTimeoutRef.current);
-			hoverTimeoutRef.current = setTimeout(() => {
-				setHoveredFeature(feature);
-			}, 1000);
-		}
-	};
-
-	const handleMouseLeave = () => {
-		// Clear any pending hover timeout
-		if (hoverTimeoutRef.current) {
-			clearTimeout(hoverTimeoutRef.current);
-			hoverTimeoutRef.current = null;
-		}
-
-		// Start 1s timer to hide details and resume scroll
-		leaveTimeoutRef.current = setTimeout(() => {
-			setHoveredFeature(null);
-			setIsPaused(false);
-		}, 1000);
-	};
+	});
 
 	return (
-		<div className="bg-white py-24 sm:py-32 dark:bg-gray-900 min-h-[900px] flex flex-col justify-center relative">
-			<div className="mx-auto max-w-7xl px-6 lg:px-8 mb-16">
+		<div className="bg-white py-24 sm:py-32 dark:bg-gray-900 min-h-[900px] flex flex-col justify-center relative overflow-hidden">
+			<div className="mx-auto max-w-7xl px-6 lg:px-8 mb-8 relative z-30">
 				<motion.div
 					initial={{ opacity: 0, y: 20 }}
 					whileInView={{ opacity: 1, y: 0 }}
@@ -513,111 +532,55 @@ export default function FeatureSection() {
 				</motion.div>
 			</div>
 
-			{/* Infinite Scroll Carousel */}
-			<div className="relative w-full mb-12">
+			{/* Orbiting Carousel */}
+			<div className="relative w-full h-[600px] flex items-center justify-center perspective-1000">
 				{/* Fade Gradients */}
 				<div className="pointer-events-none absolute left-0 top-0 bottom-0 w-32 bg-linear-to-r from-white dark:from-gray-900 z-10" />
 				<div className="pointer-events-none absolute right-0 top-0 bottom-0 w-32 bg-linear-to-l from-white dark:from-gray-900 z-10" />
 
-				<div className="flex w-full overflow-hidden">
-					<div
-						className={`flex animate-scroll gap-6 py-4 px-6 ${
-							isPaused ? "paused" : ""
-						}`}
-					>
-						{/* First Set */}
-						{features.map((feature, idx) => (
-							<FeatureCard
-								key={`a-${idx}`}
-								feature={feature}
-								onMouseEnter={() => handleMouseEnter(feature)}
-								onMouseLeave={handleMouseLeave}
-							/>
-						))}
-						{/* Second Set (Duplicate for seamless loop) */}
-						{features.map((feature, idx) => (
-							<FeatureCard
-								key={`b-${idx}`}
-								feature={feature}
-								onMouseEnter={() => handleMouseEnter(feature)}
-								onMouseLeave={handleMouseLeave}
-							/>
-						))}
-					</div>
+				<div className="relative w-full h-full max-w-5xl mx-auto perspective-[1000px]">
+					{features.map((feature, idx) => (
+						<FeatureCard
+							key={idx}
+							feature={feature}
+							index={idx}
+							rotation={rotation}
+							total={features.length}
+						/>
+					))}
 				</div>
 			</div>
 
-			{/* Info Card Area (Fixed height to prevent layout shift) */}
-			<div className="h-32 mx-auto max-w-3xl px-6 relative flex items-center justify-center">
+			{/* Info Card Area */}
+			<div className="h-48 mx-auto max-w-3xl px-6 relative flex items-center justify-center z-30 -mt-20">
 				<AnimatePresence mode="wait">
-					{hoveredFeature ? (
+					{activeFeature ? (
 						<motion.div
-							key="info"
-							initial={{ opacity: 0, y: 10 }}
-							animate={{ opacity: 1, y: 0 }}
-							exit={{ opacity: 0, y: -10 }}
-							transition={{ duration: 0.3 }}
+							key={activeFeature.title}
+							initial={{ opacity: 0, y: 20, scale: 0.95 }}
+							animate={{ opacity: 1, y: 0, scale: 1 }}
+							exit={{ opacity: 0, y: -20, scale: 0.95 }}
+							transition={{ duration: 0.4 }}
 							className={`rounded-2xl border ${
-								colorStyles[hoveredFeature.color || "gray"].cardBorder
+								colorStyles[activeFeature.color || "gray"].cardBorder
 							} ${
-								colorStyles[hoveredFeature.color || "gray"].cardBg
-							} p-6 text-center shadow-sm backdrop-blur-sm`}
+								colorStyles[activeFeature.color || "gray"].cardBg
+							} p-6 text-center shadow-lg backdrop-blur-md bg-white/80 dark:bg-gray-900/80`}
 						>
 							<h4
-								className={`text-lg font-semibold ${
-									colorStyles[hoveredFeature.color || "gray"].titleText
-								} mb-2`}
+								className={`text-2xl font-bold ${
+									colorStyles[activeFeature.color || "gray"].titleText
+								} mb-3`}
 							>
-								More about {hoveredFeature.title}
+								{activeFeature.title}
 							</h4>
-							<p className="text-sm text-gray-700 dark:text-gray-300 max-w-2xl">
-								{hoveredFeature.details}
+							<p className="text-base text-gray-700 dark:text-gray-300 max-w-2xl mx-auto leading-relaxed">
+								{activeFeature.details}
 							</p>
 						</motion.div>
-					) : (
-						<motion.div
-							key="cta"
-							initial={{ opacity: 0 }}
-							animate={{ opacity: 1 }}
-							exit={{ opacity: 0 }}
-							transition={{ duration: 0.3 }}
-							className="text-center"
-						>
-							<p className="text-base leading-7 text-gray-600 dark:text-gray-400 mb-4">
-								Ready to streamline your small business?
-							</p>
-							<StyledButton
-								label="Get Started Today"
-								intent="primary"
-								size="lg"
-								onClick={() => {
-									document
-										.getElementById("pricing")
-										?.scrollIntoView({ behavior: "smooth" });
-								}}
-							/>
-						</motion.div>
-					)}
+					) : null}
 				</AnimatePresence>
 			</div>
-
-			<style jsx>{`
-				@keyframes scroll {
-					from {
-						transform: translateX(0);
-					}
-					to {
-						transform: translateX(-50%);
-					}
-				}
-				.animate-scroll {
-					animation: scroll 80s linear infinite;
-					width: max-content;
-				}
-				.paused {
-					animation-play-state: paused;
-				}
-			`}</style>
 		</div>
 	);
 }
