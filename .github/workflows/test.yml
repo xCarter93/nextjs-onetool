@@ -36,18 +36,20 @@ jobs:
       - name: Run tests
         run: pnpm test:once
 
-      - name: Generate coverage report
-        if: success()
-        run: pnpm test:coverage
+      # Coverage generation - optional, requires @vitest/coverage-v8
+      # Uncomment after running: pnpm add -D @vitest/coverage-v8
+      # - name: Generate coverage report
+      #   if: success()
+      #   run: pnpm test:coverage
 
-      - name: Upload coverage reports
-        if: success()
-        uses: codecov/codecov-action@v4
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          fail_ci_if_error: false
-          verbose: true
-        continue-on-error: true
+      # - name: Upload coverage reports
+      #   if: success()
+      #   uses: codecov/codecov-action@v4
+      #   with:
+      #     token: ${{ secrets.CODECOV_TOKEN }}
+      #     fail_ci_if_error: false
+      #     verbose: true
+      #   continue-on-error: true
 
   lint:
     runs-on: ubuntu-latest
