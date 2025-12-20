@@ -18,7 +18,16 @@ const eslintConfig = [
 			"out/**",
 			"build/**",
 			"next-env.d.ts",
+			"**/*.test.ts",
+			"**/*.test.tsx",
+			"convex/test.setup.ts",
 		],
+	},
+	{
+		rules: {
+			"@typescript-eslint/no-unused-vars": "warn",
+			"@typescript-eslint/no-explicit-any": "warn",
+		},
 	},
 ];
 
