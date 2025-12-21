@@ -56,6 +56,7 @@ import {
 	SelectValue,
 	SelectItem,
 } from "@/components/ui/styled/styled-select";
+import { StyledMultiSelector } from "@/components/ui/styled/styled-multi-selector";
 
 type ClientId = Id<"clients">;
 type UserId = Id<"users">;
@@ -112,7 +113,7 @@ const formSchema = z.object({
 	projectType: z.enum(["one-off", "recurring"]),
 	startDate: z.date().optional(),
 	endDate: z.date().optional(),
-	assignedUserId: z.string().optional(), // Single user in form, converted to array for DB
+	assignedUserIds: z.array(z.string()).optional(), // Array of user IDs
 	invoiceReminderEnabled: z.boolean(),
 	scheduleForLater: z.boolean(),
 });
@@ -198,7 +199,7 @@ export function ProjectViewEditForm({
 			projectType: project.projectType,
 			startDate: project.startDate ? new Date(project.startDate) : undefined,
 			endDate: project.endDate ? new Date(project.endDate) : undefined,
-			assignedUserId: project.assignedUserIds?.[0] || "", // Take first user from array
+			assignedUserIds: project.assignedUserIds || [], // Array of user IDs
 			invoiceReminderEnabled: project.invoiceReminderEnabled || false,
 			scheduleForLater: project.scheduleForLater || false,
 		},
@@ -229,12 +230,19 @@ export function ProjectViewEditForm({
 				(project.endDate || undefined)
 			)
 				updates.endDate = value.endDate ? value.endDate.getTime() : undefined;
-			// Convert single user to array for database
-			const currentAssignedUser = project.assignedUserIds?.[0] || "";
-			if ((value.assignedUserId || "") !== currentAssignedUser) {
-				updates.assignedUserIds = value.assignedUserId
-					? [value.assignedUserId as UserId]
-					: undefined;
+			// Handle array of assigned users
+			const currentAssignedUserIds = project.assignedUserIds || [];
+			const newAssignedUserIds = value.assignedUserIds || [];
+			const assignedUsersChanged =
+				currentAssignedUserIds.length !== newAssignedUserIds.length ||
+				currentAssignedUserIds.some(
+					(id, index) => id !== newAssignedUserIds[index]
+				);
+			if (assignedUsersChanged) {
+				updates.assignedUserIds =
+					newAssignedUserIds.length > 0
+						? (newAssignedUserIds as UserId[])
+						: undefined;
 			}
 			if (
 				(value.invoiceReminderEnabled || false) !==
@@ -272,7 +280,7 @@ export function ProjectViewEditForm({
 				"endDate",
 				project.endDate ? new Date(project.endDate) : undefined
 			);
-			form.setFieldValue("assignedUserId", project.assignedUserIds?.[0] || "");
+			form.setFieldValue("assignedUserIds", project.assignedUserIds || []);
 			form.setFieldValue(
 				"invoiceReminderEnabled",
 				project.invoiceReminderEnabled || false
@@ -294,7 +302,7 @@ export function ProjectViewEditForm({
 			"endDate",
 			project.endDate ? new Date(project.endDate) : undefined
 		);
-		form.setFieldValue("assignedUserId", project.assignedUserIds?.[0] || "");
+		form.setFieldValue("assignedUserIds", project.assignedUserIds || []);
 		form.setFieldValue(
 			"invoiceReminderEnabled",
 			project.invoiceReminderEnabled || false
@@ -599,7 +607,7 @@ export function ProjectViewEditForm({
 													property.propertyName
 														? `${property.propertyName} - ${property.streetAddress}`
 														: property.streetAddress
-												)
+											  )
 											: []
 									}
 									placeholder={
@@ -608,12 +616,12 @@ export function ProjectViewEditForm({
 												? `${primaryProperty.propertyName} - ${primaryProperty.streetAddress}`
 												: primaryProperty.streetAddress
 											: client &&
-												  clientProperties &&
-												  clientProperties.length > 0
-												? "Select a property..."
-												: client
-													? "No properties available..."
-													: "Select a client first..."
+											  clientProperties &&
+											  clientProperties.length > 0
+											? "Select a property..."
+											: client
+											? "No properties available..."
+											: "Select a client first..."
 									}
 									disabled={!isEditing}
 									onSelect={(option) => {
@@ -727,24 +735,34 @@ export function ProjectViewEditForm({
 										clientContacts && clientContacts.length > 0
 											? clientContacts.map(
 													(contact) =>
-														`${contact.firstName} ${contact.lastName}${contact.jobTitle ? ` - ${contact.jobTitle}` : ""}`
-												)
+														`${contact.firstName} ${contact.lastName}${
+															contact.jobTitle ? ` - ${contact.jobTitle}` : ""
+														}`
+											  )
 											: []
 									}
 									placeholder={
 										primaryContact
-											? `${primaryContact.firstName} ${primaryContact.lastName}${primaryContact.jobTitle ? ` - ${primaryContact.jobTitle}` : ""}`
+											? `${primaryContact.firstName} ${
+													primaryContact.lastName
+											  }${
+													primaryContact.jobTitle
+														? ` - ${primaryContact.jobTitle}`
+														: ""
+											  }`
 											: client && clientContacts && clientContacts.length > 0
-												? "Select a contact..."
-												: client
-													? "No contacts available..."
-													: "Select a client first..."
+											? "Select a contact..."
+											: client
+											? "No contacts available..."
+											: "Select a client first..."
 									}
 									disabled={!isEditing}
 									onSelect={(option) => {
 										if (isEditing && clientContacts) {
 											const selectedContact = clientContacts.find((contact) => {
-												const displayName = `${contact.firstName} ${contact.lastName}${contact.jobTitle ? ` - ${contact.jobTitle}` : ""}`;
+												const displayName = `${contact.firstName} ${
+													contact.lastName
+												}${contact.jobTitle ? ` - ${contact.jobTitle}` : ""}`;
 												return displayName === option;
 											});
 											console.log("Selected contact:", selectedContact);
@@ -921,34 +939,43 @@ export function ProjectViewEditForm({
 									/>
 								</FieldGroup>
 
-								{/* Assigned User */}
+								{/* Assigned Users */}
 								<FieldGroup>
 									<form.Field
-										name="assignedUserId"
-										children={(field) => (
-											<Field>
-												<FieldLabel htmlFor={field.name} className="flex items-center gap-2">
-													<User className="h-4 w-4 text-primary" />
-													Assign To
-												</FieldLabel>
-												<StyledSelect
-													value={field.state.value || undefined}
-													onValueChange={(value) => field.handleChange(value)}
-													disabled={!isEditing}
-												>
-													<StyledSelectTrigger className="w-full">
-														<SelectValue placeholder="Unassigned" />
-													</StyledSelectTrigger>
-													<StyledSelectContent>
-														{users?.map((user) => (
-															<SelectItem key={user._id} value={user._id}>
-																{user.name || user.email}
-															</SelectItem>
-														))}
-													</StyledSelectContent>
-												</StyledSelect>
-											</Field>
-										)}
+										name="assignedUserIds"
+										children={(field) => {
+											// Get current value as strings for the multi-selector
+											const currentValues = (field.state.value ||
+												[]) as string[];
+
+											return (
+												<Field>
+													<FieldLabel
+														htmlFor={field.name}
+														className="flex items-center gap-2"
+													>
+														<User className="h-4 w-4 text-primary" />
+														Assign To
+													</FieldLabel>
+													<StyledMultiSelector
+														options={
+															users?.map((user) => ({
+																label: user.name || user.email,
+																value: user._id,
+															})) || []
+														}
+														value={currentValues}
+														onValueChange={(values) =>
+															field.handleChange(values as UserId[])
+														}
+														placeholder="Select team members"
+														maxCount={2}
+														disabled={!isEditing}
+														className="w-full"
+													/>
+												</Field>
+											);
+										}}
 									/>
 								</FieldGroup>
 
@@ -1091,7 +1118,7 @@ export function ProjectViewEditForm({
 																setStartDateOpen(false);
 															}}
 															disabled={isUpdating}
-															className="!bg-white dark:!bg-gray-950"
+															className="bg-white! dark:bg-gray-950!"
 														/>
 													</PopoverContent>
 												</Popover>
@@ -1147,7 +1174,7 @@ export function ProjectViewEditForm({
 																	checkDate.setHours(0, 0, 0, 0);
 																	return checkDate < start;
 																}}
-																className="!bg-white dark:!bg-gray-950"
+																className="bg-white! dark:bg-gray-950!"
 															/>
 														</PopoverContent>
 													</Popover>
@@ -1230,8 +1257,8 @@ export function ProjectViewEditForm({
 															task.status === "completed"
 																? "bg-green-500"
 																: task.status === "cancelled"
-																	? "bg-red-500"
-																	: "bg-yellow-500"
+																? "bg-red-500"
+																: "bg-yellow-500"
 														}`}
 													/>
 													<div>
@@ -1363,6 +1390,17 @@ export function ProjectViewEditForm({
 			<form.Subscribe
 				selector={(state) => state.values}
 				children={(formValues) => {
+					// Helper to compare arrays
+					const arraysEqual = (
+						a: string[] | undefined,
+						b: string[] | undefined
+					) => {
+						const arr1 = a || [];
+						const arr2 = b || [];
+						if (arr1.length !== arr2.length) return false;
+						return arr1.every((val, idx) => val === arr2[idx]);
+					};
+
 					// Recalculate isDirty with current form values
 					const currentIsDirty =
 						(formValues.clientId || "") !==
@@ -1375,8 +1413,7 @@ export function ProjectViewEditForm({
 							: undefined) !== (project.startDate || undefined) ||
 						(formValues.endDate ? formValues.endDate.getTime() : undefined) !==
 							(project.endDate || undefined) ||
-						(formValues.assignedUserId || "") !==
-							(project.assignedUserIds?.[0] || "") ||
+						!arraysEqual(formValues.assignedUserIds, project.assignedUserIds) ||
 						(formValues.invoiceReminderEnabled || false) !==
 							(project.invoiceReminderEnabled || false) ||
 						(formValues.scheduleForLater || false) !==
