@@ -1,6 +1,6 @@
 /**
  * Styled Components - Unified styling system wrappers
- * 
+ *
  * These components wrap the base Shadcn components with consistent
  * application styling patterns. Use these instead of the base components
  * for consistent design across the application.
@@ -13,4 +13,5 @@ export * from "./styled-badge";
 export * from "./styled-table";
 export * from "./styled-dialog";
 export * from "./styled-select";
-
+export * from "./styled-tabs";
+export * from "./styled-tags-input";
