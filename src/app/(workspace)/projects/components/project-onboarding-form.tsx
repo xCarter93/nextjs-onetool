@@ -43,6 +43,7 @@ import {
 	SelectValue,
 	SelectItem,
 } from "@/components/ui/styled/styled-select";
+import { StyledMultiSelector } from "@/components/ui/styled/styled-multi-selector";
 import { User } from "lucide-react";
 
 type ClientId = Id<"clients">;
@@ -67,8 +68,8 @@ export interface ProjectFormData {
 	startTime: string;
 	endTime: string;
 
-	// Assignment (single user in form, converted to array for DB)
-	assignedUserId: string;
+	// Assignment (multiple users)
+	assignedUserIds: string[];
 
 	// Settings
 	invoiceReminderEnabled: boolean;
@@ -90,7 +91,7 @@ const initialFormData: ProjectFormData = {
 	endDate: undefined,
 	startTime: "",
 	endTime: "",
-	assignedUserId: "",
+	assignedUserIds: [],
 	invoiceReminderEnabled: true,
 	scheduleForLater: false,
 };
@@ -106,7 +107,7 @@ const formSchema = z
 		endDate: z.date().optional(),
 		startTime: z.string(),
 		endTime: z.string(),
-		assignedUserId: z.string(),
+		assignedUserIds: z.array(z.string()),
 		invoiceReminderEnabled: z.boolean(),
 		scheduleForLater: z.boolean(),
 	})
@@ -346,9 +347,9 @@ export function ProjectOnboardingForm({
 					projectType: value.projectType,
 					startDate: value.startDate ? value.startDate.getTime() : undefined,
 					endDate: value.endDate ? value.endDate.getTime() : undefined,
-					// Convert single user to array for database
-					assignedUserIds: value.assignedUserId
-						? [value.assignedUserId as UserId]
+					// Handle multiple assigned users
+					assignedUserIds: value.assignedUserIds.length > 0
+						? (value.assignedUserIds as UserId[])
 						: undefined,
 					invoiceReminderEnabled: value.invoiceReminderEnabled,
 					scheduleForLater: value.scheduleForLater,
@@ -978,33 +979,37 @@ export function ProjectOnboardingForm({
 										/>
 									</FieldGroup>
 
-									{/* Assigned User */}
+									{/* Assigned Users */}
 									<FieldGroup className="sm:col-span-4">
 										<form.Field
-											name="assignedUserId"
-											children={(field) => (
-												<Field>
-													<FieldLabel htmlFor={field.name} className="flex items-center gap-2">
-														<User className="h-4 w-4 text-primary" />
-														Assign To
-													</FieldLabel>
-													<StyledSelect
-														value={field.state.value || undefined}
-														onValueChange={(value) => field.handleChange(value)}
-													>
-														<StyledSelectTrigger className="w-full" disabled={isLoading}>
-															<SelectValue placeholder="Unassigned" />
-														</StyledSelectTrigger>
-														<StyledSelectContent>
-															{users?.map((user) => (
-																<SelectItem key={user._id} value={user._id}>
-																	{user.name || user.email}
-																</SelectItem>
-															))}
-														</StyledSelectContent>
-													</StyledSelect>
-												</Field>
-											)}
+											name="assignedUserIds"
+											children={(field) => {
+												// Get current value as strings for the multi-selector
+												const currentValues = (field.state.value || []) as string[];
+												
+												return (
+													<Field>
+														<FieldLabel htmlFor={field.name} className="flex items-center gap-2">
+															<User className="h-4 w-4 text-primary" />
+															Assign To
+														</FieldLabel>
+														<StyledMultiSelector
+															options={
+																users?.map((user) => ({
+																	label: user.name || user.email,
+																	value: user._id,
+																})) || []
+															}
+															value={currentValues}
+															onValueChange={(values) => field.handleChange(values as UserId[])}
+															placeholder="Select team members"
+															maxCount={2}
+															disabled={isLoading}
+															className="w-full"
+														/>
+													</Field>
+												);
+											}}
 										/>
 									</FieldGroup>
 

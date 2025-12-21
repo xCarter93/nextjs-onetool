@@ -55,6 +55,7 @@
 		"boldsign": "^2.0.1",
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",
+		"cmdk": "^1.1.1",
 		"convex": "^1.30.0",
 		"date-fns": "^4.1.0",
 		"dompurify": "^3.3.0",
