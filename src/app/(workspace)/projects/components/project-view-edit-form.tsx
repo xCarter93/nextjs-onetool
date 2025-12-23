@@ -24,6 +24,11 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+	Tooltip,
+	TooltipTrigger,
+	TooltipContent,
+} from "@/components/ui/tooltip";
 import ComboBox from "@/components/ui/combo-box";
 import { CalendarWidget } from "@/components/ui/calendar-widget";
 import { StickyFormFooter } from "@/components/shared/sticky-form-footer";
@@ -40,6 +45,7 @@ import {
 	PencilIcon,
 	TrashIcon,
 	PlayIcon,
+	ArrowTopRightOnSquareIcon,
 } from "@heroicons/react/24/outline";
 import {
 	CalendarIcon,
@@ -103,6 +109,8 @@ interface ProjectViewEditFormProps {
 	onTaskSheetOpen: () => void;
 	onNavigate: (path: string) => void;
 	onGenerateInvoice: () => void;
+	isEditing?: boolean;
+	onEditingChange?: (isEditing: boolean) => void;
 }
 
 // Zod validation schema
@@ -165,8 +173,20 @@ export function ProjectViewEditForm({
 	onTaskSheetOpen,
 	onNavigate,
 	onGenerateInvoice,
+	isEditing: isEditingProp,
+	onEditingChange,
 }: ProjectViewEditFormProps) {
-	const [isEditing, setIsEditing] = useState(false);
+	const [internalIsEditing, setInternalIsEditing] = useState(false);
+	
+	// Use controlled prop if provided, otherwise use internal state
+	const isEditing = isEditingProp !== undefined ? isEditingProp : internalIsEditing;
+	const setIsEditing = (value: boolean) => {
+		if (onEditingChange) {
+			onEditingChange(value);
+		} else {
+			setInternalIsEditing(value);
+		}
+	};
 	const [calendarDate, setCalendarDate] = useState(() => {
 		const date = new Date();
 		date.setHours(0, 0, 0, 0);
@@ -464,9 +484,27 @@ export function ProjectViewEditForm({
 					{/* Client Information */}
 					<Card className="shadow-sm border-gray-200/60 dark:border-white/10">
 						<CardHeader className="pb-4">
-							<CardTitle className="flex items-center gap-2 text-xl font-semibold text-gray-900 dark:text-white">
-								<MagnifyingGlassIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-								Client Information
+							<CardTitle className="flex items-center justify-between text-xl font-semibold text-gray-900 dark:text-white">
+								<div className="flex items-center gap-2">
+									<MagnifyingGlassIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+									Client Information
+								</div>
+								{client && (
+									<Tooltip>
+										<TooltipTrigger asChild>
+											<button
+												onClick={() => onNavigate(`/clients/${client._id}`)}
+												className="inline-flex items-center justify-center h-8 w-8 rounded-md bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-colors"
+												type="button"
+											>
+												<ArrowTopRightOnSquareIcon className="h-4 w-4" />
+											</button>
+										</TooltipTrigger>
+										<TooltipContent>
+											<p>Navigate to client page</p>
+										</TooltipContent>
+									</Tooltip>
+								)}
 							</CardTitle>
 						</CardHeader>
 						<CardContent className="space-y-4">
