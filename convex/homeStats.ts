@@ -966,3 +966,95 @@ export const getTasksCreatedByDateRange = query({
 		}));
 	},
 });
+
+/**
+ * Get organization journey progress for Getting Started component
+ * Returns completion status for all 8 onboarding steps
+ */
+export interface JourneyProgress {
+	hasOrganization: boolean;
+	hasClient: boolean;
+	hasProject: boolean;
+	hasQuote: boolean;
+	hasESignature: boolean;
+	hasInvoice: boolean;
+	hasStripeConnect: boolean;
+	hasPayment: boolean;
+}
+
+export const getJourneyProgress = query({
+	args: {},
+	handler: async (ctx): Promise<JourneyProgress> => {
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return {
+				hasOrganization: false,
+				hasClient: false,
+				hasProject: false,
+				hasQuote: false,
+				hasESignature: false,
+				hasInvoice: false,
+				hasStripeConnect: false,
+				hasPayment: false,
+			};
+		}
+
+		// Get organization to check metadata completion and Stripe Connect
+		const organization = await ctx.db.get(userOrgId);
+		const hasOrganization = organization?.isMetadataComplete === true;
+		const hasStripeConnect = !!organization?.stripeConnectAccountId;
+
+		// Parallel queries for optimal performance - use .first() for existence checks
+		const [client, project, quote, documentWithBoldsign, invoice, paidInvoice] =
+			await Promise.all([
+				// Check if any clients exist
+				ctx.db
+					.query("clients")
+					.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
+					.first(),
+
+				// Check if any projects exist
+				ctx.db
+					.query("projects")
+					.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
+					.first(),
+
+				// Check if any quotes exist
+				ctx.db
+					.query("quotes")
+					.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
+					.first(),
+
+				// Check if any documents with BoldSign integration exist
+				ctx.db
+					.query("documents")
+					.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
+					.filter((q) => q.neq(q.field("boldsignDocumentId"), undefined))
+					.first(),
+
+				// Check if any invoices exist
+				ctx.db
+					.query("invoices")
+					.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
+					.first(),
+
+				// Check if any paid invoices exist
+				ctx.db
+					.query("invoices")
+					.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
+					.filter((q) => q.eq(q.field("status"), "paid"))
+					.first(),
+			]);
+
+		return {
+			hasOrganization,
+			hasClient: !!client,
+			hasProject: !!project,
+			hasQuote: !!quote,
+			hasESignature: !!documentWithBoldsign,
+			hasInvoice: !!invoice,
+			hasStripeConnect,
+			hasPayment: !!paidInvoice,
+		};
+	},
+});
