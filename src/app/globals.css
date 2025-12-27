@@ -109,6 +109,12 @@
 	--sidebar-foreground: hsl(240 5.3% 26.1%);
 	--sidebar-primary-foreground: hsl(0 0% 98%);
 	--sidebar-accent-foreground: hsl(240 5.9% 10%);
+
+	/* Card colors - must be defined for bg-card to work */
+	--card: oklch(1 0 0); /* Pure white */
+	--card-foreground: oklch(0.141 0.005 285.823);
+	--popover: oklch(1 0 0);
+	--popover-foreground: oklch(0.141 0.005 285.823);
 }
 
 .dark {
@@ -167,6 +173,12 @@
 	--sidebar-foreground: hsl(240 4.8% 95.9%);
 	--sidebar-primary-foreground: hsl(0 0% 100%);
 	--sidebar-accent-foreground: hsl(240 4.8% 95.9%);
+
+	/* Card colors for dark mode */
+	--card: oklch(0.15 0.005 285.823); /* Dark card background */
+	--card-foreground: oklch(0.985 0 0);
+	--popover: oklch(0.15 0.005 285.823);
+	--popover-foreground: oklch(0.985 0 0);
 }
 
 @layer base {
@@ -184,6 +196,140 @@
 }
 
 @layer utilities {
+	/* ========================================================================
+	   Product Tour Styles
+	   ======================================================================== */
+
+	/* Semi-transparent overlay that covers the entire viewport */
+	.tour-overlay {
+		position: fixed;
+		inset: 0;
+		z-index: 9998;
+		background: rgba(0, 0, 0, 0.5);
+		pointer-events: auto;
+		cursor: pointer;
+		transition: opacity 0.3s ease;
+	}
+
+	.dark .tour-overlay {
+		background: rgba(0, 0, 0, 0.65);
+	}
+
+	/* Tour element wrapper - floats above the overlay when active */
+	.tour-element-wrapper {
+		position: relative;
+	}
+
+	.tour-element-wrapper[data-tour-active="true"] {
+		position: relative;
+		z-index: 9999;
+		border-radius: 8px;
+		/* Provide solid background so semi-transparent children render correctly */
+		background-color: #ffffff; /* Light mode: pure white */
+	}
+
+	.dark .tour-element-wrapper[data-tour-active="true"] {
+		background-color: #0a0a0a; /* Dark mode: near-black */
+	}
+
+	/* Disable backdrop-blur effects inside highlighted tour elements
+	   to prevent them from blurring the overlay instead of the normal background */
+	.tour-element-wrapper[data-tour-active="true"] * {
+		backdrop-filter: none !important;
+		-webkit-backdrop-filter: none !important;
+	}
+
+	/* When a sidebar tour step is active, lift the entire sidebar above the overlay */
+	/* Using body data attribute for reliable cross-browser targeting */
+	body[data-tour-step="sidebar-nav"] [data-slot="sidebar-container"],
+	body[data-tour-step="team-switcher"] [data-slot="sidebar-container"],
+	body[data-tour-step="user-menu"] [data-slot="sidebar-container"] {
+		z-index: 9999 !important;
+	}
+
+	/* Also target the sidebar wrapper and inner elements */
+	body[data-tour-step="sidebar-nav"] [data-slot="sidebar-wrapper"],
+	body[data-tour-step="team-switcher"] [data-slot="sidebar-wrapper"],
+	body[data-tour-step="user-menu"] [data-slot="sidebar-wrapper"] {
+		z-index: 9999 !important;
+	}
+
+	body[data-tour-step="sidebar-nav"] [data-slot="sidebar"],
+	body[data-tour-step="team-switcher"] [data-slot="sidebar"],
+	body[data-tour-step="user-menu"] [data-slot="sidebar"] {
+		z-index: 9999 !important;
+	}
+
+	/* Prevent overflow clipping of tour outlines in sidebar */
+	body[data-tour-step="sidebar-nav"] [data-slot="sidebar-content"],
+	body[data-tour-step="team-switcher"] [data-slot="sidebar-header"],
+	body[data-tour-step="user-menu"] [data-slot="sidebar-footer"],
+	body[data-tour-step="sidebar-nav"] [data-sidebar="content"],
+	body[data-tour-step="team-switcher"] [data-sidebar="header"],
+	body[data-tour-step="user-menu"] [data-sidebar="footer"] {
+		overflow: visible !important;
+	}
+
+	/* Ensure the inner sidebar also allows overflow for outlines */
+	body[data-tour-step="sidebar-nav"] [data-slot="sidebar-inner"],
+	body[data-tour-step="team-switcher"] [data-slot="sidebar-inner"],
+	body[data-tour-step="user-menu"] [data-slot="sidebar-inner"] {
+		overflow: visible !important;
+	}
+
+	/* Fallback using :has() for browsers that support it */
+	[data-slot="sidebar"]:has(.tour-element-wrapper[data-tour-active="true"]) {
+		z-index: 9999 !important;
+	}
+
+	[data-slot="sidebar-container"]:has(.tour-element-wrapper[data-tour-active="true"]) {
+		z-index: 9999 !important;
+	}
+
+	/* Handle mobile sheet sidebar */
+	body.tour-active [data-mobile="true"]:has(.tour-element-wrapper[data-tour-active="true"]) {
+		z-index: 9999 !important;
+	}
+
+	/* Highlight border using pseudo-element to avoid layout shifts */
+	.tour-element-wrapper[data-tour-active="true"]::after {
+		content: "";
+		position: absolute;
+		inset: -6px;
+		border-radius: 12px;
+		border: 3px solid var(--primary);
+		box-shadow:
+			0 0 0 4px color-mix(in oklch, var(--primary) 25%, transparent),
+			0 4px 20px -4px color-mix(in oklch, var(--primary) 40%, transparent);
+		pointer-events: none;
+		animation: tour-pulse 2s ease-in-out infinite;
+	}
+
+	/* Subtle pulsing animation for the highlight */
+	@keyframes tour-pulse {
+		0%,
+		100% {
+			box-shadow:
+				0 0 0 4px color-mix(in oklch, var(--primary) 25%, transparent),
+				0 4px 20px -4px color-mix(in oklch, var(--primary) 40%, transparent);
+		}
+		50% {
+			box-shadow:
+				0 0 0 6px color-mix(in oklch, var(--primary) 20%, transparent),
+				0 4px 30px -4px color-mix(in oklch, var(--primary) 50%, transparent);
+		}
+	}
+
+	/* Tour tooltip z-index and max-width */
+	.tour-tooltip {
+		z-index: 10000;
+		pointer-events: auto;
+	}
+
+	/* ========================================================================
+	   End Product Tour Styles
+	   ======================================================================== */
+
 	.animate-blob {
 		animation: blob 7s infinite;
 	}

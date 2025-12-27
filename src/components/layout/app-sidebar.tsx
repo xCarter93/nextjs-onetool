@@ -32,6 +32,12 @@ import {
 	useCanPerformAction,
 } from "@/hooks/use-feature-access";
 import { useRoleAccess } from "@/hooks/use-role-access";
+import {
+	TourElement,
+	HomeTour,
+	HOME_TOUR_CONTENT,
+	HomeTourContext,
+} from "@/components/tours";
 
 // This is sample data.
 const data = {
@@ -268,20 +274,44 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 	return (
 		<Sidebar collapsible="icon" {...props}>
 			<SidebarHeader className="pl-0">
-				<TeamSwitcher />
+				<TourElement<HomeTour>
+					TourContext={HomeTourContext}
+					stepId={HomeTour.TEAM_SWITCHER}
+					title={HOME_TOUR_CONTENT[HomeTour.TEAM_SWITCHER].title}
+					description={HOME_TOUR_CONTENT[HomeTour.TEAM_SWITCHER].description}
+					tooltipPosition={HOME_TOUR_CONTENT[HomeTour.TEAM_SWITCHER].tooltipPosition}
+				>
+					<TeamSwitcher />
+				</TourElement>
 			</SidebarHeader>
 			<SidebarContent>
-				<NavMain
-					items={navigationItems}
-					showQuickActions={isAdmin}
-					canCreateClient={canCreateClient}
-					clientLimitReason={clientLimitReason}
-					clientCurrentUsage={clientCurrentUsage}
-					clientLimit={clientLimit}
-				/>
+				<TourElement<HomeTour>
+					TourContext={HomeTourContext}
+					stepId={HomeTour.SIDEBAR_NAV}
+					title={HOME_TOUR_CONTENT[HomeTour.SIDEBAR_NAV].title}
+					description={HOME_TOUR_CONTENT[HomeTour.SIDEBAR_NAV].description}
+					tooltipPosition={HOME_TOUR_CONTENT[HomeTour.SIDEBAR_NAV].tooltipPosition}
+				>
+					<NavMain
+						items={navigationItems}
+						showQuickActions={isAdmin}
+						canCreateClient={canCreateClient}
+						clientLimitReason={clientLimitReason}
+						clientCurrentUsage={clientCurrentUsage}
+						clientLimit={clientLimit}
+					/>
+				</TourElement>
 			</SidebarContent>
 			<SidebarFooter>
-				<NavUser />
+				<TourElement<HomeTour>
+					TourContext={HomeTourContext}
+					stepId={HomeTour.USER_MENU}
+					title={HOME_TOUR_CONTENT[HomeTour.USER_MENU].title}
+					description={HOME_TOUR_CONTENT[HomeTour.USER_MENU].description}
+					tooltipPosition={HOME_TOUR_CONTENT[HomeTour.USER_MENU].tooltipPosition}
+				>
+					<NavUser />
+				</TourElement>
 			</SidebarFooter>
 			<SidebarRail />
 		</Sidebar>

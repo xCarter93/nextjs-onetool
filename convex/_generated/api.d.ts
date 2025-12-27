@@ -53,6 +53,7 @@ import type * as serviceStatusActions from "../serviceStatusActions.js";
 import type * as skus from "../skus.js";
 import type * as tasks from "../tasks.js";
 import type * as usage from "../usage.js";
+import type * as userTour from "../userTour.js";
 import type * as users from "../users.js";
 
 import type {
@@ -107,6 +108,7 @@ declare const fullApi: ApiFromModules<{
   skus: typeof skus;
   tasks: typeof tasks;
   usage: typeof usage;
+  userTour: typeof userTour;
   users: typeof users;
 }>;
 

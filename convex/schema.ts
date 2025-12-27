@@ -10,6 +10,9 @@ export default defineSchema({
 		lastSignedInDate: v.optional(v.number()),
 		externalId: v.string(), // Clerk user ID
 
+		// Onboarding
+		hasSeenTour: v.optional(v.boolean()), // Track if user has completed the product tour
+
 		// Clerk Billing & Subscription (user-level)
 		clerkSubscriptionId: v.optional(v.string()), // Clerk subscription ID
 		clerkPlanId: v.optional(v.string()), // Clerk plan identifier
