@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import {
 	UserGroupIcon,
 	DocumentTextIcon,
@@ -11,6 +12,7 @@ import {
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent } from "@/components/ui/card";
 import { useOrganization } from "@clerk/nextjs";
+import { TaskSheet } from "@/components/shared/task-sheet";
 
 const items = [
 	{
@@ -20,6 +22,7 @@ const items = [
 		icon: UserGroupIcon,
 		background: "bg-primary",
 		href: "/clients/new",
+		type: "link" as const,
 	},
 	{
 		title: "Create Your First Project",
@@ -27,6 +30,7 @@ const items = [
 		icon: WrenchScrewdriverIcon,
 		background: "bg-primary",
 		href: "/projects/new",
+		type: "link" as const,
 	},
 	{
 		title: "Send Your First Quote",
@@ -34,13 +38,14 @@ const items = [
 		icon: DocumentTextIcon,
 		background: "bg-primary",
 		href: "/quotes/new",
+		type: "link" as const,
 	},
 	{
 		title: "Schedule Your First Task",
 		description: "Add tasks and schedule appointments for your projects.",
 		icon: CalendarDaysIcon,
 		background: "bg-primary",
-		href: "/tasks/new",
+		type: "sheet" as const,
 	},
 ];
 
@@ -52,6 +57,7 @@ function classNames(
 
 export default function GettingStarted() {
 	const { organization, isLoaded } = useOrganization();
+	const [isTaskSheetOpen, setIsTaskSheetOpen] = useState(false);
 
 	return (
 		<Card className="group relative backdrop-blur-md overflow-hidden ring-1 ring-border/20 dark:ring-border/40">
@@ -94,39 +100,81 @@ export default function GettingStarted() {
 				>
 					{items.map((item, itemIdx) => (
 						<li key={itemIdx} className="flow-root">
-							<Link href={item.href} className="block group">
-								<div className="relative -m-2 flex items-center space-x-4 rounded-2xl p-4 bg-linear-to-r from-card/80 to-card/60 dark:from-card/70 dark:to-card/50 border border-border/80 dark:border-border hover:-translate-y-1 focus-within:outline-2 focus-within:outline-primary hover:bg-linear-to-r hover:from-card hover:to-card/80 transition-all duration-300 ring-1 ring-border/20 dark:ring-border/40 backdrop-blur-md">
-									<div
-										className={classNames(
-											item.background,
-											"flex size-14 shrink-0 items-center justify-center rounded-xl p-3 ring-1 ring-white/20 group-hover:scale-105 transition-transform duration-300"
-										)}
-									>
-										<item.icon
-											aria-hidden="true"
-											className="size-6 text-white"
-										/>
-									</div>
-									<div className="flex-1">
-										<h3 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors duration-200">
-											<span>{item.title}</span>
-											<span
+							{item.type === "link" && item.href ? (
+								<Link href={item.href} className="block group">
+									<div className="relative -m-2 flex items-center space-x-4 rounded-2xl p-4 bg-linear-to-r from-card/80 to-card/60 dark:from-card/70 dark:to-card/50 border border-border/80 dark:border-border hover:-translate-y-1 focus-within:outline-2 focus-within:outline-primary hover:bg-linear-to-r hover:from-card hover:to-card/80 transition-all duration-300 ring-1 ring-border/20 dark:ring-border/40 backdrop-blur-md">
+										<div
+											className={classNames(
+												item.background,
+												"flex size-14 shrink-0 items-center justify-center rounded-xl p-3 ring-1 ring-white/20 group-hover:scale-105 transition-transform duration-300"
+											)}
+										>
+											<item.icon
 												aria-hidden="true"
-												className="ml-2 text-primary group-hover:translate-x-1 inline-block transition-transform duration-200"
-											>
-												→
-											</span>
-										</h3>
-										<p className="mt-1.5 text-sm text-muted-foreground dark:text-muted-foreground/90 leading-relaxed">
-											{item.description}
-										</p>
+												className="size-6 text-white"
+											/>
+										</div>
+										<div className="flex-1">
+											<h3 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors duration-200">
+												<span>{item.title}</span>
+												<span
+													aria-hidden="true"
+													className="ml-2 text-primary group-hover:translate-x-1 inline-block transition-transform duration-200"
+												>
+													→
+												</span>
+											</h3>
+											<p className="mt-1.5 text-sm text-muted-foreground dark:text-muted-foreground/90 leading-relaxed">
+												{item.description}
+											</p>
+										</div>
 									</div>
-								</div>
-							</Link>
+								</Link>
+							) : (
+								<button
+									onClick={() => setIsTaskSheetOpen(true)}
+									className="block group w-full text-left"
+								>
+									<div className="relative -m-2 flex items-center space-x-4 rounded-2xl p-4 bg-linear-to-r from-card/80 to-card/60 dark:from-card/70 dark:to-card/50 border border-border/80 dark:border-border hover:-translate-y-1 focus-within:outline-2 focus-within:outline-primary hover:bg-linear-to-r hover:from-card hover:to-card/80 transition-all duration-300 ring-1 ring-border/20 dark:ring-border/40 backdrop-blur-md">
+										<div
+											className={classNames(
+												item.background,
+												"flex size-14 shrink-0 items-center justify-center rounded-xl p-3 ring-1 ring-white/20 group-hover:scale-105 transition-transform duration-300"
+											)}
+										>
+											<item.icon
+												aria-hidden="true"
+												className="size-6 text-white"
+											/>
+										</div>
+										<div className="flex-1">
+											<h3 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors duration-200">
+												<span>{item.title}</span>
+												<span
+													aria-hidden="true"
+													className="ml-2 text-primary group-hover:translate-x-1 inline-block transition-transform duration-200"
+												>
+													→
+												</span>
+											</h3>
+											<p className="mt-1.5 text-sm text-muted-foreground dark:text-muted-foreground/90 leading-relaxed">
+												{item.description}
+											</p>
+										</div>
+									</div>
+								</button>
+							)}
 						</li>
 					))}
 				</ul>
 			</CardContent>
+
+			{/* Task Sheet */}
+			<TaskSheet
+				mode="create"
+				isOpen={isTaskSheetOpen}
+				onOpenChange={setIsTaskSheetOpen}
+			/>
 		</Card>
 	);
 }

@@ -12,6 +12,12 @@ import {
 	SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { motion } from "motion/react";
+import {
+	TourContextProvider,
+	HomeTour,
+	ORDERED_HOME_TOUR,
+	HomeTourContext,
+} from "@/components/tours";
 
 interface SidebarWithHeaderProps {
 	children: ReactNode;
@@ -19,9 +25,13 @@ interface SidebarWithHeaderProps {
 
 export function SidebarWithHeader({ children }: SidebarWithHeaderProps) {
 	return (
-		<SidebarProvider>
-			<AppSidebar />
-			<SidebarInset>
+		<TourContextProvider<HomeTour>
+			TourContext={HomeTourContext}
+			orderedStepIds={ORDERED_HOME_TOUR}
+		>
+			<SidebarProvider>
+				<AppSidebar />
+				<SidebarInset>
 				{/* Modern Header with Enhanced Design */}
 				<motion.header
 					className="sticky top-0 z-30 isolate overflow-hidden backdrop-blur-xl bg-background/95 dark:bg-background/90 border-b border-border/60 dark:border-border/40 shadow-sm dark:shadow-md transition-all duration-200"
@@ -79,5 +89,6 @@ export function SidebarWithHeader({ children }: SidebarWithHeaderProps) {
 				<div className="flex flex-1 flex-col gap-4 pt-0">{children}</div>
 			</SidebarInset>
 		</SidebarProvider>
+		</TourContextProvider>
 	);
 }

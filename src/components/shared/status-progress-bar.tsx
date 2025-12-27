@@ -314,7 +314,7 @@ export function StatusProgressBar({
 				</ol>
 				{showStatusButton && statusOptions.length > 0 && onStatusChange && (
 					<div
-						className="-ml-[5px] relative"
+						className="-ml-[5px] relative flex items-center"
 						style={{
 							zIndex: steps.length + 10,
 							backgroundColor: "#f1f5f9", // Force slate-100 in all modes
