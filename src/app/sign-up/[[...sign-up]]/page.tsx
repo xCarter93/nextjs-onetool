@@ -1,15 +1,31 @@
 import { SignUp } from "@clerk/nextjs";
+import Orb from "@/components/Orb";
 
 export default function SignUpPage() {
 	return (
-		<div className="flex min-h-screen items-center justify-center bg-linear-to-br from-background via-background to-muted/20 p-4">
-			<div className="w-full max-w-md">
+		<div className="relative flex min-h-screen items-center justify-center p-4 overflow-hidden bg-linear-to-b from-primary via-primary/70 to-gray-100">
+			{/* Orb Background */}
+			<div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+				<div className="w-[1100px] h-[1100px]">
+					<Orb
+						hue={0}
+						hoverIntensity={0}
+						rotateOnHover={false}
+						backgroundColor="#000000"
+					/>
+				</div>
+			</div>
+
+			{/* Clerk Component */}
+			<div className="relative z-10 w-full max-w-2xl">
 				<SignUp
 					appearance={{
 						elements: {
+							rootBox: "w-full scale-120 flex justify-center",
+							logoImage: "w-50 h-50",
 							formButtonPrimary:
-								"bg-primary hover:bg-primary/90 text-primary-foreground",
-							card: "shadow-xl",
+								"bg-primary/10 hover:bg-primary/15 text-primary hover:text-primary/80 ring-1 ring-primary/30 hover:ring-primary/40 shadow-sm hover:shadow-md backdrop-blur-sm transition-all duration-200",
+							card: "shadow-xl backdrop-blur-sm bg-background/95 mx-auto",
 							headerTitle: "text-foreground",
 							headerSubtitle: "text-muted-foreground",
 							socialButtonsBlockButton:
