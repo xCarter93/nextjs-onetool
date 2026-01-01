@@ -8,4 +8,6 @@ posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
 	capture_exceptions: true,
 	capture_pageview: true,
 	capture_pageleave: true,
+	capture_heatmaps: true,
+	enable_heatmaps: true,
 });
