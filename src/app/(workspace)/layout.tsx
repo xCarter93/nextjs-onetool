@@ -3,9 +3,9 @@ import { SidebarWithHeader } from "@/components/layout/sidebar-with-header";
 
 export default function WorkspaceLayout({ children }: { children: ReactNode }) {
 	return (
-		<div className="min-h-[100vh] flex-1 md:min-h-min">
+		<div className="min-h-screen flex-1 md:min-h-min">
 			{/* Modern Background with Subtle Texture */}
-			<div className="relative bg-background min-h-[100vh]">
+			<div className="relative bg-background min-h-screen">
 				{/* Ambient Light Effects */}
 				<div className="absolute inset-0 overflow-hidden">
 					<div className="absolute -inset-10 opacity-50">
@@ -17,7 +17,7 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
 
 				{/* Subtle Grid Pattern */}
 				<div
-					className="absolute inset-0 bg-[linear-gradient(to_right,theme(colors.border)_1px,transparent_1px),linear-gradient(to_bottom,theme(colors.border)_1px,transparent_1px)] bg-[size:4rem_4rem] opacity-[0.03] dark:opacity-[0.05]"
+					className="absolute inset-0 bg-[linear-gradient(to_right,var(--color-border)_1px,transparent_1px),linear-gradient(to_bottom,var(--color-border)_1px,transparent_1px)] bg-size-[4rem_4rem] opacity-[0.03] dark:opacity-[0.05]"
 					style={{
 						maskImage:
 							"radial-gradient(ellipse at center, transparent 20%, black)",
