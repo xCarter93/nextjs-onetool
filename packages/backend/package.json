@@ -1,0 +1,50 @@
+{
+  "name": "@onetool/backend",
+  "version": "0.0.1",
+  "private": true,
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "exports": {
+    ".": {
+      "types": "./index.ts",
+      "default": "./index.ts"
+    },
+    "./convex/_generated/api": {
+      "types": "./convex/_generated/api.d.ts",
+      "default": "./convex/_generated/api.js"
+    },
+    "./convex/_generated/dataModel": {
+      "types": "./convex/_generated/dataModel.d.ts",
+      "default": "./convex/_generated/dataModel.d.ts"
+    },
+    "./convex/_generated/server": {
+      "types": "./convex/_generated/server.d.ts",
+      "default": "./convex/_generated/server.js"
+    }
+  },
+  "scripts": {
+    "dev": "convex dev",
+    "deploy": "convex deploy",
+    "generate": "convex codegen",
+    "test": "vitest",
+    "test:once": "vitest run"
+  },
+  "dependencies": {
+    "@clerk/backend": "^2.19.1",
+    "@convex-dev/aggregate": "^0.1.25",
+    "@convex-dev/migrations": "^0.2.9",
+    "@convex-dev/resend": "^0.2.0",
+    "boldsign": "^2.0.1",
+    "convex": "^1.30.0",
+    "resend": "^6.5.2",
+    "svix": "^1.76.1"
+  },
+  "devDependencies": {
+    "@edge-runtime/vm": "^5.0.0",
+    "@onetool/tsconfig": "workspace:*",
+    "@vitest/coverage-v8": "^4.0.16",
+    "convex-test": "^0.0.41",
+    "typescript": "^5",
+    "vitest": "^4.0.16"
+  }
+}

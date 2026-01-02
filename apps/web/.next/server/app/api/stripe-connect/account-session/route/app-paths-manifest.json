@@ -1,0 +1,3 @@
+{
+  "/api/stripe-connect/account-session/route": "app/api/stripe-connect/account-session/route.js"
+}

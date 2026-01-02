@@ -1,0 +1,39 @@
+{
+  "sorted_middleware": [],
+  "middleware": {
+    "/": {
+      "files": [
+        "server/edge/chunks/_45d453c4._.js",
+        "server/edge/chunks/node_modules_@opentelemetry_api_build_esm_4557a825._.js",
+        "server/edge/chunks/node_modules_@clerk_backend_dist_05677835._.js",
+        "server/edge/chunks/node_modules_@clerk_nextjs_dist_esm_2b92463c._.js",
+        "server/edge/chunks/node_modules_@clerk_6dbe5a59._.js",
+        "server/edge/chunks/[root-of-the-server]__8bd37c4c._.js",
+        "server/edge/chunks/turbopack-apps_web_edge-wrapper_a62de8a9.js"
+      ],
+      "name": "middleware",
+      "page": "/",
+      "matchers": [
+        {
+          "regexp": "/:nextData(_next/data/[^/]{1,})?/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*){(\\\\.json)}?",
+          "originalSource": "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)"
+        },
+        {
+          "regexp": "/:nextData(_next/data/[^/]{1,})?/(api|trpc)(.*){(\\\\.json)}?",
+          "originalSource": "/(api|trpc)(.*)"
+        }
+      ],
+      "wasm": [],
+      "assets": [],
+      "env": {
+        "__NEXT_BUILD_ID": "development",
+        "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY": "ziqjHfvikZ8Xc2x72Nz8giXBIIMVIFvFQOLXuALhyg8=",
+        "__NEXT_PREVIEW_MODE_ID": "e913ac9e59194a96f39c50bdcaf32c78",
+        "__NEXT_PREVIEW_MODE_ENCRYPTION_KEY": "e816730729c44e36cee0644ad1f88f4a195bf9edeb977633ecff553ffe6817d7",
+        "__NEXT_PREVIEW_MODE_SIGNING_KEY": "f1ede830039ced3a20cda7eb404a121b9ab1d8bd0c554c2d9c295625c1c828af"
+      }
+    }
+  },
+  "instrumentation": null,
+  "functions": {}
+}
