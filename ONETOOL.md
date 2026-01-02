@@ -5,20 +5,21 @@ A comprehensive overview of all features and capabilities in the OneTool applica
 ## Table of Contents
 
 1. [Core Architecture](#core-architecture)
-2. [Client Management](#client-management)
-3. [Project Management](#project-management)
-4. [Quote Management](#quote-management)
-5. [Invoice & Payments](#invoice--payments)
-6. [Task Scheduling](#task-scheduling)
-7. [Email Communication](#email-communication)
-8. [Notifications & Mentions](#notifications--mentions)
-9. [E-Signatures](#e-signatures)
-10. [Organization Management](#organization-management)
-11. [Dashboard & Analytics](#dashboard--analytics)
-12. [Product Tours & Onboarding](#product-tours--onboarding)
-13. [Authentication & Authorization](#authentication--authorization)
-14. [Billing & Subscriptions](#billing--subscriptions)
-15. [Data Import](#data-import)
+2. [Mobile App](#mobile-app)
+3. [Client Management](#client-management)
+4. [Project Management](#project-management)
+5. [Quote Management](#quote-management)
+6. [Invoice & Payments](#invoice--payments)
+7. [Task Scheduling](#task-scheduling)
+8. [Email Communication](#email-communication)
+9. [Notifications & Mentions](#notifications--mentions)
+10. [E-Signatures](#e-signatures)
+11. [Organization Management](#organization-management)
+12. [Dashboard & Analytics](#dashboard--analytics)
+13. [Product Tours & Onboarding](#product-tours--onboarding)
+14. [Authentication & Authorization](#authentication--authorization)
+15. [Billing & Subscriptions](#billing--subscriptions)
+16. [Data Import](#data-import)
 
 ---
 
@@ -49,6 +50,298 @@ async function createProjectWithOrg(
 	return await ctx.db.insert("projects", projectData);
 }
 ```
+
+---
+
+## Mobile App
+
+### Overview
+
+OneTool includes a native iOS mobile application built with React Native and Expo, providing full feature parity with the web application. The mobile app offers real-time synchronization with the web app through Convex, ensuring data consistency across all platforms.
+
+### Tech Stack
+
+- **Framework**: React Native 0.81.5 with Expo ~54.0.0
+- **Navigation**: Expo Router 6.0.21 (file-based routing)
+- **Authentication**: Clerk Expo SDK with secure token caching via `expo-secure-store`
+- **Backend**: Convex React Client (shared with web app)
+- **UI Components**: React Native with custom components
+- **Icons**: Lucide React Native
+- **Fonts**: Outfit font family (matching web app)
+- **Platform**: iOS (with tablet support)
+
+### Environment Setup
+
+#### Required Environment Variables
+
+The mobile app requires environment variables to be prefixed with `EXPO_PUBLIC_` to be accessible in the app code. Create a `.env.local` file in `apps/mobile/`:
+
+```bash
+# Clerk Authentication
+EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_your_key_here
+
+# Convex Backend
+EXPO_PUBLIC_CONVEX_URL=https://your-project.convex.cloud
+```
+
+#### Finding Environment Values
+
+1. **Clerk Publishable Key**: 
+   - Go to [Clerk Dashboard](https://dashboard.clerk.com)
+   - Select your application
+   - Go to "API Keys"
+   - Copy the "Publishable Key"
+
+2. **Convex URL**:
+   - Go to [Convex Dashboard](https://dashboard.convex.dev)
+   - Select your project
+   - The URL is shown in the deployment settings
+   - Or check your `apps/web/.env.local` file - it should have the same URL
+
+#### After Updating Environment Variables
+
+1. Stop your dev server (Ctrl+C in the terminal)
+2. Clear the cache and restart:
+   ```bash
+   cd apps/mobile
+   pnpm dev
+   ```
+
+### Navigation Structure
+
+The mobile app uses a tab-based navigation structure with nested stack navigators for detail screens:
+
+```
+app/
+  (tabs)/
+    _layout.tsx              # Main tabs navigator
+    index.tsx                # Home screen
+    tasks.tsx                # Tasks list
+    
+    clients/
+      _layout.tsx            # Stack navigator for clients
+      index.tsx              # Clients list
+      [clientId].tsx         # Client detail
+    
+    projects/
+      _layout.tsx            # Stack navigator for projects
+      index.tsx              # Projects list
+      [projectId].tsx        # Project detail
+    
+    quotes/
+      _layout.tsx            # Stack navigator for quotes
+      index.tsx              # Quotes list
+      [quoteId].tsx          # Quote detail
+
+  clients/new.tsx            # Create new client
+  projects/new.tsx           # Create new project
+  quotes/new.tsx             # Create new quote
+  tasks/new.tsx              # Create new task
+```
+
+#### Navigation Features
+
+- **Persistent Tab Navigation**: Bottom tabs remain visible on all screens, including detail pages
+- **Stack Navigation**: Each tab (clients, projects, quotes) has its own navigation stack
+- **Safe Area Handling**: All screens respect iOS safe areas (status bar, notch, etc.)
+- **Native UX**: iOS-style navigation with smooth transitions
+
+### App Header
+
+Every screen includes a custom `AppHeader` component that provides:
+
+- **Organization Switcher** (top left): Tap to switch organizations or view organization profile
+- **User Profile** (top right): Tap to access user profile and settings
+
+The header uses Clerk's `openOrganizationProfile()` and `openUserProfile()` functions for native integration.
+
+### Features
+
+#### Home Screen
+
+The home screen (`/(tabs)/index.tsx`) displays:
+
+- **Real-time Statistics**: 
+  - Total clients (with monthly change)
+  - Completed projects
+  - Total quote value
+  - Tasks due today
+  - Current revenue (when available)
+  - Overdue tasks alert (when applicable)
+
+- **Pull-to-Refresh**: Swipe down to refresh all data
+
+#### Client Management
+
+- **List View**: Display all clients with status badges
+- **Detail View**: Full client information, contacts, and properties
+- **Create Client**: Form with company name, industry, and notes
+- **Real-time Updates**: Changes sync instantly with web app
+
+#### Project Management
+
+- **List View**: All projects with status and client association
+- **Detail View**: Project details, tasks, and related quotes
+- **Create Project**: Form with client selection, title, and description
+- **Status Tracking**: Planned → In-Progress → Completed → Cancelled
+
+#### Quote Management
+
+- **List View**: All quotes with status badges
+- **Detail View**: Full quote details with line items
+- **Create Quote**: Form with client selection (defaults to 30-day validity)
+- **Status Tracking**: Draft → Sent → Approved → Declined → Expired
+
+#### Task Management
+
+- **List View**: All tasks with due dates and priorities
+- **Create Task**: Form with optional client association and date
+- **Status Tracking**: Pending → In-Progress → Completed → Cancelled
+
+#### Creation Screens
+
+All creation screens (`/clients/new`, `/projects/new`, `/quotes/new`, `/tasks/new`) include:
+
+- Clean, mobile-optimized UI
+- Form validation
+- Loading states
+- Error handling
+- Client picker dropdowns (where applicable)
+- Cancel and submit actions
+
+### Splash Screen
+
+The app includes a professional splash screen that displays while the app loads.
+
+#### Configuration
+
+Configured in `app.json`:
+
+```json
+{
+  "expo": {
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    }
+  }
+}
+```
+
+#### Splash Screen Specifications
+
+- **File**: `apps/mobile/assets/splash.png`
+- **Dimensions**: 1284 x 2778 pixels (iPhone 14 Pro Max size)
+- **Format**: PNG with transparency support
+- **Background**: White (#ffffff)
+- **Content**: OneTool logo centered with "OneTool" text and tagline "Simplify your growing business"
+
+#### Splash Screen Flow
+
+1. **App Launch**: Splash screen displays immediately
+2. **Font Loading**: App loads the Outfit font family (same as web)
+3. **Authentication Check**: Clerk verifies user session
+4. **Transition**: Once ready, splash screen fades out and routes to:
+   - Sign-in page (if not authenticated)
+   - Home tab (if authenticated)
+
+### Components
+
+#### Core Components
+
+- **AppHeader**: Persistent header with organization switcher and user profile
+- **Card**: Reusable card component for content containers
+- **EditableField**: Inline editable text fields
+- **SectionHeader**: Section headers with optional actions
+- **StatCard**: Statistics display cards for dashboard
+- **StatusBadge**: Status indicators for clients, projects, quotes, tasks
+- **TaskItem**: Task list item component
+- **ProgressRing**: Circular progress indicator
+- **OrganizationSwitcher**: Organization selection component
+- **ProfileModal**: User profile modal
+
+#### Styled Components
+
+- **StyledButton**: Custom button component
+- **StyledBadge**: Custom badge component
+
+### Authentication
+
+- **Clerk Integration**: Uses Clerk Expo SDK for authentication
+- **Secure Token Storage**: Tokens cached securely via `expo-secure-store`
+- **Session Synchronization**: Web and mobile sessions synchronized through Convex
+- **Organization Context**: Convex provider reinitializes when organization changes
+
+### Data Synchronization
+
+- **Real-time Updates**: All data synchronized in real-time via Convex
+- **Bidirectional Sync**: Changes made in web app instantly appear in mobile app and vice versa
+- **Offline Support**: Data persists locally and syncs when connection is restored
+
+### Development
+
+#### Running the App
+
+```bash
+cd apps/mobile
+pnpm dev
+```
+
+#### Building for iOS
+
+```bash
+cd apps/mobile
+pnpm build:ios
+```
+
+#### Testing Checklist
+
+- ✅ Status bar doesn't overlap with content
+- ✅ Bottom tabs visible on all screens
+- ✅ Can navigate to detail pages and back using tabs
+- ✅ Organization switcher opens on tap
+- ✅ User profile opens on tap
+- ✅ Navigation state is preserved per tab
+- ✅ All screens have consistent header
+- ✅ Data loads correctly from Convex
+- ✅ Pull-to-refresh works on all list screens
+- ✅ Creation forms work correctly
+
+### Troubleshooting
+
+#### Data Not Loading
+
+1. Check that `.env.local` file exists and has correct values with `EXPO_PUBLIC_` prefix
+2. Restart the Expo dev server after creating/updating `.env.local`
+3. Clear the app cache: shake device → "Reload" or press `r` in terminal
+
+#### Environment Variables Not Being Read
+
+- Verify the file exists: `ls -la apps/mobile/.env.local`
+- Ensure variables have `EXPO_PUBLIC_` prefix
+- Restart dev server after changes
+
+#### Authentication Issues
+
+1. Verify your Clerk publishable key is correct
+2. Make sure you're using the same Clerk instance as the web app
+3. Check that the Clerk app has mobile app support enabled
+
+### Future Enhancements
+
+Consider adding:
+
+- Date picker for tasks (currently defaults to today)
+- Rich text editor for descriptions
+- Image uploads for clients/projects
+- Push notifications for task reminders
+- Offline mode with sync
+- Pull-to-refresh on all list screens (partially implemented)
+- Search functionality in headers
+- Quick actions in headers (e.g., "Add" button)
+- Notification indicator in header
+- Dark mode toggle in user profile
 
 ---
 
