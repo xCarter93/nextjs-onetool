@@ -34,6 +34,7 @@ import { StatCard } from "@/components/StatCard";
 import { ProgressRing } from "@/components/ProgressRing";
 import { TaskItem } from "@/components/TaskItem";
 import { SectionHeader } from "@/components/SectionHeader";
+import { JourneyProgress } from "@/components/JourneyProgress";
 import { Id } from "@onetool/backend/convex/_generated/dataModel";
 
 export default function HomeScreen() {
@@ -141,10 +142,7 @@ export default function HomeScreen() {
 			>
 				{/* Header Section */}
 				<View style={styles.headerSection}>
-					<View style={styles.dateAccent}>
-						<View style={styles.accentBar} />
-						<Text style={styles.dateText}>{formatDate()}</Text>
-					</View>
+					<Text style={styles.dateText}>{formatDate()}</Text>
 					<Text style={styles.greeting}>
 						{getTimeBasedGreeting()}
 						{user?.name ? `, ${user.name.split(" ")[0]}` : ""}!
@@ -153,6 +151,9 @@ export default function HomeScreen() {
 						Here's what's happening with your business today.
 					</Text>
 				</View>
+
+				{/* Journey Progress */}
+				<JourneyProgress />
 
 				{/* Quick Stats Grid */}
 				<View style={styles.statsGrid}>
@@ -414,24 +415,13 @@ const styles = StyleSheet.create({
 	headerSection: {
 		marginBottom: spacing.lg,
 	},
-	dateAccent: {
-		flexDirection: "row",
-		alignItems: "center",
-		marginBottom: spacing.sm,
-	},
-	accentBar: {
-		width: 3,
-		height: 24,
-		backgroundColor: colors.primary,
-		borderRadius: 2,
-		marginRight: spacing.sm,
-	},
 	dateText: {
 		fontSize: 13,
 		fontFamily: fontFamily.medium,
 		color: colors.mutedForeground,
 		textTransform: "uppercase",
 		letterSpacing: 0.5,
+		marginBottom: spacing.sm,
 	},
 	greeting: {
 		fontSize: 28,
