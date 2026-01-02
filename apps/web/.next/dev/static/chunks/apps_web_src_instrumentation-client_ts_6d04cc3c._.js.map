@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 4, "column": 0}, "map": {"version":3,"sources":["file:///Users/patrickcarter/CodingProjects/WebDevProjects/NextJSProjects/nextjs-onetool/apps/web/src/instrumentation-client.ts"],"sourcesContent":["import posthog from \"posthog-js\";\n\nposthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {\n\tapi_host: process.env.NEXT_PUBLIC_POSTHOG_HOST,\n\tdefaults: \"2025-11-30\",\n\tcapture_performance: true,\n\tautocapture: true,\n\tcapture_exceptions: true,\n\tcapture_pageview: true,\n\tcapture_pageleave: true,\n\tcapture_heatmaps: true,\n\tenable_heatmaps: true,\n});\n"],"names":[],"mappings":";AAEa;AAFb;;AAEA,6JAAO,CAAC,IAAI,sFAAuC;IAClD,QAAQ;IACR,UAAU;IACV,qBAAqB;IACrB,aAAa;IACb,oBAAoB;IACpB,kBAAkB;IAClB,mBAAmB;IACnB,kBAAkB;IAClB,iBAAiB;AAClB"}}]
+}
