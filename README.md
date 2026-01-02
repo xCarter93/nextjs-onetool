@@ -6,306 +6,192 @@
 
 ## Overview
 
-OneTool is a lightweight, modern alternative to Jobber for small field-service businesses (cleaning, landscaping, HVAC, trades). The product focuses on **clarity, speed, and essential workflows** without the bloat. MVP delivers: client & project tracking, quoting (with PDF + e-signature), task scheduling, invoicing & payments, notifications, and a concise insights dashboard.
+OneTool is a lightweight, modern business management platform designed for small field-service businesses (cleaning, landscaping, HVAC, trades). Built with **clarity, speed, and essential workflows** in mind, OneTool helps you manage clients, projects, quotes, invoices, and tasks—all in one place.
 
-### Key Features
+## Key Features
 
-- **Client Management**: Create, track, and manage client relationships with consent flags
-- **Project Tracking**: Link projects to clients with status tracking and task management
-- **Quote Management**: Create professional quotes with line items, PDF generation, and e-signature
-- **Task Scheduling**: Schedule and track tasks with reminders and calendar integration
-- **Invoice & Payments**: Generate invoices from quotes with Stripe payment integration
-- **Real-time Dashboard**: Key metrics and insights for business performance
-- **Multi-tenant Architecture**: Organization-scoped data with Clerk authentication
+### 👥 Client Management
+
+- **Complete Client Profiles**: Track company information, industry, status, and notes
+- **Status Workflow**: Lead → Prospect → Active → Inactive → Archived
+- **Client Properties**: Manage multiple properties per client with addresses and details
+- **Client Contacts**: Store multiple contacts per client with primary contact designation
+- **Bulk Import**: Import clients from CSV files with AI-powered parsing
+- **Smart Archiving**: Automatic cleanup of archived clients after 7 days
+
+### 📁 Project Management
+
+- **Full Lifecycle Tracking**: Plan, track progress, and complete projects
+- **Status Management**: Planned → In-Progress → Completed → Cancelled
+- **Project Types**: One-off or recurring projects
+- **Team Assignment**: Assign salespeople and team members to projects
+- **Date Tracking**: Start dates, end dates, and completion tracking
+- **Client Linking**: Connect projects to clients for easy organization
+- **Member Access Control**: Team members only see projects assigned to them
+
+### 💰 Quote Management
+
+- **Professional Quotes**: Create detailed quotes with line items, discounts, and taxes
+- **PDF Generation**: Generate professional quote PDFs automatically
+- **E-Signature Integration**: Send quotes for client approval via BoldSign
+- **Status Tracking**: Draft → Sent → Approved → Declined → Expired
+- **Sequential Numbering**: Auto-generated quote numbers (Q-000001)
+- **Public Access**: Clients can view and approve quotes via secure public URLs
+- **Quote to Invoice**: Convert approved quotes to invoices with one click
+
+### 💳 Invoice & Payments
+
+- **Invoice Creation**: Create invoices manually or from approved quotes
+- **PDF Generation**: Professional invoice PDFs with your branding
+- **Payment Processing**: Stripe Checkout integration for secure payments
+- **Status Tracking**: Draft → Sent → Paid → Overdue → Cancelled
+- **Public Payment Page**: Clients can pay invoices via secure public URLs
+- **Stripe Connect**: Direct payments to your organization's Stripe account
+- **Automatic Totals**: Calculated from line items with discounts and taxes
+
+### ✅ Task Scheduling
+
+- **Task Creation**: Create tasks with dates, times, and assignments
+- **Recurring Tasks**: Set up daily, weekly, monthly, or yearly recurring tasks
+- **Status Tracking**: Pending → In-Progress → Completed → Cancelled
+- **Priority Levels**: Low, Medium, High, Urgent
+- **Calendar View**: Full calendar integration with task display
+- **Project & Client Linking**: Link tasks to projects and clients
+- **Team Assignment**: Assign tasks to team members
+
+### 📧 Email Communication
+
+- **Client Emails**: Send branded emails to clients via Resend
+- **Email Threading**: Reply-to functionality with thread tracking
+- **Organization Branding**: Custom email templates with your logo and colors
+- **Inbound Email**: Receive and process client emails automatically
+- **Email Tracking**: Track sent, delivered, opened, bounced, and complaint status
+- **Attachments**: Send file attachments with emails
+- **Unique Addresses**: Each organization gets a unique receiving email address
+
+### 🔔 Notifications & Mentions
+
+- **In-App Notifications**: Real-time notifications for important events
+- **Mention System**: Tag team members in client, project, or quote contexts
+- **Notification Types**: Task reminders, quote approvals, invoice overdue alerts, and more
+- **Read/Unread Tracking**: Keep track of which notifications you've seen
+- **Priority Levels**: Low, Medium, High, Urgent notifications
+- **Scheduled Notifications**: Set up future-dated notifications
+
+### ✍️ E-Signatures
+
+- **BoldSign Integration**: Send documents for e-signature seamlessly
+- **Status Tracking**: Sent → Viewed → Signed → Completed
+- **Real-Time Updates**: Get instant notifications when documents are signed
+- **Signed PDF Storage**: Download and store signed documents automatically
+- **Quote Approval**: Automatic quote status update when signature is completed
+- **Usage Tracking**: Track monthly e-signature count for plan limits
+
+### 🏢 Organization Management
+
+- **Organization Profile**: Manage company information and branding
+- **Logo Management**: Upload and manage your organization logo
+- **Brand Customization**: Customize brand colors and contact information
+- **Document Library**: Store reusable organization documents
+- **SKU Management**: Create reusable products/services for quotes
+- **Stripe Connect**: Set up payment processing for your organization
+- **Email Configuration**: Configure receiving email addresses
+- **Settings**: Default tax rate, reminder timing, timezone, and more
+
+### 📊 Dashboard & Analytics
+
+- **Home Dashboard**: Overview of key business metrics at a glance
+- **Calendar View**: Alternative dashboard view with calendar integration
+- **Business Stats**: Track clients, projects, quotes, invoices, revenue, and tasks
+- **Date Range Filtering**: Analyze performance over custom date ranges
+- **Trend Charts**: Visualize growth over time with line charts
+- **Revenue Goal Tracking**: Set and track monthly revenue goals
+- **Activity Feed**: See recent activity across your organization
+- **Getting Started**: Onboarding checklist for new users
+
+### 📱 Mobile App
+
+- **Native iOS App**: Full-featured mobile app for iPhone and iPad
+- **Real-Time Sync**: Changes sync instantly between web and mobile
+- **Full Feature Parity**: Access all features from your mobile device
+- **Offline Support**: Data persists locally and syncs when online
+- **Native Navigation**: iOS-style navigation with smooth transitions
+- **Organization Switching**: Switch between organizations on the go
+- **Push Notifications**: Get notified about important events (coming soon)
+
+### 🎯 Product Tours & Onboarding
+
+- **Guided Tours**: Interactive multi-step tours for new users
+- **Home Tour**: Comprehensive 9-step tour covering key features
+- **Keyboard Navigation**: Navigate tours with arrow keys and Enter
+- **Progress Tracking**: Visual progress indicators
+- **Tour Persistence**: Tours remember completion status
+
+### 📥 Data Import
+
+- **CSV Import**: Bulk import clients and projects from CSV files
+- **AI-Powered Parsing**: Intelligent CSV analysis with Mastra agent
+- **Data Validation**: Automatic field validation and error reporting
+- **Client Name Resolution**: Automatically match client names to existing clients
+
+## Platform Availability
+
+- **Web App**: Full-featured web application accessible from any browser
+- **Mobile App**: Native iOS app for iPhone and iPad (Android coming soon)
 
 ## Tech Stack
 
-- **Frontend**: Next.js 15.5 (App Router, Turbopack), Tailwind CSS v4, shadcn/ui components
+OneTool is built with modern, reliable technologies:
+
+- **Frontend**: Next.js with React and Tailwind CSS
 - **Backend**: Convex (real-time database and functions)
-- **Authentication**: Clerk (auth + organizations + Stripe billing)
-- **Payments**: Stripe Checkout + Webhooks
+- **Authentication**: Clerk (users + organizations)
+- **Payments**: Stripe Checkout + Stripe Connect
 - **Email**: Resend
-- **SMS**: Twilio (basic reminders)
-- **Analytics**: PostHog
-- **Hosting**: Vercel (web), Convex Cloud (backend)
+- **E-Signatures**: BoldSign
+- **Mobile**: React Native with Expo
 
 ## Getting Started
 
-### Prerequisites
+1. **Sign Up**: Create your account and set up your organization
+2. **Add Clients**: Import clients or add them manually
+3. **Create Projects**: Link projects to clients and track progress
+4. **Send Quotes**: Create professional quotes and send for approval
+5. **Invoice & Get Paid**: Convert approved quotes to invoices and get paid via Stripe
+6. **Schedule Tasks**: Create tasks and set up recurring schedules
+7. **Track Performance**: Monitor your business metrics on the dashboard
 
-- Node.js 18+
-- pnpm (recommended) or npm/yarn
-- Convex account and deployment
-- Clerk account for authentication
+## Plans & Pricing
 
-### Installation
+### Free Plan
 
-1. Clone the repository:
+- 10 clients max
+- 3 active projects per client
+- 5 e-signatures per month
+- Custom PDF generation
 
-```bash
-git clone <repository-url>
-cd nextjs-onetool
-```
+### Business Plan
 
-2. Install dependencies:
+- Unlimited clients
+- Unlimited projects
+- Unlimited e-signatures
+- Custom SKUs
+- Unlimited documents
+- AI import
+- Stripe Connect
+- Priority support
 
-```bash
-pnpm install
-```
+## Security & Privacy
 
-3. Set up environment variables in `.env.local`:
+- **Multi-Tenant Architecture**: Your data is completely isolated by organization
+- **Secure Authentication**: Powered by Clerk with industry-standard security
+- **Encrypted Storage**: All data encrypted at rest and in transit
+- **GDPR Compliant**: Data privacy and security are top priorities
 
-```bash
-# Convex
-CONVEX_DEPLOYMENT=your-convex-deployment
-NEXT_PUBLIC_CONVEX_URL=your-convex-url
+## Support
 
-# Clerk (when implemented)
-# NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your-clerk-key
-# CLERK_SECRET_KEY=your-clerk-secret
+For questions, issues, or feature requests, please contact our support team.
 
-# Add other service keys as needed
-```
+---
 
-4. Run the development server:
-
-```bash
-pnpm dev
-```
-
-5. Start Convex development server in a separate terminal:
-
-```bash
-npx convex dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-## Project Structure
-
-```
-├── src/
-│   ├── app/                 # Next.js App Router pages
-│   ├── components/          # React components
-│   │   ├── ui/             # shadcn/ui components
-│   │   └── ...             # Custom components
-│   ├── lib/                # Utilities and configurations
-│   ├── hooks/              # Custom React hooks
-│   ├── providers/          # Context providers
-│   └── env.ts              # Environment variables
-├── convex/                 # Convex backend functions and schema
-├── public/                 # Static assets
-└── CLAUDE.md              # Development guidance
-```
-
-## Development Commands
-
-```bash
-# Install dependencies
-pnpm install
-
-# Run development server with Turbopack
-pnpm dev
-
-# Build for production with Turbopack
-pnpm build
-
-# Start production server
-pnpm start
-
-# Run linter
-pnpm lint
-
-# Run tests in watch mode (for development)
-pnpm test
-
-# Run tests once (for CI)
-pnpm test:once
-
-# Run tests with debugging
-pnpm test:debug
-
-# Generate test coverage report
-pnpm test:coverage
-
-# Convex development (run in separate terminal)
-npx convex dev
-```
-
-## Roadmap
-
-This project follows a 6-week MVP timeline:
-
-- **Week 1**: Project setup, authentication, basic UI ✅
-- **Week 2**: Organization setup, client management
-- **Week 3**: Projects, tasks, and scheduling
-- **Week 4**: Quotes with PDF generation and e-signature
-- **Week 5**: Invoices and Stripe payment integration
-- **Week 6**: Dashboard, notifications, and final polish
-
-## Testing
-
-OneTool uses [Vitest](https://vitest.dev/) with [convex-test](https://www.npmjs.com/package/convex-test) for comprehensive backend testing.
-
-### Test Coverage
-
-Our test suite covers critical business logic with over 2,400 lines of tests across 49 passing tests:
-
-- ✅ **Tasks** (`convex/tasks.test.ts`) - 942 lines, 16 tests
-
-  - Task creation with validation (empty titles, time format)
-  - Recurring task generation and scheduling
-  - List filtering (status, client, date range)
-  - Update, complete, and delete operations
-  - Statistics calculation
-
-- ✅ **Clients** (`convex/clients.test.ts`) - 650+ lines, 14 tests
-
-  - Client CRUD operations
-  - Bulk creation with error handling
-  - Archive and restore functionality
-  - Status filtering and search
-  - Client statistics and metrics
-  - Project count aggregation
-
-- ✅ **Auth Helpers** (`convex/lib/auth.test.ts`) - 400+ lines, 15 tests
-
-  - Organization membership validation
-  - User authentication helpers
-  - getCurrentUserOrgId with various auth states
-  - Organization access validation
-  - Alternative org ID field handling
-
-- ✅ **Quotes** (`convex/quotes.test.ts`) - 450+ lines, 4 tests
-  - Sequential quote number generation
-  - Status filtering
-  - Client-based filtering
-
-### Coverage Goals
-
-- **Mutations**: 80%+ coverage (critical business logic)
-- **Queries**: 70%+ coverage (data retrieval)
-- **Auth/Utils**: 90%+ coverage (security-critical functions)
-
-### Running Tests
-
-```bash
-# Watch mode - runs tests on file changes (great for TDD)
-pnpm test
-
-# Single run - for CI/CD pipelines
-pnpm test:once
-
-# Debug mode - attach debugger for troubleshooting
-pnpm test:debug
-
-# Coverage report - see what's tested and what's not
-pnpm test:coverage
-```
-
-### Test Structure
-
-Tests are co-located with the code they test in the `convex/` directory:
-
-```
-convex/
-├── tasks.ts              # Implementation
-├── tasks.test.ts         # Tests
-├── clients.ts
-├── clients.test.ts
-├── quotes.ts
-├── quotes.test.ts
-└── lib/
-    ├── auth.ts
-    └── auth.test.ts
-```
-
-### Writing Tests
-
-Our tests use the `convex-test` library to create a mock Convex environment:
-
-```typescript
-import { convexTest } from "convex-test";
-import { describe, it, expect } from "vitest";
-import { api } from "./_generated/api";
-
-describe("myFunction", () => {
-	it("should do something", async () => {
-		const t = convexTest(schema, modules);
-
-		// Run a mutation
-		await t.mutation(api.module.create, {
-			name: "Test",
-		});
-
-		// Query and assert
-		const results = await t.query(api.module.list);
-		expect(results).toHaveLength(1);
-	});
-});
-```
-
-### Test Patterns
-
-1. **Permission Testing**: Verify member vs admin access controls
-2. **Validation Testing**: Ensure proper error handling for invalid inputs
-3. **Edge Cases**: Test boundary conditions (empty strings, negative numbers, etc.)
-4. **Organization Isolation**: Confirm data scoping per organization
-5. **Financial Calculations**: Validate money math with precision
-6. **Sequential Operations**: Test number generation and ordering
-
-### Continuous Integration
-
-Tests run automatically on:
-
-- Pull requests to `main`, `staging`, or `develop` branches
-- Pushes to protected branches
-- Manual workflow dispatch
-
-See `.github/workflows/test.yml` for the complete CI configuration.
-
-### Contributing Tests
-
-When adding new features:
-
-1. **Write tests first** (TDD approach recommended)
-2. **Cover happy paths** - typical user flows
-3. **Test error cases** - invalid inputs, missing data
-4. **Test permissions** - member vs admin access
-5. **Test organization isolation** - data shouldn't leak between orgs
-6. **Aim for coverage goals** - 80%+ for mutations, 70%+ for queries
-
-Example contribution workflow:
-
-```bash
-# 1. Create feature branch
-git checkout -b feature/new-feature
-
-# 2. Write failing tests
-# Edit: convex/myFeature.test.ts
-
-# 3. Run tests in watch mode
-pnpm test
-
-# 4. Implement feature until tests pass
-# Edit: convex/myFeature.ts
-
-# 5. Check coverage
-pnpm test:coverage
-
-# 6. Commit and push
-git add convex/myFeature.ts convex/myFeature.test.ts
-git commit -m "feat: add new feature with tests"
-git push origin feature/new-feature
-```
-
-## Contributing
-
-1. Check the [TODO.md](TODO.md) for current development tasks
-2. Review the [PRD.md](PRD.md) for detailed requirements
-3. Follow the development guidelines in [CLAUDE.md](CLAUDE.md)
-4. Create feature branches and submit pull requests
-
-## License
-
-This project is private and proprietary to OneTool.
+**OneTool** - Simplify your growing business
