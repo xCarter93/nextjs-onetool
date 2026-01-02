@@ -9,8 +9,8 @@ import {
 } from "react-native";
 import { useState } from "react";
 import { useOrganizationList, useOrganization } from "@clerk/clerk-expo";
-import { colors, spacing, styles, fontFamily } from "@/lib/theme";
-import { ChevronDown, Check, Building, X } from "lucide-react-native";
+import { colors, spacing, styles, fontFamily, radius } from "@/lib/theme";
+import { Check, Building, X, RefreshCw } from "lucide-react-native";
 
 export function OrganizationSwitcher() {
 	const [modalVisible, setModalVisible] = useState(false);
@@ -51,12 +51,23 @@ export function OrganizationSwitcher() {
 				style={{
 					flexDirection: "row",
 					alignItems: "center",
-					padding: 8,
-					borderRadius: 8,
-					backgroundColor: colors.muted,
+					gap: spacing.sm,
 				}}
 			>
-				<ActivityIndicator size="small" color={colors.mutedForeground} />
+				<View>
+					<Text
+						style={{
+							fontSize: 11,
+							fontFamily: fontFamily.medium,
+							color: colors.mutedForeground,
+							textTransform: "uppercase",
+							letterSpacing: 0.5,
+						}}
+					>
+						Active Organization
+					</Text>
+					<ActivityIndicator size="small" color={colors.mutedForeground} style={{ marginTop: 4 }} />
+				</View>
 			</View>
 		);
 	}
@@ -66,28 +77,57 @@ export function OrganizationSwitcher() {
 	return (
 		<>
 			{/* Trigger Button */}
-			<Pressable
+			<View
 				style={{
 					flexDirection: "row",
 					alignItems: "center",
-					padding: 8,
-					borderRadius: 8,
-					backgroundColor: colors.muted,
+					gap: spacing.sm,
 				}}
-				onPress={() => setModalVisible(true)}
 			>
-				<Text
-					style={{
-						fontSize: 14,
-						fontWeight: "600",
-						color: colors.foreground,
-						marginRight: 4,
-					}}
-				>
-					{activeOrg?.name || "Personal"}
-				</Text>
-				<ChevronDown size={16} color={colors.mutedForeground} />
-			</Pressable>
+				<View>
+					<Text
+						style={{
+							fontSize: 11,
+							fontFamily: fontFamily.medium,
+							color: colors.mutedForeground,
+							textTransform: "uppercase",
+							letterSpacing: 0.5,
+							marginBottom: 2,
+						}}
+					>
+						Active Organization
+					</Text>
+					<Text
+						style={{
+							fontSize: 14,
+							fontFamily: fontFamily.semibold,
+							color: colors.foreground,
+						}}
+						numberOfLines={1}
+					>
+						{activeOrg?.name || "Personal"}
+					</Text>
+				</View>
+				
+				{/* Switch Organization Icon Button */}
+				{organizationList.length > 1 && (
+					<Pressable
+						style={({ pressed }) => ({
+							width: 36,
+							height: 36,
+							borderRadius: radius.md,
+							backgroundColor: pressed ? colors.muted : "transparent",
+							alignItems: "center",
+							justifyContent: "center",
+							borderWidth: 1,
+							borderColor: colors.border,
+						})}
+						onPress={() => setModalVisible(true)}
+					>
+						<RefreshCw size={18} color={colors.primary} />
+					</Pressable>
+				)}
+			</View>
 
 			{/* Organization Picker Modal */}
 			<Modal
