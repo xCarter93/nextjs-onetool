@@ -1,4 +1,4 @@
-import { View, Text, Modal, Pressable, ScrollView, Alert } from "react-native";
+import { View, Text, Modal, Pressable, ScrollView, Alert, Image } from "react-native";
 import { useState } from "react";
 import { useUser, useAuth, useOrganization } from "@clerk/clerk-expo";
 import { colors, spacing, styles, fontFamily } from "@/lib/theme";
@@ -32,16 +32,28 @@ export function ProfileModal() {
 					width: 36,
 					height: 36,
 					borderRadius: 18,
-					backgroundColor: colors.primary,
+					backgroundColor: user?.imageUrl ? "transparent" : colors.primary,
 					alignItems: "center",
 					justifyContent: "center",
+					overflow: "hidden",
 				}}
 				onPress={() => setModalVisible(true)}
 			>
-			<Text style={{ color: "#fff", fontFamily: fontFamily.semibold, fontSize: 14 }}>
-				{user?.firstName?.[0] ||
-					user?.emailAddresses[0]?.emailAddress[0]?.toUpperCase()}
-			</Text>
+			{user?.imageUrl ? (
+				<Image
+					source={{ uri: user.imageUrl }}
+					style={{
+						width: 36,
+						height: 36,
+						borderRadius: 18,
+					}}
+				/>
+			) : (
+				<Text style={{ color: "#fff", fontFamily: fontFamily.semibold, fontSize: 14 }}>
+					{user?.firstName?.[0] ||
+						user?.emailAddresses[0]?.emailAddress[0]?.toUpperCase()}
+				</Text>
+			)}
 			</Pressable>
 
 			{/* Profile Modal */}
@@ -94,24 +106,36 @@ export function ProfileModal() {
 						>
 							{/* User Avatar & Name */}
 							<View style={{ alignItems: "center", marginBottom: spacing.lg }}>
-								<View
-									style={{
-										width: 80,
-										height: 80,
-										borderRadius: 40,
-										backgroundColor: colors.primary,
-										alignItems: "center",
-										justifyContent: "center",
-										marginBottom: spacing.md,
-									}}
-								>
-				<Text
-					style={{ color: "#fff", fontSize: 32, fontFamily: fontFamily.semibold }}
-				>
-					{user?.firstName?.[0] ||
-						user?.emailAddresses[0]?.emailAddress[0]?.toUpperCase()}
-				</Text>
-								</View>
+								{user?.imageUrl ? (
+									<Image
+										source={{ uri: user.imageUrl }}
+										style={{
+											width: 80,
+											height: 80,
+											borderRadius: 40,
+											marginBottom: spacing.md,
+										}}
+									/>
+								) : (
+									<View
+										style={{
+											width: 80,
+											height: 80,
+											borderRadius: 40,
+											backgroundColor: colors.primary,
+											alignItems: "center",
+											justifyContent: "center",
+											marginBottom: spacing.md,
+										}}
+									>
+						<Text
+							style={{ color: "#fff", fontSize: 32, fontFamily: fontFamily.semibold }}
+						>
+							{user?.firstName?.[0] ||
+								user?.emailAddresses[0]?.emailAddress[0]?.toUpperCase()}
+						</Text>
+									</View>
+								)}
 
 								<Text
 									style={[styles.heading, { fontSize: 20, marginBottom: 4 }]}

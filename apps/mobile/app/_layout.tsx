@@ -9,7 +9,7 @@ import { ConvexReactClient } from "convex/react";
 import { Slot } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { View } from "react-native";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type PropsWithChildren } from "react";
 import { tokenCache } from "@clerk/clerk-expo/token-cache";
 import { useFonts } from "expo-font";
 import {
@@ -31,7 +31,7 @@ SplashScreen.setOptions({
 
 const convex = new ConvexReactClient(process.env.EXPO_PUBLIC_CONVEX_URL!);
 
-function ConvexClerkProvider({ children }: { children: React.ReactNode }) {
+function ConvexClerkProvider({ children }: PropsWithChildren) {
 	const { organization } = useOrganization();
 	const [convexKey, setConvexKey] = useState(0);
 
@@ -43,7 +43,7 @@ function ConvexClerkProvider({ children }: { children: React.ReactNode }) {
 
 	return (
 		<ConvexProviderWithClerk key={convexKey} client={convex} useAuth={useAuth}>
-			{children}
+			{children as any}
 		</ConvexProviderWithClerk>
 	);
 }

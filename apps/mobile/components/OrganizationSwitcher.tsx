@@ -6,6 +6,7 @@ import {
 	ScrollView,
 	ActivityIndicator,
 	Alert,
+	Image,
 } from "react-native";
 import { useState } from "react";
 import { useOrganizationList, useOrganization } from "@clerk/clerk-expo";
@@ -82,9 +83,43 @@ export function OrganizationSwitcher() {
 					flexDirection: "row",
 					alignItems: "center",
 					gap: spacing.sm,
+					flexShrink: 1,
 				}}
 			>
-				<View>
+				{/* Organization Avatar */}
+				{activeOrg?.imageUrl ? (
+					<Image
+						source={{ uri: activeOrg.imageUrl }}
+						style={{
+							width: 40,
+							height: 40,
+							borderRadius: 8,
+						}}
+					/>
+				) : (
+					<View
+						style={{
+							width: 40,
+							height: 40,
+							borderRadius: 8,
+							backgroundColor: colors.primary,
+							alignItems: "center",
+							justifyContent: "center",
+						}}
+					>
+						<Text
+							style={{
+								color: "#fff",
+								fontFamily: fontFamily.semibold,
+								fontSize: 16,
+							}}
+						>
+							{activeOrg?.name?.[0] || "P"}
+						</Text>
+					</View>
+				)}
+				
+				<View style={{ flexShrink: 1 }}>
 					<Text
 						style={{
 							fontSize: 11,
@@ -211,27 +246,39 @@ export function OrganizationSwitcher() {
 													flex: 1,
 												}}
 											>
-												<View
-													style={{
-														width: 40,
-														height: 40,
-														borderRadius: 8,
-														backgroundColor: colors.primary,
-														alignItems: "center",
-														justifyContent: "center",
-														marginRight: spacing.sm,
-													}}
-												>
-													<Text
-													style={{
-														color: "#fff",
-														fontFamily: fontFamily.semibold,
-														fontSize: 16,
-													}}
+												{membership.organization.imageUrl ? (
+													<Image
+														source={{ uri: membership.organization.imageUrl }}
+														style={{
+															width: 40,
+															height: 40,
+															borderRadius: 8,
+															marginRight: spacing.sm,
+														}}
+													/>
+												) : (
+													<View
+														style={{
+															width: 40,
+															height: 40,
+															borderRadius: 8,
+															backgroundColor: colors.primary,
+															alignItems: "center",
+															justifyContent: "center",
+															marginRight: spacing.sm,
+														}}
 													>
-														{membership.organization.name[0]}
-													</Text>
-												</View>
+														<Text
+														style={{
+															color: "#fff",
+															fontFamily: fontFamily.semibold,
+															fontSize: 16,
+														}}
+														>
+															{membership.organization.name[0]}
+														</Text>
+													</View>
+												)}
 												<View style={{ flex: 1 }}>
 													<Text
 													style={[
