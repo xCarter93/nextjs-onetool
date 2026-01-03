@@ -21,7 +21,6 @@ import {
 import {
 	Users,
 	FolderKanban,
-	FileText,
 	CheckSquare,
 	Plus,
 	ChevronRight,
@@ -114,14 +113,6 @@ export default function HomeScreen() {
 	};
 
 	const quickActions = [
-		{ icon: Users, label: "Client", route: "/clients/new", color: "#3b82f6" },
-		{
-			icon: FolderKanban,
-			label: "Project",
-			route: "/projects/new",
-			color: "#8b5cf6",
-		},
-		{ icon: FileText, label: "Quote", route: "/quotes/new", color: "#10b981" },
 		{ icon: CheckSquare, label: "Task", route: "/tasks/new", color: "#f59e0b" },
 	];
 
@@ -180,20 +171,6 @@ export default function HomeScreen() {
 						/>
 					</View>
 					<View style={styles.statsRow}>
-						<StatCard
-							icon={<FileText size={18} color="#10b981" />}
-							label="Quotes"
-							value={
-								homeStats?.approvedQuotes.totalValue
-									? formatCurrency(homeStats.approvedQuotes.totalValue)
-									: "$0"
-							}
-							changeType={homeStats?.approvedQuotes.changeType}
-							changeValue={homeStats?.approvedQuotes.change}
-							subValue="approved"
-							accentColor="#10b981"
-							onPress={() => router.push("/quotes")}
-						/>
 						<StatCard
 							icon={<CheckSquare size={18} color="#f59e0b" />}
 							label="Tasks Due"

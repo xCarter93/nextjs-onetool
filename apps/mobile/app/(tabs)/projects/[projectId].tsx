@@ -19,6 +19,8 @@ import { Card } from "@/components/Card";
 import { EditableField } from "@/components/EditableField";
 import { SectionHeader } from "@/components/SectionHeader";
 import { TaskItem } from "@/components/TaskItem";
+import { ProjectDocuments } from "@/components/ProjectDocuments";
+import { MentionModal } from "@/components/MentionModal";
 import {
 	Calendar,
 	Building2,
@@ -27,6 +29,7 @@ import {
 	FileText,
 	DollarSign,
 	ChevronRight,
+	MessageSquare,
 } from "lucide-react-native";
 
 type ProjectStatus = "planned" | "in-progress" | "completed" | "cancelled";
@@ -43,6 +46,7 @@ export default function ProjectDetailScreen() {
 	const router = useRouter();
 	const [refreshing, setRefreshing] = useState(false);
 	const [updatingTasks, setUpdatingTasks] = useState<Set<string>>(new Set());
+	const [mentionModalVisible, setMentionModalVisible] = useState(false);
 
 	const project = useQuery(
 		api.projects.get,
@@ -399,18 +403,12 @@ export default function ProjectDetailScreen() {
 						title="Quotes"
 						count={quotes?.length}
 						icon={<FileText size={18} color="#10b981" />}
-						actionLabel={quotes && quotes.length > 0 ? "View All" : undefined}
-						onAction={() => router.push("/quotes")}
 					/>
 
 					{quotes && quotes.length > 0 ? (
 						<View style={styles.quotesList}>
 							{quotes.slice(0, 3).map((quote) => (
-								<Pressable
-									key={quote._id}
-									style={styles.quoteItem}
-									onPress={() => router.push(`/quotes/${quote._id}`)}
-								>
+								<View key={quote._id} style={styles.quoteItem}>
 									<View style={styles.quoteItemContent}>
 										<View style={{ flex: 1 }}>
 											<Text style={styles.quoteTitle} numberOfLines={1}>
@@ -425,8 +423,7 @@ export default function ProjectDetailScreen() {
 										</View>
 										<StatusBadge status={quote.status} />
 									</View>
-									<ChevronRight size={16} color={colors.mutedForeground} />
-								</Pressable>
+								</View>
 							))}
 						</View>
 					) : (
@@ -436,9 +433,31 @@ export default function ProjectDetailScreen() {
 					)}
 				</View>
 
+				{/* Project Documents Section */}
+				{projectId && <ProjectDocuments projectId={projectId as Id<"projects">} />}
+
 				{/* Bottom spacing */}
 				<View style={{ height: spacing.xl }} />
 			</ScrollView>
+
+			{/* Floating Action Button for Mentions */}
+			<Pressable
+				style={styles.fab}
+				onPress={() => setMentionModalVisible(true)}
+			>
+				<MessageSquare size={24} color="#ffffff" />
+			</Pressable>
+
+			{/* Mention Modal */}
+			{project && (
+				<MentionModal
+					visible={mentionModalVisible}
+					onClose={() => setMentionModalVisible(false)}
+					entityType="project"
+					entityId={projectId as Id<"projects">}
+					entityName={project.title}
+				/>
+			)}
 		</SafeAreaView>
 	);
 }
@@ -652,5 +671,21 @@ const styles = StyleSheet.create({
 		fontSize: 13,
 		fontFamily: fontFamily.regular,
 		color: colors.mutedForeground,
+	},
+	fab: {
+		position: "absolute",
+		right: spacing.md,
+		bottom: spacing.md,
+		width: 56,
+		height: 56,
+		borderRadius: 28,
+		backgroundColor: colors.primary,
+		alignItems: "center",
+		justifyContent: "center",
+		shadowColor: "#000",
+		shadowOffset: { width: 0, height: 4 },
+		shadowOpacity: 0.3,
+		shadowRadius: 8,
+		elevation: 8,
 	},
 });

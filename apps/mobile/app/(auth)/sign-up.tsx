@@ -13,7 +13,12 @@ import { Link, useRouter } from "expo-router";
 import { useSSO } from "@clerk/clerk-expo";
 import * as WebBrowser from "expo-web-browser";
 import * as AuthSession from "expo-auth-session";
-import { colors, spacing, fontFamily, styles as themeStyles } from "@/lib/theme";
+import {
+	colors,
+	spacing,
+	fontFamily,
+	styles as themeStyles,
+} from "@/lib/theme";
 import { StyledButton } from "@/components/styled";
 import { GoogleIcon } from "@/components/GoogleIcon";
 
@@ -112,9 +117,6 @@ export default function SignUpScreen() {
 				signUp,
 			} = await startSSOFlow({
 				strategy: "oauth_google",
-				redirectUrl: AuthSession.makeRedirectUri({
-					path: "/oauth-callback",
-				}),
 			});
 
 			if (createdSessionId && ssoSetActive) {
@@ -154,17 +156,17 @@ export default function SignUpScreen() {
 					editable={!loading}
 				/>
 
-			<StyledButton
-				intent="primary"
-				size="lg"
-				onPress={onVerifyPress}
-				isLoading={loading}
-				disabled={loading}
-				showArrow={false}
-				style={{ marginBottom: spacing.md }}
-			>
-				Verify Email
-			</StyledButton>
+				<StyledButton
+					intent="primary"
+					size="lg"
+					onPress={onVerifyPress}
+					isLoading={loading}
+					disabled={loading}
+					showArrow={false}
+					style={{ marginBottom: spacing.md }}
+				>
+					Verify Email
+				</StyledButton>
 			</View>
 		);
 	}
@@ -174,19 +176,19 @@ export default function SignUpScreen() {
 			<Text style={styles.title}>Create your account</Text>
 			<Text style={styles.subtitle}>Sign up to get started with OneTool</Text>
 
-		{/* Google OAuth Button */}
-		<StyledButton
-			intent="outline"
-			size="lg"
-			onPress={handleGoogleSignUp}
-			isLoading={loading}
-			disabled={loading}
-			showArrow={false}
-			icon={<GoogleIcon size={20} />}
-			style={{ marginBottom: spacing.md }}
-		>
-			Continue with Google
-		</StyledButton>
+			{/* Google OAuth Button */}
+			<StyledButton
+				intent="outline"
+				size="lg"
+				onPress={handleGoogleSignUp}
+				isLoading={loading}
+				disabled={loading}
+				showArrow={false}
+				icon={<GoogleIcon size={20} />}
+				style={{ marginBottom: spacing.md }}
+			>
+				Continue with Google
+			</StyledButton>
 
 			<View style={styles.divider}>
 				<View style={styles.dividerLine} />
@@ -214,17 +216,17 @@ export default function SignUpScreen() {
 				editable={!loading}
 			/>
 
-		<StyledButton
-			intent="primary"
-			size="lg"
-			onPress={onSignUpPress}
-			isLoading={loading}
-			disabled={loading}
-			showArrow={false}
-			style={{ marginBottom: spacing.md }}
-		>
-			Sign Up
-		</StyledButton>
+			<StyledButton
+				intent="primary"
+				size="lg"
+				onPress={onSignUpPress}
+				isLoading={loading}
+				disabled={loading}
+				showArrow={false}
+				style={{ marginBottom: spacing.md }}
+			>
+				Sign Up
+			</StyledButton>
 
 			<View style={styles.footer}>
 				<Text style={styles.footerText}>Already have an account? </Text>
@@ -303,4 +305,3 @@ const styles = StyleSheet.create({
 		fontSize: 14,
 	},
 });
-

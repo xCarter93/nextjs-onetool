@@ -4,7 +4,6 @@ import {
   Home,
   Users,
   FolderKanban,
-  FileText,
   CheckSquare,
 } from "lucide-react-native";
 import { AppHeader } from "@/components/AppHeader";
@@ -55,16 +54,6 @@ export default function TabLayout() {
           title: "Projects",
           tabBarIcon: ({ color, size }) => (
             <FolderKanban color={color} size={size} />
-          ),
-          headerShown: false, // Stack will handle header
-        }}
-      />
-      <Tabs.Screen
-        name="quotes"
-        options={{
-          title: "Quotes",
-          tabBarIcon: ({ color, size }) => (
-            <FileText color={color} size={size} />
           ),
           headerShown: false, // Stack will handle header
         }}

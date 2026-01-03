@@ -18,6 +18,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { Card } from "@/components/Card";
 import { EditableField } from "@/components/EditableField";
 import { SectionHeader } from "@/components/SectionHeader";
+import { MentionModal } from "@/components/MentionModal";
 import {
 	Mail,
 	Phone,
@@ -28,6 +29,7 @@ import {
 	User,
 	Tag,
 	FileEdit,
+	MessageSquare,
 } from "lucide-react-native";
 
 type ClientStatus = "lead" | "prospect" | "active" | "inactive" | "archived";
@@ -44,6 +46,7 @@ export default function ClientDetailScreen() {
 	const { clientId } = useLocalSearchParams<{ clientId: string }>();
 	const router = useRouter();
 	const [refreshing, setRefreshing] = useState(false);
+	const [mentionModalVisible, setMentionModalVisible] = useState(false);
 
 	const client = useQuery(
 		api.clients.get,
@@ -287,18 +290,12 @@ export default function ClientDetailScreen() {
 							approvedQuotes > 0 ? `${approvedQuotes} approved` : undefined
 						}
 						icon={<FileText size={18} color="#10b981" />}
-						actionLabel={quotes && quotes.length > 0 ? "View All" : undefined}
-						onAction={() => router.push("/quotes")}
 					/>
 
 					{recentQuotes.length > 0 ? (
 						<View style={styles.relatedList}>
 							{recentQuotes.map((quote) => (
-								<Pressable
-									key={quote._id}
-									style={styles.relatedItem}
-									onPress={() => router.push(`/quotes/${quote._id}`)}
-								>
+								<View key={quote._id} style={styles.relatedItem}>
 									<View style={styles.relatedItemContent}>
 										<View style={{ flex: 1 }}>
 											<Text style={styles.relatedItemTitle} numberOfLines={1}>
@@ -310,8 +307,7 @@ export default function ClientDetailScreen() {
 										</View>
 										<StatusBadge status={quote.status} />
 									</View>
-									<ChevronRight size={16} color={colors.mutedForeground} />
-								</Pressable>
+								</View>
 							))}
 						</View>
 					) : (
@@ -338,6 +334,25 @@ export default function ClientDetailScreen() {
 				{/* Bottom spacing */}
 				<View style={{ height: spacing.xl }} />
 			</ScrollView>
+
+			{/* Floating Action Button for Mentions */}
+			<Pressable
+				style={styles.fab}
+				onPress={() => setMentionModalVisible(true)}
+			>
+				<MessageSquare size={24} color="#ffffff" />
+			</Pressable>
+
+			{/* Mention Modal */}
+			{client && (
+				<MentionModal
+					visible={mentionModalVisible}
+					onClose={() => setMentionModalVisible(false)}
+					entityType="client"
+					entityId={clientId as Id<"clients">}
+					entityName={client.companyName}
+				/>
+			)}
 		</SafeAreaView>
 	);
 }
@@ -510,5 +525,21 @@ const styles = StyleSheet.create({
 		fontSize: 12,
 		fontFamily: fontFamily.medium,
 		color: colors.primary,
+	},
+	fab: {
+		position: "absolute",
+		right: spacing.md,
+		bottom: spacing.md,
+		width: 56,
+		height: 56,
+		borderRadius: 28,
+		backgroundColor: colors.primary,
+		alignItems: "center",
+		justifyContent: "center",
+		shadowColor: "#000",
+		shadowOffset: { width: 0, height: 4 },
+		shadowOpacity: 0.3,
+		shadowRadius: 8,
+		elevation: 8,
 	},
 });
