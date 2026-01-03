@@ -558,11 +558,6 @@ export default function TasksPage() {
 		return filtered;
 	}, [allTasks, projectIdFromUrl, filters, searchQuery, sortBy, sortOrder]);
 
-	const handleClearFiltersAndSearch = () => {
-		setFilters([]);
-		setSearchQuery("");
-	};
-
 	const handleStatusChange = async (
 		taskId: Id<"tasks">,
 		newStatus: Task["status"]
@@ -673,43 +668,44 @@ export default function TasksPage() {
 				/>
 			</div>
 
-			{/* Filters and Search */}
-			<div className="flex flex-col sm:flex-row gap-4 items-start">
-				{/* Filters on the left */}
-				<div className="flex-shrink-0">
-					<StyledFilters
-						filters={filters}
-						fields={filterFields}
-						onChange={setFilters}
-						addButtonText="Filter"
-						addButtonIcon={<FilterIcon className="h-4 w-4" />}
-						size="md"
-						variant="outline"
-					/>
-				</div>
+		{/* Filters and Search */}
+		<div className="flex flex-col sm:flex-row gap-4 items-start">
+			{/* Filters with integrated clear button on the left */}
+			<StyledFilters
+				filters={filters}
+				fields={filterFields}
+				onChange={setFilters}
+				addButtonText="Filter"
+				addButtonIcon={<FilterIcon className="h-4 w-4" />}
+				size="md"
+				variant="outline"
+				showClearButton={true}
+				clearButtonText="Clear"
+				clearButtonIcon={<X className="h-4 w-4" />}
+			/>
 
-				{/* Search in the middle */}
-				<div className="relative flex-1">
-					<Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-					<Input
-						placeholder="Search tasks..."
-						value={searchQuery}
-						onChange={(e) => setSearchQuery(e.target.value)}
-						className="pl-10"
-					/>
-				</div>
-
-				{/* Clear button on the right */}
-				{(filters.length > 0 || searchQuery.trim() !== "") && (
-					<StyledButton
-						label="Clear"
-						icon={<X className="h-4 w-4" />}
-						intent="outline"
-						onClick={handleClearFiltersAndSearch}
-						showArrow={false}
-					/>
-				)}
+			{/* Search in the middle */}
+			<div className="relative flex-1">
+				<Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+				<Input
+					placeholder="Search tasks..."
+					value={searchQuery}
+					onChange={(e) => setSearchQuery(e.target.value)}
+					className="pl-10"
+				/>
 			</div>
+
+			{/* Additional clear button for search only */}
+			{searchQuery.trim() !== "" && filters.length === 0 && (
+				<StyledButton
+					label="Clear"
+					icon={<X className="h-4 w-4" />}
+					intent="outline"
+					onClick={() => setSearchQuery("")}
+					showArrow={false}
+				/>
+			)}
+		</div>
 
 			{/* Tasks Table */}
 			<div className="bg-card rounded-lg border overflow-hidden">
