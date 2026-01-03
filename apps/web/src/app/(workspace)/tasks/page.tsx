@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "convex/react";
+import { useSearchParams } from "next/navigation";
 import { api } from "@onetool/backend/convex/_generated/api";
 import { Id } from "@onetool/backend/convex/_generated/dataModel";
 import { cn } from "@/lib/utils";
@@ -331,6 +332,9 @@ function TaskRow({
 }
 
 export default function TasksPage() {
+	const searchParams = useSearchParams();
+	const projectIdFromUrl = searchParams.get("projectId") as Id<"projects"> | null;
+	
 	const [searchQuery, setSearchQuery] = useState("");
 	const [statusFilter, setStatusFilter] = useState<Task["status"] | "all">(
 		"all"
@@ -347,6 +351,7 @@ export default function TasksPage() {
 
 	// Queries
 	const allTasks = useQuery(api.tasks.list, {});
+	const projects = useQuery(api.projects.list, {});
 
 	// Mutations
 	const updateTaskMutation = useMutation(api.tasks.update);
@@ -355,11 +360,21 @@ export default function TasksPage() {
 
 	const isLoading = allTasks === undefined;
 
+	// Get project name if filtering by project
+	const filteredProject = projectIdFromUrl 
+		? projects?.find((p) => p._id === projectIdFromUrl)
+		: null;
+
 	// Filter and sort tasks
 	const filteredAndSortedTasks = useMemo(() => {
 		if (!allTasks) return [];
 
 		let filtered = allTasks;
+
+		// Project filter (from URL parameter)
+		if (projectIdFromUrl) {
+			filtered = filtered.filter((task) => task.projectId === projectIdFromUrl);
+		}
 
 		// Search filter
 		if (searchQuery.trim()) {
@@ -406,7 +421,7 @@ export default function TasksPage() {
 		});
 
 		return filtered;
-	}, [allTasks, searchQuery, statusFilter, priorityFilter, sortBy, sortOrder]);
+	}, [allTasks, projectIdFromUrl, searchQuery, statusFilter, priorityFilter, sortBy, sortOrder]);
 
 	const handleStatusChange = async (
 		taskId: Id<"tasks">,
@@ -494,6 +509,11 @@ export default function TasksPage() {
 				<div className="space-y-1">
 					<h1 className="text-2xl sm:text-3xl font-bold text-foreground">
 						Tasks
+						{filteredProject && (
+							<span className="text-lg sm:text-xl font-normal text-muted-foreground ml-2">
+								for {filteredProject.title}
+							</span>
+						)}
 					</h1>
 					<p className="text-muted-foreground">
 						{isLoading
