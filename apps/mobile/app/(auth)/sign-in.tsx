@@ -83,9 +83,6 @@ export default function SignInScreen() {
 				signUp,
 			} = await startSSOFlow({
 				strategy: "oauth_google",
-				redirectUrl: AuthSession.makeRedirectUri({
-					path: "/oauth-callback",
-				}),
 			});
 
 			if (createdSessionId && ssoSetActive) {
@@ -121,19 +118,19 @@ export default function SignInScreen() {
 			<Text style={styles.title}>Welcome back</Text>
 			<Text style={styles.subtitle}>Sign in to continue to OneTool</Text>
 
-		{/* Google OAuth Button */}
-		<StyledButton
-			intent="outline"
-			size="lg"
-			onPress={handleGoogleSignIn}
-			isLoading={loading}
-			disabled={loading}
-			showArrow={false}
-			icon={<GoogleIcon size={20} />}
-			style={{ marginBottom: spacing.md }}
-		>
-			Continue with Google
-		</StyledButton>
+			{/* Google OAuth Button */}
+			<StyledButton
+				intent="outline"
+				size="lg"
+				onPress={handleGoogleSignIn}
+				isLoading={loading}
+				disabled={loading}
+				showArrow={false}
+				icon={<GoogleIcon size={20} />}
+				style={{ marginBottom: spacing.md }}
+			>
+				Continue with Google
+			</StyledButton>
 
 			<View style={styles.divider}>
 				<View style={styles.dividerLine} />
@@ -161,17 +158,17 @@ export default function SignInScreen() {
 				editable={!loading}
 			/>
 
-		<StyledButton
-			intent="primary"
-			size="lg"
-			onPress={onSignInPress}
-			isLoading={loading}
-			disabled={loading}
-			showArrow={false}
-			style={{ marginBottom: spacing.md }}
-		>
-			Sign In
-		</StyledButton>
+			<StyledButton
+				intent="primary"
+				size="lg"
+				onPress={onSignInPress}
+				isLoading={loading}
+				disabled={loading}
+				showArrow={false}
+				style={{ marginBottom: spacing.md }}
+			>
+				Sign In
+			</StyledButton>
 
 			<View style={styles.footer}>
 				<Text style={styles.footerText}>Don't have an account? </Text>
@@ -250,4 +247,3 @@ const styles = StyleSheet.create({
 		fontSize: 14,
 	},
 });
-
