@@ -487,7 +487,7 @@ export const getRevenueGoalProgress = query({
 			.filter((q) =>
 				q.and(
 					q.eq(q.field("status"), "paid"),
-					q.gte(q.field("issuedDate"), startOfThisMonth)
+					q.gte(q.field("paidAt"), startOfThisMonth)
 				)
 			)
 			.collect();
