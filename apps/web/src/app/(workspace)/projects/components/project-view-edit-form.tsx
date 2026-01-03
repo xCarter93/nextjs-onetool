@@ -55,13 +55,6 @@ import {
 	FileText,
 	User,
 } from "lucide-react";
-import {
-	StyledSelect,
-	StyledSelectTrigger,
-	StyledSelectContent,
-	SelectValue,
-	SelectItem,
-} from "@/components/ui/styled/styled-select";
 import { StyledMultiSelector } from "@/components/ui/styled/styled-multi-selector";
 
 type ClientId = Id<"clients">;
@@ -177,9 +170,10 @@ export function ProjectViewEditForm({
 	onEditingChange,
 }: ProjectViewEditFormProps) {
 	const [internalIsEditing, setInternalIsEditing] = useState(false);
-	
+
 	// Use controlled prop if provided, otherwise use internal state
-	const isEditing = isEditingProp !== undefined ? isEditingProp : internalIsEditing;
+	const isEditing =
+		isEditingProp !== undefined ? isEditingProp : internalIsEditing;
 	const setIsEditing = (value: boolean) => {
 		if (onEditingChange) {
 			onEditingChange(value);
@@ -645,7 +639,7 @@ export function ProjectViewEditForm({
 													property.propertyName
 														? `${property.propertyName} - ${property.streetAddress}`
 														: property.streetAddress
-											  )
+												)
 											: []
 									}
 									placeholder={
@@ -654,12 +648,12 @@ export function ProjectViewEditForm({
 												? `${primaryProperty.propertyName} - ${primaryProperty.streetAddress}`
 												: primaryProperty.streetAddress
 											: client &&
-											  clientProperties &&
-											  clientProperties.length > 0
-											? "Select a property..."
-											: client
-											? "No properties available..."
-											: "Select a client first..."
+												  clientProperties &&
+												  clientProperties.length > 0
+												? "Select a property..."
+												: client
+													? "No properties available..."
+													: "Select a client first..."
 									}
 									disabled={!isEditing}
 									onSelect={(option) => {
@@ -776,23 +770,23 @@ export function ProjectViewEditForm({
 														`${contact.firstName} ${contact.lastName}${
 															contact.jobTitle ? ` - ${contact.jobTitle}` : ""
 														}`
-											  )
+												)
 											: []
 									}
 									placeholder={
 										primaryContact
 											? `${primaryContact.firstName} ${
 													primaryContact.lastName
-											  }${
+												}${
 													primaryContact.jobTitle
 														? ` - ${primaryContact.jobTitle}`
 														: ""
-											  }`
+												}`
 											: client && clientContacts && clientContacts.length > 0
-											? "Select a contact..."
-											: client
-											? "No contacts available..."
-											: "Select a client first..."
+												? "Select a contact..."
+												: client
+													? "No contacts available..."
+													: "Select a client first..."
 									}
 									disabled={!isEditing}
 									onSelect={(option) => {
@@ -1295,8 +1289,8 @@ export function ProjectViewEditForm({
 															task.status === "completed"
 																? "bg-green-500"
 																: task.status === "cancelled"
-																? "bg-red-500"
-																: "bg-yellow-500"
+																	? "bg-red-500"
+																	: "bg-yellow-500"
 														}`}
 													/>
 													<div>
@@ -1319,7 +1313,7 @@ export function ProjectViewEditForm({
 											<button
 												type="button"
 												onClick={() =>
-													onNavigate(`/projects/${projectId}/tasks`)
+													onNavigate(`/tasks?projectId=${projectId}`)
 												}
 												className="w-full mt-3 h-9 px-3 py-2 text-sm border border-gray-200 dark:border-white/10 rounded-md hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
 											>
