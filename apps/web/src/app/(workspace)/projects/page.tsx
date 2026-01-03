@@ -231,7 +231,10 @@ export default function ProjectsPage() {
 		[]
 	);
 	const [query, setQuery] = React.useState("");
-	const pageSize = 10;
+	const [pagination, setPagination] = React.useState({
+		pageIndex: 0,
+		pageSize: 10,
+	});
 	const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 	const [projectToDelete, setProjectToDelete] = useState<{
 		id: string;
@@ -313,11 +316,12 @@ export default function ProjectsPage() {
 			sorting,
 			columnFilters,
 			globalFilter: query,
-			pagination: { pageIndex: 0, pageSize },
+			pagination,
 		},
 		onSortingChange: setSorting,
 		onColumnFiltersChange: setColumnFilters,
 		onGlobalFilterChange: setQuery,
+		onPaginationChange: setPagination,
 		globalFilterFn: (row, columnId, value) => {
 			// If no search value, show all rows
 			if (!value || value.trim() === "") return true;
@@ -355,9 +359,10 @@ export default function ProjectsPage() {
 		getPaginationRowModel: getPaginationRowModel(),
 	});
 
+	// Reset to first page when search changes
 	React.useEffect(() => {
-		table.setPageSize(pageSize);
-	}, [pageSize, table]);
+		setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+	}, [query]);
 
 	const handleKanbanDataChange = React.useCallback(
 		(nextData: ProjectKanbanItem[]) => {
