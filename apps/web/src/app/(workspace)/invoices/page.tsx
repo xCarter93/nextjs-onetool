@@ -295,7 +295,10 @@ export default function InvoicesPage() {
 		[]
 	);
 	const [query, setQuery] = React.useState("");
-	const pageSize = 10;
+	const [pagination, setPagination] = React.useState({
+		pageIndex: 0,
+		pageSize: 10,
+	});
 
 	const invoiceStatusMap = React.useMemo(() => {
 		const statusMap = new Map<string, Doc<"invoices">["status"]>();
@@ -393,19 +396,56 @@ export default function InvoicesPage() {
 			sorting,
 			columnFilters,
 			globalFilter: query,
-			pagination: { pageIndex: 0, pageSize },
+			pagination,
 		},
 		onSortingChange: setSorting,
 		onColumnFiltersChange: setColumnFilters,
+		onGlobalFilterChange: setQuery,
+		onPaginationChange: setPagination,
+		globalFilterFn: (row, columnId, value) => {
+			// If no search value, show all rows
+			if (!value || value.trim() === "") return true;
+
+			const search = value.toLowerCase().trim();
+			const invoice = row.original;
+
+			// Search in invoice number
+			if (
+				invoice.invoiceNumber &&
+				invoice.invoiceNumber.toLowerCase().includes(search)
+			)
+				return true;
+
+			// Search in client name
+			if (
+				invoice.clientName &&
+				invoice.clientName.toLowerCase().includes(search)
+			)
+				return true;
+
+			// Search in project name
+			if (
+				invoice.projectName &&
+				invoice.projectName.toLowerCase().includes(search)
+			)
+				return true;
+
+			// Search in status
+			if (invoice.status && invoice.status.toLowerCase().includes(search))
+				return true;
+
+			return false;
+		},
 		getCoreRowModel: getCoreRowModel(),
 		getSortedRowModel: getSortedRowModel(),
 		getFilteredRowModel: getFilteredRowModel(),
 		getPaginationRowModel: getPaginationRowModel(),
 	});
 
+	// Reset to first page when search changes
 	React.useEffect(() => {
-		table.setPageSize(pageSize);
-	}, [pageSize, table]);
+		setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+	}, [query]);
 
 	// Calculate stats
 	const totalOpen = React.useMemo(

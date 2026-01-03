@@ -294,7 +294,10 @@ export default function QuotesPage() {
 		[]
 	);
 	const [query, setQuery] = React.useState("");
-	const pageSize = 10;
+	const [pagination, setPagination] = React.useState({
+		pageIndex: 0,
+		pageSize: 10,
+	});
 
 	const quoteStatusMap = React.useMemo(() => {
 		const statusMap = new Map<string, Doc<"quotes">["status"]>();
@@ -367,25 +370,49 @@ export default function QuotesPage() {
 			sorting,
 			columnFilters,
 			globalFilter: query,
-			pagination: { pageIndex: 0, pageSize },
+			pagination,
 		},
 		onSortingChange: setSorting,
 		onColumnFiltersChange: setColumnFilters,
+		onGlobalFilterChange: setQuery,
+		onPaginationChange: setPagination,
+		globalFilterFn: (row, columnId, value) => {
+			// If no search value, show all rows
+			if (!value || value.trim() === "") return true;
+
+			const search = value.toLowerCase().trim();
+			const quote = row.original;
+
+			// Search in quote number
+			if (quote.quoteNumber && quote.quoteNumber.toLowerCase().includes(search))
+				return true;
+
+			// Search in title or project name
+			if (quote.title && quote.title.toLowerCase().includes(search))
+				return true;
+			if (quote.projectName && quote.projectName.toLowerCase().includes(search))
+				return true;
+
+			// Search in client name
+			if (quote.clientName && quote.clientName.toLowerCase().includes(search))
+				return true;
+
+			// Search in status
+			if (quote.status && quote.status.toLowerCase().includes(search))
+				return true;
+
+			return false;
+		},
 		getCoreRowModel: getCoreRowModel(),
 		getSortedRowModel: getSortedRowModel(),
 		getFilteredRowModel: getFilteredRowModel(),
 		getPaginationRowModel: getPaginationRowModel(),
 	});
 
+	// Reset to first page when search changes
 	React.useEffect(() => {
-		table.setPageSize(pageSize);
-	}, [pageSize, table]);
-
-	React.useEffect(() => {
-		table.getColumn("quoteNumber")?.setFilterValue(query);
-		table.getColumn("clientName")?.setFilterValue(query);
-		table.getColumn("status")?.setFilterValue(query);
-	}, [query, table]);
+		setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+	}, [query]);
 
 	const totalPending = React.useMemo(
 		() => data.filter((q) => q.status === "sent").length,
