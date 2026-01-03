@@ -16,3 +16,4 @@ export * from "./styled-select";
 export * from "./styled-tabs";
 export * from "./styled-tags-input";
 export * from "./styled-multi-selector";
+export * from "./styled-filters";

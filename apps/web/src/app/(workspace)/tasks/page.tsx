@@ -12,12 +12,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { TaskSheet } from "@/components/shared/task-sheet";
 import { StyledButton } from "@/components/ui/styled/styled-button";
 import {
-	StyledSelect,
-	StyledSelectTrigger,
-	StyledSelectContent,
-	SelectValue,
-	SelectItem,
-} from "@/components/ui/styled/styled-select";
+	StyledFilters,
+	type Filter,
+	type FilterFieldConfig,
+} from "@/components/ui/styled/styled-filters";
 import { motion, AnimatePresence } from "motion/react";
 import {
 	Calendar,
@@ -35,6 +33,8 @@ import {
 	FolderOpen,
 	Edit,
 	Trash2,
+	Filter as FilterIcon,
+	X,
 } from "lucide-react";
 import { Task } from "@/types/task";
 
@@ -333,15 +333,12 @@ function TaskRow({
 
 export default function TasksPage() {
 	const searchParams = useSearchParams();
-	const projectIdFromUrl = searchParams.get("projectId") as Id<"projects"> | null;
-	
+	const projectIdFromUrl = searchParams.get(
+		"projectId"
+	) as Id<"projects"> | null;
+
 	const [searchQuery, setSearchQuery] = useState("");
-	const [statusFilter, setStatusFilter] = useState<Task["status"] | "all">(
-		"all"
-	);
-	const [priorityFilter, setPriorityFilter] = useState<
-		Task["priority"] | "all"
-	>("all");
+	const [filters, setFilters] = useState<Filter<unknown>[]>([]);
 	const [sortBy, setSortBy] = useState<"date" | "priority" | "status">("date");
 	const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 	const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -352,6 +349,8 @@ export default function TasksPage() {
 	// Queries
 	const allTasks = useQuery(api.tasks.list, {});
 	const projects = useQuery(api.projects.list, {});
+	const clients = useQuery(api.clients.list, {});
+	const users = useQuery(api.users.listByOrg, {});
 
 	// Mutations
 	const updateTaskMutation = useMutation(api.tasks.update);
@@ -361,9 +360,109 @@ export default function TasksPage() {
 	const isLoading = allTasks === undefined;
 
 	// Get project name if filtering by project
-	const filteredProject = projectIdFromUrl 
+	const filteredProject = projectIdFromUrl
 		? projects?.find((p) => p._id === projectIdFromUrl)
 		: null;
+
+	// Define filter fields configuration
+	const filterFields: FilterFieldConfig<unknown>[] = useMemo(() => {
+		const statusOptions = [
+			{ value: "pending", label: "Pending" },
+			{ value: "in-progress", label: "In Progress" },
+			{ value: "completed", label: "Completed" },
+			{ value: "cancelled", label: "Cancelled" },
+		];
+
+		const priorityOptions = [
+			{
+				value: "low",
+				label: "Low",
+				icon: <Flag className="h-3 w-3 text-gray-500" />,
+			},
+			{
+				value: "medium",
+				label: "Medium",
+				icon: <Flag className="h-3 w-3 text-blue-500" />,
+			},
+			{
+				value: "high",
+				label: "High",
+				icon: <Flag className="h-3 w-3 text-amber-500" />,
+			},
+			{
+				value: "urgent",
+				label: "Urgent",
+				icon: <AlertTriangle className="h-3 w-3 text-red-500" />,
+			},
+		];
+
+		const clientOptions =
+			clients?.map((client) => ({
+				value: client._id,
+				label: client.companyName,
+			})) || [];
+
+		const projectOptions =
+			projects?.map((project) => ({
+				value: project._id,
+				label: project.title,
+			})) || [];
+
+		const assigneeOptions =
+			users?.map(
+				(user: { _id: Id<"users">; name?: string; email: string }) => ({
+					value: user._id,
+					label: user.name || user.email,
+				})
+			) || [];
+
+		return [
+			{
+				key: "status",
+				label: "Status",
+				icon: <CheckCircle2 className="h-3 w-3" />,
+				type: "multiselect",
+				options: statusOptions,
+			},
+			{
+				key: "priority",
+				label: "Priority",
+				icon: <Flag className="h-3 w-3" />,
+				type: "multiselect",
+				options: priorityOptions,
+			},
+			{
+				key: "client",
+				label: "Client",
+				icon: <Building2 className="h-3 w-3" />,
+				type: "multiselect",
+				options: clientOptions,
+				searchable: true,
+			},
+			{
+				key: "project",
+				label: "Project",
+				icon: <FolderOpen className="h-3 w-3" />,
+				type: "multiselect",
+				options: projectOptions,
+				searchable: true,
+			},
+			{
+				key: "assignee",
+				label: "Assignee",
+				icon: <User className="h-3 w-3" />,
+				type: "multiselect",
+				options: assigneeOptions,
+				searchable: true,
+			},
+			{
+				key: "date",
+				label: "Date",
+				icon: <Calendar className="h-3 w-3" />,
+				type: "daterange",
+			},
+		];
+	}, [clients, projects, users]);
 
 	// Filter and sort tasks
 	const filteredAndSortedTasks = useMemo(() => {
@@ -376,25 +475,61 @@ export default function TasksPage() {
 			filtered = filtered.filter((task) => task.projectId === projectIdFromUrl);
 		}
 
-		// Search filter
+		// Apply filters from the Filters component
+		filters.forEach((filter) => {
+			if (filter.values.length === 0) return;
+
+			switch (filter.field) {
+				case "status":
+					filtered = filtered.filter((task) =>
+						filter.values.includes(task.status as unknown)
+					);
+					break;
+				case "priority":
+					filtered = filtered.filter((task) =>
+						filter.values.includes((task.priority || "medium") as unknown)
+					);
+					break;
+				case "client":
+					filtered = filtered.filter((task) =>
+						filter.values.includes(task.clientId as unknown)
+					);
+					break;
+				case "project":
+					filtered = filtered.filter((task) =>
+						filter.values.includes(task.projectId as unknown)
+					);
+					break;
+				case "assignee":
+					filtered = filtered.filter(
+						(task) =>
+							task.assigneeUserId &&
+							filter.values.includes(task.assigneeUserId as unknown)
+					);
+					break;
+				case "date":
+					if (filter.operator === "between" && filter.values.length === 2) {
+						const [startDate, endDate] = filter.values as [string, string];
+						if (startDate) {
+							const startTimestamp = new Date(startDate).getTime();
+							filtered = filtered.filter((task) => task.date >= startTimestamp);
+						}
+						if (endDate) {
+							const endTimestamp = new Date(endDate).getTime();
+							filtered = filtered.filter((task) => task.date <= endTimestamp);
+						}
+					}
+					break;
+			}
+		});
+
+		// Search filter (applies to filtered results)
 		if (searchQuery.trim()) {
 			const query = searchQuery.toLowerCase();
 			filtered = filtered.filter(
 				(task) =>
 					task.title.toLowerCase().includes(query) ||
 					task.description?.toLowerCase().includes(query)
-			);
-		}
-
-		// Status filter
-		if (statusFilter !== "all") {
-			filtered = filtered.filter((task) => task.status === statusFilter);
-		}
-
-		// Priority filter
-		if (priorityFilter !== "all") {
-			filtered = filtered.filter(
-				(task) => (task.priority || "medium") === priorityFilter
 			);
 		}
 
@@ -421,7 +556,12 @@ export default function TasksPage() {
 		});
 
 		return filtered;
-	}, [allTasks, projectIdFromUrl, searchQuery, statusFilter, priorityFilter, sortBy, sortOrder]);
+	}, [allTasks, projectIdFromUrl, filters, searchQuery, sortBy, sortOrder]);
+
+	const handleClearFiltersAndSearch = () => {
+		setFilters([]);
+		setSearchQuery("");
+	};
 
 	const handleStatusChange = async (
 		taskId: Id<"tasks">,
@@ -534,8 +674,21 @@ export default function TasksPage() {
 			</div>
 
 			{/* Filters and Search */}
-			<div className="flex flex-col sm:flex-row gap-4">
-				{/* Search */}
+			<div className="flex flex-col sm:flex-row gap-4 items-start">
+				{/* Filters on the left */}
+				<div className="flex-shrink-0">
+					<StyledFilters
+						filters={filters}
+						fields={filterFields}
+						onChange={setFilters}
+						addButtonText="Filter"
+						addButtonIcon={<FilterIcon className="h-4 w-4" />}
+						size="md"
+						variant="outline"
+					/>
+				</div>
+
+				{/* Search in the middle */}
 				<div className="relative flex-1">
 					<Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
 					<Input
@@ -546,44 +699,16 @@ export default function TasksPage() {
 					/>
 				</div>
 
-				{/* Filters */}
-				<div className="flex gap-2">
-					<StyledSelect
-						value={statusFilter}
-						onValueChange={(value) =>
-							setStatusFilter(value as Task["status"] | "all")
-						}
-					>
-						<StyledSelectTrigger className="w-[140px]">
-							<SelectValue placeholder="All Status" />
-						</StyledSelectTrigger>
-						<StyledSelectContent>
-							<SelectItem value="all">All Status</SelectItem>
-							<SelectItem value="pending">Pending</SelectItem>
-							<SelectItem value="in-progress">In Progress</SelectItem>
-							<SelectItem value="completed">Completed</SelectItem>
-							<SelectItem value="cancelled">Cancelled</SelectItem>
-						</StyledSelectContent>
-					</StyledSelect>
-
-					<StyledSelect
-						value={priorityFilter}
-						onValueChange={(value) =>
-							setPriorityFilter(value as Task["priority"] | "all")
-						}
-					>
-						<StyledSelectTrigger className="w-[140px]">
-							<SelectValue placeholder="All Priority" />
-						</StyledSelectTrigger>
-						<StyledSelectContent>
-							<SelectItem value="all">All Priority</SelectItem>
-							<SelectItem value="urgent">Urgent</SelectItem>
-							<SelectItem value="high">High</SelectItem>
-							<SelectItem value="medium">Medium</SelectItem>
-							<SelectItem value="low">Low</SelectItem>
-						</StyledSelectContent>
-					</StyledSelect>
-				</div>
+				{/* Clear button on the right */}
+				{(filters.length > 0 || searchQuery.trim() !== "") && (
+					<StyledButton
+						label="Clear"
+						icon={<X className="h-4 w-4" />}
+						intent="outline"
+						onClick={handleClearFiltersAndSearch}
+						showArrow={false}
+					/>
+				)}
 			</div>
 
 			{/* Tasks Table */}
@@ -693,27 +818,23 @@ export default function TasksPage() {
 							<div className="space-y-2">
 								<h3 className="text-lg font-medium">No tasks found</h3>
 								<p className="text-muted-foreground max-w-md mx-auto">
-									{searchQuery ||
-									statusFilter !== "all" ||
-									priorityFilter !== "all"
-										? "No tasks match your current filters. Try adjusting your search or filters."
+									{searchQuery || filters.length > 0
+										? "No tasks match your current filters or search. Try adjusting your filters or clearing them."
 										: "You haven't created any tasks yet. Create your first task to get started."}
 								</p>
 							</div>
-							{!searchQuery &&
-								statusFilter === "all" &&
-								priorityFilter === "all" && (
-									<TaskSheet
-										mode="create"
-										trigger={
-											<StyledButton
-												label="Create Your First Task"
-												icon={<Plus className="h-4 w-4" />}
-												intent="primary"
-											/>
-										}
-									/>
-								)}
+							{!searchQuery && filters.length === 0 && (
+								<TaskSheet
+									mode="create"
+									trigger={
+										<StyledButton
+											label="Create Your First Task"
+											icon={<Plus className="h-4 w-4" />}
+											intent="primary"
+										/>
+									}
+								/>
+							)}
 						</div>
 					</div>
 				)}
