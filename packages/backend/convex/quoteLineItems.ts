@@ -165,7 +165,6 @@ export const create = mutation({
 		rate: v.number(),
 		cost: v.optional(v.number()),
 		sortOrder: v.number(),
-		optional: v.optional(v.boolean()),
 	},
 	handler: async (ctx, args): Promise<QuoteLineItemId> => {
 		// Validate required fields
@@ -219,7 +218,6 @@ export const update = mutation({
 		rate: v.optional(v.number()),
 		cost: v.optional(v.number()),
 		sortOrder: v.optional(v.number()),
-		optional: v.optional(v.boolean()),
 	},
 	handler: async (ctx, args): Promise<QuoteLineItemId> => {
 		const { id, ...updates } = args;
@@ -304,7 +302,6 @@ export const bulkCreate = mutation({
 				rate: v.number(),
 				cost: v.optional(v.number()),
 				sortOrder: v.number(),
-				optional: v.optional(v.boolean()),
 			})
 		),
 	},
@@ -403,21 +400,20 @@ export const duplicate = mutation({
 			-1
 		);
 
-		// Create duplicate with incremented sort order
-		const duplicateId = await ctx.db.insert("quoteLineItems", {
-			quoteId: originalItem.quoteId,
-			orgId: originalItem.orgId,
-			description: `${originalItem.description} (Copy)`,
-			quantity: originalItem.quantity,
-			unit: originalItem.unit,
-			rate: originalItem.rate,
-			amount: originalItem.amount,
-			cost: originalItem.cost,
-			sortOrder: maxSortOrder + 1,
-			optional: originalItem.optional,
-		});
+	// Create duplicate with incremented sort order
+	const duplicateId = await ctx.db.insert("quoteLineItems", {
+		quoteId: originalItem.quoteId,
+		orgId: originalItem.orgId,
+		description: `${originalItem.description} (Copy)`,
+		quantity: originalItem.quantity,
+		unit: originalItem.unit,
+		rate: originalItem.rate,
+		amount: originalItem.amount,
+		cost: originalItem.cost,
+		sortOrder: maxSortOrder + 1,
+	});
 
-		return duplicateId;
+	return duplicateId;
 	},
 });
 
@@ -435,27 +431,20 @@ export const getStats = query({
 			.withIndex("by_quote", (q) => q.eq("quoteId", args.quoteId))
 			.collect();
 
-		const stats = {
-			totalItems: lineItems.length,
-			totalAmount: 0,
-			optionalItems: 0,
-			optionalAmount: 0,
-			averageRate: 0,
-			totalQuantity: 0,
-		};
+	const stats = {
+		totalItems: lineItems.length,
+		totalAmount: 0,
+		averageRate: 0,
+		totalQuantity: 0,
+	};
 
 		let totalRate = 0;
 
-		lineItems.forEach((item: QuoteLineItemDocument) => {
-			stats.totalAmount += item.amount;
-			stats.totalQuantity += item.quantity;
-			totalRate += item.rate;
-
-			if (item.optional) {
-				stats.optionalItems++;
-				stats.optionalAmount += item.amount;
-			}
-		});
+	lineItems.forEach((item: QuoteLineItemDocument) => {
+		stats.totalAmount += item.amount;
+		stats.totalQuantity += item.quantity;
+		totalRate += item.rate;
+	});
 
 		if (lineItems.length > 0) {
 			stats.averageRate = totalRate / lineItems.length;

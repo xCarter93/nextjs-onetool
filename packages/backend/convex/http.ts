@@ -486,11 +486,14 @@ http.route({
 		switch (event.type) {
 			case "paymentAttempt.created": {
 				const data = event.data as BillingWebhookData;
+				const organizationId =
+					data.payer?.organization_id || data.organization_id;
+
 				await ctx.runMutation(
 					internal.billingWebhook.handlePaymentAttemptCreated,
 					{
 						paymentAttemptId: data.id,
-						userId: data.user_id,
+						organizationId: organizationId,
 						amount: data.amount,
 					}
 				);
@@ -499,12 +502,15 @@ http.route({
 
 			case "paymentAttempt.updated": {
 				const data = event.data as BillingWebhookData;
+				const organizationId =
+					data.payer?.organization_id || data.organization_id;
+
 				await ctx.runMutation(
 					internal.billingWebhook.handlePaymentAttemptUpdated,
 					{
 						paymentAttemptId: data.id,
 						status: data.status,
-						userId: data.user_id,
+						organizationId: organizationId,
 					}
 				);
 				break;
@@ -516,18 +522,15 @@ http.route({
 					data.payer?.organization_id || data.organization_id;
 				const userId = data.payer?.user_id || data.user_id;
 
-				if (!userId && !organizationId) {
-					console.error(
-						"No user_id or organization_id in subscription.created event"
-					);
+				if (!organizationId) {
+					console.error("No organization_id in subscription.created event");
 					break;
 				}
 				await ctx.runMutation(
 					internal.billingWebhook.handleSubscriptionCreated,
 					{
 						subscriptionId: data.id,
-						userId: userId || undefined,
-						organizationId: organizationId || undefined,
+						organizationId: organizationId,
 						planId: data.plan_id || data.plan?.id || "",
 						status: data.status || "active",
 						currentPeriodStart: data.current_period_start
@@ -544,18 +547,15 @@ http.route({
 					data.payer?.organization_id || data.organization_id;
 				const userId = data.payer?.user_id || data.user_id;
 
-				if (!userId && !organizationId) {
-					console.error(
-						"No user_id or organization_id in subscription.active event"
-					);
+				if (!organizationId) {
+					console.error("No organization_id in subscription.active event");
 					break;
 				}
 				await ctx.runMutation(
 					internal.billingWebhook.handleSubscriptionActive,
 					{
 						subscriptionId: data.id,
-						userId: userId || undefined,
-						organizationId: organizationId || undefined,
+						organizationId: organizationId,
 						planId: data.plan_id || data.plan?.id || "",
 						currentPeriodStart: data.current_period_start
 							? data.current_period_start * 1000
@@ -573,18 +573,15 @@ http.route({
 					data.payer?.organization_id || data.organization_id;
 				const userId = data.payer?.user_id || data.user_id;
 
-				if (!userId && !organizationId) {
-					console.error(
-						"No user_id or organization_id in subscription.updated event"
-					);
+				if (!organizationId) {
+					console.error("No organization_id in subscription.updated event");
 					break;
 				}
 				await ctx.runMutation(
 					internal.billingWebhook.handleSubscriptionUpdated,
 					{
 						subscriptionId: data.id,
-						userId: userId || undefined,
-						organizationId: organizationId || undefined,
+						organizationId: organizationId,
 						planId: data.plan_id || data.plan?.id || "",
 						status: data.status || "active",
 						currentPeriodStart: data.current_period_start
@@ -601,18 +598,15 @@ http.route({
 					data.payer?.organization_id || data.organization_id;
 				const userId = data.payer?.user_id || data.user_id;
 
-				if (!userId && !organizationId) {
-					console.error(
-						"No user_id or organization_id in subscription.pastDue event"
-					);
+				if (!organizationId) {
+					console.error("No organization_id in subscription.pastDue event");
 					break;
 				}
 				await ctx.runMutation(
 					internal.billingWebhook.handleSubscriptionPastDue,
 					{
 						subscriptionId: data.id,
-						userId: userId || undefined,
-						organizationId: organizationId || undefined,
+						organizationId: organizationId,
 					}
 				);
 				break;

@@ -37,7 +37,6 @@ type Quote = {
 
 type Client = {
 	companyName: string;
-	industry?: string;
 };
 
 type Organization = {

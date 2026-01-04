@@ -29,7 +29,6 @@ import type { Id } from "@onetool/backend/convex/_generated/dataModel";
 interface Client {
 	_id: Id<"clients">;
 	companyName: string;
-	industry?: string;
 }
 
 interface Project {
@@ -253,21 +252,14 @@ export default function NewQuotePage() {
 											onSelect={handleClientSelect}
 											disabled={isLoading}
 										/>
-									</div>
+								</div>
 
-									{selectedClient && (
-										<div className="grid grid-cols-2 gap-4 text-sm">
-											<div>
-												<span className="text-gray-500 dark:text-gray-400">
-													Industry:
-												</span>
-												<div className="mt-1 text-gray-900 dark:text-white">
-													{selectedClient.industry || "No industry specified"}
-												</div>
-											</div>
-										</div>
-									)}
-								</CardContent>
+								{selectedClient && (
+									<div className="text-sm text-gray-600 dark:text-gray-400">
+										Selected: {selectedClient.companyName}
+									</div>
+								)}
+							</CardContent>
 							</Card>
 
 							{/* Project Selection Card */}

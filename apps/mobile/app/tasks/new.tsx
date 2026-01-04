@@ -224,7 +224,6 @@ export default function NewTaskScreen() {
 							<AppCalendar
 								selectedDate={selectedDateId}
 								onDateSelect={handleDateSelect}
-								showHeader={true}
 							/>
 						</View>
 					</View>
@@ -313,16 +312,6 @@ export default function NewTaskScreen() {
 										<Text style={{ fontSize: 16, color: colors.foreground }}>
 											{client.companyName}
 										</Text>
-										{client.industry && (
-											<Text
-												style={[
-													styles.mutedText,
-													{ fontSize: 14, marginTop: 2 },
-												]}
-											>
-												{client.industry}
-											</Text>
-										)}
 									</TouchableOpacity>
 								))}
 							</ScrollView>

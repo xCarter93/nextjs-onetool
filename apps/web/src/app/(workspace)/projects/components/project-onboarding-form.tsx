@@ -637,29 +637,13 @@ export function ProjectOnboardingForm({
 														className={getStatusBadgeClass(
 															clientDetails.status
 														)}
-														variant="outline"
-													>
-														{clientDetails.status}
-													</Badge>
-												</div>
+													variant="outline"
+												>
+													{clientDetails.status}
+												</Badge>
 											</div>
-											<div>
-												<span className="text-gray-500 dark:text-gray-400">
-													Type:
-												</span>
-												<div className="mt-1 text-gray-900 dark:text-white capitalize">
-													{clientDetails.clientType || "Not specified"}
-												</div>
-											</div>
-											<div>
-												<span className="text-gray-500 dark:text-gray-400">
-													Industry:
-												</span>
-												<div className="mt-1 text-gray-900 dark:text-white">
-													{clientDetails.industry || "No industry specified"}
-												</div>
-											</div>
-											{clientDetails.companyDescription && (
+									</div>
+									{clientDetails.companyDescription && (
 												<div className="col-span-2">
 													<span className="text-gray-500 dark:text-gray-400">
 														Description:
@@ -728,51 +712,30 @@ export function ProjectOnboardingForm({
 											<div>
 												<span className="text-gray-500 dark:text-gray-400">
 													Type:
-												</span>
-												<div className="mt-1 text-gray-900 dark:text-white capitalize">
-													{selectedProperty.propertyType || "Not specified"}
-												</div>
+											</span>
+											<div className="mt-1 text-gray-900 dark:text-white capitalize">
+												{selectedProperty.propertyType || "Not specified"}
 											</div>
-											{selectedProperty.squareFootage && (
-												<div>
-													<span className="text-gray-500 dark:text-gray-400">
-														Square Footage:
-													</span>
-													<div className="mt-1 text-gray-900 dark:text-white">
-														{selectedProperty.squareFootage.toLocaleString()} sq
-														ft
-													</div>
-												</div>
-											)}
-											<div className="col-span-2">
-												<span className="text-gray-500 dark:text-gray-400">
-													Address:
-												</span>
-												<div className="mt-1 text-gray-900 dark:text-white">
-													<div className="font-medium">
-														{selectedProperty.streetAddress}
-													</div>
-													<div className="text-gray-600 dark:text-gray-400">
-														{selectedProperty.city}, {selectedProperty.state}{" "}
-														{selectedProperty.zipCode}
-														{selectedProperty.country
-															? `, ${selectedProperty.country}`
-															: ""}
-													</div>
-												</div>
-											</div>
-											{selectedProperty.description && (
-												<div className="col-span-2">
-													<span className="text-gray-500 dark:text-gray-400">
-														Description:
-													</span>
-													<div className="mt-1 text-gray-900 dark:text-white">
-														{selectedProperty.description}
-													</div>
-												</div>
-											)}
 										</div>
-									) : selectedClientId ? (
+										<div className="col-span-2">
+											<span className="text-gray-500 dark:text-gray-400">
+												Address:
+											</span>
+											<div className="mt-1 text-gray-900 dark:text-white">
+												<div className="font-medium">
+													{selectedProperty.streetAddress}
+												</div>
+												<div className="text-gray-600 dark:text-gray-400">
+													{selectedProperty.city}, {selectedProperty.state}{" "}
+													{selectedProperty.zipCode}
+													{selectedProperty.country
+														? `, ${selectedProperty.country}`
+														: ""}
+												</div>
+											</div>
+										</div>
+									</div>
+								) : selectedClientId ? (
 										<div className="text-center py-8 text-sm text-gray-500 dark:text-gray-400">
 											{propertyOptions.length === 0
 												? "No properties available for this client"
@@ -834,26 +797,6 @@ export function ProjectOnboardingForm({
 													</span>
 													<div className="mt-1 text-gray-900 dark:text-white">
 														{selectedContact.jobTitle}
-													</div>
-												</div>
-											)}
-											{selectedContact.role && (
-												<div>
-													<span className="text-gray-500 dark:text-gray-400">
-														Role:
-													</span>
-													<div className="mt-1 text-gray-900 dark:text-white capitalize">
-														{selectedContact.role}
-													</div>
-												</div>
-											)}
-											{selectedContact.department && (
-												<div>
-													<span className="text-gray-500 dark:text-gray-400">
-														Department:
-													</span>
-													<div className="mt-1 text-gray-900 dark:text-white">
-														{selectedContact.department}
 													</div>
 												</div>
 											)}

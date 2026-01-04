@@ -41,7 +41,6 @@ type LineItem = {
 	amount: number;
 	cost?: number;
 	sortOrder: number;
-	optional?: boolean;
 	isNew?: boolean; // Track if this is a new item not yet saved
 };
 

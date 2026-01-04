@@ -94,21 +94,20 @@ export function CalendarContainer() {
 				startDate.getUTCDate()
 			);
 
-			return {
-				id: t.id,
-				type: "task" as const,
-				title: t.title,
-				description: t.description,
-				startDate: startDateLocal,
-				startTime: t.startTime,
-				endTime: t.endTime,
-				status: t.status,
-				priority: t.priority,
-				clientId: t.clientId,
-				clientName: t.clientName,
-				assignedUserIds: t.assigneeUserId ? [t.assigneeUserId] : undefined,
-				projectId: t.projectId,
-			};
+		return {
+			id: t.id,
+			type: "task" as const,
+			title: t.title,
+			description: t.description,
+			startDate: startDateLocal,
+			startTime: t.startTime,
+			endTime: t.endTime,
+			status: t.status,
+			clientId: t.clientId,
+			clientName: t.clientName,
+			assignedUserIds: t.assigneeUserId ? [t.assigneeUserId] : undefined,
+			projectId: t.projectId,
+		};
 		});
 
 		return [...projectEvents, ...taskEvents];

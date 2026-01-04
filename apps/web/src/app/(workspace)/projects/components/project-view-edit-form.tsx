@@ -542,28 +542,12 @@ export function ProjectViewEditForm({
 											<Badge
 												className={getStatusColor(client.status)}
 												variant="outline"
-											>
-												{client.status}
-											</Badge>
-										</div>
+										>
+											{client.status}
+										</Badge>
 									</div>
-									<div>
-										<span className="text-gray-500 dark:text-gray-400">
-											Type:
-										</span>
-										<div className="mt-1 text-gray-900 dark:text-white capitalize">
-											{client.clientType || "Not specified"}
-										</div>
-									</div>
-									<div>
-										<span className="text-gray-500 dark:text-gray-400">
-											Industry:
-										</span>
-										<div className="mt-1 text-gray-900 dark:text-white">
-											{client.industry || "No industry specified"}
-										</div>
-									</div>
-									{client.companyDescription && (
+								</div>
+								{client.companyDescription && (
 										<div className="col-span-2">
 											<span className="text-gray-500 dark:text-gray-400">
 												Description:
@@ -688,49 +672,29 @@ export function ProjectViewEditForm({
 									<div>
 										<span className="text-gray-500 dark:text-gray-400">
 											Type:
-										</span>
-										<div className="mt-1 text-gray-900 dark:text-white capitalize">
-											{primaryProperty.propertyType || "Not specified"}
-										</div>
+									</span>
+									<div className="mt-1 text-gray-900 dark:text-white capitalize">
+										{primaryProperty.propertyType || "Not specified"}
 									</div>
-									{primaryProperty.squareFootage && (
-										<div>
-											<span className="text-gray-500 dark:text-gray-400">
-												Square Footage:
-											</span>
-											<div className="mt-1 text-gray-900 dark:text-white">
-												{primaryProperty.squareFootage.toLocaleString()} sq ft
-											</div>
-										</div>
-									)}
-									<div className="col-span-2">
-										<span className="text-gray-500 dark:text-gray-400">
-											Address:
-										</span>
-										<div className="mt-1 text-gray-900 dark:text-white">
-											<div className="font-medium">
-												{primaryProperty.streetAddress}
-											</div>
-											<div className="text-gray-600 dark:text-gray-400">
-												{primaryProperty.city}, {primaryProperty.state}{" "}
-												{primaryProperty.zipCode}
-												{primaryProperty.country &&
-													`, ${primaryProperty.country}`}
-											</div>
-										</div>
-									</div>
-									{primaryProperty.description && (
-										<div className="col-span-2">
-											<span className="text-gray-500 dark:text-gray-400">
-												Description:
-											</span>
-											<div className="mt-1 text-gray-900 dark:text-white">
-												{primaryProperty.description}
-											</div>
-										</div>
-									)}
 								</div>
-							) : isEditing ? (
+							<div className="col-span-2">
+								<span className="text-gray-500 dark:text-gray-400">
+									Address:
+								</span>
+								<div className="mt-1 text-gray-900 dark:text-white">
+									<div className="font-medium">
+										{primaryProperty.streetAddress}
+									</div>
+									<div className="text-gray-600 dark:text-gray-400">
+										{primaryProperty.city}, {primaryProperty.state}{" "}
+										{primaryProperty.zipCode}
+										{primaryProperty.country &&
+											`, ${primaryProperty.country}`}
+									</div>
+								</div>
+							</div>
+						</div>
+					) : isEditing ? (
 								<div className="text-center py-8 text-gray-500 dark:text-gray-400">
 									<p className="text-sm">
 										{client
@@ -814,37 +778,17 @@ export function ProjectViewEditForm({
 											{primaryContact.firstName} {primaryContact.lastName}
 										</div>
 									</div>
-									{primaryContact.jobTitle && (
-										<div>
-											<span className="text-gray-500 dark:text-gray-400">
-												Job Title:
-											</span>
-											<div className="mt-1 text-gray-900 dark:text-white">
-												{primaryContact.jobTitle}
-											</div>
+								{primaryContact.jobTitle && (
+									<div>
+										<span className="text-gray-500 dark:text-gray-400">
+											Job Title:
+										</span>
+										<div className="mt-1 text-gray-900 dark:text-white">
+											{primaryContact.jobTitle}
 										</div>
-									)}
-									{primaryContact.role && (
-										<div>
-											<span className="text-gray-500 dark:text-gray-400">
-												Role:
-											</span>
-											<div className="mt-1 text-gray-900 dark:text-white capitalize">
-												{primaryContact.role}
-											</div>
-										</div>
-									)}
-									{primaryContact.department && (
-										<div>
-											<span className="text-gray-500 dark:text-gray-400">
-												Department:
-											</span>
-											<div className="mt-1 text-gray-900 dark:text-white">
-												{primaryContact.department}
-											</div>
-										</div>
-									)}
-									{primaryContact.email && (
+									</div>
+								)}
+								{primaryContact.email && (
 										<div>
 											<span className="text-gray-500 dark:text-gray-400">
 												Email:

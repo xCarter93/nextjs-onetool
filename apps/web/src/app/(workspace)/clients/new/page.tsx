@@ -63,43 +63,37 @@ export default function NewClientPage() {
 
 			const clientId = await createClient(clientData);
 
-			// Create contacts
-			for (const contact of formData.contacts) {
-				if (contact.firstName.trim() && contact.lastName.trim()) {
-					await createContact({
-						clientId,
-						firstName: contact.firstName.trim(),
-						lastName: contact.lastName.trim(),
-						email: contact.email.trim() || undefined,
-						phone: contact.phone.trim() || undefined,
-						jobTitle: contact.jobTitle.trim() || undefined,
-						role: contact.role.trim() || undefined,
-						department: contact.department.trim() || undefined,
-						isPrimary: contact.isPrimary,
-					});
-				}
+		// Create contacts
+		for (const contact of formData.contacts) {
+			if (contact.firstName.trim() && contact.lastName.trim()) {
+				await createContact({
+					clientId,
+					firstName: contact.firstName.trim(),
+					lastName: contact.lastName.trim(),
+					email: contact.email.trim() || undefined,
+					phone: contact.phone.trim() || undefined,
+					jobTitle: contact.jobTitle.trim() || undefined,
+					isPrimary: contact.isPrimary,
+				});
 			}
+		}
 
-			// Create properties
-			for (const property of formData.properties) {
-				if (property.streetAddress.trim()) {
-					await createProperty({
-						clientId,
-						propertyName: property.propertyName.trim() || undefined,
-						propertyType: property.propertyType || undefined,
-						squareFootage: property.squareFootage.trim()
-							? parseInt(property.squareFootage)
-							: undefined,
-						streetAddress: property.streetAddress.trim(),
-						city: property.city.trim(),
-						state: property.region.trim(),
-						zipCode: property.postalCode.trim(),
-						country: "United States", // Default to US, could be made configurable
-						description: property.propertyDescription.trim() || undefined,
-						isPrimary: property.isPrimary,
-					});
-				}
+		// Create properties
+		for (const property of formData.properties) {
+			if (property.streetAddress.trim()) {
+				await createProperty({
+					clientId,
+					propertyName: property.propertyName.trim() || undefined,
+					propertyType: property.propertyType || undefined,
+					streetAddress: property.streetAddress.trim(),
+					city: property.city.trim(),
+					state: property.region.trim(),
+					zipCode: property.postalCode.trim(),
+					country: "United States", // Default to US, could be made configurable
+					isPrimary: property.isPrimary,
+				});
 			}
+		}
 
 			// Navigate to clients list on success
 			router.push("/clients");
