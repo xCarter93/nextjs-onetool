@@ -1,10 +1,18 @@
-import { View } from "react-native";
+import { View, Text } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { colors } from "@/lib/theme";
+import { colors, fontFamily, spacing } from "@/lib/theme";
 import { OrganizationSwitcher } from "./OrganizationSwitcher";
-import { ProfileModal } from "./ProfileModal";
 
 export function AppHeader() {
+  const formatDate = () => {
+    const now = new Date();
+    return now.toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
   return (
     <SafeAreaView 
       edges={["top"]}
@@ -23,11 +31,28 @@ export function AppHeader() {
           paddingVertical: 12,
         }}
       >
-      {/* Organization Switcher */}
-      <OrganizationSwitcher />
+        {/* Date on the left */}
+        <View
+          style={{
+            backgroundColor: "rgba(0, 166, 244, 0.1)",
+            paddingHorizontal: spacing.sm,
+            paddingVertical: spacing.xs,
+            borderRadius: 20,
+          }}
+        >
+          <Text
+            style={{
+              fontSize: 13,
+              fontFamily: fontFamily.semibold,
+              color: colors.primary,
+            }}
+          >
+            {formatDate()}
+          </Text>
+        </View>
 
-      {/* Profile Modal */}
-      <ProfileModal />
+        {/* Organization Switcher on the right */}
+        <OrganizationSwitcher />
       </View>
     </SafeAreaView>
   );

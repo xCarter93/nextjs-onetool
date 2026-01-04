@@ -5,19 +5,15 @@ import {
 	RefreshControl,
 	Pressable,
 	StyleSheet,
+	Modal,
+	TouchableOpacity,
 } from "react-native";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@onetool/backend/convex/_generated/api";
 import { useState, useCallback, useMemo } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import {
-	styles as themeStyles,
-	colors,
-	fontFamily,
-	spacing,
-	radius,
-} from "@/lib/theme";
+import { colors, fontFamily, spacing, radius } from "@/lib/theme";
 import {
 	Users,
 	FolderKanban,
@@ -25,21 +21,37 @@ import {
 	Plus,
 	ChevronRight,
 	TrendingUp,
-	AlertTriangle,
-	Calendar,
+	TrendingDown,
+	AlertCircle,
 	Target,
+	X,
 } from "lucide-react-native";
-import { StatCard } from "@/components/StatCard";
 import { ProgressRing } from "@/components/ProgressRing";
 import { TaskItem } from "@/components/TaskItem";
-import { SectionHeader } from "@/components/SectionHeader";
 import { JourneyProgress } from "@/components/JourneyProgress";
+import { ViewToggle, ViewMode } from "@/components/ViewToggle";
+import {
+	AppCalendar,
+	toDateId,
+	fromDateId,
+	CalendarTask,
+	CalendarProject,
+} from "@/components/AppCalendar";
+import { FABMenu } from "@/components/FABMenu";
 import { Id } from "@onetool/backend/convex/_generated/dataModel";
 
 export default function HomeScreen() {
 	const router = useRouter();
 	const [refreshing, setRefreshing] = useState(false);
-	const [showQuickActions, setShowQuickActions] = useState(false);
+	const [viewMode, setViewMode] = useState<ViewMode>("dashboard");
+	const [selectedDate, setSelectedDate] = useState<string>(
+		toDateId(new Date())
+	);
+	// Track the currently displayed month separately for data fetching
+	const [displayedMonth, setDisplayedMonth] = useState<string>(
+		toDateId(new Date())
+	);
+	const [showDateModal, setShowDateModal] = useState(false);
 	const [updatingTasks, setUpdatingTasks] = useState<Set<string>>(new Set());
 
 	const user = useQuery(api.users.current);
@@ -47,6 +59,37 @@ export default function HomeScreen() {
 	const taskStats = useQuery(api.tasks.getStats, {});
 	const upcomingTasks = useQuery(api.tasks.getUpcoming, { daysAhead: 7 });
 	const overdueTasks = useQuery(api.tasks.getOverdue, {});
+
+	// Fetch calendar events for a 3-month range based on displayed month
+	const calendarEvents = useQuery(
+		api.calendar.getCalendarEvents,
+		viewMode === "calendar"
+			? {
+					startDate: (() => {
+						const date = fromDateId(displayedMonth);
+						// Start from first day of previous month
+						const firstDay = new Date(
+							date.getFullYear(),
+							date.getMonth() - 1,
+							1
+						);
+						firstDay.setHours(0, 0, 0, 0);
+						return firstDay.getTime();
+					})(),
+					endDate: (() => {
+						const date = fromDateId(displayedMonth);
+						// End at last day of next month
+						const lastDay = new Date(
+							date.getFullYear(),
+							date.getMonth() + 2,
+							0
+						);
+						lastDay.setHours(23, 59, 59, 999);
+						return lastDay.getTime();
+					})(),
+				}
+			: "skip"
+	);
 
 	const completeTask = useMutation(api.tasks.complete);
 	const updateTask = useMutation(api.tasks.update);
@@ -72,22 +115,13 @@ export default function HomeScreen() {
 		return "Good evening";
 	};
 
-	const formatDate = () => {
-		const now = new Date();
-		return now.toLocaleDateString("en-US", {
-			weekday: "long",
-			month: "long",
-			day: "numeric",
-		});
-	};
-
 	// Combine and dedupe tasks for display
 	const allTasks = useMemo(() => {
 		const combined = [...(overdueTasks || []), ...(upcomingTasks || [])];
 		const uniqueTasks = combined.filter(
 			(task, index, self) => self.findIndex((t) => t._id === task._id) === index
 		);
-		return uniqueTasks.slice(0, 5); // Show max 5 tasks
+		return uniqueTasks.slice(0, 5);
 	}, [overdueTasks, upcomingTasks]);
 
 	const handleToggleTask = async (taskId: string) => {
@@ -112,12 +146,78 @@ export default function HomeScreen() {
 		}
 	};
 
-	const quickActions = [
-		{ icon: CheckSquare, label: "Task", route: "/tasks/new", color: "#f59e0b" },
-	];
-
 	const overdueCount = overdueTasks?.length ?? 0;
 	const todayTasksCount = taskStats?.todayTasks ?? 0;
+
+	// Get events for the selected date
+	const selectedDateEvents = useMemo(() => {
+		if (!calendarEvents) return { tasks: [], projects: [] };
+
+		// Use Flash Calendar's fromDateId utility
+		const selectedDay = fromDateId(selectedDate);
+		selectedDay.setHours(0, 0, 0, 0);
+		const selectedTimestamp = selectedDay.getTime();
+		const nextDay = new Date(selectedDay);
+		nextDay.setDate(nextDay.getDate() + 1);
+		const nextDayTimestamp = nextDay.getTime();
+
+		// Filter tasks for the selected date
+		const tasksForDate = calendarEvents.tasks.filter((task) => {
+			return (
+				task.startDate >= selectedTimestamp && task.startDate < nextDayTimestamp
+			);
+		});
+
+		// Filter projects that are active on the selected date
+		const projectsForDate = calendarEvents.projects.filter((project) => {
+			const projectEnd = project.endDate || project.startDate;
+			return (
+				project.startDate <= selectedTimestamp &&
+				projectEnd >= selectedTimestamp
+			);
+		});
+
+		return {
+			tasks: tasksForDate,
+			projects: projectsForDate,
+		};
+	}, [calendarEvents, selectedDate]);
+
+	// Format calendar tasks for marking
+	const calendarTasks: CalendarTask[] = useMemo(() => {
+		if (!calendarEvents) return [];
+
+		return calendarEvents.tasks.map((task) => ({
+			id: task.id,
+			date: toDateId(new Date(task.startDate)),
+			title: task.title,
+			color: colors.primary,
+		}));
+	}, [calendarEvents]);
+
+	// Format calendar projects for period marking
+	const calendarProjects: CalendarProject[] = useMemo(() => {
+		if (!calendarEvents) return [];
+
+		return calendarEvents.projects.map((project) => ({
+			id: project.id,
+			startDate: toDateId(new Date(project.startDate)),
+			endDate: toDateId(new Date(project.endDate || project.startDate)),
+			title: project.title,
+			status: project.status as "in_progress" | "completed" | "not_started",
+		}));
+	}, [calendarEvents]);
+
+	// Handle date selection - show modal with events
+	const handleDateSelect = useCallback((dateId: string) => {
+		setSelectedDate(dateId);
+		setShowDateModal(true);
+	}, []);
+
+	// Handle month navigation - update the displayed month for data fetching
+	const handleMonthChange = useCallback((monthDateId: string) => {
+		setDisplayedMonth(monthDateId);
+	}, []);
 
 	return (
 		<SafeAreaView
@@ -126,298 +226,424 @@ export default function HomeScreen() {
 		>
 			<ScrollView
 				style={{ flex: 1 }}
-				contentContainerStyle={{ padding: spacing.md }}
+				contentContainerStyle={{ padding: spacing.md, paddingBottom: 100 }}
 				refreshControl={
 					<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
 				}
 			>
 				{/* Header Section */}
 				<View style={styles.headerSection}>
-					<Text style={styles.dateText}>{formatDate()}</Text>
 					<Text style={styles.greeting}>
 						{getTimeBasedGreeting()}
-						{user?.name ? `, ${user.name.split(" ")[0]}` : ""}!
-					</Text>
-					<Text style={styles.subtitle}>
-						Here's what's happening with your business today.
+						{user?.name ? `, ${user.name.split(" ")[0]}` : ""}
 					</Text>
 				</View>
 
 				{/* Journey Progress */}
 				<JourneyProgress />
 
-				{/* Quick Stats Grid */}
-				<View style={styles.statsGrid}>
-					<View style={styles.statsRow}>
-						<StatCard
-							icon={<Users size={18} color={colors.primary} />}
-							label="Total Clients"
-							value={homeStats?.totalClients.current ?? 0}
-							changeType={homeStats?.totalClients.changeType}
-							changeValue={homeStats?.totalClients.change}
-							subValue="this month"
-							accentColor={colors.primary}
-							onPress={() => router.push("/clients")}
-						/>
-						<StatCard
-							icon={<FolderKanban size={18} color="#8b5cf6" />}
-							label="Projects"
-							value={homeStats?.completedProjects.current ?? 0}
-							changeType={homeStats?.completedProjects.changeType}
-							changeValue={homeStats?.completedProjects.change}
-							subValue="completed"
-							accentColor="#8b5cf6"
-							onPress={() => router.push("/projects")}
-						/>
-					</View>
-					<View style={styles.statsRow}>
-						<StatCard
-							icon={<CheckSquare size={18} color="#f59e0b" />}
-							label="Tasks Due"
-							value={todayTasksCount}
-							subValue="today"
-							accentColor="#f59e0b"
-							onPress={() => router.push("/tasks")}
-						/>
-					</View>
+				{/* View Toggle - Below Journey Progress */}
+				<View style={styles.viewToggleContainer}>
+					<ViewToggle value={viewMode} onChange={setViewMode} />
 				</View>
 
-				{/* Revenue Goal Progress */}
-				{homeStats && homeStats.revenueGoal.target > 0 && (
-					<View style={styles.revenueCard}>
-						<View style={styles.revenueHeader}>
-							<View style={styles.revenueIconContainer}>
-								<Target size={20} color="#10b981" />
-							</View>
-							<View style={styles.revenueInfo}>
-								<Text style={styles.revenueTitle}>Monthly Revenue Goal</Text>
-								<Text style={styles.revenueSubtitle}>
-									{formatCurrency(homeStats.revenueGoal.current)} of{" "}
-									{formatCurrency(homeStats.revenueGoal.target)}
-								</Text>
-							</View>
-						</View>
-						<View style={styles.revenueProgress}>
-							<ProgressRing
-								percentage={homeStats.revenueGoal.percentage}
-								size={100}
-								strokeWidth={8}
-								color="#10b981"
-							/>
-							<View style={styles.revenueStats}>
-								<View style={styles.revenueStat}>
-									<Text style={styles.revenueStatValue}>
-										{formatCurrency(homeStats.revenueGoal.current)}
-									</Text>
-									<Text style={styles.revenueStatLabel}>Earned</Text>
+				{viewMode === "dashboard" ? (
+					<>
+						{/* Quick Stats Row */}
+						<View style={styles.statsRow}>
+							<Pressable
+								style={styles.statCard}
+								onPress={() => router.push("/clients")}
+							>
+								<View style={styles.statIconContainer}>
+									<Users size={18} color={colors.primary} />
 								</View>
-								<View style={styles.revenueStat}>
-									<Text style={styles.revenueStatValue}>
-										{formatCurrency(
-											homeStats.revenueGoal.target -
-												homeStats.revenueGoal.current
+								<View style={styles.statContent}>
+									<Text style={styles.statValue}>
+										{homeStats?.totalClients.current ?? 0}
+									</Text>
+									<Text style={styles.statLabel}>Clients</Text>
+								</View>
+								{homeStats?.totalClients.change !== 0 && (
+									<View style={styles.statChange}>
+										{homeStats?.totalClients.changeType === "increase" ? (
+											<TrendingUp size={12} color={colors.success} />
+										) : (
+											<TrendingDown size={12} color={colors.danger} />
 										)}
-									</Text>
-									<Text style={styles.revenueStatLabel}>Remaining</Text>
-								</View>
-								{homeStats.revenueGoal.changePercentage !== 0 && (
-									<View style={styles.revenueChange}>
-										<TrendingUp
-											size={14}
-											color={
-												homeStats.revenueGoal.changeType === "increase"
-													? colors.success
-													: colors.danger
-											}
-										/>
 										<Text
 											style={[
-												styles.revenueChangeText,
+												styles.statChangeText,
 												{
 													color:
-														homeStats.revenueGoal.changeType === "increase"
+														homeStats?.totalClients.changeType === "increase"
 															? colors.success
 															: colors.danger,
 												},
 											]}
 										>
-											{homeStats.revenueGoal.changePercentage}% vs last month
+											{homeStats?.totalClients.change}
 										</Text>
 									</View>
 								)}
+							</Pressable>
+
+							<Pressable
+								style={styles.statCard}
+								onPress={() => router.push("/projects")}
+							>
+								<View style={styles.statIconContainer}>
+									<FolderKanban size={18} color={colors.primary} />
+								</View>
+								<View style={styles.statContent}>
+									<Text style={styles.statValue}>
+										{homeStats?.completedProjects.current ?? 0}
+									</Text>
+									<Text style={styles.statLabel}>Projects</Text>
+								</View>
+							</Pressable>
+
+							<Pressable
+								style={styles.statCard}
+								onPress={() => router.push("/tasks")}
+							>
+								<View style={styles.statIconContainer}>
+									<CheckSquare size={18} color={colors.primary} />
+								</View>
+								<View style={styles.statContent}>
+									<Text style={styles.statValue}>{todayTasksCount}</Text>
+									<Text style={styles.statLabel}>Due Today</Text>
+								</View>
+							</Pressable>
+						</View>
+
+						{/* Overdue Warning */}
+						{overdueCount > 0 && (
+							<Pressable
+								style={styles.alertCard}
+								onPress={() => router.push("/tasks")}
+							>
+								<View style={styles.alertIcon}>
+									<AlertCircle size={18} color={colors.danger} />
+								</View>
+								<View style={styles.alertContent}>
+									<Text style={styles.alertTitle}>
+										{overdueCount} Overdue Task{overdueCount !== 1 ? "s" : ""}
+									</Text>
+									<Text style={styles.alertText}>Tap to view and complete</Text>
+								</View>
+								<ChevronRight size={18} color={colors.danger} />
+							</Pressable>
+						)}
+
+						{/* Revenue Goal Progress */}
+						{homeStats && homeStats.revenueGoal.target > 0 && (
+							<View style={styles.revenueCard}>
+								<View style={styles.revenueHeader}>
+									<View style={styles.revenueIconContainer}>
+										<Target size={18} color={colors.primary} />
+									</View>
+									<View style={styles.revenueInfo}>
+										<Text style={styles.revenueTitle}>Monthly Goal</Text>
+										<Text style={styles.revenueSubtitle}>
+											{Math.round(homeStats.revenueGoal.percentage)}% complete
+										</Text>
+									</View>
+								</View>
+								<View style={styles.revenueProgress}>
+									<ProgressRing
+										percentage={homeStats.revenueGoal.percentage}
+										size={80}
+										strokeWidth={8}
+										color={colors.primary}
+									/>
+									<View style={styles.revenueStats}>
+										<View style={styles.revenueStat}>
+											<Text style={styles.revenueStatLabel}>Earned</Text>
+											<Text style={styles.revenueStatValue}>
+												{formatCurrency(homeStats.revenueGoal.current)}
+											</Text>
+										</View>
+										<View style={styles.revenueStat}>
+											<Text style={styles.revenueStatLabel}>Target</Text>
+											<Text style={styles.revenueStatValue}>
+												{formatCurrency(homeStats.revenueGoal.target)}
+											</Text>
+										</View>
+									</View>
+								</View>
 							</View>
+						)}
+
+						{/* Tasks Section */}
+						<View style={styles.section}>
+							<View style={styles.sectionHeader}>
+								<Text style={styles.sectionTitle}>Your Tasks</Text>
+								<Pressable
+									onPress={() => router.push("/tasks")}
+									style={styles.sectionAction}
+								>
+									<Text style={styles.sectionActionText}>View All</Text>
+									<ChevronRight size={16} color={colors.primary} />
+								</Pressable>
+							</View>
+
+							{allTasks.length > 0 ? (
+								<View style={styles.tasksList}>
+									{allTasks.map((task) => (
+										<TaskItem
+											key={task._id}
+											id={task._id}
+											title={task.title}
+											date={task.date}
+											startTime={task.startTime}
+											endTime={task.endTime}
+											status={task.status}
+											priority={task.priority}
+											isUpdating={updatingTasks.has(task._id)}
+											onToggleComplete={handleToggleTask}
+										/>
+									))}
+								</View>
+							) : (
+								<View style={styles.emptyState}>
+									<CheckSquare size={28} color={colors.mutedForeground} />
+									<Text style={styles.emptyTitle}>No upcoming tasks</Text>
+									<Text style={styles.emptyText}>You're all caught up!</Text>
+								</View>
+							)}
 						</View>
+					</>
+				) : (
+					/* Calendar View */
+					<View style={styles.calendarSection}>
+						<AppCalendar
+							selectedDate={selectedDate}
+							onDateSelect={handleDateSelect}
+							onMonthChange={handleMonthChange}
+							tasks={calendarTasks}
+							projects={calendarProjects}
+						/>
 					</View>
 				)}
-
-				{/* Overdue Warning */}
-				{overdueCount > 0 && (
-					<Pressable
-						style={styles.overdueCard}
-						onPress={() => router.push("/tasks")}
-					>
-						<View style={styles.overdueIcon}>
-							<AlertTriangle size={20} color="#dc2626" />
-						</View>
-						<View style={styles.overdueContent}>
-							<Text style={styles.overdueTitle}>Attention Needed</Text>
-							<Text style={styles.overdueText}>
-								{overdueCount} overdue task{overdueCount !== 1 ? "s" : ""}{" "}
-								require{overdueCount === 1 ? "s" : ""} your attention
-							</Text>
-						</View>
-						<ChevronRight size={20} color="#dc2626" />
-					</Pressable>
-				)}
-
-				{/* Today's Tasks Section */}
-				<View style={styles.tasksSection}>
-					<SectionHeader
-						title="Your Tasks"
-						subtitle={
-							todayTasksCount > 0
-								? `${todayTasksCount} due today`
-								: "Stay on schedule"
-						}
-						icon={<Calendar size={18} color={colors.primary} />}
-						actionLabel="View All"
-						onAction={() => router.push("/tasks")}
-					/>
-
-					{allTasks.length > 0 ? (
-						<View style={styles.tasksList}>
-							{allTasks.map((task) => (
-								<TaskItem
-									key={task._id}
-									id={task._id}
-									title={task.title}
-									date={task.date}
-									startTime={task.startTime}
-									endTime={task.endTime}
-									status={task.status}
-									priority={task.priority}
-									isUpdating={updatingTasks.has(task._id)}
-									onToggleComplete={handleToggleTask}
-								/>
-							))}
-						</View>
-					) : (
-						<View style={styles.emptyTasks}>
-							<CheckSquare size={32} color={colors.mutedForeground} />
-							<Text style={styles.emptyTasksTitle}>No upcoming tasks</Text>
-							<Text style={styles.emptyTasksText}>
-								Great job staying on top of things!
-							</Text>
-						</View>
-					)}
-				</View>
-
-				{/* Week Overview */}
-				{homeStats && homeStats.pendingTasks.dueThisWeek > 0 && (
-					<View style={styles.weekCard}>
-						<View style={styles.weekHeader}>
-							<Calendar size={18} color={colors.primary} />
-							<Text style={styles.weekTitle}>This Week</Text>
-						</View>
-						<Text style={styles.weekText}>
-							{homeStats.pendingTasks.dueThisWeek} task
-							{homeStats.pendingTasks.dueThisWeek !== 1 ? "s" : ""} scheduled
-						</Text>
-					</View>
-				)}
-
-				{/* Bottom spacing for FAB */}
-				<View style={{ height: 80 }} />
 			</ScrollView>
 
-			{/* Quick Action FAB */}
-			<View style={styles.fabContainer}>
-				{showQuickActions && (
-					<View style={styles.quickActionsMenu}>
-						{quickActions.map((action, index) => (
-							<Pressable
-								key={action.label}
-								style={[
-									styles.quickActionItem,
-									{ borderLeftColor: action.color },
-								]}
-								onPress={() => {
-									setShowQuickActions(false);
-									router.push(action.route as any);
-								}}
-							>
-								<View
-									style={[
-										styles.quickActionIcon,
-										{ backgroundColor: `${action.color}15` },
-									]}
-								>
-									<action.icon size={18} color={action.color} />
-								</View>
-								<Text style={styles.quickActionLabel}>{action.label}</Text>
-							</Pressable>
-						))}
-					</View>
-				)}
-				<Pressable
-					style={({ pressed }) => [
-						styles.fab,
-						pressed && styles.fabPressed,
-						showQuickActions && styles.fabActive,
-					]}
-					onPress={() => setShowQuickActions(!showQuickActions)}
-				>
-					<Plus
-						size={24}
-						color="#fff"
-						style={{
-							transform: [{ rotate: showQuickActions ? "45deg" : "0deg" }],
-						}}
-					/>
-				</Pressable>
-			</View>
+			{/* FAB Menu */}
+			<FABMenu />
 
-			{/* Overlay when quick actions are shown */}
-			{showQuickActions && (
-				<Pressable
-					style={styles.overlay}
-					onPress={() => setShowQuickActions(false)}
-				/>
-			)}
+			{/* Date Events Modal */}
+			<Modal
+				visible={showDateModal}
+				transparent
+				animationType="slide"
+				onRequestClose={() => setShowDateModal(false)}
+			>
+				<TouchableOpacity
+					style={styles.modalBackdrop}
+					activeOpacity={1}
+					onPress={() => setShowDateModal(false)}
+				>
+					<Pressable
+						style={styles.modalContent}
+						onPress={(e) => e.stopPropagation()}
+					>
+						{/* Modal Header */}
+						<View style={styles.modalHeader}>
+							<View style={styles.modalHandleBar} />
+							<View style={styles.modalTitleContainer}>
+								<Text style={styles.modalTitle}>
+									{fromDateId(selectedDate).toLocaleDateString("en-US", {
+										weekday: "long",
+										month: "long",
+										day: "numeric",
+									})}
+								</Text>
+								<TouchableOpacity
+									onPress={() => setShowDateModal(false)}
+									style={styles.modalCloseButton}
+								>
+									<X size={24} color={colors.foreground} />
+								</TouchableOpacity>
+							</View>
+						</View>
+
+						{/* Modal Content */}
+						<ScrollView style={styles.modalScrollView}>
+							{/* Projects for this date */}
+							{selectedDateEvents.projects.length > 0 && (
+								<View style={styles.modalSection}>
+									<Text style={styles.modalSectionTitle}>Projects</Text>
+									{selectedDateEvents.projects.map((project) => (
+										<Pressable
+											key={project.id}
+											style={styles.modalEventCard}
+											onPress={() => {
+												setShowDateModal(false);
+												router.push(`/projects/${project.id}`);
+											}}
+										>
+											<View style={styles.modalEventIcon}>
+												<FolderKanban size={18} color={colors.primary} />
+											</View>
+											<View style={styles.modalEventContent}>
+												<Text style={styles.modalEventTitle}>
+													{project.title}
+												</Text>
+												<Text style={styles.modalEventSubtitle}>
+													{project.clientName}
+												</Text>
+												{project.startDate && project.endDate && (
+													<Text style={styles.modalEventMeta}>
+														{new Date(project.startDate).toLocaleDateString()} -{" "}
+														{new Date(project.endDate).toLocaleDateString()}
+													</Text>
+												)}
+											</View>
+											<ChevronRight size={18} color={colors.border} />
+										</Pressable>
+									))}
+								</View>
+							)}
+
+							{/* Tasks for this date */}
+							{selectedDateEvents.tasks.length > 0 && (
+								<View style={styles.modalSection}>
+									<Text style={styles.modalSectionTitle}>Tasks</Text>
+									{selectedDateEvents.tasks.map((task) => (
+										<Pressable
+											key={task.id}
+											style={styles.modalEventCard}
+											onPress={() => {
+												setShowDateModal(false);
+												router.push(`/tasks`);
+											}}
+										>
+											<View style={styles.modalEventIcon}>
+												<CheckSquare size={18} color={colors.primary} />
+											</View>
+											<View style={styles.modalEventContent}>
+												<Text style={styles.modalEventTitle}>{task.title}</Text>
+												<Text style={styles.modalEventSubtitle}>
+													{task.clientName}
+												</Text>
+												{task.startTime && (
+													<Text style={styles.modalEventMeta}>
+														{task.startTime}
+														{task.endTime && ` - ${task.endTime}`}
+													</Text>
+												)}
+											</View>
+											<ChevronRight size={18} color={colors.border} />
+										</Pressable>
+									))}
+								</View>
+							)}
+
+							{/* Empty State */}
+							{selectedDateEvents.projects.length === 0 &&
+								selectedDateEvents.tasks.length === 0 && (
+									<View style={styles.modalEmptyState}>
+										<View style={styles.modalEmptyIcon}>
+											<CheckSquare size={28} color={colors.mutedForeground} />
+										</View>
+										<Text style={styles.modalEmptyTitle}>
+											Nothing scheduled
+										</Text>
+										<Text style={styles.modalEmptyText}>
+											No tasks or projects for this day
+										</Text>
+									</View>
+								)}
+						</ScrollView>
+					</Pressable>
+				</TouchableOpacity>
+			</Modal>
 		</SafeAreaView>
 	);
 }
 
 const styles = StyleSheet.create({
 	headerSection: {
-		marginBottom: spacing.lg,
-	},
-	dateText: {
-		fontSize: 13,
-		fontFamily: fontFamily.medium,
-		color: colors.mutedForeground,
-		textTransform: "uppercase",
-		letterSpacing: 0.5,
-		marginBottom: spacing.sm,
+		marginBottom: spacing.md,
 	},
 	greeting: {
-		fontSize: 28,
+		fontSize: 26,
 		fontFamily: fontFamily.bold,
 		color: colors.foreground,
-		marginBottom: spacing.xs,
 	},
-	subtitle: {
-		fontSize: 15,
-		fontFamily: fontFamily.regular,
-		color: colors.mutedForeground,
-	},
-	statsGrid: {
-		gap: spacing.sm,
+	viewToggleContainer: {
+		alignItems: "center",
 		marginBottom: spacing.lg,
+		marginTop: spacing.sm,
 	},
 	statsRow: {
 		flexDirection: "row",
 		gap: spacing.sm,
+		marginBottom: spacing.md,
+	},
+	statCard: {
+		flex: 1,
+		backgroundColor: colors.card,
+		borderRadius: radius.lg,
+		padding: spacing.md,
+		borderWidth: 1,
+		borderColor: colors.border,
+	},
+	statIconContainer: {
+		width: 36,
+		height: 36,
+		borderRadius: radius.md,
+		backgroundColor: "rgba(0, 166, 244, 0.1)",
+		alignItems: "center",
+		justifyContent: "center",
+		marginBottom: spacing.sm,
+	},
+	statContent: {},
+	statValue: {
+		fontSize: 22,
+		fontFamily: fontFamily.bold,
+		color: colors.foreground,
+	},
+	statLabel: {
+		fontSize: 12,
+		fontFamily: fontFamily.regular,
+		color: colors.mutedForeground,
+	},
+	statChange: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 2,
+		marginTop: spacing.xs,
+	},
+	statChangeText: {
+		fontSize: 11,
+		fontFamily: fontFamily.medium,
+	},
+	alertCard: {
+		flexDirection: "row",
+		alignItems: "center",
+		backgroundColor: "#fef2f2",
+		borderRadius: radius.lg,
+		padding: spacing.md,
+		borderWidth: 1,
+		borderColor: "#fecaca",
+		marginBottom: spacing.md,
+	},
+	alertIcon: {
+		marginRight: spacing.sm,
+	},
+	alertContent: {
+		flex: 1,
+	},
+	alertTitle: {
+		fontSize: 14,
+		fontFamily: fontFamily.semibold,
+		color: colors.danger,
+	},
+	alertText: {
+		fontSize: 12,
+		fontFamily: fontFamily.regular,
+		color: "#991b1b",
 	},
 	revenueCard: {
 		backgroundColor: colors.card,
@@ -425,7 +651,7 @@ const styles = StyleSheet.create({
 		padding: spacing.md,
 		borderWidth: 1,
 		borderColor: colors.border,
-		marginBottom: spacing.lg,
+		marginBottom: spacing.md,
 	},
 	revenueHeader: {
 		flexDirection: "row",
@@ -433,10 +659,10 @@ const styles = StyleSheet.create({
 		marginBottom: spacing.md,
 	},
 	revenueIconContainer: {
-		width: 40,
-		height: 40,
+		width: 36,
+		height: 36,
 		borderRadius: radius.md,
-		backgroundColor: "#dcfce7",
+		backgroundColor: "rgba(0, 166, 244, 0.1)",
 		alignItems: "center",
 		justifyContent: "center",
 		marginRight: spacing.sm,
@@ -445,7 +671,7 @@ const styles = StyleSheet.create({
 		flex: 1,
 	},
 	revenueTitle: {
-		fontSize: 16,
+		fontSize: 15,
 		fontFamily: fontFamily.semibold,
 		color: colors.foreground,
 	},
@@ -464,61 +690,44 @@ const styles = StyleSheet.create({
 		gap: spacing.sm,
 	},
 	revenueStat: {},
-	revenueStatValue: {
-		fontSize: 18,
-		fontFamily: fontFamily.bold,
-		color: colors.foreground,
-	},
 	revenueStatLabel: {
 		fontSize: 12,
 		fontFamily: fontFamily.regular,
 		color: colors.mutedForeground,
 	},
-	revenueChange: {
+	revenueStatValue: {
+		fontSize: 18,
+		fontFamily: fontFamily.bold,
+		color: colors.foreground,
+	},
+	section: {
+		marginBottom: spacing.md,
+	},
+	sectionHeader: {
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "space-between",
+		marginBottom: spacing.sm,
+	},
+	sectionTitle: {
+		fontSize: 17,
+		fontFamily: fontFamily.semibold,
+		color: colors.foreground,
+	},
+	sectionAction: {
 		flexDirection: "row",
 		alignItems: "center",
 		gap: 4,
-		marginTop: spacing.xs,
 	},
-	revenueChangeText: {
-		fontSize: 12,
-		fontFamily: fontFamily.medium,
-	},
-	overdueCard: {
-		flexDirection: "row",
-		alignItems: "center",
-		backgroundColor: "#fef2f2",
-		borderRadius: radius.lg,
-		padding: spacing.md,
-		borderWidth: 1,
-		borderColor: "#fecaca",
-		borderLeftWidth: 4,
-		borderLeftColor: "#dc2626",
-		marginBottom: spacing.lg,
-	},
-	overdueIcon: {
-		marginRight: spacing.sm,
-	},
-	overdueContent: {
-		flex: 1,
-	},
-	overdueTitle: {
-		fontSize: 15,
-		fontFamily: fontFamily.semibold,
-		color: "#dc2626",
-	},
-	overdueText: {
+	sectionActionText: {
 		fontSize: 13,
-		fontFamily: fontFamily.regular,
-		color: "#7f1d1d",
-	},
-	tasksSection: {
-		marginBottom: spacing.lg,
+		fontFamily: fontFamily.medium,
+		color: colors.primary,
 	},
 	tasksList: {
 		gap: spacing.sm,
 	},
-	emptyTasks: {
+	emptyState: {
 		alignItems: "center",
 		paddingVertical: spacing.xl,
 		backgroundColor: colors.card,
@@ -526,104 +735,138 @@ const styles = StyleSheet.create({
 		borderWidth: 1,
 		borderColor: colors.border,
 	},
-	emptyTasksTitle: {
-		fontSize: 16,
+	emptyTitle: {
+		fontSize: 15,
 		fontFamily: fontFamily.semibold,
 		color: colors.foreground,
 		marginTop: spacing.sm,
 	},
-	emptyTasksText: {
+	emptyText: {
 		fontSize: 13,
 		fontFamily: fontFamily.regular,
 		color: colors.mutedForeground,
 		marginTop: spacing.xs,
 	},
-	weekCard: {
-		backgroundColor: colors.card,
-		borderRadius: radius.lg,
-		padding: spacing.md,
-		borderWidth: 1,
-		borderColor: colors.border,
+	calendarSection: {
+		gap: spacing.md,
 	},
-	weekHeader: {
+	modalBackdrop: {
+		flex: 1,
+		backgroundColor: "rgba(0, 0, 0, 0.5)",
+		justifyContent: "flex-end",
+	},
+	modalContent: {
+		backgroundColor: colors.background,
+		borderTopLeftRadius: radius.xl,
+		borderTopRightRadius: radius.xl,
+		maxHeight: "80%",
+		paddingBottom: spacing.xl,
+	},
+	modalHeader: {
+		paddingTop: spacing.sm,
+		paddingHorizontal: spacing.md,
+		paddingBottom: spacing.md,
+		borderBottomWidth: 1,
+		borderBottomColor: colors.border,
+	},
+	modalHandleBar: {
+		width: 40,
+		height: 4,
+		backgroundColor: colors.muted,
+		borderRadius: radius.full,
+		alignSelf: "center",
+		marginBottom: spacing.md,
+	},
+	modalTitleContainer: {
 		flexDirection: "row",
 		alignItems: "center",
-		gap: spacing.sm,
-		marginBottom: spacing.xs,
+		justifyContent: "space-between",
 	},
-	weekTitle: {
-		fontSize: 15,
+	modalTitle: {
+		fontSize: 18,
 		fontFamily: fontFamily.semibold,
 		color: colors.foreground,
 	},
-	weekText: {
+	modalCloseButton: {
+		padding: spacing.xs,
+	},
+	modalScrollView: {
+		maxHeight: "100%",
+	},
+	modalSection: {
+		padding: spacing.md,
+	},
+	modalSectionTitle: {
 		fontSize: 14,
-		fontFamily: fontFamily.regular,
+		fontFamily: fontFamily.semibold,
 		color: colors.mutedForeground,
-		marginLeft: 26,
-	},
-	fabContainer: {
-		position: "absolute",
-		bottom: 24,
-		right: 24,
-		alignItems: "flex-end",
-		zIndex: 100,
-	},
-	quickActionsMenu: {
+		textTransform: "uppercase",
+		letterSpacing: 0.5,
 		marginBottom: spacing.sm,
-		gap: spacing.xs,
 	},
-	quickActionItem: {
+	modalEventCard: {
 		flexDirection: "row",
 		alignItems: "center",
+		padding: spacing.sm,
 		backgroundColor: colors.card,
-		paddingVertical: spacing.sm,
-		paddingHorizontal: spacing.md,
-		borderRadius: radius.lg,
+		borderRadius: radius.md,
 		borderWidth: 1,
 		borderColor: colors.border,
-		borderLeftWidth: 3,
-		shadowColor: "#000",
-		shadowOffset: { width: 0, height: 2 },
-		shadowOpacity: 0.1,
-		shadowRadius: 4,
-		elevation: 3,
+		marginBottom: spacing.sm,
 	},
-	quickActionIcon: {
-		width: 32,
-		height: 32,
+	modalEventIcon: {
+		width: 36,
+		height: 36,
 		borderRadius: radius.md,
+		backgroundColor: "rgba(0, 166, 244, 0.1)",
 		alignItems: "center",
 		justifyContent: "center",
 		marginRight: spacing.sm,
 	},
-	quickActionLabel: {
-		fontSize: 14,
+	modalEventContent: {
+		flex: 1,
+	},
+	modalEventTitle: {
+		fontSize: 15,
 		fontFamily: fontFamily.semibold,
 		color: colors.foreground,
+		marginBottom: 2,
 	},
-	fab: {
+	modalEventSubtitle: {
+		fontSize: 13,
+		fontFamily: fontFamily.regular,
+		color: colors.mutedForeground,
+		marginBottom: 2,
+	},
+	modalEventMeta: {
+		fontSize: 12,
+		fontFamily: fontFamily.regular,
+		color: colors.mutedForeground,
+	},
+	modalEmptyState: {
+		alignItems: "center",
+		paddingVertical: spacing.xl * 2,
+		paddingHorizontal: spacing.lg,
+	},
+	modalEmptyIcon: {
 		width: 56,
 		height: 56,
 		borderRadius: 28,
-		backgroundColor: colors.primary,
+		backgroundColor: colors.muted,
 		alignItems: "center",
 		justifyContent: "center",
-		shadowColor: "#000",
-		shadowOffset: { width: 0, height: 2 },
-		shadowOpacity: 0.25,
-		shadowRadius: 4,
-		elevation: 5,
+		marginBottom: spacing.md,
 	},
-	fabPressed: {
-		opacity: 0.8,
+	modalEmptyTitle: {
+		fontSize: 16,
+		fontFamily: fontFamily.semibold,
+		color: colors.foreground,
+		marginBottom: spacing.xs,
 	},
-	fabActive: {
-		backgroundColor: colors.foreground,
-	},
-	overlay: {
-		...StyleSheet.absoluteFillObject,
-		backgroundColor: "rgba(0, 0, 0, 0.3)",
-		zIndex: 50,
+	modalEmptyText: {
+		fontSize: 14,
+		fontFamily: fontFamily.regular,
+		color: colors.mutedForeground,
+		textAlign: "center",
 	},
 });

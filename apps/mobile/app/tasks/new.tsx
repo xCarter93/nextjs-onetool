@@ -6,6 +6,7 @@ import {
 	TouchableOpacity,
 	Alert,
 	Platform,
+	Modal,
 } from "react-native";
 import { useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -16,6 +17,7 @@ import { styles, colors, spacing, fontFamily } from "@/lib/theme";
 import { X, ChevronDown, Calendar } from "lucide-react-native";
 import type { Id } from "@onetool/backend/convex/_generated/dataModel";
 import { StyledButton } from "@/components/styled";
+import { AppCalendar, toDateId, fromDateId } from "@/components/AppCalendar";
 
 export default function NewTaskScreen() {
 	const router = useRouter();
@@ -24,7 +26,8 @@ export default function NewTaskScreen() {
 	const [selectedClientId, setSelectedClientId] =
 		useState<Id<"clients"> | null>(null);
 	const [showClientPicker, setShowClientPicker] = useState(false);
-	const [selectedDate, setSelectedDate] = useState(new Date());
+	const [selectedDateId, setSelectedDateId] = useState(toDateId(new Date()));
+	const [showDatePicker, setShowDatePicker] = useState(false);
 	const [loading, setLoading] = useState(false);
 
 	const clients = useQuery(api.clients.list, {}) ?? [];
@@ -32,12 +35,20 @@ export default function NewTaskScreen() {
 
 	const selectedClient = clients.find((c) => c._id === selectedClientId);
 
-	const formatDate = (date: Date) => {
+	const formatDate = (dateId: string) => {
+		// Parse YYYY-MM-DD format
+		const [year, month, day] = dateId.split("-").map(Number);
+		const date = new Date(year, month - 1, day);
 		return date.toLocaleDateString("en-US", {
 			year: "numeric",
 			month: "long",
 			day: "numeric",
 		});
+	};
+
+	const handleDateSelect = (dateId: string) => {
+		setSelectedDateId(dateId);
+		setShowDatePicker(false);
 	};
 
 	const handleSubmit = async () => {
@@ -49,8 +60,9 @@ export default function NewTaskScreen() {
 		try {
 			setLoading(true);
 
-			// Set date to start of day in local timezone
-			const taskDate = new Date(selectedDate);
+			// Parse the date ID (YYYY-MM-DD) and create a date at start of day
+			const [year, month, day] = selectedDateId.split("-").map(Number);
+			const taskDate = new Date(year, month - 1, day);
 			taskDate.setHours(0, 0, 0, 0);
 
 			await createTask({
@@ -141,7 +153,7 @@ export default function NewTaskScreen() {
 					>
 						Date
 					</Text>
-					<View
+					<TouchableOpacity
 						style={{
 							borderWidth: 1,
 							borderColor: colors.border,
@@ -151,6 +163,8 @@ export default function NewTaskScreen() {
 							flexDirection: "row",
 							alignItems: "center",
 						}}
+						onPress={() => setShowDatePicker(true)}
+						disabled={loading}
 					>
 						<Calendar
 							size={20}
@@ -158,13 +172,63 @@ export default function NewTaskScreen() {
 							style={{ marginRight: 8 }}
 						/>
 						<Text style={{ fontSize: 16, color: colors.foreground }}>
-							{formatDate(selectedDate)}
+							{formatDate(selectedDateId)}
 						</Text>
-					</View>
-					<Text style={[styles.mutedText, { fontSize: 13, marginTop: 4 }]}>
-						Date picker coming soon. Using today's date.
-					</Text>
+					</TouchableOpacity>
 				</View>
+
+				{/* Date Picker Modal */}
+				<Modal
+					visible={showDatePicker}
+					transparent
+					animationType="slide"
+					onRequestClose={() => setShowDatePicker(false)}
+				>
+					<View
+						style={{
+							flex: 1,
+							backgroundColor: "rgba(0, 0, 0, 0.5)",
+							justifyContent: "center",
+							alignItems: "center",
+						}}
+					>
+						<View
+							style={{
+								backgroundColor: colors.background,
+								borderRadius: 12,
+								padding: spacing.md,
+								width: "90%",
+								maxWidth: 400,
+							}}
+						>
+							<View
+								style={{
+									flexDirection: "row",
+									justifyContent: "space-between",
+									alignItems: "center",
+									marginBottom: spacing.md,
+								}}
+							>
+								<Text
+									style={[
+										styles.heading,
+										{ fontSize: 18, fontFamily: fontFamily.semibold },
+									]}
+								>
+									Select Date
+								</Text>
+								<TouchableOpacity onPress={() => setShowDatePicker(false)}>
+									<X size={24} color={colors.foreground} />
+								</TouchableOpacity>
+							</View>
+							<AppCalendar
+								selectedDate={selectedDateId}
+								onDateSelect={handleDateSelect}
+								showHeader={true}
+							/>
+						</View>
+					</View>
+				</Modal>
 
 				{/* Client Selection (Optional) */}
 				<View style={{ marginBottom: 20 }}>

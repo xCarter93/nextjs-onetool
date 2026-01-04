@@ -525,7 +525,7 @@ const styles = StyleSheet.create({
 		color: "#ef4444",
 	},
 	mentionedIndicator: {
-		backgroundColor: `${colors.primary}15`,
+		backgroundColor: "rgba(0, 166, 244, 0.08)",
 		padding: spacing.xs,
 		borderRadius: radius.sm,
 		marginBottom: spacing.xs,
