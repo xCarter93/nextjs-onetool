@@ -39,7 +39,6 @@ type Property = {
 	state: string;
 	zipCode: string;
 	country?: string;
-	description?: string;
 	isPrimary: boolean;
 	isNew?: boolean; // Track if this is a new item not yet saved
 };
@@ -102,7 +101,6 @@ export function PropertyTable({
 			state: "",
 			zipCode: "",
 			country: "",
-			description: "",
 			isPrimary: false,
 			isNew: true,
 		};
@@ -134,35 +132,34 @@ export function PropertyTable({
 			(typeof property._id === "string" && property._id.startsWith("temp-"));
 
 		if (isNewProperty) {
-			// Save new property directly to database
-			console.log("Creating new property...");
-			try {
-				await createProperty({
-					clientId,
-					streetAddress: property.streetAddress || "Address Required",
-					city: property.city || "City Required",
-					state: property.state || "State Required",
-					zipCode: property.zipCode || "ZIP Required",
-					country: property.country,
-					description: property.description,
-					isPrimary: property.isPrimary,
-				});
+		// Save new property directly to database
+		console.log("Creating new property...");
+		try {
+			await createProperty({
+				clientId,
+				streetAddress: property.streetAddress || "Address Required",
+				city: property.city || "City Required",
+				state: property.state || "State Required",
+				zipCode: property.zipCode || "ZIP Required",
+				country: property.country,
+				isPrimary: property.isPrimary,
+			});
 
-				// Remove from local items
-				setLocalProperties((prev) =>
-					prev.filter((item) => item._id !== property._id)
-				);
-				setEditingId(null);
-				onChange?.();
-				toast.success(
-					"Property Saved",
-					"Property has been successfully saved!"
-				);
-			} catch (error) {
-				console.error("Failed to save property:", error);
-				toast.error("Error", "Failed to save property. Please try again.");
-			}
-		} else {
+			// Remove from local items
+			setLocalProperties((prev) =>
+				prev.filter((item) => item._id !== property._id)
+			);
+			setEditingId(null);
+			onChange?.();
+			toast.success(
+				"Property Saved",
+				"Property has been successfully saved!"
+			);
+		} catch (error) {
+			console.error("Failed to save property:", error);
+			toast.error("Error", "Failed to save property. Please try again.");
+		}
+	} else {
 			// Update existing item in database
 			console.log("Updating existing property with ID:", property._id);
 			try {
@@ -173,7 +170,6 @@ export function PropertyTable({
 					state: property.state,
 					zipCode: property.zipCode,
 					country: property.country,
-					description: property.description,
 					isPrimary: property.isPrimary,
 				});
 				setEditingId(null);

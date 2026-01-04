@@ -42,13 +42,8 @@ export default function ClientDetailPage() {
 	const [emailSheetMode, setEmailSheetMode] = useState<"new" | "reply">("new");
 	const [activeTab, setActiveTab] = useState("details");
 	const [form, setForm] = useState({
-		industry: "",
 		companyDescription: "",
 		status: "lead",
-		category: "",
-		clientSize: "",
-		priorityLevel: "",
-		projectDimensions: "",
 		communicationPreference: "" as "email" | "phone" | "both" | "",
 		tags: "",
 		notes: "",
@@ -291,12 +286,7 @@ export default function ClientDetailPage() {
 										client={client}
 										isEditing={isEditing}
 										form={{
-											industry: form.industry,
 											companyDescription: form.companyDescription,
-											category: form.category,
-											clientSize: form.clientSize,
-											priorityLevel: form.priorityLevel,
-											projectDimensions: form.projectDimensions,
 										}}
 										onFormChange={(field, value) =>
 											setForm((prev) => ({ ...prev, [field]: value }))

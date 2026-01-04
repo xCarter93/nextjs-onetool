@@ -19,7 +19,6 @@ export interface CalendarEvent {
 	startTime?: string; // HH:MM format for tasks
 	endTime?: string;
 	status: string;
-	priority?: string; // For tasks
 	clientId?: Id<"clients">; // Optional for internal tasks
 	clientName: string;
 	assignedUserIds?: Id<"users">[];

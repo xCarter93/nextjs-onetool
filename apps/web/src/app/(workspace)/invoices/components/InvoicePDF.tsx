@@ -32,7 +32,6 @@ type Invoice = {
 
 type Client = {
 	companyName: string;
-	industry?: string;
 };
 
 type Organization = {

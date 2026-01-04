@@ -182,30 +182,12 @@ export function CalendarDetailSidebar({
 											: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
 							}
 						`}
-						>
-							{event.status.replace("-", " ")}
-						</div>
-						{event.priority && (
-							<div
-								className={`
-								px-3 py-1 rounded-full text-xs font-medium
-								${
-									event.priority === "urgent"
-										? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
-										: event.priority === "high"
-											? "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300"
-											: event.priority === "medium"
-												? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300"
-												: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
-								}
-							`}
-							>
-								{event.priority}
-							</div>
-						)}
+					>
+						{event.status.replace("-", " ")}
 					</div>
+				</div>
 
-					{/* Details */}
+				{/* Details */}
 					<div className="space-y-4">
 						{/* Client */}
 						<div className="flex items-start gap-3">

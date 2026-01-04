@@ -39,7 +39,6 @@ type Contact = {
 	email?: string;
 	phone?: string;
 	jobTitle?: string;
-	role?: string;
 	isPrimary: boolean;
 	isNew?: boolean; // Track if this is a new item not yet saved
 };
@@ -102,7 +101,6 @@ export function ContactTable({
 			email: "",
 			phone: "",
 			jobTitle: "",
-			role: "",
 			isPrimary: false,
 			isNew: true,
 		};
@@ -145,7 +143,6 @@ export function ContactTable({
 					email: contact.email,
 					phone: contact.phone,
 					jobTitle: contact.jobTitle,
-					role: contact.role,
 					isPrimary: contact.isPrimary,
 				});
 
@@ -171,7 +168,6 @@ export function ContactTable({
 					email: contact.email,
 					phone: contact.phone,
 					jobTitle: contact.jobTitle,
-					role: contact.role,
 					isPrimary: contact.isPrimary,
 				});
 				setEditingId(null);

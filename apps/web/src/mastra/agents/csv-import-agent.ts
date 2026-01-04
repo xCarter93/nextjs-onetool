@@ -40,7 +40,7 @@ Always suggest appropriate defaults for missing required fields:
 - For clients: status="lead"
 - For projects: status="planned", projectType="one-off"
 
-For array fields (servicesNeeded, tags, assignedUserIds):
+For array fields (tags, assignedUserIds):
 - These should be comma, semicolon, or pipe-separated values in the CSV
 - They will be automatically split into arrays during import
 

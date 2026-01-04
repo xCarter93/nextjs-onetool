@@ -23,7 +23,7 @@ export function CalendarEventIcon({
 	onClick,
 	size = "md",
 }: CalendarEventIconProps) {
-	const colors = getEventColor(event.type, event.priority || "medium");
+	const colors = getEventColor(event.type, event.status);
 
 	const sizeClasses = {
 		sm: "w-5 h-5 text-[10px]",
@@ -44,13 +44,6 @@ export function CalendarEventIcon({
 		}
 	};
 
-	const getPriorityIcon = () => {
-		if (event.priority === "urgent") {
-			return <AlertCircle className="w-3 h-3" />;
-		}
-		return getStatusIcon();
-	};
-
 	const tooltipContent = (
 		<div className="space-y-1">
 			<div className="font-semibold">{event.title}</div>
@@ -62,9 +55,6 @@ export function CalendarEventIcon({
 				{event.startTime && ` at ${formatTime(event.startTime)}`}
 				{event.endTime && ` - ${formatTime(event.endTime)}`}
 			</div>
-			{event.priority && (
-				<div className="text-xs capitalize">Priority: {event.priority}</div>
-			)}
 			<div className="text-xs capitalize">Status: {event.status}</div>
 			{event.description && (
 				<div className="text-xs mt-1 max-w-xs">
@@ -89,10 +79,10 @@ export function CalendarEventIcon({
 							shadow-sm hover:shadow-md
 							hover:scale-110
 						`}
-						onClick={onClick}
-					>
-						{getPriorityIcon()}
-					</div>
+					onClick={onClick}
+				>
+					{getStatusIcon()}
+				</div>
 				</TooltipTrigger>
 				<TooltipContent side="top" className="max-w-sm">
 					{tooltipContent}

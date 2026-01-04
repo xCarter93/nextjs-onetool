@@ -225,37 +225,30 @@ export function getEventColor(
 				};
 		}
 	} else {
-		// Tasks - use purple shades with priority variations
-		const priority = status; // For tasks, we'll use priority here
-		switch (priority) {
-			case "urgent":
+		// Tasks - use purple shades with status variations
+		switch (status) {
+			case "completed":
 				return {
-					bg: "bg-red-500 dark:bg-red-600",
-					border: "border-red-600 dark:border-red-500",
-					text: "text-white dark:text-white",
-					hover: "hover:bg-red-600 dark:hover:bg-red-700",
+					bg: "bg-green-100 dark:bg-green-900/30",
+					border: "border-green-300 dark:border-green-700",
+					text: "text-green-900 dark:text-green-100",
+					hover: "hover:bg-green-200 dark:hover:bg-green-900/50",
 				};
-			case "high":
+			case "in-progress":
 				return {
 					bg: "bg-purple-500 dark:bg-purple-600",
 					border: "border-purple-600 dark:border-purple-500",
 					text: "text-white dark:text-white",
 					hover: "hover:bg-purple-600 dark:hover:bg-purple-700",
 				};
-			case "medium":
+			case "cancelled":
 				return {
-					bg: "bg-purple-300 dark:bg-purple-700",
-					border: "border-purple-400 dark:border-purple-600",
-					text: "text-purple-900 dark:text-purple-100",
-					hover: "hover:bg-purple-400 dark:hover:bg-purple-800",
+					bg: "bg-gray-100 dark:bg-gray-800/30",
+					border: "border-gray-300 dark:border-gray-700",
+					text: "text-gray-600 dark:text-gray-400",
+					hover: "hover:bg-gray-200 dark:hover:bg-gray-800/50",
 				};
-			case "low":
-				return {
-					bg: "bg-purple-100 dark:bg-purple-900/30",
-					border: "border-purple-300 dark:border-purple-700",
-					text: "text-purple-900 dark:text-purple-100",
-					hover: "hover:bg-purple-200 dark:hover:bg-purple-900/50",
-				};
+			case "pending":
 			default:
 				return {
 					bg: "bg-purple-200 dark:bg-purple-800",

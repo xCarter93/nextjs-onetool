@@ -77,7 +77,6 @@ import { cn } from "@/lib/utils";
 type Client = {
 	id: string;
 	name: string;
-	industry: string;
 	location: string;
 	activeProjects: number;
 	lastActivity: string; // ISO date or friendly string
@@ -94,7 +93,6 @@ type ClientKanbanItem = {
 	name: string;
 	column: "lead" | "active" | "inactive";
 	status: "lead" | "active" | "inactive";
-	industry: string;
 	activeProjects: number;
 	primaryContact: {
 		name: string;
@@ -188,13 +186,6 @@ const createColumns = (
 					{row.original.location}
 				</span>
 			</div>
-		),
-	},
-	{
-		accessorKey: "industry",
-		header: "Industry",
-		cell: ({ row }) => (
-			<span className="text-foreground">{row.original.industry}</span>
 		),
 	},
 	{
@@ -396,20 +387,19 @@ export default function ClientsPage() {
 						kanbanStatus = "inactive";
 					}
 
-					return {
-						id: client.id,
-						name: client.name,
-						column: kanbanStatus,
-						status: kanbanStatus,
-						industry: client.industry,
-						activeProjects: client.activeProjects,
-						primaryContact: client.primaryContact
-							? {
-									name: client.primaryContact.name,
-									email: client.primaryContact.email,
-							  }
-							: null,
-					};
+				return {
+					id: client.id,
+					name: client.name,
+					column: kanbanStatus,
+					status: kanbanStatus,
+					activeProjects: client.activeProjects,
+					primaryContact: client.primaryContact
+						? {
+								name: client.primaryContact.name,
+								email: client.primaryContact.email,
+						  }
+						: null,
+				};
 				})
 		);
 	}, [activeData]);
@@ -525,10 +515,6 @@ export default function ClientsPage() {
 
 			// Search in client name
 			if (client.name && client.name.toLowerCase().includes(search))
-				return true;
-
-			// Search in industry
-			if (client.industry && client.industry.toLowerCase().includes(search))
 				return true;
 
 			// Search in primary contact name and email
@@ -727,7 +713,7 @@ export default function ClientsPage() {
 					</div>
 					<div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
 						<Input
-							placeholder="Search clients, contacts, or industry..."
+							placeholder="Search clients or contacts..."
 							value={globalQuery}
 							onChange={(e) => setGlobalQuery(e.target.value)}
 							className="w-full md:w-96"
@@ -813,14 +799,11 @@ export default function ClientsPage() {
 																	variant={kanbanStatusToBadgeVariant(
 																		item.status
 																	)}
-																>
-																	{formatKanbanStatus(item.status)}
-																</StyledBadge>
-															</div>
-															<div className="text-xs text-muted-foreground">
-																{item.industry}
-															</div>
-															<div className="flex items-center justify-between text-xs">
+															>
+																{formatKanbanStatus(item.status)}
+															</StyledBadge>
+														</div>
+														<div className="flex items-center justify-between text-xs">
 																<span className="text-muted-foreground">
 																	{item.activeProjects === 0
 																		? "No active projects"
