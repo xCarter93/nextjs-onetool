@@ -13,8 +13,6 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -36,13 +34,6 @@ import { MapPinIcon } from "@heroicons/react/24/outline";
 import ComboBox from "@/components/ui/combo-box";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { cn } from "@/lib/utils";
-import {
-	StyledSelect,
-	StyledSelectTrigger,
-	StyledSelectContent,
-	SelectValue,
-	SelectItem,
-} from "@/components/ui/styled/styled-select";
 import { StyledMultiSelector } from "@/components/ui/styled/styled-multi-selector";
 import { User } from "lucide-react";
 
@@ -57,7 +48,7 @@ export interface ProjectFormData {
 
 	// Project Information
 	title: string;
-	instructions: string;
+	description: string;
 	projectType: "one-off" | "recurring";
 
 	// Dates
@@ -70,10 +61,6 @@ export interface ProjectFormData {
 
 	// Assignment (multiple users)
 	assignedUserIds: string[];
-
-	// Settings
-	invoiceReminderEnabled: boolean;
-	scheduleForLater: boolean;
 }
 
 interface ProjectOnboardingFormProps {
@@ -85,15 +72,13 @@ interface ProjectOnboardingFormProps {
 const initialFormData: ProjectFormData = {
 	clientId: "",
 	title: "",
-	instructions: "",
+	description: "",
 	projectType: "one-off",
 	startDate: undefined,
 	endDate: undefined,
 	startTime: "",
 	endTime: "",
 	assignedUserIds: [],
-	invoiceReminderEnabled: true,
-	scheduleForLater: false,
 };
 
 // Zod validation schema
@@ -101,15 +86,13 @@ const formSchema = z
 	.object({
 		clientId: z.string().min(1, "Client selection is required"),
 		title: z.string().min(1, "Project title is required"),
-		instructions: z.string(),
+		description: z.string(),
 		projectType: z.enum(["one-off", "recurring"]),
 		startDate: z.date().optional(),
 		endDate: z.date().optional(),
 		startTime: z.string(),
 		endTime: z.string(),
 		assignedUserIds: z.array(z.string()),
-		invoiceReminderEnabled: z.boolean(),
-		scheduleForLater: z.boolean(),
 	})
 	.refine(
 		(data) => {
@@ -133,7 +116,6 @@ const formatDisplayDate = (date?: Date | number) => {
 		day: "numeric",
 	});
 };
-
 
 const getStatusBadgeClass = (status?: string) => {
 	switch (status) {
@@ -296,7 +278,9 @@ export function ProjectOnboardingForm({
 		return date;
 	});
 
-	const [projectType, setProjectType] = React.useState<"one-off" | "recurring">("one-off");
+	const [projectType, setProjectType] = React.useState<"one-off" | "recurring">(
+		"one-off"
+	);
 
 	const clientsResult = useQuery(api.clients.list, {});
 	const clients = useMemo(() => clientsResult ?? [], [clientsResult]);
@@ -341,18 +325,16 @@ export function ProjectOnboardingForm({
 				const payload = {
 					clientId: value.clientId as ClientId,
 					title: value.title.trim(),
-					description: value.instructions || undefined,
-					instructions: value.instructions || undefined,
+					description: value.description || undefined,
 					status: "planned" as const,
 					projectType: value.projectType,
 					startDate: value.startDate ? value.startDate.getTime() : undefined,
 					endDate: value.endDate ? value.endDate.getTime() : undefined,
 					// Handle multiple assigned users
-					assignedUserIds: value.assignedUserIds.length > 0
-						? (value.assignedUserIds as UserId[])
-						: undefined,
-					invoiceReminderEnabled: value.invoiceReminderEnabled,
-					scheduleForLater: value.scheduleForLater,
+					assignedUserIds:
+						value.assignedUserIds.length > 0
+							? (value.assignedUserIds as UserId[])
+							: undefined,
 				};
 
 				if (onSubmit) {
@@ -637,13 +619,13 @@ export function ProjectOnboardingForm({
 														className={getStatusBadgeClass(
 															clientDetails.status
 														)}
-													variant="outline"
-												>
-													{clientDetails.status}
-												</Badge>
+														variant="outline"
+													>
+														{clientDetails.status}
+													</Badge>
+												</div>
 											</div>
-									</div>
-									{clientDetails.companyDescription && (
+											{clientDetails.companyDescription && (
 												<div className="col-span-2">
 													<span className="text-gray-500 dark:text-gray-400">
 														Description:
@@ -712,30 +694,30 @@ export function ProjectOnboardingForm({
 											<div>
 												<span className="text-gray-500 dark:text-gray-400">
 													Type:
-											</span>
-											<div className="mt-1 text-gray-900 dark:text-white capitalize">
-												{selectedProperty.propertyType || "Not specified"}
-											</div>
-										</div>
-										<div className="col-span-2">
-											<span className="text-gray-500 dark:text-gray-400">
-												Address:
-											</span>
-											<div className="mt-1 text-gray-900 dark:text-white">
-												<div className="font-medium">
-													{selectedProperty.streetAddress}
-												</div>
-												<div className="text-gray-600 dark:text-gray-400">
-													{selectedProperty.city}, {selectedProperty.state}{" "}
-													{selectedProperty.zipCode}
-													{selectedProperty.country
-														? `, ${selectedProperty.country}`
-														: ""}
+												</span>
+												<div className="mt-1 text-gray-900 dark:text-white capitalize">
+													{selectedProperty.propertyType || "Not specified"}
 												</div>
 											</div>
+											<div className="col-span-2">
+												<span className="text-gray-500 dark:text-gray-400">
+													Address:
+												</span>
+												<div className="mt-1 text-gray-900 dark:text-white">
+													<div className="font-medium">
+														{selectedProperty.streetAddress}
+													</div>
+													<div className="text-gray-600 dark:text-gray-400">
+														{selectedProperty.city}, {selectedProperty.state}{" "}
+														{selectedProperty.zipCode}
+														{selectedProperty.country
+															? `, ${selectedProperty.country}`
+															: ""}
+													</div>
+												</div>
+											</div>
 										</div>
-									</div>
-								) : selectedClientId ? (
+									) : selectedClientId ? (
 										<div className="text-center py-8 text-sm text-gray-500 dark:text-gray-400">
 											{propertyOptions.length === 0
 												? "No properties available for this client"
@@ -890,7 +872,7 @@ export function ProjectOnboardingForm({
 
 									<FieldGroup className="col-span-full">
 										<form.Field
-											name="instructions"
+											name="description"
 											children={(field) => {
 												const isInvalid =
 													field.state.meta.isTouched &&
@@ -898,7 +880,7 @@ export function ProjectOnboardingForm({
 												return (
 													<Field data-invalid={isInvalid}>
 														<FieldLabel htmlFor={field.name}>
-															Instructions
+															Description
 														</FieldLabel>
 														<Textarea
 															id={field.name}
@@ -910,7 +892,7 @@ export function ProjectOnboardingForm({
 															}
 															aria-invalid={isInvalid}
 															rows={4}
-															placeholder="Describe any special instructions or context for this project"
+															placeholder="Describe the project details and context"
 															disabled={isLoading}
 														/>
 														{isInvalid && (
@@ -928,11 +910,15 @@ export function ProjectOnboardingForm({
 											name="assignedUserIds"
 											children={(field) => {
 												// Get current value as strings for the multi-selector
-												const currentValues = (field.state.value || []) as string[];
-												
+												const currentValues = (field.state.value ||
+													[]) as string[];
+
 												return (
 													<Field>
-														<FieldLabel htmlFor={field.name} className="flex items-center gap-2">
+														<FieldLabel
+															htmlFor={field.name}
+															className="flex items-center gap-2"
+														>
 															<User className="h-4 w-4 text-primary" />
 															Assign To
 														</FieldLabel>
@@ -944,7 +930,9 @@ export function ProjectOnboardingForm({
 																})) || []
 															}
 															value={currentValues}
-															onValueChange={(values) => field.handleChange(values as UserId[])}
+															onValueChange={(values) =>
+																field.handleChange(values as UserId[])
+															}
 															placeholder="Select team members"
 															maxCount={2}
 															disabled={isLoading}
@@ -965,30 +953,6 @@ export function ProjectOnboardingForm({
 												Automatically assigned after creation
 											</p>
 										</div>
-									</div>
-
-									<div className="flex items-center gap-3 pt-4 border-t border-gray-200 dark:border-white/10">
-										<form.Field
-											name="invoiceReminderEnabled"
-											children={(field) => (
-												<>
-													<Checkbox
-														id="invoiceReminder"
-														checked={field.state.value}
-														onCheckedChange={(checked) =>
-															field.handleChange(!!checked)
-														}
-														disabled={isLoading}
-													/>
-													<Label
-														htmlFor="invoiceReminder"
-														className="text-sm text-gray-900 dark:text-white"
-													>
-														Remind me to invoice when I close the project
-													</Label>
-												</>
-											)}
-										/>
 									</div>
 								</CardContent>
 							</Card>
@@ -1086,30 +1050,6 @@ export function ProjectOnboardingForm({
 													)
 												}
 											/>
-
-											<div className="flex items-center gap-3">
-												<form.Field
-													name="scheduleForLater"
-													children={(field) => (
-														<>
-															<Checkbox
-																id="scheduleForLater"
-																checked={field.state.value}
-																onCheckedChange={(checked) =>
-																	field.handleChange(!!checked)
-																}
-																disabled={isLoading}
-															/>
-															<Label
-																htmlFor="scheduleForLater"
-																className="text-sm text-gray-900 dark:text-white"
-															>
-																Scheduled for later
-															</Label>
-														</>
-													)}
-												/>
-											</div>
 										</div>
 
 										{/* Large Calendar Component */}

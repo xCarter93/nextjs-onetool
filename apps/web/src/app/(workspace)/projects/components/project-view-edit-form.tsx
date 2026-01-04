@@ -65,13 +65,10 @@ interface ProjectData {
 	clientId?: ClientId;
 	title: string;
 	description?: string;
-	instructions?: string;
 	projectType: "one-off" | "recurring";
 	startDate?: number;
 	endDate?: number;
 	assignedUserIds?: UserId[];
-	invoiceReminderEnabled?: boolean;
-	scheduleForLater?: boolean;
 	status: "planned" | "in-progress" | "completed" | "cancelled";
 	projectNumber?: string;
 }
@@ -110,13 +107,11 @@ interface ProjectViewEditFormProps {
 const formSchema = z.object({
 	clientId: z.string().optional(),
 	title: z.string().min(1, "Project title is required"),
-	instructions: z.string().optional(),
+	description: z.string().optional(),
 	projectType: z.enum(["one-off", "recurring"]),
 	startDate: z.date().optional(),
 	endDate: z.date().optional(),
 	assignedUserIds: z.array(z.string()).optional(), // Array of user IDs
-	invoiceReminderEnabled: z.boolean(),
-	scheduleForLater: z.boolean(),
 });
 
 const formatDisplayDate = (date?: Date | number) => {
@@ -209,13 +204,11 @@ export function ProjectViewEditForm({
 		defaultValues: {
 			clientId: project.clientId?.toString() || "",
 			title: project.title,
-			instructions: project.instructions || "",
+			description: project.description || "",
 			projectType: project.projectType,
 			startDate: project.startDate ? new Date(project.startDate) : undefined,
 			endDate: project.endDate ? new Date(project.endDate) : undefined,
 			assignedUserIds: project.assignedUserIds || [], // Array of user IDs
-			invoiceReminderEnabled: project.invoiceReminderEnabled || false,
-			scheduleForLater: project.scheduleForLater || false,
 		},
 		onSubmit: async ({ value }) => {
 			const result = formSchema.safeParse(value);
@@ -228,8 +221,8 @@ export function ProjectViewEditForm({
 			if ((value.clientId || undefined) !== (project.clientId || undefined))
 				updates.clientId = value.clientId as ClientId | undefined;
 			if (value.title !== project.title) updates.title = value.title.trim();
-			if ((value.instructions || "") !== (project.instructions || ""))
-				updates.instructions = value.instructions || undefined;
+			if ((value.description || "") !== (project.description || ""))
+				updates.description = value.description || undefined;
 			if (value.projectType !== project.projectType)
 				updates.projectType = value.projectType;
 			if (
@@ -258,16 +251,6 @@ export function ProjectViewEditForm({
 						? (newAssignedUserIds as UserId[])
 						: undefined;
 			}
-			if (
-				(value.invoiceReminderEnabled || false) !==
-				(project.invoiceReminderEnabled || false)
-			)
-				updates.invoiceReminderEnabled = !!value.invoiceReminderEnabled;
-			if (
-				(value.scheduleForLater || false) !==
-				(project.scheduleForLater || false)
-			)
-				updates.scheduleForLater = !!value.scheduleForLater;
 
 			if (Object.keys(updates).length === 0) {
 				setIsEditing(false);
@@ -284,7 +267,7 @@ export function ProjectViewEditForm({
 		if (project) {
 			form.setFieldValue("clientId", project.clientId?.toString() || "");
 			form.setFieldValue("title", project.title);
-			form.setFieldValue("instructions", project.instructions || "");
+			form.setFieldValue("description", project.description || "");
 			form.setFieldValue("projectType", project.projectType);
 			form.setFieldValue(
 				"startDate",
@@ -295,18 +278,13 @@ export function ProjectViewEditForm({
 				project.endDate ? new Date(project.endDate) : undefined
 			);
 			form.setFieldValue("assignedUserIds", project.assignedUserIds || []);
-			form.setFieldValue(
-				"invoiceReminderEnabled",
-				project.invoiceReminderEnabled || false
-			);
-			form.setFieldValue("scheduleForLater", project.scheduleForLater || false);
 		}
 	}, [project, form]);
 
 	const resetForm = () => {
 		form.setFieldValue("clientId", project.clientId?.toString() || "");
 		form.setFieldValue("title", project.title);
-		form.setFieldValue("instructions", project.instructions || "");
+		form.setFieldValue("description", project.description || "");
 		form.setFieldValue("projectType", project.projectType);
 		form.setFieldValue(
 			"startDate",
@@ -317,11 +295,6 @@ export function ProjectViewEditForm({
 			project.endDate ? new Date(project.endDate) : undefined
 		);
 		form.setFieldValue("assignedUserIds", project.assignedUserIds || []);
-		form.setFieldValue(
-			"invoiceReminderEnabled",
-			project.invoiceReminderEnabled || false
-		);
-		form.setFieldValue("scheduleForLater", project.scheduleForLater || false);
 	};
 
 	const primaryContact =
@@ -542,12 +515,12 @@ export function ProjectViewEditForm({
 											<Badge
 												className={getStatusColor(client.status)}
 												variant="outline"
-										>
-											{client.status}
-										</Badge>
+											>
+												{client.status}
+											</Badge>
+										</div>
 									</div>
-								</div>
-								{client.companyDescription && (
+									{client.companyDescription && (
 										<div className="col-span-2">
 											<span className="text-gray-500 dark:text-gray-400">
 												Description:
@@ -672,29 +645,29 @@ export function ProjectViewEditForm({
 									<div>
 										<span className="text-gray-500 dark:text-gray-400">
 											Type:
-									</span>
-									<div className="mt-1 text-gray-900 dark:text-white capitalize">
-										{primaryProperty.propertyType || "Not specified"}
+										</span>
+										<div className="mt-1 text-gray-900 dark:text-white capitalize">
+											{primaryProperty.propertyType || "Not specified"}
+										</div>
+									</div>
+									<div className="col-span-2">
+										<span className="text-gray-500 dark:text-gray-400">
+											Address:
+										</span>
+										<div className="mt-1 text-gray-900 dark:text-white">
+											<div className="font-medium">
+												{primaryProperty.streetAddress}
+											</div>
+											<div className="text-gray-600 dark:text-gray-400">
+												{primaryProperty.city}, {primaryProperty.state}{" "}
+												{primaryProperty.zipCode}
+												{primaryProperty.country &&
+													`, ${primaryProperty.country}`}
+											</div>
+										</div>
 									</div>
 								</div>
-							<div className="col-span-2">
-								<span className="text-gray-500 dark:text-gray-400">
-									Address:
-								</span>
-								<div className="mt-1 text-gray-900 dark:text-white">
-									<div className="font-medium">
-										{primaryProperty.streetAddress}
-									</div>
-									<div className="text-gray-600 dark:text-gray-400">
-										{primaryProperty.city}, {primaryProperty.state}{" "}
-										{primaryProperty.zipCode}
-										{primaryProperty.country &&
-											`, ${primaryProperty.country}`}
-									</div>
-								</div>
-							</div>
-						</div>
-					) : isEditing ? (
+							) : isEditing ? (
 								<div className="text-center py-8 text-gray-500 dark:text-gray-400">
 									<p className="text-sm">
 										{client
@@ -778,17 +751,17 @@ export function ProjectViewEditForm({
 											{primaryContact.firstName} {primaryContact.lastName}
 										</div>
 									</div>
-								{primaryContact.jobTitle && (
-									<div>
-										<span className="text-gray-500 dark:text-gray-400">
-											Job Title:
-										</span>
-										<div className="mt-1 text-gray-900 dark:text-white">
-											{primaryContact.jobTitle}
+									{primaryContact.jobTitle && (
+										<div>
+											<span className="text-gray-500 dark:text-gray-400">
+												Job Title:
+											</span>
+											<div className="mt-1 text-gray-900 dark:text-white">
+												{primaryContact.jobTitle}
+											</div>
 										</div>
-									</div>
-								)}
-								{primaryContact.email && (
+									)}
+									{primaryContact.email && (
 										<div>
 											<span className="text-gray-500 dark:text-gray-400">
 												Email:
@@ -886,7 +859,7 @@ export function ProjectViewEditForm({
 
 								<FieldGroup>
 									<form.Field
-										name="instructions"
+										name="description"
 										children={(field) => {
 											const isInvalid =
 												field.state.meta.isTouched &&
@@ -894,7 +867,7 @@ export function ProjectViewEditForm({
 											return (
 												<Field data-invalid={isInvalid}>
 													<FieldLabel htmlFor={field.name}>
-														Instructions
+														Description
 													</FieldLabel>
 													<Textarea
 														id={field.name}
@@ -964,28 +937,6 @@ export function ProjectViewEditForm({
 											#{project.projectNumber || projectId.slice(-6)}
 										</span>
 									</div>
-								</div>
-
-								{/* Invoice Reminder Checkbox */}
-								<div className="flex items-center gap-3 pt-4 border-t border-gray-200 dark:border-white/10">
-									<form.Field
-										name="invoiceReminderEnabled"
-										children={(field) => (
-											<>
-												<input
-													type="checkbox"
-													checked={field.state.value}
-													onChange={(e) => field.handleChange(e.target.checked)}
-													readOnly={!isEditing}
-													disabled={!isEditing}
-													className="h-4 w-4 rounded border-gray-300 dark:border-white/10 text-blue-600 dark:text-indigo-500"
-												/>
-												<label className="text-sm text-gray-900 dark:text-white">
-													Remind me to invoice when I close the project
-												</label>
-											</>
-										)}
-									/>
 								</div>
 							</div>
 						</CardContent>
@@ -1158,27 +1109,6 @@ export function ProjectViewEditForm({
 											}}
 										/>
 									</div>
-								</div>
-
-								<div className="flex items-center gap-3">
-									<form.Field
-										name="scheduleForLater"
-										children={(field) => (
-											<>
-												<input
-													type="checkbox"
-													checked={field.state.value}
-													onChange={(e) => field.handleChange(e.target.checked)}
-													readOnly={!isEditing}
-													disabled={!isEditing}
-													className="h-4 w-4 rounded border-gray-300 dark:border-white/10 text-blue-600 dark:text-indigo-500"
-												/>
-												<label className="text-sm text-gray-900 dark:text-white">
-													Scheduled for later
-												</label>
-											</>
-										)}
-									/>
 								</div>
 							</div>
 
@@ -1382,18 +1312,14 @@ export function ProjectViewEditForm({
 						(formValues.clientId || "") !==
 							(project.clientId?.toString() || "") ||
 						formValues.title !== project.title ||
-						(formValues.instructions || "") !== (project.instructions || "") ||
+						(formValues.description || "") !== (project.description || "") ||
 						formValues.projectType !== project.projectType ||
 						(formValues.startDate
 							? formValues.startDate.getTime()
 							: undefined) !== (project.startDate || undefined) ||
 						(formValues.endDate ? formValues.endDate.getTime() : undefined) !==
 							(project.endDate || undefined) ||
-						!arraysEqual(formValues.assignedUserIds, project.assignedUserIds) ||
-						(formValues.invoiceReminderEnabled || false) !==
-							(project.invoiceReminderEnabled || false) ||
-						(formValues.scheduleForLater || false) !==
-							(project.scheduleForLater || false);
+						!arraysEqual(formValues.assignedUserIds, project.assignedUserIds);
 
 					return (
 						<StickyFormFooter
