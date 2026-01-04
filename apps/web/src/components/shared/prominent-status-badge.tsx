@@ -70,7 +70,6 @@ const getStatusColor = (status: string) => {
 		case "draft":
 		case "planned":
 			return "bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700";
-		case "prospect":
 		case "lead":
 			return "bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-700";
 		case "cancelled":

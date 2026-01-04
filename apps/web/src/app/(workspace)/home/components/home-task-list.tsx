@@ -14,7 +14,6 @@ import { motion, AnimatePresence } from "motion/react";
 import {
 	Calendar,
 	User,
-	Flag,
 	Plus,
 	CheckCircle2,
 	Circle,
@@ -25,24 +24,7 @@ import {
 import Link from "next/link";
 import { Task } from "@/types/task";
 
-const priorityConfig = {
-	low: {
-		color: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
-		icon: Flag,
-	},
-	medium: {
-		color: "bg-blue-100 text-blue-700 dark:bg-blue-800 dark:text-blue-300",
-		icon: Flag,
-	},
-	high: {
-		color: "bg-amber-100 text-amber-700 dark:bg-amber-800 dark:text-amber-300",
-		icon: Flag,
-	},
-	urgent: {
-		color: "bg-red-100 text-red-700 dark:bg-red-800 dark:text-red-300",
-		icon: AlertTriangle,
-	},
-};
+// Priority config removed - field no longer exists
 
 // Status configuration removed - not currently used
 
@@ -83,8 +65,6 @@ function TaskItem({ task, onStatusChange, isUpdating }: TaskItemProps) {
 	const isOverdue =
 		task.date < todayUTCTimestamp && task.status !== "completed";
 	const isToday = task.date === todayUTCTimestamp;
-
-	const PriorityIcon = priorityConfig[task.priority || "medium"].icon;
 
 	const formatTime = (time?: string) => {
 		if (!time) return null;
@@ -147,7 +127,7 @@ function TaskItem({ task, onStatusChange, isUpdating }: TaskItemProps) {
 				</button>
 
 				{/* Tabular Grid Layout - Everything Horizontal */}
-				<div className="flex-1 grid grid-cols-[2fr_2fr_1.5fr_1.5fr_auto] gap-6 items-center">
+				<div className="flex-1 grid grid-cols-[2fr_2fr_1.5fr_1.5fr] gap-6 items-center">
 					{/* Column 1: Task Title & Description */}
 					<div className="min-w-0">
 						<h3
@@ -204,19 +184,6 @@ function TaskItem({ task, onStatusChange, isUpdating }: TaskItemProps) {
 						<span className="text-sm truncate">
 							{assignee ? assignee.name || assignee.email : "Unassigned"}
 						</span>
-					</div>
-
-					{/* Column 5: Priority Badge */}
-					<div className="shrink-0">
-						{task.priority && (
-							<Badge
-								variant="secondary"
-								className={cn("text-xs", priorityConfig[task.priority].color)}
-							>
-								<PriorityIcon className="h-3 w-3 mr-1" />
-								{task.priority}
-							</Badge>
-						)}
 					</div>
 				</div>
 			</div>

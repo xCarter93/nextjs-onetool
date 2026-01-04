@@ -55,8 +55,7 @@ async function validateClientAccess(
 	clientId: Id<"clients">,
 	existingOrgId?: Id<"organizations">
 ): Promise<void> {
-	const userOrgId =
-		existingOrgId ?? (await getCurrentUserOrgId(ctx));
+	const userOrgId = existingOrgId ?? (await getCurrentUserOrgId(ctx));
 	const client = await ctx.db.get(clientId);
 
 	if (!client) {
@@ -196,11 +195,7 @@ export const create = mutation({
 		email: v.optional(v.string()),
 		phone: v.optional(v.string()),
 		jobTitle: v.optional(v.string()),
-		role: v.optional(v.string()),
-		department: v.optional(v.string()),
 		isPrimary: v.boolean(),
-		photoUrl: v.optional(v.string()),
-		photoStorageId: v.optional(v.id("_storage")),
 	},
 	handler: async (ctx, args): Promise<ClientContactId> => {
 		// Validate email format if provided
@@ -255,11 +250,7 @@ export const update = mutation({
 		email: v.optional(v.string()),
 		phone: v.optional(v.string()),
 		jobTitle: v.optional(v.string()),
-		role: v.optional(v.string()),
-		department: v.optional(v.string()),
 		isPrimary: v.optional(v.boolean()),
-		photoUrl: v.optional(v.string()),
-		photoStorageId: v.optional(v.id("_storage")),
 	},
 	handler: async (ctx, args): Promise<ClientContactId> => {
 		const { id, ...updates } = args;
@@ -373,8 +364,7 @@ export const search = query({
 				contact.lastName.toLowerCase().includes(searchQuery) ||
 				(contact.email && contact.email.toLowerCase().includes(searchQuery)) ||
 				(contact.jobTitle &&
-					contact.jobTitle.toLowerCase().includes(searchQuery)) ||
-				(contact.role && contact.role.toLowerCase().includes(searchQuery))
+					contact.jobTitle.toLowerCase().includes(searchQuery))
 		);
 	},
 });
@@ -393,11 +383,7 @@ export const bulkCreate = mutation({
 				email: v.optional(v.string()),
 				phone: v.optional(v.string()),
 				jobTitle: v.optional(v.string()),
-				role: v.optional(v.string()),
-				department: v.optional(v.string()),
 				isPrimary: v.boolean(),
-				photoUrl: v.optional(v.string()),
-				photoStorageId: v.optional(v.id("_storage")),
 			})
 		),
 	},

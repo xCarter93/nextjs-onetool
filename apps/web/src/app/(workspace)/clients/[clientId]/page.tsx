@@ -88,13 +88,8 @@ export default function ClientDetailPage() {
 	useEffect(() => {
 		if (client) {
 			setForm({
-				industry: client.industry || "",
 				companyDescription: client.companyDescription || "",
 				status: client.status,
-				category: client.category || "",
-				clientSize: client.clientSize || "",
-				priorityLevel: client.priorityLevel || "",
-				projectDimensions: client.projectDimensions || "",
 				communicationPreference: client.communicationPreference || "",
 				tags: (client.tags || []).join(", "),
 				notes: client.notes || "",
@@ -105,13 +100,8 @@ export default function ClientDetailPage() {
 	const isDirty = useMemo(() => {
 		if (!client) return false;
 		return (
-			(form.industry || "") !== (client.industry || "") ||
 			(form.companyDescription || "") !== (client.companyDescription || "") ||
 			form.status !== client.status ||
-			(form.category || "") !== (client.category || "") ||
-			(form.clientSize || "") !== (client.clientSize || "") ||
-			(form.priorityLevel || "") !== (client.priorityLevel || "") ||
-			(form.projectDimensions || "") !== (client.projectDimensions || "") ||
 			(form.communicationPreference || "") !==
 				(client.communicationPreference || "") ||
 			(form.tags || "") !== (client.tags || []).join(", ") ||
@@ -122,20 +112,10 @@ export default function ClientDetailPage() {
 	const handleSave = async () => {
 		if (!client) return;
 		const updates: Record<string, unknown> = {};
-		if ((form.industry || "") !== (client.industry || ""))
-			updates.industry = form.industry || undefined;
 		if ((form.companyDescription || "") !== (client.companyDescription || ""))
 			updates.companyDescription = form.companyDescription || undefined;
 		if (form.status !== client.status)
 			updates.status = form.status as typeof client.status;
-		if ((form.category || "") !== (client.category || ""))
-			updates.category = form.category || undefined;
-		if ((form.clientSize || "") !== (client.clientSize || ""))
-			updates.clientSize = form.clientSize || undefined;
-		if ((form.priorityLevel || "") !== (client.priorityLevel || ""))
-			updates.priorityLevel = form.priorityLevel || undefined;
-		if ((form.projectDimensions || "") !== (client.projectDimensions || ""))
-			updates.projectDimensions = form.projectDimensions || undefined;
 		if (
 			(form.communicationPreference || "") !==
 			(client.communicationPreference || "")
@@ -188,13 +168,8 @@ export default function ClientDetailPage() {
 				onClick: () => {
 					setIsEditing(false);
 					setForm({
-						industry: client?.industry || "",
 						companyDescription: client?.companyDescription || "",
 						status: client?.status || "lead",
-						category: client?.category || "",
-						clientSize: client?.clientSize || "",
-						priorityLevel: client?.priorityLevel || "",
-						projectDimensions: client?.projectDimensions || "",
 						communicationPreference: client?.communicationPreference || "",
 						tags: (client?.tags || []).join(", "),
 						notes: client?.notes || "",

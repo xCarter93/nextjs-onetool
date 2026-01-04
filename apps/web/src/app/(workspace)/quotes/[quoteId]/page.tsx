@@ -392,11 +392,7 @@ export default function QuoteDetailPage() {
 			const element = (
 				<QuotePDF
 					quote={quote}
-					client={
-						client
-							? { companyName: client.companyName, industry: client.industry }
-							: undefined
-					}
+					client={client ? { companyName: client.companyName } : undefined}
 					items={lineItems}
 					organization={
 						organization
@@ -689,9 +685,6 @@ export default function QuoteDetailPage() {
 																	<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
 																		{client.companyName}
 																	</h3>
-																	<p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-																		{client.industry || "No industry specified"}
-																	</p>
 																	{client.companyDescription && (
 																		<p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
 																			{client.companyDescription}
@@ -751,11 +744,6 @@ export default function QuoteDetailPage() {
 																				</a>
 																			</p>
 																		)}
-																		{primaryContact.department && (
-																			<p className="text-xs text-gray-500 dark:text-gray-500">
-																				{primaryContact.department}
-																			</p>
-																		)}
 																	</div>
 																) : (
 																	<p className="text-sm text-gray-500 dark:text-gray-400">
@@ -802,12 +790,6 @@ export default function QuoteDetailPage() {
 																				{primaryProperty.propertyType}
 																			</Badge>
 																		)}
-																		{primaryProperty.squareFootage && (
-																			<p className="text-xs text-gray-500 dark:text-gray-500">
-																				{primaryProperty.squareFootage.toLocaleString()}{" "}
-																				sq ft
-																			</p>
-																		)}
 																	</div>
 																) : (
 																	<p className="text-sm text-gray-500 dark:text-gray-400">
@@ -818,43 +800,6 @@ export default function QuoteDetailPage() {
 														</div>
 
 														{/* Additional Client Details */}
-														{(client.category ||
-															client.clientSize ||
-															client.priorityLevel) && (
-															<div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-																<div className="flex flex-wrap gap-2">
-																	{client.category && (
-																		<Badge
-																			variant="secondary"
-																			className="text-xs"
-																		>
-																			{client.category}
-																		</Badge>
-																	)}
-																	{client.clientSize && (
-																		<Badge
-																			variant="secondary"
-																			className="text-xs"
-																		>
-																			{client.clientSize}
-																		</Badge>
-																	)}
-																	{client.priorityLevel && (
-																		<Badge
-																			variant={
-																				client.priorityLevel === "urgent" ||
-																				client.priorityLevel === "high"
-																					? "destructive"
-																					: "secondary"
-																			}
-																			className="text-xs"
-																		>
-																			{client.priorityLevel} priority
-																		</Badge>
-																	)}
-																</div>
-															</div>
-														)}
 													</div>
 												) : (
 													<div className="p-6 border-2 border-dashed border-gray-300 dark:border-white/20 rounded-lg text-center">

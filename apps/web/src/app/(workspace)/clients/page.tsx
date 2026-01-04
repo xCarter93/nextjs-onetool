@@ -92,8 +92,8 @@ type Client = {
 type ClientKanbanItem = {
 	id: string;
 	name: string;
-	column: "lead" | "prospect" | "active" | "inactive";
-	status: "lead" | "prospect" | "active" | "inactive";
+	column: "lead" | "active" | "inactive";
+	status: "lead" | "active" | "inactive";
 	industry: string;
 	activeProjects: number;
 	primaryContact: {
@@ -103,7 +103,7 @@ type ClientKanbanItem = {
 };
 
 type ClientKanbanColumn = {
-	id: "lead" | "prospect" | "active" | "inactive";
+	id: "lead" | "active" | "inactive";
 	name: string;
 	description: string;
 };
@@ -113,11 +113,6 @@ const kanbanColumns: ClientKanbanColumn[] = [
 		id: "lead",
 		name: "Leads",
 		description: "Potential new clients",
-	},
-	{
-		id: "prospect",
-		name: "Prospects",
-		description: "Actively evaluating",
 	},
 	{
 		id: "active",
@@ -147,12 +142,11 @@ const statusToBadgeVariant = (status: Client["status"]) => {
 };
 
 const kanbanStatusToBadgeVariant = (
-	status: "lead" | "prospect" | "active" | "inactive"
+	status: "lead" | "active" | "inactive"
 ) => {
 	switch (status) {
 		case "active":
 			return "default" as const;
-		case "prospect":
 		case "lead":
 			return "secondary" as const;
 		case "inactive":
@@ -163,13 +157,11 @@ const kanbanStatusToBadgeVariant = (
 };
 
 const formatKanbanStatus = (
-	status: "lead" | "prospect" | "active" | "inactive"
+	status: "lead" | "active" | "inactive"
 ) => {
 	switch (status) {
 		case "lead":
 			return "Lead";
-		case "prospect":
-			return "Prospect";
 		case "active":
 			return "Active";
 		case "inactive":
@@ -368,15 +360,15 @@ export default function ClientsPage() {
 	const clientStatusMap = React.useMemo(() => {
 		const statusMap = new Map<
 			string,
-			"lead" | "prospect" | "active" | "inactive"
+			"lead" | "active" | "inactive"
 		>();
 		// Map client statuses to kanban columns
 		activeData.forEach((client) => {
-			let kanbanStatus: "lead" | "prospect" | "active" | "inactive";
+			let kanbanStatus: "lead" | "active" | "inactive";
 			if (client.status === "Active") {
 				kanbanStatus = "active";
 			} else if (client.status === "Prospect") {
-				kanbanStatus = "prospect";
+				kanbanStatus = "lead"; // Map deprecated Prospect to Lead
 			} else {
 				kanbanStatus = "inactive";
 			}
@@ -395,11 +387,11 @@ export default function ClientsPage() {
 			activeData
 				.filter((client) => client.status !== "Archived") // Only show non-archived in kanban
 				.map((client) => {
-					let kanbanStatus: "lead" | "prospect" | "active" | "inactive";
+					let kanbanStatus: "lead" | "active" | "inactive";
 					if (client.status === "Active") {
 						kanbanStatus = "active";
 					} else if (client.status === "Prospect") {
-						kanbanStatus = "prospect";
+						kanbanStatus = "lead"; // Map deprecated Prospect to Lead
 					} else {
 						kanbanStatus = "inactive";
 					}
@@ -476,14 +468,11 @@ export default function ClientsPage() {
 				// Map kanban status back to client status
 				let clientStatus:
 					| "lead"
-					| "prospect"
 					| "active"
 					| "inactive"
 					| "archived";
 				if (changedItem.column === "active") {
 					clientStatus = "active";
-				} else if (changedItem.column === "prospect") {
-					clientStatus = "prospect";
 				} else if (changedItem.column === "lead") {
 					clientStatus = "lead";
 				} else {

@@ -20,7 +20,6 @@ import { useToast } from "@/hooks/use-toast";
 
 const STATUS_OPTIONS = [
 	"lead",
-	"prospect",
 	"active",
 	"inactive",
 	"archived",
@@ -42,7 +41,6 @@ function formatDate(timestamp?: number) {
 function getStatusColor(status: string) {
 	switch (status) {
 		case "lead":
-		case "prospect":
 			return "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400";
 		case "active":
 		case "paid":

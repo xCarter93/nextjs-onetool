@@ -23,16 +23,12 @@ When analyzing a CSV file:
 
 For client data, required fields are:
 - companyName (string)
-- status (enum: lead, prospect, active, inactive, archived)
-- emailOptIn (boolean)
-- smsOptIn (boolean)
+- status (enum: lead, active, inactive, archived)
 
 Optional client fields include:
-- industry, companyDescription, notes (strings)
-- leadSource, category, clientSize, clientType, priorityLevel, communicationPreference (enums)
-- isActive (boolean)
-- projectDimensions (string)
-- servicesNeeded, tags (arrays - can be semicolon, comma, or pipe-separated in CSV)
+- companyDescription, notes (strings)
+- leadSource, communicationPreference (enums)
+- tags (arrays - can be semicolon, comma, or pipe-separated in CSV)
 
 For project data, required fields are:
 - title (string)
@@ -41,7 +37,7 @@ For project data, required fields are:
 - clientId (can be resolved from client name)
 
 Always suggest appropriate defaults for missing required fields:
-- For clients: status="lead", emailOptIn=false, smsOptIn=false
+- For clients: status="lead"
 - For projects: status="planned", projectType="one-off"
 
 For array fields (servicesNeeded, tags, assignedUserIds):

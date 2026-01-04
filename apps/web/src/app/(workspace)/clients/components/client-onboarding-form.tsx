@@ -31,9 +31,8 @@ import { Label } from "@/components/ui/label";
 export interface ClientFormData {
 	// Company Information
 	companyName: string;
-	industry: string;
 	companyDescription: string;
-	status: "lead" | "prospect" | "active" | "inactive" | "archived" | "";
+	status: "lead" | "active" | "inactive" | "archived" | "";
 	leadSource:
 		| "word-of-mouth"
 		| "website"
@@ -53,8 +52,6 @@ export interface ClientFormData {
 		email: string;
 		phone: string;
 		jobTitle: string;
-		role: string;
-		department: string;
 		isPrimary: boolean;
 	}>;
 
@@ -70,45 +67,23 @@ export interface ClientFormData {
 			| "office"
 			| "mixed-use"
 			| "";
-		squareFootage: string;
 		streetAddress: string;
 		city: string;
 		region: string;
 		postalCode: string;
-		propertyDescription: string;
+		country: string;
 		isPrimary: boolean;
 	}>;
 
-	// Custom Categories
-	category:
-		| "design"
-		| "development"
-		| "consulting"
-		| "maintenance"
-		| "marketing"
-		| "other"
-		| "";
-	clientSize: "small" | "medium" | "large" | "enterprise" | "";
-	clientType:
-		| "new-client"
-		| "existing-client"
-		| "partner"
-		| "vendor"
-		| "contractor"
-		| "";
-	isActive: "yes" | "no" | "pending" | "";
-	projectDimensions: string;
-	priorityLevel: "low" | "medium" | "high" | "urgent" | "";
-	tags: string;
-	notes: string;
+	// Classification
+	isActive: boolean;
 
-	// Service Requirements
-	servicesNeeded: string[];
+	// Communication preferences
 	communicationPreference: "email" | "phone" | "both" | "";
 
-	// Opt-in preferences
-	emailOptIn: boolean;
-	smsOptIn: boolean;
+	// Metadata
+	tags: string;
+	notes: string;
 }
 
 interface ClientOnboardingFormProps {
@@ -122,9 +97,8 @@ interface ClientOnboardingFormProps {
 const initialFormData: ClientFormData = {
 	// Company Information
 	companyName: "",
-	industry: "",
 	companyDescription: "",
-	status: "",
+	status: "lead",
 	leadSource: "",
 
 	// Contacts - start with one primary contact
@@ -136,8 +110,6 @@ const initialFormData: ClientFormData = {
 			email: "",
 			phone: "",
 			jobTitle: "",
-			role: "",
-			department: "",
 			isPrimary: true,
 		},
 	],
@@ -148,33 +120,24 @@ const initialFormData: ClientFormData = {
 			id: "primary",
 			propertyName: "",
 			propertyType: "",
-			squareFootage: "",
 			streetAddress: "",
 			city: "",
 			region: "",
 			postalCode: "",
-			propertyDescription: "",
+			country: "",
 			isPrimary: true,
 		},
 	],
 
-	// Custom Categories
-	category: "",
-	clientSize: "",
-	clientType: "",
-	isActive: "",
-	projectDimensions: "",
-	priorityLevel: "",
-	tags: "",
-	notes: "",
+	// Classification
+	isActive: true,
 
-	// Service Requirements
-	servicesNeeded: [],
+	// Communication preferences
 	communicationPreference: "",
 
-	// Opt-in preferences
-	emailOptIn: true,
-	smsOptIn: false,
+	// Metadata
+	tags: "",
+	notes: "",
 };
 
 // Helper functions for managing contacts and properties
@@ -187,8 +150,6 @@ const createEmptyContact = (isPrimary = false) => ({
 	email: "",
 	phone: "",
 	jobTitle: "",
-	role: "",
-	department: "",
 	isPrimary,
 });
 
@@ -196,12 +157,11 @@ const createEmptyProperty = (isPrimary = false) => ({
 	id: generateId(),
 	propertyName: "",
 	propertyType: "" as const,
-	squareFootage: "",
 	streetAddress: "",
 	city: "",
 	region: "",
 	postalCode: "",
-	propertyDescription: "",
+	country: "",
 	isPrimary,
 });
 
@@ -211,7 +171,6 @@ const formSchema = z.object({
 	status: z.string().refine((val) => val !== "", {
 		message: "Client status is required",
 	}),
-	industry: z.string(),
 	companyDescription: z.string(),
 	leadSource: z.string(),
 	contacts: z
@@ -223,8 +182,6 @@ const formSchema = z.object({
 				email: z.string(),
 				phone: z.string(),
 				jobTitle: z.string(),
-				role: z.string(),
-				department: z.string(),
 				isPrimary: z.boolean(),
 			})
 		)
@@ -249,12 +206,11 @@ const formSchema = z.object({
 				id: z.string(),
 				propertyName: z.string(),
 				propertyType: z.string(),
-				squareFootage: z.string(),
 				streetAddress: z.string(),
 				city: z.string(),
 				region: z.string(),
 				postalCode: z.string(),
-				propertyDescription: z.string(),
+				country: z.string(),
 				isPrimary: z.boolean(),
 			})
 		)
@@ -273,18 +229,10 @@ const formSchema = z.object({
 					"Primary property requires street address, city, state/province, and postal code",
 			}
 		),
-	category: z.string(),
-	clientSize: z.string(),
-	clientType: z.string(),
-	isActive: z.string(),
-	projectDimensions: z.string(),
-	priorityLevel: z.string(),
+	isActive: z.boolean(),
 	tags: z.string(),
 	notes: z.string(),
-	servicesNeeded: z.array(z.string()),
 	communicationPreference: z.string(),
-	emailOptIn: z.boolean(),
-	smsOptIn: z.boolean(),
 });
 
 export const ClientOnboardingForm: React.FC<ClientOnboardingFormProps> = ({
@@ -355,7 +303,7 @@ export const ClientOnboardingForm: React.FC<ClientOnboardingFormProps> = ({
 							</div>
 
 							<div className="grid max-w-4xl grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6 md:col-span-2">
-								<FieldGroup className="sm:col-span-4">
+								<FieldGroup className="col-span-full">
 									<form.Field
 										name="companyName"
 										children={(field) => {
@@ -387,7 +335,7 @@ export const ClientOnboardingForm: React.FC<ClientOnboardingFormProps> = ({
 									/>
 								</FieldGroup>
 
-								<FieldGroup className="sm:col-span-2">
+								<FieldGroup className="sm:col-span-3">
 									<form.Field
 										name="status"
 										children={(field) => {
@@ -413,7 +361,6 @@ export const ClientOnboardingForm: React.FC<ClientOnboardingFormProps> = ({
 														</SelectTrigger>
 														<SelectContent>
 															<SelectItem value="lead">Lead</SelectItem>
-															<SelectItem value="prospect">Prospect</SelectItem>
 															<SelectItem value="active">Active</SelectItem>
 															<SelectItem value="inactive">Inactive</SelectItem>
 															<SelectItem value="archived">Archived</SelectItem>
@@ -473,35 +420,6 @@ export const ClientOnboardingForm: React.FC<ClientOnboardingFormProps> = ({
 															<SelectItem value="other">Other</SelectItem>
 														</SelectContent>
 													</Select>
-													{isInvalid && (
-														<FieldError errors={field.state.meta.errors} />
-													)}
-												</Field>
-											);
-										}}
-									/>
-								</FieldGroup>
-
-								<FieldGroup className="sm:col-span-3">
-									<form.Field
-										name="industry"
-										children={(field) => {
-											const isInvalid =
-												field.state.meta.isTouched &&
-												field.state.meta.errors.length > 0;
-											return (
-												<Field data-invalid={isInvalid}>
-													<FieldLabel htmlFor={field.name}>Industry</FieldLabel>
-													<Input
-														id={field.name}
-														name={field.name}
-														value={field.state.value}
-														onBlur={field.handleBlur}
-														onChange={(e) => field.handleChange(e.target.value)}
-														aria-invalid={isInvalid}
-														placeholder="e.g., Technology, Healthcare, Manufacturing"
-														disabled={isLoading}
-													/>
 													{isInvalid && (
 														<FieldError errors={field.state.meta.errors} />
 													)}
@@ -892,90 +810,6 @@ export const ClientOnboardingForm: React.FC<ClientOnboardingFormProps> = ({
 																									}
 																									aria-invalid={isInvalid}
 																									placeholder="Optional"
-																									disabled={isLoading}
-																								/>
-																								{isInvalid && (
-																									<FieldError
-																										errors={
-																											field.state.meta.errors
-																										}
-																									/>
-																								)}
-																							</Field>
-																						);
-																					}}
-																				/>
-																			</FieldGroup>
-
-																			<FieldGroup className="sm:col-span-3">
-																				<form.Field
-																					name={`contacts[${actualIndex}].role`}
-																					children={(field) => {
-																						const isInvalid =
-																							field.state.meta.isTouched &&
-																							field.state.meta.errors.length >
-																								0;
-																						return (
-																							<Field data-invalid={isInvalid}>
-																								<FieldLabel
-																									htmlFor={field.name}
-																								>
-																									Role/Title
-																								</FieldLabel>
-																								<Input
-																									id={field.name}
-																									name={field.name}
-																									value={field.state.value}
-																									onBlur={field.handleBlur}
-																									onChange={(e) =>
-																										field.handleChange(
-																											e.target.value
-																										)
-																									}
-																									aria-invalid={isInvalid}
-																									placeholder="e.g., Manager, Director"
-																									disabled={isLoading}
-																								/>
-																								{isInvalid && (
-																									<FieldError
-																										errors={
-																											field.state.meta.errors
-																										}
-																									/>
-																								)}
-																							</Field>
-																						);
-																					}}
-																				/>
-																			</FieldGroup>
-
-																			<FieldGroup className="sm:col-span-3">
-																				<form.Field
-																					name={`contacts[${actualIndex}].department`}
-																					children={(field) => {
-																						const isInvalid =
-																							field.state.meta.isTouched &&
-																							field.state.meta.errors.length >
-																								0;
-																						return (
-																							<Field data-invalid={isInvalid}>
-																								<FieldLabel
-																									htmlFor={field.name}
-																								>
-																									Department
-																								</FieldLabel>
-																								<Input
-																									id={field.name}
-																									name={field.name}
-																									value={field.state.value}
-																									onBlur={field.handleBlur}
-																									onChange={(e) =>
-																										field.handleChange(
-																											e.target.value
-																										)
-																									}
-																									aria-invalid={isInvalid}
-																									placeholder="e.g., Billing Contact, Operations"
 																									disabled={isLoading}
 																								/>
 																								{isInvalid && (
@@ -1668,99 +1502,24 @@ export const ClientOnboardingForm: React.FC<ClientOnboardingFormProps> = ({
 							</div>
 						</div>
 
-						{/* Service Requirements Section */}
+						{/* Communication Preferences Section */}
 						<div className="grid grid-cols-1 gap-x-8 gap-y-10 md:grid-cols-3">
 							<div>
 								<h2 className="text-base/7 font-semibold text-gray-900 dark:text-white">
-									Service Requirements
+									Communication Preferences
 								</h2>
 								<p className="mt-1 text-sm/6 text-gray-600 dark:text-gray-400">
-									Select the services you&apos;re interested in and
-									communication preferences.
+									How would the client like to be communicated with?
 								</p>
 							</div>
 
 							<div className="max-w-4xl space-y-10 md:col-span-2">
 								<FieldSet>
-									<FieldLegend variant="label">Services needed</FieldLegend>
-									<form.Field
-										name="servicesNeeded"
-										mode="array"
-										children={(field) => {
-											const services = [
-												{
-													value: "property-management",
-													label: "Property Management",
-													description:
-														"Comprehensive property management services including maintenance and tenant relations.",
-												},
-												{
-													value: "maintenance",
-													label: "Maintenance Services",
-													description:
-														"Regular maintenance, repairs, and emergency response services.",
-												},
-												{
-													value: "consulting",
-													label: "Consulting Services",
-													description:
-														"Strategic consulting for property optimization and investment planning.",
-												},
-											];
-
-											return (
-												<FieldGroup className="gap-6">
-													{services.map((service) => {
-														const isChecked = field.state.value.includes(
-															service.value
-														);
-														return (
-															<Field
-																key={service.value}
-																orientation="horizontal"
-															>
-																<Checkbox
-																	id={service.value}
-																	checked={isChecked}
-																	onCheckedChange={(checked) => {
-																		if (checked) {
-																			field.pushValue(service.value);
-																		} else {
-																			const index = field.state.value.indexOf(
-																				service.value
-																			);
-																			if (index > -1) {
-																				field.removeValue(index);
-																			}
-																		}
-																	}}
-																	disabled={isLoading}
-																/>
-																<FieldLabel htmlFor={service.value}>
-																	<div className="text-sm/6">
-																		<div className="font-medium text-gray-900 dark:text-white">
-																			{service.label}
-																		</div>
-																		<p className="text-gray-600 dark:text-gray-400">
-																			{service.description}
-																		</p>
-																	</div>
-																</FieldLabel>
-															</Field>
-														);
-													})}
-												</FieldGroup>
-											);
-										}}
-									/>
-								</FieldSet>
-
-								<FieldSet>
 									<FieldLegend variant="label">
-										Communication preferences
+										Preferred communication method
 									</FieldLegend>
 									<FieldDescription>
-										How would you like to receive updates and notifications?
+										Select how the client prefers to receive communications
 									</FieldDescription>
 									<form.Field
 										name="communicationPreference"
@@ -1778,12 +1537,12 @@ export const ClientOnboardingForm: React.FC<ClientOnboardingFormProps> = ({
 													>
 														<div className="flex items-center gap-3">
 															<RadioGroupItem value="email" id="comm-email" />
-															<Label htmlFor="comm-email">Email only</Label>
+															<Label htmlFor="comm-email">Email</Label>
 														</div>
 														<div className="flex items-center gap-3">
 															<RadioGroupItem value="phone" id="comm-phone" />
 															<Label htmlFor="comm-phone">
-																Phone calls for urgent matters
+																Phone
 															</Label>
 														</div>
 														<div className="flex items-center gap-3">

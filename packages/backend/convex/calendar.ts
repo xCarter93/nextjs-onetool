@@ -81,7 +81,6 @@ export const getCalendarEvents = query({
 				clientId: project.clientId,
 				clientName: client?.companyName || "Unknown Client",
 				assignedUserIds: project.assignedUserIds,
-				salespersonId: project.salespersonId,
 				projectNumber: project.projectNumber,
 			};
 		});
@@ -98,7 +97,6 @@ export const getCalendarEvents = query({
 				startTime: task.startTime,
 				endTime: task.endTime,
 				status: task.status,
-				priority: task.priority,
 				clientId: task.clientId,
 				clientName:
 					client?.companyName ||

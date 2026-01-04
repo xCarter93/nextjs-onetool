@@ -21,7 +21,6 @@ import {
 	Calendar,
 	Clock,
 	User,
-	Flag,
 	Plus,
 	CheckCircle2,
 	Circle,
@@ -37,25 +36,6 @@ import {
 	X,
 } from "lucide-react";
 import { Task } from "@/types/task";
-
-const priorityConfig = {
-	low: {
-		color: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
-		icon: Flag,
-	},
-	medium: {
-		color: "bg-blue-100 text-blue-700 dark:bg-blue-800 dark:text-blue-300",
-		icon: Flag,
-	},
-	high: {
-		color: "bg-amber-100 text-amber-700 dark:bg-amber-800 dark:text-amber-300",
-		icon: Flag,
-	},
-	urgent: {
-		color: "bg-red-100 text-red-700 dark:bg-red-800 dark:text-red-300",
-		icon: AlertTriangle,
-	},
-};
 
 const statusConfig = {
 	pending: {
@@ -121,8 +101,6 @@ function TaskRow({
 	const isOverdue =
 		task.date < todayUTCDate.getTime() && task.status !== "completed";
 	const isToday = task.date === todayUTCDate.getTime();
-
-	const PriorityIcon = priorityConfig[task.priority || "medium"].icon;
 
 	const formatTime = (time?: string) => {
 		if (!time) return null;
@@ -283,20 +261,6 @@ function TaskRow({
 				</Badge>
 			</td>
 
-			{/* Priority */}
-			<td className="px-4 py-3">
-				<Badge
-					variant="secondary"
-					className={cn(
-						"text-xs",
-						priorityConfig[task.priority || "medium"].color
-					)}
-				>
-					<PriorityIcon className="h-3 w-3 mr-1" />
-					{task.priority || "medium"}
-				</Badge>
-			</td>
-
 			{/* Actions */}
 			<td className="w-16 px-4 py-3">
 				<AnimatePresence>
@@ -339,7 +303,7 @@ export default function TasksPage() {
 
 	const [searchQuery, setSearchQuery] = useState("");
 	const [filters, setFilters] = useState<Filter<unknown>[]>([]);
-	const [sortBy, setSortBy] = useState<"date" | "priority" | "status">("date");
+	const [sortBy, setSortBy] = useState<"date" | "status">("date");
 	const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 	const [editingTask, setEditingTask] = useState<Task | null>(null);
 	const [updatingTasks, setUpdatingTasks] = useState<Set<Id<"tasks">>>(
@@ -373,29 +337,6 @@ export default function TasksPage() {
 			{ value: "cancelled", label: "Cancelled" },
 		];
 
-		const priorityOptions = [
-			{
-				value: "low",
-				label: "Low",
-				icon: <Flag className="h-3 w-3 text-gray-500" />,
-			},
-			{
-				value: "medium",
-				label: "Medium",
-				icon: <Flag className="h-3 w-3 text-blue-500" />,
-			},
-			{
-				value: "high",
-				label: "High",
-				icon: <Flag className="h-3 w-3 text-amber-500" />,
-			},
-			{
-				value: "urgent",
-				label: "Urgent",
-				icon: <AlertTriangle className="h-3 w-3 text-red-500" />,
-			},
-		];
-
 		const clientOptions =
 			clients?.map((client) => ({
 				value: client._id,
@@ -423,13 +364,6 @@ export default function TasksPage() {
 				icon: <CheckCircle2 className="h-3 w-3" />,
 				type: "multiselect",
 				options: statusOptions,
-			},
-			{
-				key: "priority",
-				label: "Priority",
-				icon: <Flag className="h-3 w-3" />,
-				type: "multiselect",
-				options: priorityOptions,
 			},
 			{
 				key: "client",
@@ -485,11 +419,6 @@ export default function TasksPage() {
 						filter.values.includes(task.status as unknown)
 					);
 					break;
-				case "priority":
-					filtered = filtered.filter((task) =>
-						filter.values.includes((task.priority || "medium") as unknown)
-					);
-					break;
 				case "client":
 					filtered = filtered.filter((task) =>
 						filter.values.includes(task.clientId as unknown)
@@ -540,12 +469,6 @@ export default function TasksPage() {
 			switch (sortBy) {
 				case "date":
 					comparison = a.date - b.date;
-					break;
-				case "priority":
-					const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
-					const aPriority = priorityOrder[a.priority || "medium"];
-					const bPriority = priorityOrder[b.priority || "medium"];
-					comparison = bPriority - aPriority; // Higher priority first by default
 					break;
 				case "status":
 					comparison = a.status.localeCompare(b.status);
@@ -765,20 +688,6 @@ export default function TasksPage() {
 										>
 											Status
 											{sortBy === "status" &&
-												(sortOrder === "asc" ? (
-													<SortAsc className="h-3 w-3" />
-												) : (
-													<SortDesc className="h-3 w-3" />
-												))}
-										</button>
-									</th>
-									<th className="px-4 py-3 font-medium text-muted-foreground">
-										<button
-											onClick={() => toggleSort("priority")}
-											className="flex items-center gap-1 hover:text-foreground"
-										>
-											Priority
-											{sortBy === "priority" &&
 												(sortOrder === "asc" ? (
 													<SortAsc className="h-3 w-3" />
 												) : (

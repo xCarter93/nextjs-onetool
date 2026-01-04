@@ -135,7 +135,7 @@ export default function InvoiceDetailPage() {
 		const origin =
 			typeof window !== "undefined"
 				? window.location.origin
-				: process.env.NEXT_PUBLIC_APP_URL ?? "";
+				: (process.env.NEXT_PUBLIC_APP_URL ?? "");
 		return origin ? `${origin}/pay/${invoice.publicToken}` : "";
 	}, [invoice?.publicToken]);
 
@@ -297,11 +297,7 @@ export default function InvoiceDetailPage() {
 			const element = (
 				<InvoicePDF
 					invoice={invoice}
-					client={
-						client
-							? { companyName: client.companyName, industry: client.industry }
-							: undefined
-					}
+					client={client ? { companyName: client.companyName } : undefined}
 					items={lineItems}
 					organization={
 						organization
@@ -311,7 +307,7 @@ export default function InvoiceDetailPage() {
 									address: organization.address || undefined,
 									phone: organization.phone || undefined,
 									email: organization.email || undefined,
-							  }
+								}
 							: undefined
 					}
 				/>
@@ -474,9 +470,6 @@ export default function InvoiceDetailPage() {
 																	<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
 																		{client.companyName}
 																	</h3>
-																	<p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-																		{client.industry || "No industry specified"}
-																	</p>
 																	{client.companyDescription && (
 																		<p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
 																			{client.companyDescription}
@@ -597,8 +590,8 @@ export default function InvoiceDetailPage() {
 																		project.status === "in-progress"
 																			? "default"
 																			: project.status === "completed"
-																			? "secondary"
-																			: "outline"
+																				? "secondary"
+																				: "outline"
 																	}
 																>
 																	{project.status}
@@ -954,16 +947,16 @@ export default function InvoiceDetailPage() {
 										currentStatus === "draft"
 											? "Mark as Sent"
 											: currentStatus === "sent" || currentStatus === "overdue"
-											? "Mark as Paid"
-											: currentStatus === "paid"
-											? "Reopen"
-											: "Update Status",
+												? "Mark as Paid"
+												: currentStatus === "paid"
+													? "Reopen"
+													: "Update Status",
 									intent:
 										currentStatus === "draft"
 											? ("primary" as const)
 											: currentStatus === "sent" || currentStatus === "overdue"
-											? ("success" as const)
-											: ("outline" as const),
+												? ("success" as const)
+												: ("outline" as const),
 									icon:
 										currentStatus === "draft" ? (
 											<Mail className="h-4 w-4" />
@@ -987,7 +980,7 @@ export default function InvoiceDetailPage() {
 									},
 									position: "left" as const,
 								},
-						  ]
+							]
 						: []),
 					// Right side buttons - Actions
 					{
@@ -1007,7 +1000,7 @@ export default function InvoiceDetailPage() {
 									onClick: () => handleStatusChange("cancelled"),
 									position: "right" as const,
 								},
-						  ]
+							]
 						: []),
 				]}
 				fullWidth

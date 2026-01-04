@@ -70,7 +70,10 @@ async function validateUserAccess(
  */
 async function createNotificationWithOrg(
 	ctx: MutationCtx,
-	data: Omit<Doc<"notifications">, "_id" | "_creationTime" | "orgId">
+	data: Omit<
+		Doc<"notifications">,
+		"_id" | "_creationTime" | "orgId" | "priority"
+	>
 ): Promise<Id<"notifications">> {
 	const userOrgId = await getCurrentUserOrgId(ctx);
 
@@ -82,7 +85,8 @@ async function createNotificationWithOrg(
 		orgId: userOrgId,
 	};
 
-	return await ctx.db.insert("notifications", notificationData);
+	// Type assertion needed because schema still has deprecated priority field
+	return await ctx.db.insert("notifications", notificationData as any);
 }
 
 /**
@@ -124,12 +128,6 @@ interface NotificationStats {
 		project_mention: number;
 		quote_mention: number;
 	};
-	byPriority: {
-		low: number;
-		medium: number;
-		high: number;
-		urgent: number;
-	};
 	today: number;
 	pending: number; // scheduled but not sent yet
 }
@@ -148,12 +146,6 @@ function createEmptyNotificationStats(): NotificationStats {
 			client_mention: 0,
 			project_mention: 0,
 			quote_mention: 0,
-		},
-		byPriority: {
-			low: 0,
-			medium: 0,
-			high: 0,
-			urgent: 0,
 		},
 		today: 0,
 		pending: 0,
@@ -240,14 +232,6 @@ export const list = query({
 				v.literal("team_assignment")
 			)
 		),
-		priority: v.optional(
-			v.union(
-				v.literal("low"),
-				v.literal("medium"),
-				v.literal("high"),
-				v.literal("urgent")
-			)
-		),
 	},
 	handler: async (ctx, args): Promise<NotificationDocument[]> => {
 		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
@@ -275,13 +259,6 @@ export const list = query({
 				.query("notifications")
 				.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
 				.collect();
-		}
-
-		// Filter by priority if specified
-		if (args.priority) {
-			notifications = notifications.filter(
-				(notification) => notification.priority === args.priority
-			);
 		}
 
 		// Sort by creation time (newest first)
@@ -336,12 +313,6 @@ export const create = mutation({
 		sentVia: v.optional(
 			v.union(v.literal("email"), v.literal("sms"), v.literal("in_app"))
 		),
-		priority: v.union(
-			v.literal("low"),
-			v.literal("medium"),
-			v.literal("high"),
-			v.literal("urgent")
-		),
 	},
 	handler: async (ctx, args): Promise<NotificationId> => {
 		// Validate required fields
@@ -380,14 +351,6 @@ export const update = mutation({
 		scheduledFor: v.optional(v.number()),
 		sentVia: v.optional(
 			v.union(v.literal("email"), v.literal("sms"), v.literal("in_app"))
-		),
-		priority: v.optional(
-			v.union(
-				v.literal("low"),
-				v.literal("medium"),
-				v.literal("high"),
-				v.literal("urgent")
-			)
 		),
 	},
 	handler: async (ctx, args): Promise<NotificationId> => {
@@ -557,12 +520,6 @@ export const getStatsForUser = query({
 				project_mention: 0,
 				quote_mention: 0,
 			},
-			byPriority: {
-				low: 0,
-				medium: 0,
-				high: 0,
-				urgent: 0,
-			},
 			today: 0,
 			pending: 0,
 		};
@@ -579,9 +536,6 @@ export const getStatsForUser = query({
 
 			// Count by type
 			stats.byType[notification.notificationType]++;
-
-			// Count by priority
-			stats.byPriority[notification.priority]++;
 
 			// Count today's notifications
 			if (
@@ -635,12 +589,6 @@ export const getStats = query({
 				project_mention: 0,
 				quote_mention: 0,
 			},
-			byPriority: {
-				low: 0,
-				medium: 0,
-				high: 0,
-				urgent: 0,
-			},
 			today: 0,
 			pending: 0,
 		};
@@ -657,9 +605,6 @@ export const getStats = query({
 
 			// Count by type
 			stats.byType[notification.notificationType]++;
-
-			// Count by priority
-			stats.byPriority[notification.priority]++;
 
 			// Count today's notifications
 			if (
@@ -1046,7 +991,6 @@ export const createMention = mutation({
 			entityId: args.entityId,
 			actionUrl,
 			isRead: false,
-			priority: "medium",
 			sentVia: "in_app",
 			sentAt: Date.now(),
 			hasAttachments,

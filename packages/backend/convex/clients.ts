@@ -137,7 +137,6 @@ interface ClientStats {
 	total: number;
 	byStatus: {
 		lead: number;
-		prospect: number;
 		active: number;
 		inactive: number;
 		archived: number;
@@ -146,14 +145,6 @@ interface ClientStats {
 		prospective: number;
 		active: number;
 		inactive: number;
-	};
-	byCategory: {
-		design: number;
-		development: number;
-		consulting: number;
-		maintenance: number;
-		marketing: number;
-		other: number;
 	};
 	recentlyCreated: number;
 }
@@ -166,7 +157,6 @@ export const list = query({
 		status: v.optional(
 			v.union(
 				v.literal("lead"),
-				v.literal("prospect"),
 				v.literal("active"),
 				v.literal("inactive"),
 				v.literal("archived")
@@ -226,13 +216,11 @@ export const create = mutation({
 	args: {
 		// Company Information
 		companyName: v.string(),
-		industry: v.optional(v.string()),
 		companyDescription: v.optional(v.string()),
 
 		// Status and Classification
 		status: v.union(
 			v.literal("lead"),
-			v.literal("prospect"),
 			v.literal("active"),
 			v.literal("inactive"),
 			v.literal("archived")
@@ -250,61 +238,21 @@ export const create = mutation({
 			)
 		),
 
-		// Custom Categories
-		category: v.optional(
-			v.union(
-				v.literal("design"),
-				v.literal("development"),
-				v.literal("consulting"),
-				v.literal("maintenance"),
-				v.literal("marketing"),
-				v.literal("other")
-			)
-		),
-		clientSize: v.optional(
-			v.union(
-				v.literal("small"),
-				v.literal("medium"),
-				v.literal("large"),
-				v.literal("enterprise")
-			)
-		),
-		clientType: v.optional(
-			v.union(
-				v.literal("new-client"),
-				v.literal("existing-client"),
-				v.literal("partner"),
-				v.literal("vendor"),
-				v.literal("contractor")
-			)
-		),
+		// Classification
 		isActive: v.optional(v.boolean()),
-		priorityLevel: v.optional(
-			v.union(
-				v.literal("low"),
-				v.literal("medium"),
-				v.literal("high"),
-				v.literal("urgent")
-			)
-		),
-		projectDimensions: v.optional(v.string()),
 
 		// Communication preferences
 		communicationPreference: v.optional(
 			v.union(v.literal("email"), v.literal("phone"), v.literal("both"))
 		),
-		emailOptIn: v.boolean(),
-		smsOptIn: v.boolean(),
-
-		// Services
-		servicesNeeded: v.optional(v.array(v.string())),
 
 		// Metadata
 		tags: v.optional(v.array(v.string())),
 		notes: v.optional(v.string()),
 	},
 	handler: async (ctx, args): Promise<ClientId> => {
-		const clientId = await createClientWithOrg(ctx, args);
+		// Type assertion needed because schema still has deprecated fields
+		const clientId = await createClientWithOrg(ctx, args as any);
 
 		// Get the created client for activity logging and aggregates
 		const client = await ctx.db.get(clientId);
@@ -326,13 +274,11 @@ export const bulkCreate = mutation({
 			v.object({
 				// Company Information
 				companyName: v.string(),
-				industry: v.optional(v.string()),
 				companyDescription: v.optional(v.string()),
 
 				// Status and Classification
 				status: v.union(
 					v.literal("lead"),
-					v.literal("prospect"),
 					v.literal("active"),
 					v.literal("inactive"),
 					v.literal("archived")
@@ -350,54 +296,13 @@ export const bulkCreate = mutation({
 					)
 				),
 
-				// Custom Categories
-				category: v.optional(
-					v.union(
-						v.literal("design"),
-						v.literal("development"),
-						v.literal("consulting"),
-						v.literal("maintenance"),
-						v.literal("marketing"),
-						v.literal("other")
-					)
-				),
-				clientSize: v.optional(
-					v.union(
-						v.literal("small"),
-						v.literal("medium"),
-						v.literal("large"),
-						v.literal("enterprise")
-					)
-				),
-				clientType: v.optional(
-					v.union(
-						v.literal("new-client"),
-						v.literal("existing-client"),
-						v.literal("partner"),
-						v.literal("vendor"),
-						v.literal("contractor")
-					)
-				),
+				// Classification
 				isActive: v.optional(v.boolean()),
-				priorityLevel: v.optional(
-					v.union(
-						v.literal("low"),
-						v.literal("medium"),
-						v.literal("high"),
-						v.literal("urgent")
-					)
-				),
-				projectDimensions: v.optional(v.string()),
 
 				// Communication preferences
 				communicationPreference: v.optional(
 					v.union(v.literal("email"), v.literal("phone"), v.literal("both"))
 				),
-				emailOptIn: v.boolean(),
-				smsOptIn: v.boolean(),
-
-				// Services
-				servicesNeeded: v.optional(v.array(v.string())),
 
 				// Metadata
 				tags: v.optional(v.array(v.string())),
@@ -426,8 +331,8 @@ export const bulkCreate = mutation({
 					continue;
 				}
 
-				// Create the client
-				const clientId = await createClientWithOrg(ctx, clientData);
+				// Type assertion needed because schema still has deprecated fields
+				const clientId = await createClientWithOrg(ctx, clientData as any);
 
 				// Get the created client for activity logging and aggregates
 				const client = await ctx.db.get(clientId);
@@ -461,12 +366,10 @@ export const update = mutation({
 		id: v.id("clients"),
 		// All fields are optional for updates
 		companyName: v.optional(v.string()),
-		industry: v.optional(v.string()),
 		companyDescription: v.optional(v.string()),
 		status: v.optional(
 			v.union(
 				v.literal("lead"),
-				v.literal("prospect"),
 				v.literal("active"),
 				v.literal("inactive"),
 				v.literal("archived")
@@ -484,49 +387,10 @@ export const update = mutation({
 				v.literal("other")
 			)
 		),
-		category: v.optional(
-			v.union(
-				v.literal("design"),
-				v.literal("development"),
-				v.literal("consulting"),
-				v.literal("maintenance"),
-				v.literal("marketing"),
-				v.literal("other")
-			)
-		),
-		clientSize: v.optional(
-			v.union(
-				v.literal("small"),
-				v.literal("medium"),
-				v.literal("large"),
-				v.literal("enterprise")
-			)
-		),
-		clientType: v.optional(
-			v.union(
-				v.literal("new-client"),
-				v.literal("existing-client"),
-				v.literal("partner"),
-				v.literal("vendor"),
-				v.literal("contractor")
-			)
-		),
 		isActive: v.optional(v.boolean()),
-		priorityLevel: v.optional(
-			v.union(
-				v.literal("low"),
-				v.literal("medium"),
-				v.literal("high"),
-				v.literal("urgent")
-			)
-		),
-		projectDimensions: v.optional(v.string()),
 		communicationPreference: v.optional(
 			v.union(v.literal("email"), v.literal("phone"), v.literal("both"))
 		),
-		emailOptIn: v.optional(v.boolean()),
-		smsOptIn: v.optional(v.boolean()),
-		servicesNeeded: v.optional(v.array(v.string())),
 		tags: v.optional(v.array(v.string())),
 		notes: v.optional(v.string()),
 	},
@@ -799,20 +663,9 @@ export const search = query({
 		status: v.optional(
 			v.union(
 				v.literal("lead"),
-				v.literal("prospect"),
 				v.literal("active"),
 				v.literal("inactive"),
 				v.literal("archived")
-			)
-		),
-		category: v.optional(
-			v.union(
-				v.literal("design"),
-				v.literal("development"),
-				v.literal("consulting"),
-				v.literal("maintenance"),
-				v.literal("marketing"),
-				v.literal("other")
 			)
 		),
 	},
@@ -826,19 +679,11 @@ export const search = query({
 			);
 		}
 
-		if (args.category) {
-			clients = clients.filter(
-				(client: ClientDocument) => client.category === args.category
-			);
-		}
-
-		// Search in company name, industry, and notes
+		// Search in company name and notes
 		const searchQuery = args.query.toLowerCase();
 		return clients.filter(
 			(client: ClientDocument) =>
 				client.companyName.toLowerCase().includes(searchQuery) ||
-				(client.industry &&
-					client.industry.toLowerCase().includes(searchQuery)) ||
 				(client.notes && client.notes.toLowerCase().includes(searchQuery)) ||
 				(client.tags &&
 					client.tags.some((tag: string) =>
@@ -860,7 +705,6 @@ export const getStats = query({
 			total: clients.length,
 			byStatus: {
 				lead: 0,
-				prospect: 0,
 				active: 0,
 				inactive: 0,
 				archived: 0,
@@ -869,14 +713,6 @@ export const getStats = query({
 				prospective: 0,
 				active: 0,
 				inactive: 0,
-			},
-			byCategory: {
-				design: 0,
-				development: 0,
-				consulting: 0,
-				maintenance: 0,
-				marketing: 0,
-				other: 0,
 			},
 			recentlyCreated: 0, // Last 30 days
 		};
@@ -890,7 +726,6 @@ export const getStats = query({
 			}
 
 			switch (client.status) {
-				case "prospect":
 				case "lead":
 					stats.groupedByStatus.prospective++;
 					break;
@@ -903,11 +738,6 @@ export const getStats = query({
 					break;
 				default:
 					break;
-			}
-
-			// Type-safe category counting
-			if (client.category && client.category in stats.byCategory) {
-				stats.byCategory[client.category as keyof typeof stats.byCategory]++;
 			}
 
 			// Count recently created
@@ -965,7 +795,6 @@ export const listWithProjectCounts = query({
 		status: v.optional(
 			v.union(
 				v.literal("lead"),
-				v.literal("prospect"),
 				v.literal("active"),
 				v.literal("inactive"),
 				v.literal("archived")
@@ -1041,7 +870,6 @@ export const listWithProjectCounts = query({
 				return {
 					id: client._id,
 					name: client.companyName,
-					industry: client.industry || "Not specified",
 					// For location, we'll need to check if there's a primary contact with address
 					location: "Not specified", // This could be enhanced with contact data
 					activeProjects: activeProjects.length,
@@ -1049,15 +877,13 @@ export const listWithProjectCounts = query({
 					status:
 						client.status === "active"
 							? ("Active" as const)
-							: client.status === "prospect"
+							: client.status === "lead"
 								? ("Prospect" as const)
-								: client.status === "lead"
-									? ("Prospect" as const)
-									: client.status === "inactive"
-										? ("Paused" as const)
-										: client.status === "archived"
-											? ("Archived" as const)
-											: ("Paused" as const),
+								: client.status === "inactive"
+									? ("Paused" as const)
+									: client.status === "archived"
+										? ("Archived" as const)
+										: ("Paused" as const),
 					primaryContact: primaryContact
 						? {
 								name: `${primaryContact.firstName} ${primaryContact.lastName}`,

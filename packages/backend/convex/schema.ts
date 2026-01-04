@@ -13,9 +13,7 @@ export default defineSchema({
 		// Onboarding
 		hasSeenTour: v.optional(v.boolean()), // Track if user has completed the product tour
 
-		// Clerk Billing & Subscription (user-level)
-		clerkSubscriptionId: v.optional(v.string()), // Clerk subscription ID | REMOVE THIS FIELD
-		clerkPlanId: v.optional(v.string()), // Clerk plan identifier | REMOVE THIS FIELD
+		// Subscription (user-level status only, billing handled at org level)
 		subscriptionStatus: v.optional(
 			v.union(
 				v.literal("active"),
@@ -27,7 +25,6 @@ export default defineSchema({
 				v.literal("unpaid")
 			)
 		),
-		billingCycleStart: v.optional(v.number()), // Timestamp of current billing cycle start | REMOVE THIS FIELD
 	})
 		.index("by_external_id", ["externalId"])
 		.index("by_email", ["email"]),
@@ -44,7 +41,6 @@ export default defineSchema({
 		website: v.optional(v.string()),
 		logoUrl: v.optional(v.string()),
 		logoInvertInDarkMode: v.optional(v.boolean()),
-		brandColor: v.optional(v.string()), // REMOVE THIS FIELD
 		address: v.optional(v.string()),
 		phone: v.optional(v.string()),
 		companySize: v.optional(
@@ -52,7 +48,7 @@ export default defineSchema({
 		),
 
 		// Email receiving configuration
-		receivingAddress: v.optional(v.string()), // Unique receiving email address (e.g., "org-abc123@inbound.onetool.biz").  Allow user to customize this when creating their organization.
+		receivingAddress: v.optional(v.string()), // Unique receiving email address (e.g., "org-abc123@inbound.onetool.biz")
 
 		// Clerk Billing & Subscription
 		clerkSubscriptionId: v.optional(v.string()), // Clerk subscription ID
@@ -79,17 +75,13 @@ export default defineSchema({
 			})
 		),
 
-		// Legacy fields (keeping for backwards compatibility)
-		stripeCustomerId: v.optional(v.string()), // REMOVE THIS FIELD
+		// Stripe Connect
 		stripeConnectAccountId: v.optional(v.string()),
 		plan: v.optional(
 			v.union(v.literal("trial"), v.literal("pro"), v.literal("cancelled"))
 		), // Deprecated: Use Clerk billing fields instead
 
-		// Default settings
-		defaultTaxRate: v.optional(v.number()), // REMOVE THIS FIELD
-		defaultReminderTiming: v.optional(v.number()), // REMOVE THIS FIELD
-		smsEnabled: v.optional(v.boolean()), // REMOVE THIS FIELD
+		// Settings
 		monthlyRevenueTarget: v.optional(v.number()), // Monthly Revenue target displayed on home page
 		timezone: v.optional(v.string()), // IANA timezone (e.g., "America/New_York")
 
@@ -116,14 +108,12 @@ export default defineSchema({
 	clients: defineTable({
 		orgId: v.id("organizations"),
 		// Company Information
-		companyName: v.string(), // Change to clientName
-		industry: v.optional(v.string()), // REMOVE THIS FIELD
-		companyDescription: v.optional(v.string()), // Change to clientDescription
+		companyName: v.string(),
+		companyDescription: v.optional(v.string()),
 
 		// Status and Classification
 		status: v.union(
 			v.literal("lead"),
-			v.literal("prospect"), // REMOVE THIS VALUE
 			v.literal("active"),
 			v.literal("inactive"),
 			v.literal("archived")
@@ -141,54 +131,13 @@ export default defineSchema({
 			)
 		),
 
-		// Custom Categories
-		category: v.optional(
-			v.union(
-				v.literal("design"),
-				v.literal("development"),
-				v.literal("consulting"),
-				v.literal("maintenance"),
-				v.literal("marketing"),
-				v.literal("other")
-			) // REMOVE THIS FIELD
-		),
-		clientSize: v.optional(
-			v.union(
-				v.literal("small"),
-				v.literal("medium"),
-				v.literal("large"),
-				v.literal("enterprise")
-			) // REMOVE THIS FIELD
-		),
-		clientType: v.optional(
-			v.union(
-				v.literal("new-client"),
-				v.literal("existing-client"),
-				v.literal("partner"),
-				v.literal("vendor"),
-				v.literal("contractor")
-			) // REMOVE THIS FIELD
-		),
+		// Classification
 		isActive: v.optional(v.boolean()),
-		priorityLevel: v.optional(
-			v.union(
-				v.literal("low"),
-				v.literal("medium"),
-				v.literal("high"),
-				v.literal("urgent")
-			) // REMOVE THIS FIELD
-		),
-		projectDimensions: v.optional(v.string()), // REMOVE THIS FIELD
 
 		// Communication preferences
 		communicationPreference: v.optional(
 			v.union(v.literal("email"), v.literal("phone"), v.literal("both"))
 		),
-		emailOptIn: v.boolean(), // REMOVE THIS FIELD
-		smsOptIn: v.boolean(), // REMOVE THIS FIELD
-
-		// Services
-		servicesNeeded: v.optional(v.array(v.string())), // Array of service types | REMOVE THIS FIELD
 
 		// Metadata
 		tags: v.optional(v.array(v.string())),
@@ -213,13 +162,9 @@ export default defineSchema({
 
 		// Role information
 		jobTitle: v.optional(v.string()),
-		role: v.optional(v.string()), // e.g., "Manager", "Director" | REMOVE THIS FIELD
-		department: v.optional(v.string()), // e.g., "Billing Contact", "Operations" | REMOVE THIS FIELD
 
 		// Contact preferences
 		isPrimary: v.boolean(), // Mark primary contact
-		photoUrl: v.optional(v.string()), // REMOVE THIS FIELD
-		photoStorageId: v.optional(v.id("_storage")), // REMOVE THIS FIELD
 	})
 		.index("by_client", ["clientId"])
 		.index("by_org", ["orgId"])
@@ -242,7 +187,6 @@ export default defineSchema({
 				v.literal("mixed-use")
 			)
 		),
-		squareFootage: v.optional(v.number()), // REMOVE THIS FIELD
 
 		// Address
 		streetAddress: v.string(),
@@ -252,8 +196,6 @@ export default defineSchema({
 		country: v.optional(v.string()),
 
 		// Additional info
-		description: v.optional(v.string()), // REMOVE THIS FIELD
-		imageStorageIds: v.optional(v.array(v.id("_storage"))), // Multiple images | REMOVE THIS FIELD
 		isPrimary: v.boolean(), // Mark primary property
 	})
 		.index("by_client", ["clientId"])
@@ -268,8 +210,7 @@ export default defineSchema({
 		// Basic info
 		title: v.string(),
 		description: v.optional(v.string()),
-		instructions: v.optional(v.string()), // REMOVE THIS FIELD
-		projectNumber: v.optional(v.string()), // Custom project numbering, update to PROJ-XXXXXX format
+		projectNumber: v.optional(v.string()), // Custom project numbering
 
 		// Status and type
 		status: v.union(
@@ -286,12 +227,7 @@ export default defineSchema({
 		completedAt: v.optional(v.number()),
 
 		// Team
-		salespersonId: v.optional(v.id("users")), // REMOVE THIS FIELD
 		assignedUserIds: v.optional(v.array(v.id("users"))),
-
-		// Settings
-		invoiceReminderEnabled: v.optional(v.boolean()), // REMOVE THIS FIELD
-		scheduleForLater: v.optional(v.boolean()), // REMOVE THIS FIELD
 	})
 		.index("by_org", ["orgId"])
 		.index("by_client", ["clientId"])
@@ -315,20 +251,12 @@ export default defineSchema({
 		// Assignment
 		assigneeUserId: v.optional(v.id("users")),
 
-		// Status and Priority
+		// Status
 		status: v.union(
 			v.literal("pending"),
 			v.literal("in-progress"),
 			v.literal("completed"),
 			v.literal("cancelled")
-		),
-		priority: v.optional(
-			v.union(
-				v.literal("low"),
-				v.literal("medium"),
-				v.literal("high"),
-				v.literal("urgent")
-			) // REMOVE THIS FIELD
 		),
 		completedAt: v.optional(v.number()),
 
@@ -359,7 +287,7 @@ export default defineSchema({
 		projectId: v.optional(v.id("projects")),
 
 		// Basic info
-		title: v.optional(v.string()), // Update to auto-generated quote title based on project name and quoteNumber
+		title: v.optional(v.string()),
 		quoteNumber: v.optional(v.string()), // Auto-generated or custom
 
 		// Status
@@ -393,16 +321,6 @@ export default defineSchema({
 		approvedAt: v.optional(v.number()),
 		declinedAt: v.optional(v.number()),
 
-		// Client approval details
-		approval: v.optional(
-			v.object({
-				clientName: v.string(),
-				ipAddress: v.string(),
-				userAgent: v.string(),
-				signedAt: v.number(),
-			}) // REMOVE THIS FIELD
-		),
-
 		// PDF settings for client view
 		pdfSettings: v.optional(
 			v.object({
@@ -415,14 +333,11 @@ export default defineSchema({
 
 		// Reference to the latest document version
 		latestDocumentId: v.optional(v.id("documents")),
-
-		publicToken: v.string(), // For client access | REMOVE THIS FIELD
 	})
 		.index("by_org", ["orgId"])
 		.index("by_client", ["clientId"])
 		.index("by_project", ["projectId"])
-		.index("by_status", ["orgId", "status"])
-		.index("by_public_token", ["publicToken"]),
+		.index("by_status", ["orgId", "status"]),
 
 	// Quote Line Items
 	quoteLineItems: defineTable({
@@ -437,7 +352,6 @@ export default defineSchema({
 		cost: v.optional(v.number()), // Cost per unit for margin calculation
 
 		sortOrder: v.number(), // For ordering items
-		optional: v.optional(v.boolean()), // Mark as optional item | REMOVE THIS FIELD
 	})
 		.index("by_quote", ["quoteId"])
 		.index("by_org", ["orgId"]),
@@ -473,7 +387,6 @@ export default defineSchema({
 		paidAt: v.optional(v.number()),
 
 		// Payment
-		paymentMethod: v.optional(v.string()), // REMOVE THIS FIELD
 		stripeSessionId: v.optional(v.string()),
 		stripePaymentIntentId: v.optional(v.string()),
 
@@ -637,12 +550,6 @@ export default defineSchema({
 		sentVia: v.optional(
 			v.union(v.literal("email"), v.literal("sms"), v.literal("in_app"))
 		),
-		priority: v.union(
-			v.literal("low"),
-			v.literal("medium"),
-			v.literal("high"),
-			v.literal("urgent")
-		), // REMOVE THIS FIELD
 		hasAttachments: v.optional(v.boolean()), // Quick flag for whether this notification has attachments
 	})
 		.index("by_user_read", ["userId", "isRead"])

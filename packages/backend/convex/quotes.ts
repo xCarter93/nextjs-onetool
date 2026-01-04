@@ -4,7 +4,7 @@ import { Doc, Id } from "./_generated/dataModel";
 import { getCurrentUserOrgId } from "./lib/auth";
 import { ActivityHelpers } from "./lib/activities";
 import { AggregateHelpers } from "./lib/aggregates";
-import { generatePublicToken, BusinessUtils } from "./lib/shared";
+import { BusinessUtils } from "./lib/shared";
 
 /**
  * Quote operations with embedded CRUD helpers
@@ -46,19 +46,6 @@ async function getQuoteOrThrow(
 		throw new Error("Quote not found");
 	}
 	return quote;
-}
-
-/**
- * Get a quote by public token (for client access)
- */
-async function getQuoteByPublicToken(
-	ctx: QueryCtx,
-	publicToken: string
-): Promise<Doc<"quotes"> | null> {
-	return await ctx.db
-		.query("quotes")
-		.withIndex("by_public_token", (q) => q.eq("publicToken", publicToken))
-		.unique();
 }
 
 /**
@@ -201,7 +188,7 @@ async function generateNextQuoteNumber(
  */
 async function createQuoteWithOrg(
 	ctx: MutationCtx,
-	data: Omit<Doc<"quotes">, "_id" | "_creationTime" | "orgId" | "publicToken">
+	data: Omit<Doc<"quotes">, "_id" | "_creationTime" | "orgId">
 ): Promise<Id<"quotes">> {
 	const userOrgId = await getCurrentUserOrgId(ctx);
 
@@ -221,7 +208,6 @@ async function createQuoteWithOrg(
 		...data,
 		quoteNumber,
 		orgId: userOrgId,
-		publicToken: generatePublicToken(),
 	};
 
 	return await ctx.db.insert("quotes", quoteData);
@@ -409,17 +395,6 @@ export const get = query({
 });
 
 /**
- * Get a quote by public token (for client access)
- */
-// TODO: Candidate for deletion if confirmed unused.
-export const getByPublicToken = query({
-	args: { publicToken: v.string() },
-	handler: async (ctx, args): Promise<QuoteDocument | null> => {
-		return await getQuoteByPublicToken(ctx, args.publicToken);
-	},
-});
-
-/**
  * Create a new quote
  */
 export const create = mutation({
@@ -485,7 +460,8 @@ export const create = mutation({
 			throw new Error("Valid until date must be in the future");
 		}
 
-		const quoteId = await createQuoteWithOrg(ctx, args);
+		// Type assertion needed because schema still has deprecated publicToken field
+		const quoteId = await createQuoteWithOrg(ctx, args as any);
 
 		// Get the created quote for activity logging and aggregates
 		const quote = await ctx.db.get(quoteId);
@@ -659,7 +635,6 @@ export const update = mutation({
 /**
  * Recalculate quote totals based on line items
  */
-// TODO: Candidate for deletion if confirmed unused.
 export const recalculateTotals = mutation({
 	args: { id: v.id("quotes") },
 	handler: async (ctx, args): Promise<QuoteId> => {
@@ -680,64 +655,6 @@ export const recalculateTotals = mutation({
 		});
 
 		return args.id;
-	},
-});
-
-/**
- * Approve a quote (client-facing operation)
- */
-// TODO: Candidate for deletion if confirmed unused.
-export const approve = mutation({
-	args: {
-		publicToken: v.string(),
-		clientName: v.string(),
-		ipAddress: v.string(),
-		userAgent: v.string(),
-	},
-	handler: async (
-		ctx,
-		args
-	): Promise<{ success: boolean; quoteId: QuoteId }> => {
-		const quote = await getQuoteByPublicToken(ctx, args.publicToken);
-
-		if (!quote) {
-			throw new Error("Quote not found");
-		}
-
-		if (quote.status !== "sent") {
-			throw new Error("Quote cannot be approved in its current status");
-		}
-
-		// Check if quote has expired
-		if (quote.validUntil && quote.validUntil < Date.now()) {
-			throw new Error("Quote has expired");
-		}
-
-		const now = Date.now();
-
-		await ctx.db.patch(quote._id, {
-			status: "approved",
-			approvedAt: now,
-			approval: {
-				clientName: args.clientName,
-				ipAddress: args.ipAddress,
-				userAgent: args.userAgent,
-				signedAt: now,
-			},
-		});
-
-		// Log activity
-		const updatedQuote = await ctx.db.get(quote._id);
-		if (updatedQuote) {
-			const client = await ctx.db.get(updatedQuote.clientId);
-			await ActivityHelpers.quoteApproved(
-				ctx,
-				updatedQuote as QuoteDocument,
-				client?.companyName || "Unknown Client"
-			);
-		}
-
-		return { success: true, quoteId: quote._id };
 	},
 });
 
@@ -782,7 +699,6 @@ export const remove = mutation({
 /**
  * Search quotes
  */
-// TODO: Candidate for deletion if confirmed unused.
 export const search = query({
 	args: {
 		query: v.string(),
@@ -832,7 +748,6 @@ export const search = query({
 /**
  * Get quote statistics for dashboard
  */
-// TODO: Candidate for deletion if confirmed unused.
 export const getStats = query({
 	args: {},
 	handler: async (ctx): Promise<QuoteStats> => {
@@ -906,7 +821,6 @@ export const getStats = query({
 /**
  * Get quotes expiring soon
  */
-// TODO: Candidate for deletion if confirmed unused.
 export const getExpiringSoon = query({
 	args: { days: v.optional(v.number()) },
 	handler: async (ctx, args): Promise<QuoteDocument[]> => {

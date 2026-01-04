@@ -32,11 +32,10 @@ import {
 	MessageSquare,
 } from "lucide-react-native";
 
-type ClientStatus = "lead" | "prospect" | "active" | "inactive" | "archived";
+type ClientStatus = "lead" | "active" | "inactive" | "archived";
 
 const statusOptions: { value: ClientStatus; label: string }[] = [
 	{ value: "lead", label: "Lead" },
-	{ value: "prospect", label: "Prospect" },
 	{ value: "active", label: "Active" },
 	{ value: "inactive", label: "Inactive" },
 	{ value: "archived", label: "Archived" },
@@ -170,13 +169,6 @@ export default function ClientDetailScreen() {
 								<FileEdit size={14} color={colors.mutedForeground} />
 							</Pressable>
 						</View>
-
-						<EditableField
-							label="Industry"
-							value={client.industry}
-							onSave={(value) => handleUpdateField("industry", value)}
-							placeholder="Not specified"
-						/>
 					</View>
 				</View>
 
