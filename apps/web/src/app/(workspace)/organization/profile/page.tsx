@@ -161,13 +161,13 @@ function OnboardingButton({
 	const buttonText = onboardingLoading
 		? null
 		: onboardingComplete
-		? "Open onboarding"
-		: "Continue onboarding";
+			? "Open onboarding"
+			: "Continue onboarding";
 	const ariaLabel = onboardingLoading
 		? "Loading onboarding..."
 		: onboardingComplete
-		? "Open onboarding in Stripe"
-		: "Continue onboarding in Stripe";
+			? "Open onboarding in Stripe"
+			: "Continue onboarding in Stripe";
 
 	if (variant === "plain") {
 		return (
@@ -232,8 +232,8 @@ export default function OrganizationProfilePage() {
 	const lastOrganizationId = React.useRef<string | null>(null);
 	const onboardingComplete = Boolean(
 		stripeStatus?.detailsSubmitted &&
-			stripeStatus?.chargesEnabled &&
-			stripeStatus?.payoutsEnabled
+		stripeStatus?.chargesEnabled &&
+		stripeStatus?.payoutsEnabled
 	);
 
 	const statusTone = React.useCallback((flag?: boolean) => {
@@ -309,9 +309,9 @@ export default function OrganizationProfilePage() {
 	const isLoading = organization === undefined || currentUser === undefined;
 	const isOwner = Boolean(
 		organization &&
-			currentUser &&
-			"ownerUserId" in organization &&
-			organization.ownerUserId === currentUser._id
+		currentUser &&
+		"ownerUserId" in organization &&
+		organization.ownerUserId === currentUser._id
 	);
 
 	const combineAddress = React.useCallback(() => {
@@ -653,6 +653,7 @@ export default function OrganizationProfilePage() {
 									routing="hash"
 									appearance={{
 										elements: {
+											cardBox: "w-full",
 											rootBox: "w-full text-foreground",
 											card: "w-full !shadow-none !bg-transparent !border-none !p-0",
 											headerTitle:
@@ -660,11 +661,33 @@ export default function OrganizationProfilePage() {
 											headerSubtitle:
 												"text-sm !text-muted-foreground dark:!text-muted-foreground mb-6 leading-relaxed",
 											navbar:
-												"border-b !border-border/60 dark:!border-border/40 mb-8 pb-4 !bg-transparent",
+												"border-b !border-border/60 dark:!border-border/40 !bg-transparent w-full",
 											navbarButton:
 												"px-4 py-2 !text-muted-foreground dark:!text-muted-foreground hover:!text-foreground dark:hover:!text-foreground hover:!bg-muted/40 dark:hover:!bg-muted/20 rounded-lg transition-all duration-200 font-medium",
 											navbarButtonActive:
 												"!bg-primary/10 dark:!bg-primary/20 !text-primary dark:!text-primary px-4 py-2 rounded-lg font-medium !shadow-none ring-1 !ring-primary/20",
+											navbarButtonText:
+												"!text-foreground dark:!text-foreground text-lg",
+											tabButton: "text-lg",
+											profileSectionTitleText:
+												"text-lg font-bold !text-foreground dark:!text-foreground mb-2 tracking-tight",
+											profileSectionDescriptionText:
+												"text-sm !text-muted-foreground dark:!text-muted-foreground mb-6 leading-relaxed",
+											profileSectionContent: "space-y-6 text-lg",
+											profileSectionContentItem: "flex items-center gap-3",
+											profileSectionContentItemLabel:
+												"text-sm font-semibold !text-foreground tracking-wide",
+											profileSectionContentItemValue:
+												"text-sm !text-muted-foreground dark:!text-muted-foreground",
+											profileSectionPrimaryButton: "text-lg",
+											profileSectionPrimaryButtonText: "text-lg",
+											paymentMethodRowType: "text-lg",
+											paymentMethodRowValue: "text-lg",
+											paymentMethodRowBadge: "text-lg",
+											profileSectionContentItemValueInput:
+												"w-full !bg-background/95 dark:!bg-card/60 border !border-border dark:!border-border/60 focus:!border-primary focus:!ring-2 focus:!ring-primary/20 rounded-lg px-3 py-2.5 !text-foreground dark:!text-foreground placeholder:!text-muted-foreground dark:!placeholder:text-muted-foreground transition-all duration-200 shadow-sm dark:!shadow-none",
+											profileSectionContentItemValueInputShowPasswordButton:
+												"!text-muted-foreground hover:!text-foreground dark:!text-muted-foreground dark:hover:!text-foreground",
 											pageScrollBox: "!bg-transparent",
 											page: "space-y-8 !bg-transparent",
 											form: "space-y-6",
@@ -684,9 +707,10 @@ export default function OrganizationProfilePage() {
 											tableHeadRow:
 												"border-b !border-border dark:!border-border",
 											tableHeadCell:
-												"text-left p-4 font-semibold !text-foreground dark:!text-foreground text-sm",
+												"text-left p-4 font-semibold !text-foreground dark:!text-foreground text-lg",
 											tableBody:
 												"divide-y !divide-border dark:!divide-border/60",
+											tableBodyCell: "text-lg",
 											tableRow:
 												"hover:!bg-muted/30 dark:hover:!bg-muted/20 transition-colors",
 											tableCell:

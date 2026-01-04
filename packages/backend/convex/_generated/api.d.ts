@@ -38,7 +38,6 @@ import type * as migrations_addReceivingAddresses from "../migrations/addReceivi
 import type * as migrations_fixInvoiceTotals from "../migrations/fixInvoiceTotals.js";
 import type * as migrations_initializeQuoteCounters from "../migrations/initializeQuoteCounters.js";
 import type * as migrations_populateAggregates from "../migrations/populateAggregates.js";
-import type * as migrations_removeDeprecatedFields from "../migrations/removeDeprecatedFields.js";
 import type * as migrations_seedServiceStatus from "../migrations/seedServiceStatus.js";
 import type * as notifications from "../notifications.js";
 import type * as organizationDocuments from "../organizationDocuments.js";
@@ -94,7 +93,6 @@ declare const fullApi: ApiFromModules<{
   "migrations/fixInvoiceTotals": typeof migrations_fixInvoiceTotals;
   "migrations/initializeQuoteCounters": typeof migrations_initializeQuoteCounters;
   "migrations/populateAggregates": typeof migrations_populateAggregates;
-  "migrations/removeDeprecatedFields": typeof migrations_removeDeprecatedFields;
   "migrations/seedServiceStatus": typeof migrations_seedServiceStatus;
   notifications: typeof notifications;
   organizationDocuments: typeof organizationDocuments;
