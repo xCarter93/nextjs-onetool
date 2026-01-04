@@ -536,8 +536,7 @@ export const getClientsCreatedByDateRange = query({
 			date: string; // YYYY-MM-DD format
 			count: number;
 			_creationTime: number;
-			clientType?: string;
-			status?: "lead" | "prospect" | "active" | "inactive" | "archived";
+			status?: "lead" | "active" | "inactive" | "archived";
 		}>;
 	}> => {
 		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
@@ -578,8 +577,7 @@ export const getClientsCreatedByDateRange = query({
 			date: DateUtils.toLocalDateString(client._creationTime, timezone),
 			count: 1, // Each client counts as 1
 			_creationTime: client._creationTime,
-			clientType: client.clientType ?? undefined,
-			status: client.status,
+			status: client.status as "lead" | "active" | "inactive" | "archived",
 		}));
 
 		const totalInRange = data.reduce((sum, item) => sum + item.count, 0);

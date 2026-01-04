@@ -107,11 +107,6 @@ async function createProjectWithOrg(
 		await validateUserAccess(ctx, data.assignedUserIds, userOrgId);
 	}
 
-	// Validate salesperson if provided
-	if (data.salespersonId) {
-		await validateUserAccess(ctx, [data.salespersonId], userOrgId);
-	}
-
 	const projectData = {
 		...data,
 		orgId: userOrgId,
@@ -139,11 +134,6 @@ async function updateProjectWithValidation(
 	// Validate assigned users if being updated
 	if (updates.assignedUserIds && updates.assignedUserIds.length > 0) {
 		await validateUserAccess(ctx, updates.assignedUserIds);
-	}
-
-	// Validate salesperson if being updated
-	if (updates.salespersonId) {
-		await validateUserAccess(ctx, [updates.salespersonId]);
 	}
 
 	// Update the project
@@ -296,7 +286,6 @@ export const create = mutation({
 		clientId: v.id("clients"),
 		title: v.string(),
 		description: v.optional(v.string()),
-		instructions: v.optional(v.string()),
 		projectNumber: v.optional(v.string()),
 		status: v.union(
 			v.literal("planned"),
@@ -307,10 +296,7 @@ export const create = mutation({
 		projectType: v.union(v.literal("one-off"), v.literal("recurring")),
 		startDate: v.optional(v.number()),
 		endDate: v.optional(v.number()),
-		salespersonId: v.optional(v.id("users")),
 		assignedUserIds: v.optional(v.array(v.id("users"))),
-		invoiceReminderEnabled: v.optional(v.boolean()),
-		scheduleForLater: v.optional(v.boolean()),
 	},
 	handler: async (ctx: MutationCtx, args: any): Promise<ProjectId> => {
 		// Validate title is not empty
@@ -347,7 +333,6 @@ export const bulkCreate = mutation({
 				clientName: v.optional(v.string()), // For lookup if clientId not provided
 				title: v.string(),
 				description: v.optional(v.string()),
-				instructions: v.optional(v.string()),
 				projectNumber: v.optional(v.string()),
 				status: v.union(
 					v.literal("planned"),
@@ -358,10 +343,7 @@ export const bulkCreate = mutation({
 				projectType: v.union(v.literal("one-off"), v.literal("recurring")),
 				startDate: v.optional(v.number()),
 				endDate: v.optional(v.number()),
-				salespersonId: v.optional(v.id("users")),
 				assignedUserIds: v.optional(v.array(v.id("users"))),
-				invoiceReminderEnabled: v.optional(v.boolean()),
-				scheduleForLater: v.optional(v.boolean()),
 			})
 		),
 	},
@@ -475,7 +457,6 @@ export const update = mutation({
 		clientId: v.optional(v.id("clients")),
 		title: v.optional(v.string()),
 		description: v.optional(v.string()),
-		instructions: v.optional(v.string()),
 		projectNumber: v.optional(v.string()),
 		status: v.optional(
 			v.union(
@@ -490,10 +471,7 @@ export const update = mutation({
 		),
 		startDate: v.optional(v.number()),
 		endDate: v.optional(v.number()),
-		salespersonId: v.optional(v.id("users")),
 		assignedUserIds: v.optional(v.array(v.id("users"))),
-		invoiceReminderEnabled: v.optional(v.boolean()),
-		scheduleForLater: v.optional(v.boolean()),
 	},
 	handler: async (ctx: MutationCtx, args: any): Promise<ProjectId> => {
 		const { id, ...updates } = args;
@@ -734,15 +712,13 @@ export const search = query({
 			);
 		}
 
-		// Search in title, description, instructions, and project number
+		// Search in title, description, and project number
 		const searchQuery = args.query.toLowerCase();
 		return projects.filter(
 			(project: ProjectDocument) =>
 				project.title.toLowerCase().includes(searchQuery) ||
 				(project.description &&
 					project.description.toLowerCase().includes(searchQuery)) ||
-				(project.instructions &&
-					project.instructions.toLowerCase().includes(searchQuery)) ||
 				(project.projectNumber &&
 					project.projectNumber.toLowerCase().includes(searchQuery))
 		);
@@ -851,12 +827,10 @@ export const getByAssignee = query({
 			.withIndex("by_org", (q: any) => q.eq("orgId", userOrgId))
 			.collect();
 
-		// Filter projects where user is assigned or is the salesperson
+		// Filter projects where user is assigned
 		let filteredProjects = projects.filter(
 			(project: any) =>
-				project.salespersonId === args.userId ||
-				(project.assignedUserIds &&
-					project.assignedUserIds.includes(args.userId))
+				project.assignedUserIds && project.assignedUserIds.includes(args.userId)
 		);
 
 		// If requesting user is a member, further filter to only their assigned projects

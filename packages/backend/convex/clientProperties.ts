@@ -54,8 +54,7 @@ async function validateClientAccess(
 	clientId: Id<"clients">,
 	existingOrgId?: Id<"organizations">
 ): Promise<void> {
-	const userOrgId =
-		existingOrgId ?? (await getCurrentUserOrgId(ctx));
+	const userOrgId = existingOrgId ?? (await getCurrentUserOrgId(ctx));
 	const client = await ctx.db.get(clientId);
 
 	if (!client) {
@@ -203,14 +202,11 @@ export const create = mutation({
 				v.literal("mixed-use")
 			)
 		),
-		squareFootage: v.optional(v.number()),
 		streetAddress: v.string(),
 		city: v.string(),
 		state: v.string(),
 		zipCode: v.string(),
 		country: v.optional(v.string()),
-		description: v.optional(v.string()),
-		imageStorageIds: v.optional(v.array(v.id("_storage"))),
 		isPrimary: v.boolean(),
 	},
 	handler: async (ctx, args): Promise<ClientPropertyId> => {
@@ -226,11 +222,6 @@ export const create = mutation({
 		}
 		if (!args.zipCode.trim()) {
 			throw new Error("ZIP code is required");
-		}
-
-		// Validate square footage is positive if provided
-		if (args.squareFootage !== undefined && args.squareFootage <= 0) {
-			throw new Error("Square footage must be positive");
 		}
 
 		// If setting as primary, ensure no other primary property exists for this client
@@ -281,14 +272,11 @@ export const update = mutation({
 				v.literal("mixed-use")
 			)
 		),
-		squareFootage: v.optional(v.number()),
 		streetAddress: v.optional(v.string()),
 		city: v.optional(v.string()),
 		state: v.optional(v.string()),
 		zipCode: v.optional(v.string()),
 		country: v.optional(v.string()),
-		description: v.optional(v.string()),
-		imageStorageIds: v.optional(v.array(v.id("_storage"))),
 		isPrimary: v.optional(v.boolean()),
 	},
 	handler: async (ctx, args): Promise<ClientPropertyId> => {
@@ -306,11 +294,6 @@ export const update = mutation({
 		}
 		if (updates.zipCode !== undefined && !updates.zipCode.trim()) {
 			throw new Error("ZIP code cannot be empty");
-		}
-
-		// Validate square footage is positive if provided
-		if (updates.squareFootage !== undefined && updates.squareFootage <= 0) {
-			throw new Error("Square footage must be positive");
 		}
 
 		// Filter out undefined values
@@ -393,7 +376,7 @@ export const search = query({
 			)
 		),
 	},
-		handler: async (ctx, args): Promise<ClientPropertyDocument[]> => {
+	handler: async (ctx, args): Promise<ClientPropertyDocument[]> => {
 		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
 		if (!userOrgId) {
 			return [];
@@ -431,9 +414,7 @@ export const search = query({
 				property.streetAddress.toLowerCase().includes(searchQuery) ||
 				property.city.toLowerCase().includes(searchQuery) ||
 				property.state.toLowerCase().includes(searchQuery) ||
-				property.zipCode.toLowerCase().includes(searchQuery) ||
-				(property.description &&
-					property.description.toLowerCase().includes(searchQuery))
+				property.zipCode.toLowerCase().includes(searchQuery)
 		);
 	},
 });
@@ -492,14 +473,11 @@ export const bulkCreate = mutation({
 						v.literal("mixed-use")
 					)
 				),
-				squareFootage: v.optional(v.number()),
 				streetAddress: v.string(),
 				city: v.string(),
 				state: v.string(),
 				zipCode: v.string(),
 				country: v.optional(v.string()),
-				description: v.optional(v.string()),
-				imageStorageIds: v.optional(v.array(v.id("_storage"))),
 				isPrimary: v.boolean(),
 			})
 		),
@@ -551,14 +529,6 @@ export const bulkCreate = mutation({
 			}
 			if (!propertyData.zipCode.trim()) {
 				throw new Error("ZIP code is required for all properties");
-			}
-
-			// Validate square footage is positive if provided
-			if (
-				propertyData.squareFootage !== undefined &&
-				propertyData.squareFootage <= 0
-			) {
-				throw new Error("Square footage must be positive");
 			}
 
 			const propertyId = await ctx.db.insert("clientProperties", {
@@ -620,8 +590,6 @@ export const getStats = query({
 				"mixed-use": 0,
 				unspecified: 0,
 			},
-			totalSquareFootage: 0,
-			averageSquareFootage: 0,
 		};
 
 		properties.forEach((property: ClientPropertyDocument) => {
@@ -631,22 +599,7 @@ export const getStats = query({
 			} else {
 				stats.byType.unspecified++;
 			}
-
-			// Sum square footage
-			if (property.squareFootage) {
-				stats.totalSquareFootage += property.squareFootage;
-			}
 		});
-
-		// Calculate average square footage
-		const propertiesWithSquareFootage = properties.filter(
-			(p) => p.squareFootage
-		).length;
-		if (propertiesWithSquareFootage > 0) {
-			stats.averageSquareFootage = Math.round(
-				stats.totalSquareFootage / propertiesWithSquareFootage
-			);
-		}
 
 		return stats;
 	},

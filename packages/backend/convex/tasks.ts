@@ -409,14 +409,6 @@ export const create = mutation({
 			v.literal("completed"),
 			v.literal("cancelled")
 		),
-		priority: v.optional(
-			v.union(
-				v.literal("low"),
-				v.literal("medium"),
-				v.literal("high"),
-				v.literal("urgent")
-			)
-		),
 		repeat: v.optional(
 			v.union(
 				v.literal("none"),
@@ -543,14 +535,6 @@ export const update = mutation({
 				v.literal("in-progress"),
 				v.literal("completed"),
 				v.literal("cancelled")
-			)
-		),
-		priority: v.optional(
-			v.union(
-				v.literal("low"),
-				v.literal("medium"),
-				v.literal("high"),
-				v.literal("urgent")
 			)
 		),
 		repeat: v.optional(
@@ -954,23 +938,14 @@ export const getUpcoming = query({
 			tasks = tasks.filter((task) => task.assigneeUserId === currentUserId);
 		}
 
-		// Sort by date, then by priority (urgent first), then by start time
+		// Sort by date, then by start time
 		return tasks.sort((a, b) => {
 			// First sort by date
 			if (a.date !== b.date) {
 				return a.date - b.date;
 			}
 
-			// Then by priority (urgent -> high -> medium -> low)
-			const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
-			const aPriority = priorityOrder[a.priority || "medium"];
-			const bPriority = priorityOrder[b.priority || "medium"];
-
-			if (aPriority !== bPriority) {
-				return bPriority - aPriority; // Higher priority first
-			}
-
-			// Finally by start time if available
+			// Then by start time if available
 			if (a.startTime && b.startTime) {
 				return a.startTime.localeCompare(b.startTime);
 			}
@@ -1024,23 +999,14 @@ export const getByUser = query({
 			);
 		}
 
-		// Sort by date, then by priority, then by start time
+		// Sort by date, then by start time
 		return tasks.sort((a, b) => {
 			// First sort by date
 			if (a.date !== b.date) {
 				return a.date - b.date;
 			}
 
-			// Then by priority (urgent -> high -> medium -> low)
-			const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
-			const aPriority = priorityOrder[a.priority || "medium"];
-			const bPriority = priorityOrder[b.priority || "medium"];
-
-			if (aPriority !== bPriority) {
-				return bPriority - aPriority; // Higher priority first
-			}
-
-			// Finally by start time if available
+			// Then by start time if available
 			if (a.startTime && b.startTime) {
 				return a.startTime.localeCompare(b.startTime);
 			}

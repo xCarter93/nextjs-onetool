@@ -56,7 +56,6 @@ export const sendClientEmail = mutation({
 		// Build email HTML with organization branding
 		const emailHtml = buildEmailHtml({
 			logoUrl: organization.logoUrl,
-			brandColor: organization.brandColor || "#3b82f6",
 			organizationName: organization.name,
 			organizationEmail: organization.email,
 			organizationPhone: organization.phone,
@@ -202,7 +201,6 @@ export const replyToEmail = mutation({
 		// Build email HTML with organization branding
 		const emailHtml = buildEmailHtml({
 			logoUrl: organization.logoUrl,
-			brandColor: organization.brandColor || "#3b82f6",
 			organizationName: organization.name,
 			organizationEmail: organization.email,
 			organizationPhone: organization.phone,
@@ -317,7 +315,6 @@ function resolveFromEmail(organization: { receivingAddress?: string }): string {
  */
 function buildEmailHtml(options: {
 	logoUrl?: string;
-	brandColor: string;
 	organizationName: string;
 	organizationEmail?: string;
 	organizationPhone?: string;
@@ -328,7 +325,6 @@ function buildEmailHtml(options: {
 }): string {
 	const {
 		logoUrl,
-		brandColor,
 		organizationName,
 		organizationEmail,
 		organizationPhone,
@@ -337,6 +333,9 @@ function buildEmailHtml(options: {
 		messageBody,
 		senderName,
 	} = options;
+
+	// Default brand color (hardcoded since brandColor field was removed)
+	const brandColor = "#3b82f6";
 
 	// HTML escape helper to prevent XSS
 	const escapeHtml = (text: string): string => {

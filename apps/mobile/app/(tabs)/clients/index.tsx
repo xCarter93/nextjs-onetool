@@ -19,7 +19,6 @@ import { FABMenu } from "@/components/FABMenu";
 // Status config using primary color for active states
 const statusConfig = {
 	lead: { label: "Lead", color: colors.primary },
-	prospect: { label: "Prospect", color: "#f59e0b" },
 	active: { label: "Active", color: colors.success },
 	inactive: { label: "Inactive", color: colors.mutedForeground },
 	archived: { label: "Archived", color: colors.mutedForeground },
@@ -35,10 +34,8 @@ export default function ClientsScreen() {
 	const filteredClients = useMemo(() => {
 		if (!searchQuery.trim()) return clients;
 		const query = searchQuery.toLowerCase();
-		return clients.filter(
-			(client) =>
-				client.companyName.toLowerCase().includes(query) ||
-				client.industry?.toLowerCase().includes(query)
+		return clients.filter((client) =>
+			client.companyName.toLowerCase().includes(query)
 		);
 	}, [clients, searchQuery]);
 
@@ -81,14 +78,6 @@ export default function ClientsScreen() {
 						{item.companyName}
 					</Text>
 					<View style={styles.clientMeta}>
-						{item.industry && (
-							<View style={styles.metaItem}>
-								<Building2 size={11} color={colors.mutedForeground} />
-								<Text style={styles.metaText} numberOfLines={1}>
-									{item.industry}
-								</Text>
-							</View>
-						)}
 						<View
 							style={[styles.statusDot, { backgroundColor: status.color }]}
 						/>

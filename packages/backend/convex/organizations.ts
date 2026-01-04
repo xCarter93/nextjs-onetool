@@ -149,9 +149,6 @@ export const completeMetadata = mutation({
 		companySize: v.optional(
 			v.union(v.literal("1-10"), v.literal("10-100"), v.literal("100+"))
 		),
-		defaultTaxRate: v.optional(v.number()),
-		defaultReminderTiming: v.optional(v.number()),
-		smsEnabled: v.optional(v.boolean()),
 		monthlyRevenueTarget: v.optional(v.number()),
 		logoUrl: v.optional(v.string()),
 		logoInvertInDarkMode: v.optional(v.boolean()),
@@ -177,9 +174,6 @@ export const completeMetadata = mutation({
 			address: args.address,
 			phone: args.phone,
 			companySize: args.companySize,
-			defaultTaxRate: args.defaultTaxRate,
-			defaultReminderTiming: args.defaultReminderTiming,
-			smsEnabled: args.smsEnabled ?? false,
 			monthlyRevenueTarget: args.monthlyRevenueTarget,
 			logoUrl: args.logoUrl,
 			logoInvertInDarkMode:
@@ -314,15 +308,11 @@ export const update = mutation({
 		logoUrl: v.optional(v.string()),
 		logoInvertInDarkMode: v.optional(v.boolean()),
 		logoStorageId: v.optional(v.id("_storage")),
-		brandColor: v.optional(v.string()),
 		address: v.optional(v.string()),
 		phone: v.optional(v.string()),
 		companySize: v.optional(
 			v.union(v.literal("1-10"), v.literal("10-100"), v.literal("100+"))
 		),
-		defaultTaxRate: v.optional(v.number()),
-		defaultReminderTiming: v.optional(v.number()),
-		smsEnabled: v.optional(v.boolean()),
 		monthlyRevenueTarget: v.optional(v.number()),
 		timezone: v.optional(v.string()), // IANA timezone (e.g., "America/New_York")
 	},

@@ -40,39 +40,16 @@ export default function NewClientPage() {
 			const clientData = {
 				// Company Information
 				companyName: formData.companyName.trim(),
-				industry: formData.industry.trim() || undefined,
 				companyDescription: formData.companyDescription.trim() || undefined,
 				status: formData.status as
 					| "lead"
-					| "prospect"
 					| "active"
 					| "inactive"
 					| "archived",
 				leadSource: formData.leadSource || undefined,
 
-				// Custom Categories
-				category: formData.category || undefined,
-				clientSize: formData.clientSize || undefined,
-				clientType: formData.clientType || undefined,
-				isActive:
-					formData.isActive === "yes"
-						? true
-						: formData.isActive === "no"
-							? false
-							: undefined,
-				priorityLevel: formData.priorityLevel || undefined,
-				projectDimensions: formData.projectDimensions.trim() || undefined,
-
 				// Communication preferences
 				communicationPreference: formData.communicationPreference || undefined,
-				emailOptIn: formData.emailOptIn,
-				smsOptIn: formData.smsOptIn,
-
-				// Services
-				servicesNeeded:
-					formData.servicesNeeded.length > 0
-						? formData.servicesNeeded
-						: undefined,
 
 				// Metadata
 				tags: formData.tags.trim()

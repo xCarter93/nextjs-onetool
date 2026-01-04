@@ -362,10 +362,7 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({
 					<Text style={styles.sectionTitle}>Bill To:</Text>
 					<View style={styles.billToContent}>
 						{client ? (
-							<>
-								<Text>{client.companyName}</Text>
-								{client.industry ? <Text>{client.industry}</Text> : null}
-							</>
+							<Text>{client.companyName}</Text>
 						) : (
 							<Text>Client details unavailable</Text>
 						)}

@@ -35,7 +35,6 @@ import { useToast } from "@/hooks/use-toast";
 import {
 	CalendarIcon,
 	User,
-	Flag,
 	Building2,
 	FolderOpen,
 	Activity,
@@ -53,13 +52,6 @@ interface TaskSheetProps {
 		projectId?: Id<"projects">;
 	};
 }
-
-const priorityOptions = [
-	{ value: "low", label: "Low", color: "text-gray-600" },
-	{ value: "medium", label: "Medium", color: "text-blue-600" },
-	{ value: "high", label: "High", color: "text-amber-600" },
-	{ value: "urgent", label: "Urgent", color: "text-red-600" },
-];
 
 const statusOptions = [
 	{ value: "pending", label: "Pending", color: "text-gray-600" },
@@ -94,7 +86,6 @@ export function TaskSheet({
 		date: undefined as Date | undefined,
 		assigneeUserId: "" as Id<"users"> | "",
 		status: "pending" as Task["status"],
-		priority: "medium" as Task["priority"],
 		repeat: "none" as Task["repeat"],
 		repeatUntil: undefined as Date | undefined,
 	});
@@ -132,7 +123,6 @@ export function TaskSheet({
 				date: taskDate,
 				assigneeUserId: task.assigneeUserId || "",
 				status: task.status,
-				priority: task.priority || "medium",
 				repeat: task.repeat || "none",
 				repeatUntil: task.repeatUntil ? new Date(task.repeatUntil) : undefined,
 			});
@@ -149,7 +139,6 @@ export function TaskSheet({
 				date: today,
 				assigneeUserId: "",
 				status: "pending",
-				priority: "medium",
 				repeat: "none",
 				repeatUntil: undefined,
 			});
@@ -226,7 +215,6 @@ export function TaskSheet({
 					? (formData.assigneeUserId as Id<"users">)
 					: undefined,
 				status: formData.status,
-				priority: formData.priority,
 				repeat: formData.repeat,
 				repeatUntil,
 			};
@@ -455,52 +443,27 @@ export function TaskSheet({
 							</Popover>
 						</div>
 
-						{/* Status and Priority */}
-						<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-							<div className="space-y-2.5">
-								<label className="text-sm font-semibold text-foreground flex items-center gap-2">
-									<Activity className="h-4 w-4 text-primary" />
-									Status
-								</label>
-								<StyledSelect
-									value={formData.status}
-									onValueChange={(value) => handleInputChange("status", value)}
-								>
-									<StyledSelectTrigger className="w-full">
-										<SelectValue />
-									</StyledSelectTrigger>
-									<StyledSelectContent>
-										{statusOptions.map((option) => (
-											<SelectItem key={option.value} value={option.value}>
-												{option.label}
-											</SelectItem>
-										))}
-									</StyledSelectContent>
-								</StyledSelect>
-							</div>
-							<div className="space-y-2.5">
-								<label className="text-sm font-semibold text-foreground flex items-center gap-2">
-									<Flag className="h-4 w-4 text-primary" />
-									Priority
-								</label>
-								<StyledSelect
-									value={formData.priority}
-									onValueChange={(value) =>
-										handleInputChange("priority", value)
-									}
-								>
-									<StyledSelectTrigger className="w-full">
-										<SelectValue />
-									</StyledSelectTrigger>
-									<StyledSelectContent>
-										{priorityOptions.map((option) => (
-											<SelectItem key={option.value} value={option.value}>
-												{option.label}
-											</SelectItem>
-										))}
-									</StyledSelectContent>
-								</StyledSelect>
-							</div>
+						{/* Status */}
+						<div className="space-y-2.5">
+							<label className="text-sm font-semibold text-foreground flex items-center gap-2">
+								<Activity className="h-4 w-4 text-primary" />
+								Status
+							</label>
+							<StyledSelect
+								value={formData.status}
+								onValueChange={(value) => handleInputChange("status", value)}
+							>
+								<StyledSelectTrigger className="w-full">
+									<SelectValue />
+								</StyledSelectTrigger>
+								<StyledSelectContent>
+									{statusOptions.map((option) => (
+										<SelectItem key={option.value} value={option.value}>
+											{option.label}
+										</SelectItem>
+									))}
+								</StyledSelectContent>
+							</StyledSelect>
 						</div>
 
 						{/* Assignee */}
