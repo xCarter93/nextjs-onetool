@@ -1,12 +1,12 @@
 import {
 	View,
 	Text,
-	FlatList,
 	Pressable,
 	RefreshControl,
 	TextInput,
 	StyleSheet,
 } from "react-native";
+import { FlashList } from "@shopify/flash-list";
 import { useQuery } from "convex/react";
 import { api } from "@onetool/backend/convex/_generated/api";
 import { useRouter } from "expo-router";
@@ -14,14 +14,21 @@ import { useState, useCallback, useMemo } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
 	Search,
-	Plus,
 	ChevronRight,
 	Calendar,
-	Building2,
 	FolderKanban,
+	X,
 } from "lucide-react-native";
 import { colors, fontFamily, radius, spacing } from "@/lib/theme";
-import { StatusBadge } from "@/components/StatusBadge";
+import { FABMenu } from "@/components/FABMenu";
+
+// Status config using consistent colors
+const statusConfig = {
+	planned: { label: "Planned", color: colors.primary },
+	"in-progress": { label: "In Progress", color: "#f59e0b" },
+	completed: { label: "Completed", color: colors.success },
+	cancelled: { label: "Cancelled", color: colors.danger },
+} as const;
 
 export default function ProjectsScreen() {
 	const router = useRouter();
@@ -50,102 +57,70 @@ export default function ProjectsScreen() {
 		return new Date(timestamp).toLocaleDateString("en-US", {
 			month: "short",
 			day: "numeric",
-			year: "numeric",
 		});
 	};
 
-	const getStatusColor = (status: string) => {
-		switch (status) {
-			case "completed":
-				return "#10b981";
-			case "in-progress":
-				return "#f59e0b";
-			case "planned":
-				return "#3b82f6";
-			case "cancelled":
-				return "#ef4444";
-			default:
-				return colors.mutedForeground;
-		}
-	};
-
 	const renderProject = ({ item }: { item: (typeof projects)[0] }) => {
-		const statusColor = getStatusColor(item.status);
+		const status = statusConfig[item.status as keyof typeof statusConfig] || {
+			label: item.status,
+			color: colors.mutedForeground,
+		};
 
 		return (
 			<Pressable
 				style={({ pressed }) => [
-					styles.projectCard,
-					pressed && styles.projectCardPressed,
+					styles.projectRow,
+					pressed && styles.projectRowPressed,
 				]}
 				onPress={() => router.push(`/projects/${item._id}`)}
 			>
-				{/* Status accent bar */}
-				<View style={[styles.statusBar, { backgroundColor: statusColor }]} />
-
-				<View style={styles.projectContent}>
-					{/* Header Row */}
-					<View style={styles.headerRow}>
-						<View style={styles.iconContainer}>
-							<FolderKanban size={20} color={statusColor} />
-						</View>
-						<View style={styles.headerInfo}>
-							<Text style={styles.projectTitle} numberOfLines={1}>
-								{item.title}
-							</Text>
-							{item.projectNumber && (
-								<Text style={styles.projectNumber}>#{item.projectNumber}</Text>
-							)}
-						</View>
-						<StatusBadge status={item.status} />
-					</View>
-
-					{/* Client Info */}
-					{item.clientId && (
-						<View style={styles.clientRow}>
-							<Building2 size={14} color={colors.mutedForeground} />
-							<Text style={styles.clientName} numberOfLines={1}>
-								Client
-							</Text>
-						</View>
-					)}
-
-					{/* Date Range */}
-					{(item.startDate || item.endDate) && (
-						<View style={styles.dateRow}>
-							<Calendar size={14} color={colors.mutedForeground} />
-							<Text style={styles.dateText}>
-								{item.startDate && formatDate(item.startDate)}
-								{item.startDate && item.endDate && " → "}
-								{item.endDate && formatDate(item.endDate)}
-							</Text>
-						</View>
-					)}
-
-					{/* Progress indicator for in-progress projects */}
-					{item.status === "in-progress" && (
-						<View style={styles.progressContainer}>
-							<View style={styles.progressBar}>
-								<View
-									style={[
-										styles.progressFill,
-										{ width: "50%", backgroundColor: statusColor },
-									]}
-								/>
-							</View>
-							<Text style={styles.progressText}>In Progress</Text>
-						</View>
-					)}
+				{/* Icon */}
+				<View style={styles.projectIcon}>
+					<FolderKanban size={18} color={colors.primary} />
 				</View>
 
-				<ChevronRight
-					size={20}
-					color={colors.mutedForeground}
-					style={styles.chevron}
-				/>
+				{/* Project Info */}
+				<View style={styles.projectInfo}>
+					<View style={styles.projectHeader}>
+						<Text style={styles.projectTitle} numberOfLines={1}>
+							{item.title}
+						</Text>
+						{item.projectNumber && (
+							<Text style={styles.projectNumber}>#{item.projectNumber}</Text>
+						)}
+					</View>
+					<View style={styles.projectMeta}>
+						{(item.startDate || item.endDate) && (
+							<View style={styles.metaItem}>
+								<Calendar size={11} color={colors.mutedForeground} />
+								<Text style={styles.metaText}>
+									{item.startDate && formatDate(item.startDate)}
+									{item.startDate && item.endDate && " → "}
+									{item.endDate && formatDate(item.endDate)}
+								</Text>
+							</View>
+						)}
+						<View
+							style={[styles.statusDot, { backgroundColor: status.color }]}
+						/>
+						<Text style={[styles.statusText, { color: status.color }]}>
+							{status.label}
+						</Text>
+					</View>
+				</View>
+
+				<ChevronRight size={18} color={colors.border} />
 			</Pressable>
 		);
 	};
+
+	// Count projects by status
+	const statusCounts = useMemo(() => {
+		return {
+			inProgress: projects.filter((p) => p.status === "in-progress").length,
+			completed: projects.filter((p) => p.status === "completed").length,
+		};
+	}, [projects]);
 
 	return (
 		<SafeAreaView
@@ -155,7 +130,7 @@ export default function ProjectsScreen() {
 			{/* Search Bar */}
 			<View style={styles.searchContainer}>
 				<View style={styles.searchBar}>
-					<Search size={20} color={colors.mutedForeground} />
+					<Search size={18} color={colors.mutedForeground} />
 					<TextInput
 						style={styles.searchInput}
 						placeholder="Search projects..."
@@ -163,6 +138,14 @@ export default function ProjectsScreen() {
 						value={searchQuery}
 						onChangeText={setSearchQuery}
 					/>
+					{searchQuery.length > 0 && (
+						<Pressable
+							onPress={() => setSearchQuery("")}
+							style={styles.clearButton}
+						>
+							<X size={16} color={colors.mutedForeground} />
+						</Pressable>
+					)}
 				</View>
 
 				{searchQuery && (
@@ -173,47 +156,66 @@ export default function ProjectsScreen() {
 				)}
 			</View>
 
-			<FlatList
+			{/* Summary Bar */}
+			<View style={styles.summaryBar}>
+				<Text style={styles.summaryText}>
+					{projects.length} total project{projects.length !== 1 ? "s" : ""}
+				</Text>
+				<View style={styles.summaryStats}>
+					<View style={styles.summaryStatItem}>
+						<View style={[styles.summaryDot, { backgroundColor: "#f59e0b" }]} />
+						<Text style={styles.summaryStatText}>
+							{statusCounts.inProgress} active
+						</Text>
+					</View>
+					<View style={styles.summaryStatItem}>
+						<View
+							style={[styles.summaryDot, { backgroundColor: colors.success }]}
+						/>
+						<Text style={styles.summaryStatText}>
+							{statusCounts.completed} done
+						</Text>
+					</View>
+				</View>
+			</View>
+
+			<FlashList
 				data={filteredProjects}
 				keyExtractor={(item) => item._id}
 				renderItem={renderProject}
 				contentContainerStyle={styles.listContent}
-				ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
+				ItemSeparatorComponent={() => <View style={styles.separator} />}
 				refreshControl={
 					<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
 				}
 				ListEmptyComponent={
 					<View style={styles.emptyState}>
 						<View style={styles.emptyIcon}>
-							<FolderKanban size={32} color={colors.mutedForeground} />
+							<FolderKanban size={28} color={colors.mutedForeground} />
 						</View>
 						<Text style={styles.emptyTitle}>
 							{searchQuery ? "No projects found" : "No projects yet"}
 						</Text>
 						<Text style={styles.emptyText}>
 							{searchQuery
-								? "Try adjusting your search terms"
+								? "Try adjusting your search"
 								: "Create your first project to get started"}
 						</Text>
 					</View>
 				}
 			/>
 
-			{/* FAB */}
-			<Pressable
-				style={({ pressed }) => [styles.fab, pressed && styles.fabPressed]}
-				onPress={() => router.push("/projects/new")}
-			>
-				<Plus size={24} color="#ffffff" />
-			</Pressable>
+			{/* FAB Menu */}
+			<FABMenu />
 		</SafeAreaView>
 	);
 }
 
 const styles = StyleSheet.create({
 	searchContainer: {
-		padding: spacing.md,
-		paddingBottom: spacing.sm,
+		paddingHorizontal: spacing.md,
+		paddingTop: spacing.sm,
+		paddingBottom: spacing.xs,
 	},
 	searchBar: {
 		flexDirection: "row",
@@ -221,14 +223,17 @@ const styles = StyleSheet.create({
 		backgroundColor: colors.muted,
 		borderRadius: radius.lg,
 		paddingHorizontal: spacing.sm,
+		height: 44,
 	},
 	searchInput: {
 		flex: 1,
-		paddingVertical: spacing.sm,
 		paddingHorizontal: spacing.sm,
-		fontSize: 16,
+		fontSize: 15,
 		fontFamily: fontFamily.regular,
 		color: colors.foreground,
+	},
+	clearButton: {
+		padding: spacing.xs,
 	},
 	resultsCount: {
 		fontSize: 12,
@@ -237,129 +242,128 @@ const styles = StyleSheet.create({
 		marginTop: spacing.xs,
 		marginLeft: spacing.xs,
 	},
+	summaryBar: {
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "space-between",
+		paddingHorizontal: spacing.md,
+		paddingVertical: spacing.sm,
+		borderBottomWidth: 1,
+		borderBottomColor: colors.border,
+	},
+	summaryText: {
+		fontSize: 13,
+		fontFamily: fontFamily.medium,
+		color: colors.mutedForeground,
+	},
+	summaryStats: {
+		flexDirection: "row",
+		gap: spacing.md,
+	},
+	summaryStatItem: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 4,
+	},
+	summaryDot: {
+		width: 6,
+		height: 6,
+		borderRadius: 3,
+	},
+	summaryStatText: {
+		fontSize: 12,
+		fontFamily: fontFamily.medium,
+		color: colors.mutedForeground,
+	},
 	listContent: {
-		padding: spacing.md,
-		paddingTop: 0,
 		paddingBottom: 100,
 	},
-	projectCard: {
+	projectRow: {
 		flexDirection: "row",
 		alignItems: "center",
-		backgroundColor: colors.card,
-		borderRadius: radius.lg,
-		borderWidth: 1,
-		borderColor: colors.border,
-		overflow: "hidden",
-		shadowColor: "#000",
-		shadowOffset: { width: 0, height: 1 },
-		shadowOpacity: 0.05,
-		shadowRadius: 2,
-		elevation: 1,
+		paddingVertical: spacing.md,
+		paddingHorizontal: spacing.md,
+		backgroundColor: colors.background,
 	},
-	projectCardPressed: {
-		opacity: 0.7,
+	projectRowPressed: {
 		backgroundColor: colors.muted,
 	},
-	statusBar: {
-		width: 4,
-		alignSelf: "stretch",
+	separator: {
+		height: 1,
+		backgroundColor: colors.border,
+		marginLeft: 44 + spacing.md,
 	},
-	projectContent: {
-		flex: 1,
-		padding: spacing.md,
-	},
-	headerRow: {
-		flexDirection: "row",
-		alignItems: "center",
-		marginBottom: spacing.xs,
-	},
-	iconContainer: {
-		width: 36,
-		height: 36,
+	projectIcon: {
+		width: 44,
+		height: 44,
 		borderRadius: radius.md,
-		backgroundColor: colors.muted,
+		backgroundColor: "rgba(0, 166, 244, 0.1)",
 		alignItems: "center",
 		justifyContent: "center",
 		marginRight: spacing.sm,
 	},
-	headerInfo: {
+	projectInfo: {
 		flex: 1,
 		marginRight: spacing.sm,
 	},
+	projectHeader: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: spacing.xs,
+		marginBottom: 2,
+	},
 	projectTitle: {
-		fontSize: 16,
+		fontSize: 15,
 		fontFamily: fontFamily.semibold,
 		color: colors.foreground,
+		flex: 1,
 	},
 	projectNumber: {
 		fontSize: 12,
 		fontFamily: fontFamily.regular,
 		color: colors.mutedForeground,
-		marginTop: 2,
 	},
-	clientRow: {
+	projectMeta: {
 		flexDirection: "row",
 		alignItems: "center",
 		gap: spacing.xs,
-		marginTop: spacing.xs,
 	},
-	clientName: {
-		fontSize: 13,
-		fontFamily: fontFamily.regular,
-		color: colors.mutedForeground,
+	metaItem: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 3,
 		flex: 1,
 	},
-	dateRow: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: spacing.xs,
-		marginTop: spacing.xs,
-	},
-	dateText: {
+	metaText: {
 		fontSize: 12,
 		fontFamily: fontFamily.regular,
 		color: colors.mutedForeground,
 	},
-	progressContainer: {
-		flexDirection: "row",
-		alignItems: "center",
-		marginTop: spacing.sm,
-		gap: spacing.sm,
+	statusDot: {
+		width: 6,
+		height: 6,
+		borderRadius: 3,
 	},
-	progressBar: {
-		flex: 1,
-		height: 4,
-		backgroundColor: colors.muted,
-		borderRadius: 2,
-		overflow: "hidden",
-	},
-	progressFill: {
-		height: "100%",
-		borderRadius: 2,
-	},
-	progressText: {
+	statusText: {
 		fontSize: 11,
 		fontFamily: fontFamily.medium,
-		color: colors.mutedForeground,
-	},
-	chevron: {
-		marginRight: spacing.sm,
 	},
 	emptyState: {
 		alignItems: "center",
 		paddingVertical: spacing.xl * 2,
+		paddingHorizontal: spacing.lg,
 	},
 	emptyIcon: {
-		width: 64,
-		height: 64,
-		borderRadius: 32,
+		width: 56,
+		height: 56,
+		borderRadius: 28,
 		backgroundColor: colors.muted,
 		alignItems: "center",
 		justifyContent: "center",
 		marginBottom: spacing.md,
 	},
 	emptyTitle: {
-		fontSize: 18,
+		fontSize: 16,
 		fontFamily: fontFamily.semibold,
 		color: colors.foreground,
 		marginBottom: spacing.xs,
@@ -369,24 +373,5 @@ const styles = StyleSheet.create({
 		fontFamily: fontFamily.regular,
 		color: colors.mutedForeground,
 		textAlign: "center",
-	},
-	fab: {
-		position: "absolute",
-		bottom: 24,
-		right: 24,
-		width: 56,
-		height: 56,
-		borderRadius: 28,
-		backgroundColor: colors.primary,
-		alignItems: "center",
-		justifyContent: "center",
-		shadowColor: "#000",
-		shadowOffset: { width: 0, height: 2 },
-		shadowOpacity: 0.25,
-		shadowRadius: 4,
-		elevation: 5,
-	},
-	fabPressed: {
-		opacity: 0.8,
 	},
 });

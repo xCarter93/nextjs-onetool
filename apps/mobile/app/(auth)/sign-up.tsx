@@ -147,14 +147,15 @@ export default function SignUpScreen() {
 					We sent a verification code to {emailAddress}
 				</Text>
 
-				<TextInput
-					style={styles.input}
-					value={code}
-					placeholder="Enter verification code"
-					keyboardType="number-pad"
-					onChangeText={setCode}
-					editable={!loading}
-				/>
+			<TextInput
+				style={styles.input}
+				value={code}
+				placeholder="Enter verification code"
+				placeholderTextColor={colors.mutedForeground}
+				keyboardType="number-pad"
+				onChangeText={setCode}
+				editable={!loading}
+			/>
 
 				<StyledButton
 					intent="primary"
@@ -202,6 +203,7 @@ export default function SignUpScreen() {
 				autoCapitalize="none"
 				value={emailAddress}
 				placeholder="Email"
+				placeholderTextColor={colors.mutedForeground}
 				keyboardType="email-address"
 				onChangeText={setEmailAddress}
 				editable={!loading}
@@ -211,6 +213,7 @@ export default function SignUpScreen() {
 				style={styles.input}
 				value={password}
 				placeholder="Password"
+				placeholderTextColor={colors.mutedForeground}
 				secureTextEntry={true}
 				onChangeText={setPassword}
 				editable={!loading}

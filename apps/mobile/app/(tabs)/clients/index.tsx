@@ -1,20 +1,29 @@
 import {
 	View,
 	Text,
-	FlatList,
 	Pressable,
 	RefreshControl,
 	TextInput,
 	StyleSheet,
 } from "react-native";
+import { FlashList } from "@shopify/flash-list";
 import { useQuery } from "convex/react";
 import { api } from "@onetool/backend/convex/_generated/api";
 import { useRouter } from "expo-router";
 import { useState, useCallback, useMemo } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Search, Plus, ChevronRight, Building2 } from "lucide-react-native";
+import { Search, ChevronRight, Building2, X } from "lucide-react-native";
 import { colors, fontFamily, radius, spacing } from "@/lib/theme";
-import { StatusBadge } from "@/components/StatusBadge";
+import { FABMenu } from "@/components/FABMenu";
+
+// Status config using primary color for active states
+const statusConfig = {
+	lead: { label: "Lead", color: colors.primary },
+	prospect: { label: "Prospect", color: "#f59e0b" },
+	active: { label: "Active", color: colors.success },
+	inactive: { label: "Inactive", color: colors.mutedForeground },
+	archived: { label: "Archived", color: colors.mutedForeground },
+} as const;
 
 export default function ClientsScreen() {
 	const router = useRouter();
@@ -47,72 +56,49 @@ export default function ClientsScreen() {
 		return name.substring(0, 2).toUpperCase();
 	};
 
-	// Generate a consistent color based on the name
-	const getAvatarColor = (name: string) => {
-		const colors = [
-			"#3b82f6", // blue
-			"#8b5cf6", // purple
-			"#10b981", // green
-			"#f59e0b", // amber
-			"#ec4899", // pink
-			"#06b6d4", // cyan
-			"#f97316", // orange
-			"#6366f1", // indigo
-		];
-		const hash = name
-			.split("")
-			.reduce((acc, char) => acc + char.charCodeAt(0), 0);
-		return colors[hash % colors.length];
-	};
-
 	const renderClient = ({ item }: { item: (typeof clients)[0] }) => {
-		const avatarColor = getAvatarColor(item.companyName);
+		const status = statusConfig[item.status as keyof typeof statusConfig] || {
+			label: item.status,
+			color: colors.mutedForeground,
+		};
 
 		return (
 			<Pressable
 				style={({ pressed }) => [
-					styles.clientCard,
-					pressed && styles.clientCardPressed,
+					styles.clientRow,
+					pressed && styles.clientRowPressed,
 				]}
 				onPress={() => router.push(`/clients/${item._id}`)}
 			>
 				{/* Avatar */}
-				<View style={[styles.avatar, { backgroundColor: `${avatarColor}20` }]}>
-					<Text style={[styles.avatarText, { color: avatarColor }]}>
-						{getInitials(item.companyName)}
-					</Text>
+				<View style={styles.avatar}>
+					<Text style={styles.avatarText}>{getInitials(item.companyName)}</Text>
 				</View>
 
 				{/* Client Info */}
 				<View style={styles.clientInfo}>
-					<View style={styles.clientHeader}>
-						<Text style={styles.companyName} numberOfLines={1}>
-							{item.companyName}
-						</Text>
-						<StatusBadge status={item.status} />
-					</View>
-
-					{item.industry && (
-						<View style={styles.industryRow}>
-							<Building2 size={12} color={colors.mutedForeground} />
-							<Text style={styles.industryText}>{item.industry}</Text>
-						</View>
-					)}
-
-					{/* Lead Source Badge */}
-					{item.leadSource && (
-						<View style={styles.contactPreview}>
-							<View style={styles.leadSourceBadge}>
-								<Text style={styles.leadSourceText}>
-									{item.leadSource.replace(/-/g, " ")}
+					<Text style={styles.companyName} numberOfLines={1}>
+						{item.companyName}
+					</Text>
+					<View style={styles.clientMeta}>
+						{item.industry && (
+							<View style={styles.metaItem}>
+								<Building2 size={11} color={colors.mutedForeground} />
+								<Text style={styles.metaText} numberOfLines={1}>
+									{item.industry}
 								</Text>
 							</View>
-						</View>
-					)}
+						)}
+						<View
+							style={[styles.statusDot, { backgroundColor: status.color }]}
+						/>
+						<Text style={[styles.statusText, { color: status.color }]}>
+							{status.label}
+						</Text>
+					</View>
 				</View>
 
-				{/* Chevron */}
-				<ChevronRight size={20} color={colors.mutedForeground} />
+				<ChevronRight size={18} color={colors.border} />
 			</Pressable>
 		);
 	};
@@ -125,7 +111,7 @@ export default function ClientsScreen() {
 			{/* Search Bar */}
 			<View style={styles.searchContainer}>
 				<View style={styles.searchBar}>
-					<Search size={20} color={colors.mutedForeground} />
+					<Search size={18} color={colors.mutedForeground} />
 					<TextInput
 						style={styles.searchInput}
 						placeholder="Search clients..."
@@ -133,9 +119,16 @@ export default function ClientsScreen() {
 						value={searchQuery}
 						onChangeText={setSearchQuery}
 					/>
+					{searchQuery.length > 0 && (
+						<Pressable
+							onPress={() => setSearchQuery("")}
+							style={styles.clearButton}
+						>
+							<X size={16} color={colors.mutedForeground} />
+						</Pressable>
+					)}
 				</View>
 
-				{/* Results count */}
 				{searchQuery && (
 					<Text style={styles.resultsCount}>
 						{filteredClients.length} result
@@ -144,47 +137,60 @@ export default function ClientsScreen() {
 				)}
 			</View>
 
-			<FlatList
+			{/* Summary Bar */}
+			<View style={styles.summaryBar}>
+				<Text style={styles.summaryText}>
+					{clients.length} total client{clients.length !== 1 ? "s" : ""}
+				</Text>
+				<View style={styles.summaryStats}>
+					<View style={styles.summaryStatItem}>
+						<View
+							style={[styles.summaryDot, { backgroundColor: colors.success }]}
+						/>
+						<Text style={styles.summaryStatText}>
+							{clients.filter((c) => c.status === "active").length} active
+						</Text>
+					</View>
+				</View>
+			</View>
+
+			<FlashList
 				data={filteredClients}
 				keyExtractor={(item) => item._id}
 				renderItem={renderClient}
 				contentContainerStyle={styles.listContent}
-				ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
+				ItemSeparatorComponent={() => <View style={styles.separator} />}
 				refreshControl={
 					<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
 				}
 				ListEmptyComponent={
 					<View style={styles.emptyState}>
 						<View style={styles.emptyIcon}>
-							<Building2 size={32} color={colors.mutedForeground} />
+							<Building2 size={28} color={colors.mutedForeground} />
 						</View>
 						<Text style={styles.emptyTitle}>
 							{searchQuery ? "No clients found" : "No clients yet"}
 						</Text>
 						<Text style={styles.emptyText}>
 							{searchQuery
-								? "Try adjusting your search terms"
+								? "Try adjusting your search"
 								: "Add your first client to get started"}
 						</Text>
 					</View>
 				}
 			/>
 
-			{/* FAB */}
-			<Pressable
-				style={({ pressed }) => [styles.fab, pressed && styles.fabPressed]}
-				onPress={() => router.push("/clients/new")}
-			>
-				<Plus size={24} color="#ffffff" />
-			</Pressable>
+			{/* FAB Menu */}
+			<FABMenu />
 		</SafeAreaView>
 	);
 }
 
 const styles = StyleSheet.create({
 	searchContainer: {
-		padding: spacing.md,
-		paddingBottom: spacing.sm,
+		paddingHorizontal: spacing.md,
+		paddingTop: spacing.sm,
+		paddingBottom: spacing.xs,
 	},
 	searchBar: {
 		flexDirection: "row",
@@ -192,14 +198,17 @@ const styles = StyleSheet.create({
 		backgroundColor: colors.muted,
 		borderRadius: radius.lg,
 		paddingHorizontal: spacing.sm,
+		height: 44,
 	},
 	searchInput: {
 		flex: 1,
-		paddingVertical: spacing.sm,
 		paddingHorizontal: spacing.sm,
-		fontSize: 16,
+		fontSize: 15,
 		fontFamily: fontFamily.regular,
 		color: colors.foreground,
+	},
+	clearButton: {
+		padding: spacing.xs,
 	},
 	resultsCount: {
 		fontSize: 12,
@@ -208,100 +217,123 @@ const styles = StyleSheet.create({
 		marginTop: spacing.xs,
 		marginLeft: spacing.xs,
 	},
-	listContent: {
-		padding: spacing.md,
-		paddingTop: 0,
-		paddingBottom: 100,
-	},
-	clientCard: {
+	summaryBar: {
 		flexDirection: "row",
 		alignItems: "center",
-		backgroundColor: colors.card,
-		borderRadius: radius.lg,
-		padding: spacing.md,
-		borderWidth: 1,
-		borderColor: colors.border,
-		shadowColor: "#000",
-		shadowOffset: { width: 0, height: 1 },
-		shadowOpacity: 0.05,
-		shadowRadius: 2,
-		elevation: 1,
+		justifyContent: "space-between",
+		paddingHorizontal: spacing.md,
+		paddingVertical: spacing.sm,
+		borderBottomWidth: 1,
+		borderBottomColor: colors.border,
 	},
-	clientCardPressed: {
-		opacity: 0.7,
+	summaryText: {
+		fontSize: 13,
+		fontFamily: fontFamily.medium,
+		color: colors.mutedForeground,
+	},
+	summaryStats: {
+		flexDirection: "row",
+		gap: spacing.md,
+	},
+	summaryStatItem: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 4,
+	},
+	summaryDot: {
+		width: 6,
+		height: 6,
+		borderRadius: 3,
+	},
+	summaryStatText: {
+		fontSize: 12,
+		fontFamily: fontFamily.medium,
+		color: colors.mutedForeground,
+	},
+	listContent: {
+		paddingBottom: 100,
+	},
+	clientRow: {
+		flexDirection: "row",
+		alignItems: "center",
+		paddingVertical: spacing.md,
+		paddingHorizontal: spacing.md,
+		backgroundColor: colors.background,
+	},
+	clientRowPressed: {
 		backgroundColor: colors.muted,
 	},
+	separator: {
+		height: 1,
+		backgroundColor: colors.border,
+		marginLeft: 56 + spacing.md,
+	},
 	avatar: {
-		width: 48,
-		height: 48,
-		borderRadius: 24,
+		width: 44,
+		height: 44,
+		borderRadius: 22,
+		backgroundColor: "rgba(0, 166, 244, 0.08)",
 		alignItems: "center",
 		justifyContent: "center",
 		marginRight: spacing.sm,
 	},
 	avatarText: {
-		fontSize: 16,
-		fontFamily: fontFamily.bold,
+		fontSize: 15,
+		fontFamily: fontFamily.semibold,
+		color: colors.primary,
 	},
 	clientInfo: {
 		flex: 1,
-	},
-	clientHeader: {
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "space-between",
-		marginBottom: spacing.xs,
-	},
-	companyName: {
-		fontSize: 16,
-		fontFamily: fontFamily.semibold,
-		color: colors.foreground,
-		flex: 1,
 		marginRight: spacing.sm,
 	},
-	industryRow: {
+	companyName: {
+		fontSize: 15,
+		fontFamily: fontFamily.semibold,
+		color: colors.foreground,
+		marginBottom: 2,
+	},
+	clientMeta: {
 		flexDirection: "row",
 		alignItems: "center",
-		gap: 4,
-		marginBottom: spacing.xs,
+		gap: spacing.xs,
 	},
-	industryText: {
-		fontSize: 13,
+	metaItem: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 3,
+		flex: 1,
+	},
+	metaText: {
+		fontSize: 12,
 		fontFamily: fontFamily.regular,
 		color: colors.mutedForeground,
+		flex: 1,
 	},
-	contactPreview: {
-		flexDirection: "row",
-		gap: spacing.md,
-		marginTop: spacing.xs,
+	statusDot: {
+		width: 6,
+		height: 6,
+		borderRadius: 3,
 	},
-	leadSourceBadge: {
-		backgroundColor: colors.muted,
-		paddingHorizontal: spacing.sm,
-		paddingVertical: 2,
-		borderRadius: radius.full,
-	},
-	leadSourceText: {
+	statusText: {
 		fontSize: 11,
 		fontFamily: fontFamily.medium,
-		color: colors.mutedForeground,
-		textTransform: "capitalize",
 	},
 	emptyState: {
 		alignItems: "center",
 		paddingVertical: spacing.xl * 2,
+		paddingHorizontal: spacing.lg,
 	},
 	emptyIcon: {
-		width: 64,
-		height: 64,
-		borderRadius: 32,
+		width: 56,
+		height: 56,
+		borderRadius: 28,
 		backgroundColor: colors.muted,
 		alignItems: "center",
 		justifyContent: "center",
 		marginBottom: spacing.md,
 	},
 	emptyTitle: {
-		fontSize: 18,
+		fontSize: 16,
 		fontFamily: fontFamily.semibold,
 		color: colors.foreground,
 		marginBottom: spacing.xs,
@@ -311,24 +343,5 @@ const styles = StyleSheet.create({
 		fontFamily: fontFamily.regular,
 		color: colors.mutedForeground,
 		textAlign: "center",
-	},
-	fab: {
-		position: "absolute",
-		bottom: 24,
-		right: 24,
-		width: 56,
-		height: 56,
-		borderRadius: 28,
-		backgroundColor: colors.primary,
-		alignItems: "center",
-		justifyContent: "center",
-		shadowColor: "#000",
-		shadowOffset: { width: 0, height: 2 },
-		shadowOpacity: 0.25,
-		shadowRadius: 4,
-		elevation: 5,
-	},
-	fabPressed: {
-		opacity: 0.8,
 	},
 });

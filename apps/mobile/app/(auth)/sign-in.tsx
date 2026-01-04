@@ -144,6 +144,7 @@ export default function SignInScreen() {
 				autoCapitalize="none"
 				value={emailAddress}
 				placeholder="Email"
+				placeholderTextColor={colors.mutedForeground}
 				keyboardType="email-address"
 				onChangeText={setEmailAddress}
 				editable={!loading}
@@ -153,6 +154,7 @@ export default function SignInScreen() {
 				style={styles.input}
 				value={password}
 				placeholder="Password"
+				placeholderTextColor={colors.mutedForeground}
 				secureTextEntry={true}
 				onChangeText={setPassword}
 				editable={!loading}

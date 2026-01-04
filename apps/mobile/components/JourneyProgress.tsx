@@ -1,10 +1,4 @@
-import {
-	View,
-	Text,
-	ScrollView,
-	StyleSheet,
-	Pressable,
-} from "react-native";
+import { View, Text, ScrollView, StyleSheet, Pressable } from "react-native";
 import { useQuery } from "convex/react";
 import { api } from "@onetool/backend/convex/_generated/api";
 import {
@@ -37,7 +31,7 @@ const journeySteps: JourneyStep[] = [
 		shortTitle: "Org Setup",
 		icon: Building2,
 		completionKey: "hasOrganization",
-		color: "#6366f1",
+		color: colors.primary,
 	},
 	{
 		id: 2,
@@ -45,7 +39,7 @@ const journeySteps: JourneyStep[] = [
 		shortTitle: "Add Client",
 		icon: Users,
 		completionKey: "hasClient",
-		color: "#3b82f6",
+		color: colors.primary,
 	},
 	{
 		id: 3,
@@ -53,7 +47,7 @@ const journeySteps: JourneyStep[] = [
 		shortTitle: "Add Project",
 		icon: FolderKanban,
 		completionKey: "hasProject",
-		color: "#8b5cf6",
+		color: colors.primary,
 	},
 	{
 		id: 4,
@@ -61,7 +55,7 @@ const journeySteps: JourneyStep[] = [
 		shortTitle: "Create Quote",
 		icon: FileText,
 		completionKey: "hasQuote",
-		color: "#10b981",
+		color: colors.primary,
 	},
 	{
 		id: 5,
@@ -69,7 +63,7 @@ const journeySteps: JourneyStep[] = [
 		shortTitle: "E-Sign Doc",
 		icon: FileSignature,
 		completionKey: "hasESignature",
-		color: "#06b6d4",
+		color: colors.primary,
 	},
 	{
 		id: 6,
@@ -77,7 +71,7 @@ const journeySteps: JourneyStep[] = [
 		shortTitle: "Send Invoice",
 		icon: Receipt,
 		completionKey: "hasInvoice",
-		color: "#f59e0b",
+		color: colors.primary,
 	},
 	{
 		id: 7,
@@ -85,7 +79,7 @@ const journeySteps: JourneyStep[] = [
 		shortTitle: "Setup Stripe",
 		icon: CreditCard,
 		completionKey: "hasStripeConnect",
-		color: "#ec4899",
+		color: colors.primary,
 	},
 	{
 		id: 8,
@@ -93,7 +87,7 @@ const journeySteps: JourneyStep[] = [
 		shortTitle: "Get Paid",
 		icon: DollarSign,
 		completionKey: "hasPayment",
-		color: "#14b8a6",
+		color: colors.primary,
 	},
 ];
 
@@ -114,7 +108,8 @@ export function JourneyProgress() {
 	}
 
 	const completedCount = journeySteps.filter(
-		(step) => journeyProgress[step.completionKey as keyof typeof journeyProgress]
+		(step) =>
+			journeyProgress[step.completionKey as keyof typeof journeyProgress]
 	).length;
 
 	return (
@@ -145,20 +140,17 @@ export function JourneyProgress() {
 					const IconComponent = step.icon;
 
 					return (
-						<Pressable
+						<View
 							key={step.id}
-							style={({ pressed }) => [
-								styles.stepCard,
-								isCompleted && styles.stepCardCompleted,
-								pressed && styles.stepCardPressed,
-							]}
+							style={[styles.stepCard, isCompleted && styles.stepCardCompleted]}
 						>
 							<View
 								style={[
 									styles.stepIconContainer,
-									{ backgroundColor: `${step.color}15` },
-									isCompleted && {
-										backgroundColor: `${step.color}25`,
+									{
+										backgroundColor: isCompleted
+											? "rgba(0, 166, 244, 0.15)"
+											: "rgba(0, 166, 244, 0.1)",
 									},
 								]}
 							>
@@ -188,7 +180,7 @@ export function JourneyProgress() {
 									<Circle size={18} color={colors.border} />
 								)}
 							</View>
-						</Pressable>
+						</View>
 					);
 				})}
 			</ScrollView>
@@ -297,4 +289,3 @@ const styles = StyleSheet.create({
 		borderRadius: radius.sm,
 	},
 });
-
