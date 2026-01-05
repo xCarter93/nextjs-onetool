@@ -13,6 +13,7 @@ import {
 	Receipt,
 	Briefcase,
 	ListCheck,
+	BarChart3,
 } from "lucide-react";
 
 import { NavMain } from "@/components/layout/nav-main";
@@ -93,6 +94,11 @@ const data = {
 			title: "Invoices",
 			url: "/invoices",
 			icon: Receipt,
+		},
+		{
+			title: "Reports",
+			url: "/reports",
+			icon: BarChart3,
 		},
 		{
 			title: "Settings",
@@ -196,6 +202,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 			return (
 				pathname.startsWith("/invoices") || pathname.startsWith("/invoice")
 			);
+		}
+
+		if (title === "Reports") {
+			return pathname.startsWith("/reports") || pathname.startsWith("/report");
 		}
 
 		// Fallback for other items (like Home)

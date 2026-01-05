@@ -45,6 +45,8 @@ import type * as organizations from "../organizations.js";
 import type * as projects from "../projects.js";
 import type * as quoteLineItems from "../quoteLineItems.js";
 import type * as quotes from "../quotes.js";
+import type * as reportData from "../reportData.js";
+import type * as reports from "../reports.js";
 import type * as resend from "../resend.js";
 import type * as resendReceiving from "../resendReceiving.js";
 import type * as resendWebhook from "../resendWebhook.js";
@@ -100,6 +102,8 @@ declare const fullApi: ApiFromModules<{
   projects: typeof projects;
   quoteLineItems: typeof quoteLineItems;
   quotes: typeof quotes;
+  reportData: typeof reportData;
+  reports: typeof reports;
   resend: typeof resend;
   resendReceiving: typeof resendReceiving;
   resendWebhook: typeof resendWebhook;
