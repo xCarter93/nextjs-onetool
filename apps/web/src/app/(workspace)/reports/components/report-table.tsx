@@ -1,0 +1,147 @@
+"use client";
+
+import React from "react";
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+
+interface DataPoint {
+	name: string;
+	value: number;
+	totalValue?: number;
+	[key: string]: unknown;
+}
+
+interface ReportTableProps {
+	data: DataPoint[];
+	total: number;
+	groupBy?: string;
+	entityType: string;
+}
+
+export function ReportTable({
+	data,
+	total,
+	groupBy,
+	entityType,
+}: ReportTableProps) {
+	const totalCount = data.reduce((sum, d) => sum + d.value, 0);
+
+	const formatValue = (value: number) => {
+		if (entityType === "invoices" || entityType === "quotes") {
+			if (value > 100) {
+				return new Intl.NumberFormat("en-US", {
+					style: "currency",
+					currency: "USD",
+					minimumFractionDigits: 0,
+					maximumFractionDigits: 0,
+				}).format(value);
+			}
+		}
+		return value.toString();
+	};
+
+	// Sort by value descending
+	const sortedData = [...data].sort((a, b) => b.value - a.value);
+
+	return (
+		<div className="space-y-4">
+			{/* Summary stats */}
+			<div className="flex items-center justify-between text-sm">
+				<span className="text-muted-foreground">
+					{data.length} rows
+				</span>
+				<span className="font-medium text-foreground">
+					Total: {formatValue(totalCount)}
+				</span>
+			</div>
+
+			{/* Table */}
+			<div className="rounded-lg border overflow-hidden">
+				<Table>
+					<TableHeader className="bg-muted/50">
+						<TableRow>
+							<TableHead className="w-12">#</TableHead>
+							<TableHead>
+								{groupBy
+									? groupBy.charAt(0).toUpperCase() + groupBy.slice(1)
+									: "Category"}
+							</TableHead>
+							<TableHead className="text-right">Count</TableHead>
+							<TableHead className="text-right">%</TableHead>
+							{sortedData.some((d) => d.totalValue !== undefined) && (
+								<TableHead className="text-right">Value</TableHead>
+							)}
+						</TableRow>
+					</TableHeader>
+					<TableBody>
+						{sortedData.map((item, index) => {
+							const percentage =
+								totalCount > 0
+									? ((item.value / totalCount) * 100).toFixed(1)
+									: "0";
+
+							return (
+								<TableRow key={item.name}>
+									<TableCell className="text-muted-foreground font-mono text-sm">
+										{index + 1}
+									</TableCell>
+									<TableCell>
+										<div className="flex items-center gap-2">
+											<span className="font-medium text-foreground">
+												{item.name}
+											</span>
+											{index === 0 && (
+												<Badge variant="secondary" className="text-xs">
+													Top
+												</Badge>
+											)}
+										</div>
+									</TableCell>
+									<TableCell className="text-right font-mono">
+										{item.value}
+									</TableCell>
+									<TableCell className="text-right">
+										<div className="flex items-center justify-end gap-2">
+											<div className="w-16 h-2 rounded-full bg-muted overflow-hidden">
+												<div
+													className="h-full bg-primary/70 rounded-full"
+													style={{
+														width: `${(item.value / (sortedData[0]?.value || 1)) * 100}%`,
+													}}
+												/>
+											</div>
+											<span className="text-muted-foreground text-sm w-12 text-right">
+												{percentage}%
+											</span>
+										</div>
+									</TableCell>
+									{item.totalValue !== undefined && (
+										<TableCell className="text-right font-mono">
+											{formatValue(item.totalValue as number)}
+										</TableCell>
+									)}
+								</TableRow>
+							);
+						})}
+					</TableBody>
+				</Table>
+			</div>
+
+			{/* Footer summary */}
+			<div className="flex items-center justify-between pt-2 text-sm text-muted-foreground border-t">
+				<span>Showing all {data.length} items</span>
+				<span>
+					Average: {(totalCount / (data.length || 1)).toFixed(1)} per category
+				</span>
+			</div>
+		</div>
+	);
+}
+

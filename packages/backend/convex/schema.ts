@@ -719,4 +719,64 @@ export default defineSchema({
 	})
 		.index("by_email", ["emailMessageId"])
 		.index("by_org", ["orgId"]),
+
+	// Reports - saved report configurations
+	reports: defineTable({
+		orgId: v.id("organizations"),
+		createdBy: v.id("users"),
+		name: v.string(),
+		description: v.optional(v.string()),
+
+		// Report configuration (what data to fetch)
+		config: v.object({
+			entityType: v.union(
+				v.literal("clients"),
+				v.literal("projects"),
+				v.literal("tasks"),
+				v.literal("quotes"),
+				v.literal("invoices"),
+				v.literal("activities")
+			),
+			filters: v.optional(v.any()), // Dynamic filter conditions
+			aggregations: v.optional(
+				v.array(
+					v.object({
+						field: v.string(),
+						operation: v.union(
+							v.literal("count"),
+							v.literal("sum"),
+							v.literal("avg"),
+							v.literal("min"),
+							v.literal("max")
+						),
+					})
+				)
+			),
+			groupBy: v.optional(v.array(v.string())),
+			dateRange: v.optional(
+				v.object({
+					start: v.optional(v.number()),
+					end: v.optional(v.number()),
+				})
+			),
+		}),
+
+		// Visualization settings
+		visualization: v.object({
+			type: v.union(
+				v.literal("table"),
+				v.literal("bar"),
+				v.literal("line"),
+				v.literal("pie")
+			),
+			options: v.optional(v.any()),
+		}),
+
+		// Metadata
+		createdAt: v.number(),
+		updatedAt: v.number(),
+		isPublic: v.optional(v.boolean()), // Share within org
+	})
+		.index("by_org", ["orgId"])
+		.index("by_creator", ["createdBy"]),
 });
