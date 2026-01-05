@@ -10,6 +10,30 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
+// Apple's official logo
+function AppleLogo({ className = "w-6 h-6" }: { className?: string }) {
+	return (
+		<svg
+			xmlns="http://www.w3.org/2000/svg"
+			viewBox="-1 -1 16 16"
+			className={className}
+		>
+			<path
+				fill="white"
+				d="M10.182 7.49a2.49 2.49 0 0 1 1.737-2.366a2.906 2.906 0 0 0-4.214-.999a1 1 0 0 1-.999 0a3.086 3.086 0 0 0-4.404 1.208a5.12 5.12 0 0 0-.54 3.356A7.24 7.24 0 0 0 3.7 12.893a2.09 2.09 0 0 0 2.697.15a1.32 1.32 0 0 1 1.568 0a2.06 2.06 0 0 0 2.656-.06a6.57 6.57 0 0 0 1.698-2.996a2.476 2.476 0 0 1-2.137-2.497"
+			/>
+			<path
+				fill="none"
+				stroke="white"
+				strokeWidth="1.5"
+				strokeLinecap="round"
+				strokeLinejoin="round"
+				d="M8.184 1.998L9.682.5"
+			/>
+		</svg>
+	);
+}
+
 export default function HeroSection() {
 	const [mounted, setMounted] = useState(false);
 	const { resolvedTheme } = useTheme();
@@ -148,7 +172,7 @@ export default function HeroSection() {
 										OneTool brings together quotes, projects, clients, and
 										invoices — everything you need to keep work moving.
 									</p>
-									<div className="mt-10 flex items-center gap-x-6">
+									<div className="mt-10 flex items-center gap-x-4 flex-wrap">
 										<StyledButton
 											intent="primary"
 											size="lg"
@@ -165,6 +189,21 @@ export default function HeroSection() {
 											icon={<Calendar className="h-5 w-5" />}
 										>
 											Schedule a Demo
+										</StyledButton>
+										
+										{/* App Store Badge - Coming Soon */}
+										<StyledButton
+											intent="secondary"
+											size="lg"
+											disabled
+											showArrow={false}
+											className="!bg-black !text-white hover:!bg-gray-900 !ring-gray-800 disabled:opacity-60"
+											icon={<AppleLogo className="w-8 h-8" />}
+										>
+											<div className="flex flex-col items-start text-left -my-1">
+												<span className="text-[10px] leading-tight font-normal">Coming Soon on the</span>
+												<span className="text-lg font-semibold leading-tight -mt-0.5">App Store</span>
+											</div>
 										</StyledButton>
 									</div>
 

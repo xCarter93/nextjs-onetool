@@ -60,6 +60,10 @@ export default function HomeScreen() {
 	const upcomingTasks = useQuery(api.tasks.getUpcoming, { daysAhead: 7 });
 	const overdueTasks = useQuery(api.tasks.getOverdue, {});
 
+	// Query clients and projects for stat cards
+	const allClients = useQuery(api.clients.list, {});
+	const allProjects = useQuery(api.projects.list, {});
+
 	// Fetch calendar events for a 3-month range based on displayed month
 	const calendarEvents = useQuery(
 		api.calendar.getCalendarEvents,
@@ -148,6 +152,25 @@ export default function HomeScreen() {
 
 	const overdueCount = overdueTasks?.length ?? 0;
 	const todayTasksCount = taskStats?.todayTasks ?? 0;
+
+	// Calculate client stats
+	const totalClients = allClients?.length ?? 0;
+	const activeClients =
+		allClients?.filter((c) => c.status === "active").length ?? 0;
+	const inactiveClients =
+		allClients?.filter((c) => c.status === "inactive").length ?? 0;
+	const leadClients =
+		allClients?.filter((c) => c.status === "lead").length ?? 0;
+
+	// Calculate project stats
+	const activeProjects =
+		allProjects?.filter(
+			(p) => p.status === "planned" || p.status === "in-progress"
+		).length ?? 0;
+	const plannedProjects =
+		allProjects?.filter((p) => p.status === "planned").length ?? 0;
+	const inProgressProjects =
+		allProjects?.filter((p) => p.status === "in-progress").length ?? 0;
 
 	// Get events for the selected date
 	const selectedDateEvents = useMemo(() => {
@@ -252,67 +275,92 @@ export default function HomeScreen() {
 						{/* Quick Stats Row */}
 						<View style={styles.statsRow}>
 							<Pressable
-								style={styles.statCard}
+								style={styles.statCardWide}
 								onPress={() => router.push("/clients")}
 							>
-								<View style={styles.statIconContainer}>
-									<Users size={18} color={colors.primary} />
+								<View style={styles.statTopRow}>
+									<View style={styles.statIconContainer}>
+										<Users size={18} color={colors.primary} />
+									</View>
+									<View style={styles.statValueContainer}>
+										<Text style={styles.statLabel}>Total Clients</Text>
+										<Text style={styles.statValue}>{totalClients}</Text>
+									</View>
 								</View>
-								<View style={styles.statContent}>
-									<Text style={styles.statValue}>
-										{homeStats?.totalClients.current ?? 0}
-									</Text>
-									<Text style={styles.statLabel}>Clients</Text>
-								</View>
-								{homeStats?.totalClients.change !== 0 && (
-									<View style={styles.statChange}>
-										{homeStats?.totalClients.changeType === "increase" ? (
-											<TrendingUp size={12} color={colors.success} />
-										) : (
-											<TrendingDown size={12} color={colors.danger} />
-										)}
+								<View style={styles.statBreakdownRow}>
+									<Text style={styles.statBreakdownItem}>
 										<Text
 											style={[
-												styles.statChangeText,
-												{
-													color:
-														homeStats?.totalClients.changeType === "increase"
-															? colors.success
-															: colors.danger,
-												},
+												styles.statBreakdownNumber,
+												{ color: colors.success },
 											]}
 										>
-											{homeStats?.totalClients.change}
-										</Text>
-									</View>
-								)}
+											{activeClients}
+										</Text>{" "}
+										<Text style={styles.statBreakdownLabel}>Active</Text>
+									</Text>
+									<Text style={styles.statBreakdownSeparator}> · </Text>
+									<Text style={styles.statBreakdownItem}>
+										<Text
+											style={[
+												styles.statBreakdownNumber,
+												{ color: colors.mutedForeground },
+											]}
+										>
+											{inactiveClients}
+										</Text>{" "}
+										<Text style={styles.statBreakdownLabel}>Inactive</Text>
+									</Text>
+									{leadClients > 0 && (
+										<>
+											<Text style={styles.statBreakdownSeparator}> · </Text>
+											<Text style={styles.statBreakdownItem}>
+												<Text
+													style={[
+														styles.statBreakdownNumber,
+														{ color: colors.primary },
+													]}
+												>
+													{leadClients}
+												</Text>{" "}
+												<Text style={styles.statBreakdownLabel}>Leads</Text>
+											</Text>
+										</>
+									)}
+								</View>
 							</Pressable>
 
 							<Pressable
-								style={styles.statCard}
+								style={styles.statCardWide}
 								onPress={() => router.push("/projects")}
 							>
-								<View style={styles.statIconContainer}>
-									<FolderKanban size={18} color={colors.primary} />
+								<View style={styles.statTopRow}>
+									<View style={styles.statIconContainer}>
+										<FolderKanban size={18} color={colors.primary} />
+									</View>
+									<View style={styles.statValueContainer}>
+										<Text style={styles.statLabel}>Active Projects</Text>
+										<Text style={styles.statValue}>{activeProjects}</Text>
+									</View>
 								</View>
-								<View style={styles.statContent}>
-									<Text style={styles.statValue}>
-										{homeStats?.completedProjects.current ?? 0}
+								<View style={styles.statBreakdownRow}>
+									<Text style={styles.statBreakdownItem}>
+										<Text
+											style={[styles.statBreakdownNumber, { color: "#3b82f6" }]}
+										>
+											{plannedProjects}
+										</Text>{" "}
+										<Text style={styles.statBreakdownLabel}>Planned</Text>
 									</Text>
-									<Text style={styles.statLabel}>Projects</Text>
-								</View>
-							</Pressable>
-
-							<Pressable
-								style={styles.statCard}
-								onPress={() => router.push("/tasks")}
-							>
-								<View style={styles.statIconContainer}>
-									<CheckSquare size={18} color={colors.primary} />
-								</View>
-								<View style={styles.statContent}>
-									<Text style={styles.statValue}>{todayTasksCount}</Text>
-									<Text style={styles.statLabel}>Due Today</Text>
+									<Text style={styles.statBreakdownSeparator}> · </Text>
+									<Text style={styles.statBreakdownItem}>
+										<Text
+											style={[styles.statBreakdownNumber, { color: "#f59e0b" }]}
+										>
+											{inProgressProjects}
+										</Text>{" "}
+										<Text style={styles.statBreakdownLabel}>In Progress</Text>
+									</Text>
 								</View>
 							</Pressable>
 						</View>
@@ -344,30 +392,48 @@ export default function HomeScreen() {
 										<Target size={18} color={colors.primary} />
 									</View>
 									<View style={styles.revenueInfo}>
-										<Text style={styles.revenueTitle}>Monthly Goal</Text>
+										<Text style={styles.revenueTitle}>
+											Monthly Revenue Goal
+										</Text>
 										<Text style={styles.revenueSubtitle}>
 											{Math.round(homeStats.revenueGoal.percentage)}% complete
 										</Text>
 									</View>
 								</View>
-								<View style={styles.revenueProgress}>
+								<View style={styles.revenueProgressRow}>
 									<ProgressRing
 										percentage={homeStats.revenueGoal.percentage}
-										size={80}
-										strokeWidth={8}
+										size={100}
+										strokeWidth={10}
 										color={colors.primary}
 									/>
-									<View style={styles.revenueStats}>
-										<View style={styles.revenueStat}>
-											<Text style={styles.revenueStatLabel}>Earned</Text>
-											<Text style={styles.revenueStatValue}>
+									<View style={styles.revenueStatsColumn}>
+										<View style={styles.revenueStatLarge}>
+											<Text style={styles.revenueStatLabelLarge}>Earned</Text>
+											<Text style={styles.revenueStatValueLarge}>
 												{formatCurrency(homeStats.revenueGoal.current)}
 											</Text>
 										</View>
-										<View style={styles.revenueStat}>
-											<Text style={styles.revenueStatLabel}>Target</Text>
-											<Text style={styles.revenueStatValue}>
+										<View style={styles.revenueStatLarge}>
+											<Text style={styles.revenueStatLabelLarge}>Target</Text>
+											<Text style={styles.revenueStatValueLarge}>
 												{formatCurrency(homeStats.revenueGoal.target)}
+											</Text>
+										</View>
+										<View style={styles.revenueStatLarge}>
+											<Text style={styles.revenueStatLabelLarge}>
+												Remaining
+											</Text>
+											<Text
+												style={[
+													styles.revenueStatValueLarge,
+													{ color: colors.mutedForeground },
+												]}
+											>
+												{formatCurrency(
+													homeStats.revenueGoal.target -
+														homeStats.revenueGoal.current
+												)}
 											</Text>
 										</View>
 									</View>
@@ -399,7 +465,6 @@ export default function HomeScreen() {
 											startTime={task.startTime}
 											endTime={task.endTime}
 											status={task.status}
-											priority={task.priority}
 											isUpdating={updatingTasks.has(task._id)}
 											onToggleComplete={handleToggleTask}
 										/>
@@ -589,6 +654,21 @@ const styles = StyleSheet.create({
 		borderWidth: 1,
 		borderColor: colors.border,
 	},
+	statCardWide: {
+		flex: 1,
+		backgroundColor: colors.card,
+		borderRadius: radius.lg,
+		padding: spacing.md,
+		borderWidth: 1,
+		borderColor: colors.border,
+		minHeight: 110,
+	},
+	statTopRow: {
+		flexDirection: "row",
+		alignItems: "flex-start",
+		justifyContent: "space-between",
+		marginBottom: spacing.sm,
+	},
 	statIconContainer: {
 		width: 36,
 		height: 36,
@@ -596,24 +676,53 @@ const styles = StyleSheet.create({
 		backgroundColor: "rgba(0, 166, 244, 0.1)",
 		alignItems: "center",
 		justifyContent: "center",
-		marginBottom: spacing.sm,
+	},
+	statValueContainer: {
+		flex: 1,
+		alignItems: "center",
 	},
 	statContent: {},
+	statLabel: {
+		fontSize: 11,
+		fontFamily: fontFamily.regular,
+		color: colors.mutedForeground,
+		textAlign: "center",
+		marginBottom: 2,
+	},
 	statValue: {
-		fontSize: 22,
+		fontSize: 28,
 		fontFamily: fontFamily.bold,
 		color: colors.foreground,
+		lineHeight: 32,
 	},
-	statLabel: {
-		fontSize: 12,
+	statBreakdownRow: {
+		flexDirection: "row",
+		flexWrap: "wrap",
+		alignItems: "center",
+	},
+	statBreakdownItem: {
+		flexDirection: "row",
+		alignItems: "baseline",
+	},
+	statBreakdownNumber: {
+		fontSize: 13,
+		fontFamily: fontFamily.bold,
+	},
+	statBreakdownLabel: {
+		fontSize: 11,
 		fontFamily: fontFamily.regular,
+		color: colors.mutedForeground,
+	},
+	statBreakdownSeparator: {
+		fontSize: 11,
 		color: colors.mutedForeground,
 	},
 	statChange: {
 		flexDirection: "row",
 		alignItems: "center",
-		gap: 2,
+		gap: 4,
 		marginTop: spacing.xs,
+		flexWrap: "wrap",
 	},
 	statChangeText: {
 		fontSize: 11,
@@ -680,23 +789,28 @@ const styles = StyleSheet.create({
 		fontFamily: fontFamily.regular,
 		color: colors.mutedForeground,
 	},
-	revenueProgress: {
+	revenueProgressRow: {
 		flexDirection: "row",
 		alignItems: "center",
-		gap: spacing.lg,
+		justifyContent: "space-between",
+		gap: spacing.md,
 	},
-	revenueStats: {
+	revenueStatsColumn: {
 		flex: 1,
 		gap: spacing.sm,
 	},
-	revenueStat: {},
-	revenueStatLabel: {
-		fontSize: 12,
-		fontFamily: fontFamily.regular,
+	revenueStatLarge: {
+		flexDirection: "row",
+		justifyContent: "space-between",
+		alignItems: "center",
+	},
+	revenueStatLabelLarge: {
+		fontSize: 13,
+		fontFamily: fontFamily.medium,
 		color: colors.mutedForeground,
 	},
-	revenueStatValue: {
-		fontSize: 18,
+	revenueStatValueLarge: {
+		fontSize: 16,
 		fontFamily: fontFamily.bold,
 		color: colors.foreground,
 	},

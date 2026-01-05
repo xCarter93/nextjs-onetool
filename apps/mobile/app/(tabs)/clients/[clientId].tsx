@@ -5,7 +5,6 @@ import {
 	RefreshControl,
 	Pressable,
 	StyleSheet,
-	Alert,
 } from "react-native";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@onetool/backend/convex/_generated/api";
@@ -22,24 +21,15 @@ import { MentionModal } from "@/components/MentionModal";
 import {
 	Mail,
 	Phone,
-	Building2,
 	FolderKanban,
 	FileText,
 	ChevronRight,
 	User,
 	Tag,
-	FileEdit,
 	MessageSquare,
 } from "lucide-react-native";
 
 type ClientStatus = "lead" | "active" | "inactive" | "archived";
-
-const statusOptions: { value: ClientStatus; label: string }[] = [
-	{ value: "lead", label: "Lead" },
-	{ value: "active", label: "Active" },
-	{ value: "inactive", label: "Inactive" },
-	{ value: "archived", label: "Archived" },
-];
 
 export default function ClientDetailScreen() {
 	const { clientId } = useLocalSearchParams<{ clientId: string }>();
@@ -67,6 +57,11 @@ export default function ClientDetailScreen() {
 		clientId ? { clientId: clientId as Id<"clients"> } : "skip"
 	);
 
+	const invoices = useQuery(
+		api.invoices.list,
+		clientId ? { clientId: clientId as Id<"clients"> } : "skip"
+	);
+
 	const updateClient = useMutation(api.clients.update);
 
 	const onRefresh = useCallback(() => {
@@ -80,25 +75,6 @@ export default function ClientDetailScreen() {
 			id: clientId as Id<"clients">,
 			[field]: value,
 		});
-	};
-
-	const handleUpdateStatus = () => {
-		if (!client) return;
-
-		Alert.alert(
-			"Update Status",
-			"Select a new status for this client",
-			statusOptions.map((option) => ({
-				text: option.label,
-				onPress: async () => {
-					await updateClient({
-						id: clientId as Id<"clients">,
-						status: option.value,
-					});
-				},
-			})),
-			{ cancelable: true }
-		);
 	};
 
 	const formatCurrency = (amount: number) => {
@@ -126,6 +102,7 @@ export default function ClientDetailScreen() {
 	const primaryContact = contacts?.find((c) => c.isPrimary) ?? contacts?.[0];
 	const recentProjects = projects?.slice(0, 3) ?? [];
 	const recentQuotes = quotes?.slice(0, 3) ?? [];
+	const recentInvoices = invoices?.slice(0, 3) ?? [];
 
 	// Calculate total quote value
 	const totalQuoteValue =
@@ -146,30 +123,35 @@ export default function ClientDetailScreen() {
 			>
 				{/* Header Card */}
 				<View style={styles.headerCard}>
-					{/* Avatar */}
-					<View style={styles.avatarLarge}>
-						<Building2 size={32} color={colors.primary} />
-					</View>
-
-					<View style={styles.headerContent}>
-						<EditableField
-							label="Company Name"
-							value={client.companyName}
-							onSave={(value) => handleUpdateField("companyName", value)}
-							placeholder="Enter company name"
-						/>
-
-						<View style={styles.statusRow}>
-							<Text style={styles.fieldLabel}>Status</Text>
-							<Pressable
-								onPress={handleUpdateStatus}
-								style={styles.statusButton}
-							>
-								<StatusBadge status={client.status} />
-								<FileEdit size={14} color={colors.mutedForeground} />
-							</Pressable>
+					<View style={styles.headerTop}>
+						<Text style={styles.companyName}>{client.companyName}</Text>
+						<View style={styles.statusBadgeContainer}>
+							<StatusBadge status={client.status} />
 						</View>
 					</View>
+					{client.communicationPreference && (
+						<View style={styles.communicationRow}>
+							{client.communicationPreference === "email" && (
+								<>
+									<Mail size={14} color={colors.mutedForeground} />
+									<Text style={styles.communicationText}>Email preferred</Text>
+								</>
+							)}
+							{client.communicationPreference === "phone" && (
+								<>
+									<Phone size={14} color={colors.mutedForeground} />
+									<Text style={styles.communicationText}>Phone preferred</Text>
+								</>
+							)}
+							{client.communicationPreference === "both" && (
+								<>
+									<Mail size={14} color={colors.mutedForeground} />
+									<Phone size={14} color={colors.mutedForeground} />
+									<Text style={styles.communicationText}>Email & Phone</Text>
+								</>
+							)}
+						</View>
+					)}
 				</View>
 
 				{/* Quick Stats */}
@@ -183,10 +165,8 @@ export default function ClientDetailScreen() {
 						<Text style={styles.statLabel}>Quotes</Text>
 					</View>
 					<View style={styles.statBox}>
-						<Text style={styles.statValue}>
-							{formatCurrency(totalQuoteValue)}
-						</Text>
-						<Text style={styles.statLabel}>Total Value</Text>
+						<Text style={styles.statValue}>{invoices?.length ?? 0}</Text>
+						<Text style={styles.statLabel}>Invoices</Text>
 					</View>
 				</View>
 
@@ -309,6 +289,39 @@ export default function ClientDetailScreen() {
 					)}
 				</View>
 
+				{/* Invoices Section */}
+				<View style={{ marginTop: spacing.lg }}>
+					<SectionHeader
+						title="Invoices"
+						count={invoices?.length}
+						icon={<FileText size={18} color="#3b82f6" />}
+					/>
+
+					{recentInvoices.length > 0 ? (
+						<View style={styles.relatedList}>
+							{recentInvoices.map((invoice) => (
+								<View key={invoice._id} style={styles.relatedItem}>
+									<View style={styles.relatedItemContent}>
+										<View style={{ flex: 1 }}>
+											<Text style={styles.relatedItemTitle} numberOfLines={1}>
+												Invoice #{invoice.invoiceNumber}
+											</Text>
+											<Text style={styles.relatedItemValue}>
+												{formatCurrency(invoice.total)}
+											</Text>
+										</View>
+										<StatusBadge status={invoice.status} />
+									</View>
+								</View>
+							))}
+						</View>
+					) : (
+						<View style={styles.emptyRelated}>
+							<Text style={styles.emptyRelatedText}>No invoices yet</Text>
+						</View>
+					)}
+				</View>
+
 				{/* Tags */}
 				{client.tags && client.tags.length > 0 && (
 					<Card title="Tags" style={{ marginTop: spacing.lg }}>
@@ -367,34 +380,31 @@ const styles = StyleSheet.create({
 		borderWidth: 1,
 		borderColor: colors.border,
 	},
-	avatarLarge: {
-		width: 64,
-		height: 64,
-		borderRadius: 32,
-		backgroundColor: "rgba(0, 166, 244, 0.08)",
-		alignItems: "center",
-		justifyContent: "center",
-		marginBottom: spacing.md,
-		alignSelf: "center",
-	},
-	headerContent: {
-		gap: spacing.sm,
-	},
-	statusRow: {
+	headerTop: {
 		flexDirection: "row",
 		alignItems: "center",
 		justifyContent: "space-between",
-		marginBottom: spacing.sm,
+		gap: spacing.sm,
 	},
-	fieldLabel: {
-		fontSize: 13,
-		fontFamily: fontFamily.medium,
-		color: colors.mutedForeground,
+	companyName: {
+		fontSize: 24,
+		fontFamily: fontFamily.bold,
+		color: colors.foreground,
+		flex: 1,
 	},
-	statusButton: {
+	communicationRow: {
 		flexDirection: "row",
 		alignItems: "center",
 		gap: spacing.xs,
+		marginTop: spacing.md,
+	},
+	communicationText: {
+		fontSize: 13,
+		fontFamily: fontFamily.regular,
+		color: colors.mutedForeground,
+	},
+	statusBadgeContainer: {
+		transform: [{ scale: 1.4 }],
 	},
 	statsRow: {
 		flexDirection: "row",
@@ -520,8 +530,8 @@ const styles = StyleSheet.create({
 	},
 	fab: {
 		position: "absolute",
-		right: spacing.md,
-		bottom: spacing.md,
+		right: 24,
+		bottom: 24,
 		width: 56,
 		height: 56,
 		borderRadius: 28,

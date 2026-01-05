@@ -349,7 +349,7 @@ const features = [
 		title: "Mobile Access",
 		description: "Work from anywhere, anytime.",
 		details:
-			"Developed with mobile first in mind so you can access the site directly from your phone to continue pushing projects further.",
+			"Our upcoming iOS app will let you take your projects, tasks, and clients with you on the go. Stay connected and productive wherever your business takes you.",
 		icon: Smartphone,
 		widget: <MobileWidget />,
 		color: "purple" as ColorKey,
