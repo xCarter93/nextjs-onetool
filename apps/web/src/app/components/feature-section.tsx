@@ -464,6 +464,50 @@ function FeatureCard({
 	);
 }
 
+// Mobile Feature Card Component
+function MobileFeatureCard({ feature }: { feature: (typeof features)[0] }) {
+	const styles = colorStyles[feature.color] || colorStyles.gray;
+
+	return (
+		<motion.div
+			initial={{ opacity: 0, y: 20 }}
+			whileInView={{ opacity: 1, y: 0 }}
+			viewport={{ once: true }}
+			transition={{ duration: 0.3 }}
+			className="flex-shrink-0 w-[280px] overflow-hidden rounded-2xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 snap-center"
+		>
+			<div className="flex flex-col h-full">
+				{/* Widget Area */}
+				<div className="relative h-32 overflow-hidden">
+					<div
+						className={`absolute inset-0 bg-linear-to-b ${styles.gradient} opacity-50`}
+					/>
+					<div className="relative z-10 h-full w-full scale-90">
+						{feature.widget}
+					</div>
+				</div>
+
+				{/* Content Area */}
+				<div className="p-4 bg-white/40 dark:bg-gray-900/40 border-t border-gray-100 dark:border-gray-800 flex-1">
+					<div className="flex items-center gap-2.5 mb-2">
+						<div
+							className={`p-1.5 rounded-lg ${styles.iconBg} ${styles.iconText}`}
+						>
+							<feature.icon className="w-4 h-4" />
+						</div>
+						<h3 className="font-semibold text-gray-900 dark:text-white text-sm">
+							{feature.title}
+						</h3>
+					</div>
+					<p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+						{feature.details}
+					</p>
+				</div>
+			</div>
+		</motion.div>
+	);
+}
+
 export default function FeatureSection() {
 	const [activeFeature, setActiveFeature] = useState<(typeof features)[0]>(
 		features[0]
@@ -510,8 +554,8 @@ export default function FeatureSection() {
 	});
 
 	return (
-		<div className="bg-white py-24 sm:py-32 dark:bg-gray-900 min-h-[900px] flex flex-col justify-center relative overflow-hidden">
-			<div className="mx-auto max-w-7xl px-6 lg:px-8 mb-8 relative z-30">
+		<div className="bg-white py-16 sm:py-24 lg:py-32 dark:bg-gray-900 min-h-[600px] lg:min-h-[900px] flex flex-col justify-center relative overflow-hidden">
+			<div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 mb-6 sm:mb-8 relative z-30">
 				<motion.div
 					initial={{ opacity: 0, y: 20 }}
 					whileInView={{ opacity: 1, y: 0 }}
@@ -519,21 +563,34 @@ export default function FeatureSection() {
 					transition={{ duration: 0.5 }}
 					className="text-center"
 				>
-					<h2 className="text-base/7 font-semibold text-primary">
+					<h2 className="text-sm sm:text-base/7 font-semibold text-primary">
 						Streamline operations
 					</h2>
-					<p className="mt-2 text-4xl font-semibold tracking-tight text-pretty text-gray-950 sm:text-5xl dark:text-white">
+					<p className="mt-2 text-2xl sm:text-4xl lg:text-5xl font-semibold tracking-tight text-pretty text-gray-950 dark:text-white">
 						Every Business, Every Stage, OneTool.
 					</p>
-					<p className="mt-6 text-lg leading-8 text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+					<p className="mt-4 sm:mt-6 text-sm sm:text-lg leading-7 sm:leading-8 text-gray-600 dark:text-gray-400 max-w-2xl mx-auto px-2">
 						From client management to invoicing, OneTool provides a complete
 						solution for small business professionals.
 					</p>
 				</motion.div>
 			</div>
 
-			{/* Orbiting Carousel */}
-			<div className="relative w-full h-[600px] flex items-center justify-center perspective-1000">
+			{/* Mobile: Horizontal Scrolling Cards */}
+			<div className="lg:hidden overflow-hidden">
+				<div className="flex gap-4 overflow-x-auto pb-6 px-4 snap-x snap-mandatory scrollbar-hide">
+					{features.map((feature, idx) => (
+						<MobileFeatureCard key={idx} feature={feature} />
+					))}
+				</div>
+				{/* Scroll hint */}
+				<p className="text-center text-xs text-gray-400 dark:text-gray-500 mt-2 px-4">
+					← Swipe to explore features →
+				</p>
+			</div>
+
+			{/* Desktop: Orbiting Carousel */}
+			<div className="hidden lg:block relative w-full h-[600px] items-center justify-center perspective-1000">
 				{/* Fade Gradients */}
 				<div className="pointer-events-none absolute left-0 top-0 bottom-0 w-32 bg-linear-to-r from-white dark:from-gray-900 z-10" />
 				<div className="pointer-events-none absolute right-0 top-0 bottom-0 w-32 bg-linear-to-l from-white dark:from-gray-900 z-10" />
@@ -551,8 +608,8 @@ export default function FeatureSection() {
 				</div>
 			</div>
 
-			{/* Info Card Area */}
-			<div className="h-48 mx-auto max-w-3xl px-6 relative flex items-center justify-center z-30 -mt-20">
+			{/* Info Card Area - Desktop only */}
+			<div className="hidden lg:flex h-48 mx-auto max-w-3xl px-6 relative items-center justify-center z-30 -mt-20">
 				<AnimatePresence mode="wait">
 					{activeFeature ? (
 						<motion.div

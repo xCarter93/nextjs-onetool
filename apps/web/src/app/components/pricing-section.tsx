@@ -332,7 +332,7 @@ export default function PricingSection() {
 
 	return (
 		<div
-			className="not-prose relative flex w-full flex-col gap-12 bg-white px-4 py-16 text-center sm:px-8 mx-auto dark:bg-gray-900"
+			className="not-prose relative flex w-full flex-col gap-8 sm:gap-12 bg-white px-4 py-12 sm:py-16 text-center sm:px-8 mx-auto dark:bg-gray-900"
 			ref={pricingRef}
 		>
 			{/* Background gradient effects for visual appeal */}
@@ -342,13 +342,13 @@ export default function PricingSection() {
 				<div className="absolute -bottom-[10%] -left-[10%] h-[40%] w-[40%] rounded-full bg-primary/5 blur-3xl" />
 			</div>
 
-			<div className="text-center mb-6 max-w-3xl mx-auto">
+			<div className="text-center mb-4 sm:mb-6 max-w-3xl mx-auto px-2">
 				<TimelineContent
 					as="h2"
 					animationNum={0}
 					timelineRef={pricingRef}
 					customVariants={revealVariants}
-					className="md:text-6xl sm:text-4xl text-3xl font-medium text-foreground mb-4"
+					className="text-2xl sm:text-4xl md:text-6xl font-medium text-foreground mb-3 sm:mb-4"
 				>
 					Plans that work best for your{" "}
 					<TimelineContent
@@ -356,7 +356,7 @@ export default function PricingSection() {
 						animationNum={1}
 						timelineRef={pricingRef}
 						customVariants={revealVariants}
-						className="border border-dashed border-primary px-2 py-1 rounded-xl bg-primary/10 capitalize inline-block"
+						className="border border-dashed border-primary px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-lg sm:rounded-xl bg-primary/10 capitalize inline-block"
 					>
 						business
 					</TimelineContent>
@@ -367,7 +367,7 @@ export default function PricingSection() {
 					animationNum={2}
 					timelineRef={pricingRef}
 					customVariants={revealVariants}
-					className="sm:text-base text-sm text-muted-foreground sm:w-[70%] w-[80%] mx-auto"
+					className="text-xs sm:text-sm md:text-base text-muted-foreground w-[90%] sm:w-[70%] mx-auto"
 				>
 					We help teams all around the world. Explore which option is right for
 					you.
@@ -383,7 +383,7 @@ export default function PricingSection() {
 				<PricingSwitch onSwitch={togglePricingPeriod} />
 			</TimelineContent>
 
-			<div className="grid md:grid-cols-2 max-w-5xl gap-6 py-6 mx-auto">
+			<div className="grid grid-cols-1 md:grid-cols-2 max-w-5xl gap-4 sm:gap-6 py-4 sm:py-6 mx-auto px-2">
 				{displayPlans.map((plan, index) => (
 					<TimelineContent
 						key={plan.name}
@@ -400,53 +400,53 @@ export default function PricingSection() {
 									: "ring-1 ring-gray-300 dark:ring-gray-700 bg-gray-50/50 dark:bg-gray-800/30 border-gray-300 dark:border-gray-700 hover:ring-2 hover:ring-gray-400 dark:hover:ring-gray-600"
 							)}
 						>
-							<CardHeader className="text-left">
-								<div className="flex justify-between">
-									<h3 className="text-3xl font-semibold text-foreground mb-2">
+							<CardHeader className="text-left p-4 sm:p-6">
+								<div className="flex justify-between items-start">
+									<h3 className="text-2xl sm:text-3xl font-semibold text-foreground mb-2">
 										{plan.name}
 									</h3>
 									{plan.popular && (
-										<div className="">
-											<span className="bg-primary text-white px-3 py-1 rounded-full text-sm font-medium">
+										<div>
+											<span className="bg-primary text-white px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap">
 												Popular
 											</span>
 										</div>
 									)}
 								</div>
-								<p className="text-sm text-muted-foreground mb-4">
+								<p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4">
 									{plan.description}
 								</p>
 								<div className="flex items-baseline">
-									<span className="text-4xl font-semibold text-foreground">
+									<span className="text-3xl sm:text-4xl font-semibold text-foreground">
 										$
 										<AnimatedNumber
 											value={isYearly ? plan.yearlyPrice : plan.price}
-											className="text-4xl font-semibold"
+											className="text-3xl sm:text-4xl font-semibold"
 											format={{
 												style: "decimal",
 												maximumFractionDigits: 0,
 											}}
 										/>
 									</span>
-									<span className="text-muted-foreground ml-1">
+									<span className="text-sm sm:text-base text-muted-foreground ml-1">
 										/{isYearly ? "year" : "month"}
 									</span>
 								</div>
 								{plan.price > 0 && (
-									<p className="text-xs text-muted-foreground mt-2">
+									<p className="text-[10px] sm:text-xs text-muted-foreground mt-2">
 										Per organization • Unlimited users included
 									</p>
 								)}
 							</CardHeader>
 
-							<CardContent className="pt-0">
-								<ul className="space-y-2 font-semibold py-5 mt-6">
+							<CardContent className="pt-0 p-4 sm:p-6 sm:pt-0">
+								<ul className="space-y-2 font-semibold py-4 sm:py-5 mt-4 sm:mt-6">
 									{plan.features.map((feature, featureIndex) => (
-										<li key={featureIndex} className="flex items-center">
-											<span className="text-foreground grid place-content-center mt-0.5 mr-3">
+										<li key={featureIndex} className="flex items-start">
+											<span className="text-foreground grid place-content-center mt-0.5 mr-2 sm:mr-3 shrink-0 [&>svg]:w-4 [&>svg]:h-4 sm:[&>svg]:w-5 sm:[&>svg]:h-5">
 												{feature.icon}
 											</span>
-											<span className="text-sm text-muted-foreground">
+											<span className="text-xs sm:text-sm text-muted-foreground text-left">
 												{feature.text}
 											</span>
 										</li>
@@ -454,17 +454,17 @@ export default function PricingSection() {
 								</ul>
 
 								{plan.includes.length > 0 && (
-									<div className="space-y-3 pt-4 border-t border-border">
-										<h4 className="font-medium text-base text-foreground mb-3">
+									<div className="space-y-2 sm:space-y-3 pt-3 sm:pt-4 border-t border-border">
+										<h4 className="font-medium text-sm sm:text-base text-foreground mb-2 sm:mb-3 text-left">
 											{plan.includes[0]}
 										</h4>
 										<ul className="space-y-2 font-semibold">
 											{plan.includes.slice(1).map((feature, featureIndex) => (
-												<li key={featureIndex} className="flex items-center">
-													<span className="h-6 w-6 bg-primary/10 border border-primary rounded-full grid place-content-center mt-0.5 mr-3">
-														<CheckCheck className="h-4 w-4 text-primary" />
+												<li key={featureIndex} className="flex items-start">
+													<span className="h-5 w-5 sm:h-6 sm:w-6 bg-primary/10 border border-primary rounded-full grid place-content-center mt-0.5 mr-2 sm:mr-3 shrink-0">
+														<CheckCheck className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
 													</span>
-													<span className="text-sm text-muted-foreground">
+													<span className="text-xs sm:text-sm text-muted-foreground text-left">
 														{feature}
 													</span>
 												</li>

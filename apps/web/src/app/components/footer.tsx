@@ -87,79 +87,87 @@ const navigation = {
 export default function Footer() {
 	return (
 		<footer className="bg-white dark:bg-gray-900">
-			<div className="mx-auto max-w-7xl px-6 pt-16 pb-8 sm:pt-24 lg:px-8 lg:pt-32">
-				<div className="xl:grid xl:grid-cols-3 xl:gap-8">
-					<div className="space-y-8">
-						<div className="flex items-center gap-3">
+			<div className="mx-auto max-w-7xl px-4 sm:px-6 pt-12 pb-6 sm:pt-16 sm:pb-8 lg:px-8 lg:pt-32">
+				{/* Mobile-first: Stack everything, then use grid on larger screens */}
+				<div className="flex flex-col gap-10 lg:grid lg:grid-cols-3 lg:gap-8">
+					{/* Logo and Description */}
+					<div className="space-y-6 text-center lg:text-left">
+						<div className="flex items-center justify-center lg:justify-start gap-3">
 							<Image
 								src="/OneTool.png"
 								alt="OneTool Logo"
-								width={180}
-								height={180}
-								className="rounded-md dark:brightness-0 dark:invert"
+								width={150}
+								height={150}
+								className="rounded-md dark:brightness-0 dark:invert sm:w-[180px]"
 							/>
 						</div>
-					<p className="text-sm/6 text-balance text-gray-600 dark:text-gray-400">
-						Streamlining business operations for companies that serve
-						their communities. Built by entrepreneurs, for entrepreneurs.
-					</p>
-						<div className="flex gap-x-6">
+						<p className="text-sm leading-6 text-balance text-gray-600 dark:text-gray-400 max-w-xs mx-auto lg:mx-0">
+							Streamlining business operations for companies that serve
+							their communities. Built by entrepreneurs, for entrepreneurs.
+						</p>
+						{/* Social icons - centered on mobile */}
+						<div className="flex justify-center lg:justify-start gap-x-5">
 							{navigation.social.map((item) => (
 								<a
 									key={item.name}
 									href={item.href}
-									className="text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
+									className="text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
 								>
 									<span className="sr-only">{item.name}</span>
-									<item.icon aria-hidden="true" className="size-6" />
+									<item.icon aria-hidden="true" className="size-5 sm:size-6" />
 								</a>
 							))}
 						</div>
 					</div>
-					<div className="mt-16 grid grid-cols-2 gap-8 xl:col-span-2 xl:mt-0">
-						<div className="md:grid md:grid-cols-2 md:gap-8">
-							<div>
-								<h3 className="text-sm/6 font-semibold text-gray-900 dark:text-white">
-									Solutions
-								</h3>
-								<ul role="list" className="mt-6 space-y-4">
-									{navigation.solutions.map((item) => (
-										<li key={item}>
-											<span className="text-sm/6 text-gray-600 dark:text-gray-400">
-												{item}
-											</span>
-										</li>
-									))}
-								</ul>
-							</div>
-							<div className="mt-10 md:mt-0">
-								<h3 className="text-sm/6 font-semibold text-gray-900 dark:text-white">
-									Company
-								</h3>
-								<ul role="list" className="mt-6 space-y-4">
-									{navigation.company.map((item) => (
-										<li key={item.name}>
-											<a
-												href={item.href}
-												className="text-sm/6 text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
-											>
-												{item.name}
-											</a>
-										</li>
-									))}
-								</ul>
-							</div>
-						</div>
+
+					{/* Navigation Links - 3 columns on mobile, adjusts on larger screens */}
+					<div className="grid grid-cols-3 gap-4 sm:gap-8 lg:col-span-2">
+						{/* Solutions */}
 						<div>
-							<h3 className="text-sm/6 font-semibold text-gray-900 dark:text-white">
+							<h3 className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white">
+								Solutions
+							</h3>
+							<ul role="list" className="mt-3 sm:mt-6 space-y-2 sm:space-y-4">
+								{navigation.solutions.map((item) => (
+									<li key={item}>
+										<span className="text-xs sm:text-sm leading-5 text-gray-600 dark:text-gray-400">
+											{item}
+										</span>
+									</li>
+								))}
+							</ul>
+						</div>
+						
+						{/* Company */}
+						<div>
+							<h3 className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white">
+								Company
+							</h3>
+							<ul role="list" className="mt-3 sm:mt-6 space-y-2 sm:space-y-4">
+								{navigation.company.map((item) => (
+									<li key={item.name}>
+										<a
+											href={item.href}
+											className="text-xs sm:text-sm leading-5 text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
+										>
+											{item.name}
+										</a>
+									</li>
+								))}
+							</ul>
+						</div>
+
+						{/* Legal */}
+						<div>
+							<h3 className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white">
 								Legal
 							</h3>
-							<ul role="list" className="mt-6 space-y-4">
+							<ul role="list" className="mt-3 sm:mt-6 space-y-2 sm:space-y-4">
 								{navigation.legal.map((item) => (
 									<li key={item.name}>
 										<a
 											href={item.href}
-											className="text-sm/6 text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
+											className="text-xs sm:text-sm leading-5 text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
 										>
 											{item.name}
 										</a>
@@ -169,8 +177,10 @@ export default function Footer() {
 						</div>
 					</div>
 				</div>
-				<div className="mt-16 border-t border-gray-900/10 pt-8 sm:mt-20 lg:mt-24 dark:border-white/10">
-					<p className="text-sm/6 text-gray-600 dark:text-gray-400">
+
+				{/* Copyright */}
+				<div className="mt-10 sm:mt-16 border-t border-gray-900/10 pt-6 sm:pt-8 lg:mt-24 dark:border-white/10">
+					<p className="text-xs sm:text-sm text-center lg:text-left text-gray-600 dark:text-gray-400">
 						&copy; 2025 OneTool. All rights reserved.
 					</p>
 				</div>

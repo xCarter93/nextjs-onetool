@@ -162,20 +162,22 @@ export default function HeroSection() {
 						/>
 					</div>
 					<div className="overflow-hidden">
-						<div className="mx-auto max-w-7xl px-6 pt-24 pb-32 sm:pt-32 lg:px-8 lg:pt-36">
+						<div className="mx-auto max-w-7xl px-4 sm:px-6 pt-12 pb-16 sm:pt-24 sm:pb-32 lg:px-8 lg:pt-36">
 							<div className="mx-auto max-w-2xl gap-x-14 lg:mx-0 lg:flex lg:max-w-none lg:items-center">
-								<div className="relative w-full lg:max-w-xl lg:shrink-0 xl:max-w-2xl">
-									<h1 className="text-5xl font-semibold tracking-tight text-pretty text-gray-900 sm:text-7xl dark:text-white">
+								<div className="relative w-full lg:max-w-xl lg:shrink-0 xl:max-w-2xl text-center lg:text-left">
+									<h1 className="text-3xl sm:text-5xl font-semibold tracking-tight text-pretty text-gray-900 lg:text-7xl dark:text-white">
 										Simplify your growing business with OneTool.
 									</h1>
-									<p className="mt-8 text-lg font-medium text-pretty text-gray-500 sm:max-w-md sm:text-xl/8 lg:max-w-none dark:text-gray-400">
+									<p className="mt-4 sm:mt-8 text-base sm:text-lg font-medium text-pretty text-gray-500 sm:max-w-md lg:text-xl/8 lg:max-w-none mx-auto lg:mx-0 dark:text-gray-400">
 										OneTool brings together quotes, projects, clients, and
 										invoices — everything you need to keep work moving.
 									</p>
-									<div className="mt-10 flex items-center gap-x-4 flex-wrap">
+									{/* Mobile: Stack buttons vertically, Desktop: Horizontal */}
+									<div className="mt-6 sm:mt-10 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 sm:gap-4">
 										<StyledButton
 											intent="primary"
 											size="lg"
+											className="w-auto"
 											onClick={() => {
 												// Handle Start Free Trial action
 											}}
@@ -185,13 +187,15 @@ export default function HeroSection() {
 										<StyledButton
 											intent="outline"
 											size="lg"
+											className="w-auto"
 											onClick={() => setIsScheduleDemoOpen(true)}
 											icon={<Calendar className="h-5 w-5" />}
 										>
 											Schedule a Demo
 										</StyledButton>
-										
-										{/* App Store Badge - Coming Soon */}
+									</div>
+									{/* App Store Badge - separate row on mobile */}
+									<div className="mt-4 flex justify-center lg:justify-start">
 										<StyledButton
 											intent="secondary"
 											size="lg"
@@ -348,8 +352,8 @@ export default function HeroSection() {
 									</Modal>
 								</div>
 
-								{/* CardSwap Component Area */}
-								<div className="relative mt-14 flex h-[450px] w-full items-center justify-center sm:-mt-44 lg:mt-0 lg:h-[600px] lg:justify-end">
+								{/* CardSwap Component Area - Hidden on mobile */}
+								<div className="relative mt-14 hidden lg:flex h-[600px] w-full items-center justify-center lg:justify-end">
 									<CardSwap width="100%" height="100%">
 										{/* Quotes Card */}
 										<Card className="flex flex-col justify-between bg-white dark:bg-gray-950 p-6 shadow-lg hover:shadow-xl transition-all border border-gray-100 dark:border-gray-800">

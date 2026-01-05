@@ -75,8 +75,8 @@ export default function FAQSection() {
 	};
 
 	return (
-		<div className="bg-white py-24 sm:py-32 dark:bg-gray-900">
-			<div className="mx-auto max-w-4xl px-6 lg:px-8">
+		<div className="bg-white py-16 sm:py-24 lg:py-32 dark:bg-gray-900">
+			<div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
 				{/* Header */}
 				<motion.div
 					initial={{ opacity: 0, y: 20 }}
@@ -85,20 +85,20 @@ export default function FAQSection() {
 					transition={{ duration: 0.5 }}
 					className="text-center"
 				>
-					<h2 className="text-base font-semibold leading-7 text-primary">
+					<h2 className="text-sm sm:text-base font-semibold leading-7 text-primary">
 						FAQ
 					</h2>
-					<p className="mt-2 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl dark:text-white">
+					<p className="mt-2 text-2xl sm:text-3xl font-bold tracking-tight text-gray-900 lg:text-4xl dark:text-white">
 						Frequently Asked Questions
 					</p>
-					<p className="mt-6 text-lg leading-8 text-gray-600 dark:text-gray-400">
+					<p className="mt-4 sm:mt-6 text-sm sm:text-lg leading-7 sm:leading-8 text-gray-600 dark:text-gray-400 px-2">
 						Everything you need to know about OneTool and how it can transform
 						your small business.
 					</p>
 				</motion.div>
 
 				{/* FAQ Items */}
-				<div className="mt-16 space-y-4">
+				<div className="mt-10 sm:mt-16 space-y-3 sm:space-y-4">
 					{faqs.map((faq, index) => (
 						<motion.div
 							key={index}
@@ -110,17 +110,17 @@ export default function FAQSection() {
 						>
 							<button
 								onClick={() => toggleFAQ(index)}
-								className="flex w-full items-center justify-between px-6 py-5 text-left transition-colors duration-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+								className="flex w-full items-center justify-between px-4 sm:px-6 py-4 sm:py-5 text-left transition-colors duration-200 hover:bg-gray-50 dark:hover:bg-gray-800/50 active:bg-gray-100 dark:active:bg-gray-700"
 							>
-								<span className="text-lg font-semibold text-gray-900 dark:text-white">
+								<span className="text-sm sm:text-lg font-semibold text-gray-900 dark:text-white pr-2">
 									{faq.question}
 								</span>
 								<motion.div
 									animate={{ rotate: openIndex === index ? 180 : 0 }}
 									transition={{ duration: 0.3 }}
-									className="ml-4 shrink-0"
+									className="shrink-0"
 								>
-									<ChevronDown className="h-5 w-5 text-primary" />
+									<ChevronDown className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
 								</motion.div>
 							</button>
 
@@ -133,8 +133,8 @@ export default function FAQSection() {
 										transition={{ duration: 0.3 }}
 										className="overflow-hidden"
 									>
-										<div className="border-t border-gray-200 px-6 py-5 dark:border-gray-800">
-											<p className="text-base leading-7 text-gray-600 dark:text-gray-400">
+										<div className="border-t border-gray-200 px-4 sm:px-6 py-4 sm:py-5 dark:border-gray-800">
+											<p className="text-sm sm:text-base leading-6 sm:leading-7 text-gray-600 dark:text-gray-400">
 												{faq.answer}
 											</p>
 										</div>
