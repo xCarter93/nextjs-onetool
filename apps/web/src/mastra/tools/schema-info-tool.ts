@@ -204,15 +204,33 @@ export const schemaInfoTool = createTool({
 	execute: async ({ context }) => {
 		const { entityType } = context;
 
+		// Helper to transform readonly fields to mutable for output schema compatibility
+		const transformFields = (
+			fields: Record<
+				string,
+				{ type: string; description: string; values?: readonly string[] }
+			>
+		): Record<string, { type: string; description: string; values?: string[] }> => {
+			const result: Record<
+				string,
+				{ type: string; description: string; values?: string[] }
+			> = {};
+			for (const [key, field] of Object.entries(fields)) {
+				result[key] = {
+					type: field.type,
+					description: field.description,
+					values: field.values ? [...field.values] : undefined,
+				};
+			}
+			return result;
+		};
+
 		if (entityType === "all") {
 			const entities = Object.entries(ENTITY_SCHEMAS).map(([id, schema]) => ({
 				id,
-				name: schema.name,
-				description: schema.description,
-				fields: schema.fields as Record<
-					string,
-					{ type: string; description: string; values?: string[] }
-				>,
+				name: schema.name as string,
+				description: schema.description as string,
+				fields: transformFields(schema.fields),
 				groupByFields: [...schema.groupByFields],
 				aggregations: [...schema.aggregations],
 			}));
@@ -228,12 +246,9 @@ export const schemaInfoTool = createTool({
 			entities: [
 				{
 					id: entityType,
-					name: schema.name,
-					description: schema.description,
-					fields: schema.fields as Record<
-						string,
-						{ type: string; description: string; values?: string[] }
-					>,
+					name: schema.name as string,
+					description: schema.description as string,
+					fields: transformFields(schema.fields),
 					groupByFields: [...schema.groupByFields],
 					aggregations: [...schema.aggregations],
 				},
