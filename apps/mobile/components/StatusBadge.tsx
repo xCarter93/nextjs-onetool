@@ -5,8 +5,9 @@ type ClientStatus = "lead" | "active" | "inactive" | "archived";
 type ProjectStatus = "planned" | "in-progress" | "completed" | "cancelled";
 type QuoteStatus = "draft" | "sent" | "approved" | "declined" | "expired";
 type TaskStatus = "pending" | "in-progress" | "completed" | "cancelled";
+type InvoiceStatus = "draft" | "sent" | "paid" | "overdue" | "cancelled";
 
-type Status = ClientStatus | ProjectStatus | QuoteStatus | TaskStatus;
+type Status = ClientStatus | ProjectStatus | QuoteStatus | TaskStatus | InvoiceStatus;
 
 const statusConfig: Record<
 	Status,
@@ -72,6 +73,18 @@ const statusConfig: Record<
 		backgroundColor: "#f3f4f6",
 		textColor: "#6b7280",
 		label: "Pending",
+	},
+
+	// Invoice statuses
+	paid: {
+		backgroundColor: "#dcfce7",
+		textColor: "#16a34a",
+		label: "Paid",
+	},
+	overdue: {
+		backgroundColor: "#fee2e2",
+		textColor: "#dc2626",
+		label: "Overdue",
 	},
 };
 

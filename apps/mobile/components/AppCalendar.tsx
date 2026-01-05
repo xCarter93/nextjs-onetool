@@ -121,7 +121,7 @@ export const AppCalendar = memo(function AppCalendar({
 		const marks: Record<string, any> = {};
 
 		// Add project period markings
-		projects.forEach((project) => {
+		projects.forEach((project, projectIndex) => {
 			const start = fromDateId(project.startDate);
 			const end = fromDateId(project.endDate);
 
@@ -143,19 +143,39 @@ export const AppCalendar = memo(function AppCalendar({
 
 				if (!marks[dateId]) {
 					marks[dateId] = {
-						startingDay: isStart,
-						endingDay: isEnd,
-						color: projectColor,
-						textColor: colors.foreground, // Keep text visible
+						periods: [{
+							startingDay: isStart,
+							endingDay: isEnd,
+							color: projectColor,
+						}],
+						textColor: colors.foreground,
 					};
 				} else {
-					// Merge with existing marking
-					marks[dateId] = {
-						...marks[dateId],
-						startingDay: marks[dateId].startingDay || isStart,
-						endingDay: marks[dateId].endingDay || isEnd,
-						color: marks[dateId].color || projectColor,
-					};
+					// Add this project as a new period (supports multiple overlapping projects)
+					if (!marks[dateId].periods) {
+						// Convert old format to new periods format
+						marks[dateId] = {
+							periods: [
+								{
+									startingDay: marks[dateId].startingDay || false,
+									endingDay: marks[dateId].endingDay || false,
+									color: marks[dateId].color || projectColor,
+								},
+								{
+									startingDay: isStart,
+									endingDay: isEnd,
+									color: projectColor,
+								}
+							],
+							textColor: colors.foreground,
+						};
+					} else {
+						marks[dateId].periods.push({
+							startingDay: isStart,
+							endingDay: isEnd,
+							color: projectColor,
+						});
+					}
 				}
 
 				current.setDate(current.getDate() + 1);
@@ -253,7 +273,7 @@ export const AppCalendar = memo(function AppCalendar({
 				onDayPress={handleDayPress}
 				onMonthChange={handleMonthChange}
 				markedDates={markedDates}
-				markingType={projects.length > 0 ? "period" : "dot"}
+				markingType={projects.length > 0 ? "multi-period" : "dot"}
 				minDate={minDate}
 				maxDate={maxDate}
 				hideArrows={hideArrows}
