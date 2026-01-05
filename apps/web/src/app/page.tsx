@@ -8,12 +8,12 @@ import Footer from "@/app/components/footer";
 
 export default function Home() {
 	return (
-		<>
+		<div className="overflow-x-hidden">
 			{/* Sticky Navbar */}
 			<AppNavbar />
 
 			{/* Hero Section */}
-			<section id="home" className="relative">
+			<section id="home" className="relative overflow-hidden">
 				<HeroSection />
 			</section>
 
@@ -28,7 +28,7 @@ export default function Home() {
 			</div>
 
 			{/* Features Section */}
-			<section id="features" className="relative">
+			<section id="features" className="relative overflow-hidden">
 				<FeatureSection />
 			</section>
 
@@ -43,7 +43,7 @@ export default function Home() {
 			</div>
 
 			{/* FAQ Section */}
-			<section id="faq" className="relative">
+			<section id="faq" className="relative overflow-hidden">
 				<FAQSection />
 			</section>
 
@@ -58,7 +58,7 @@ export default function Home() {
 			</div>
 
 			{/* Pricing Section */}
-			<section id="pricing" className="relative">
+			<section id="pricing" className="relative overflow-hidden">
 				<PricingSection />
 			</section>
 
@@ -74,6 +74,6 @@ export default function Home() {
 
 			{/* Footer */}
 			<Footer />
-		</>
+		</div>
 	);
 }

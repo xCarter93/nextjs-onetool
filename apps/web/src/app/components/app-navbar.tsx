@@ -66,9 +66,9 @@ const Logo: React.FC = () => (
 		<Image
 			src="/OneTool.png"
 			alt="OneTool Logo"
-			width={180}
-			height={180}
-			className="rounded-md dark:brightness-0 dark:invert"
+			width={140}
+			height={140}
+			className="rounded-md dark:brightness-0 dark:invert sm:w-[180px]"
 		/>
 	</div>
 );
@@ -208,14 +208,14 @@ function AppNavBar() {
 
 				{/* Mobile Navigation */}
 				{isMenuOpen && (
-					<div className="md:hidden">
-						<div className="px-2 pt-2 pb-3 space-y-1 bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl rounded-xl border border-gray-200 dark:border-gray-600 mt-2">
+					<div className="md:hidden absolute left-0 right-0 top-full">
+						<div className="mx-4 mt-2 px-3 pt-3 pb-4 space-y-1 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-600 shadow-lg">
 							{navigationLinks.map((link, index) => (
 								<Link
 									key={index}
 									href={link.href}
 									scroll={true}
-									className="block px-3 py-2 text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-all duration-300"
+									className="block px-4 py-3 text-base font-medium text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-all duration-200 active:bg-gray-200 dark:active:bg-gray-600"
 									onClick={(e) => {
 										e.preventDefault();
 										const targetId = link.href.replace("#", "");
@@ -232,17 +232,14 @@ function AppNavBar() {
 									{link.label}
 								</Link>
 							))}
-							<div className="px-3 py-2 space-y-2">
-								<div className="flex justify-center mb-2">
-									<ThemeSwitcher />
-								</div>
+							<div className="pt-3 mt-2 border-t border-gray-200 dark:border-gray-700">
 								<SignedOut>
-									<div className="space-y-2">
+									<div className="flex items-center justify-center gap-2">
+										<ThemeSwitcher />
 										<SignInButton mode="modal" forceRedirectUrl="/home">
 											<StyledButton
 												intent="outline"
 												size="sm"
-												className="w-full"
 											>
 												Sign In
 											</StyledButton>
@@ -251,7 +248,6 @@ function AppNavBar() {
 											<StyledButton
 												intent="primary"
 												size="sm"
-												className="w-full"
 											>
 												Sign Up
 											</StyledButton>
@@ -259,17 +255,19 @@ function AppNavBar() {
 									</div>
 								</SignedOut>
 								<SignedIn>
-									<StyledButton
-										intent="primary"
-										size="sm"
-										className="w-full"
-										onClick={() => {
-											router.push("/home");
-											setIsMenuOpen(false);
-										}}
-									>
-										Go To Dashboard
-									</StyledButton>
+									<div className="flex items-center justify-center gap-2">
+										<ThemeSwitcher />
+										<StyledButton
+											intent="primary"
+											size="sm"
+											onClick={() => {
+												router.push("/home");
+												setIsMenuOpen(false);
+											}}
+										>
+											Go To Dashboard
+										</StyledButton>
+									</div>
 								</SignedIn>
 							</div>
 						</div>
