@@ -204,15 +204,15 @@ export const reportConfigTool = createTool({
 			.enum(["today", "this_week", "this_month", "this_quarter", "this_year", "custom", "all_time"])
 			.optional()
 			.default("this_month")
-			.describe("Preset date range for the report"),
+			.describe("Date range type. IMPORTANT: Use 'custom' when user mentions specific dates like 'December 1, 2025' or 'starting on [date]' or 'from [date] to [date]'"),
 		customStartDate: z
 			.number()
 			.optional()
-			.describe("Custom start date timestamp (only if dateRangeType is 'custom')"),
+			.describe("Custom start date as Unix timestamp in MILLISECONDS. REQUIRED when user specifies a start date like 'starting on December 1, 2025'. Example: Dec 1, 2025 = 1733029200000"),
 		customEndDate: z
 			.number()
 			.optional()
-			.describe("Custom end date timestamp (only if dateRangeType is 'custom')"),
+			.describe("Custom end date as Unix timestamp in MILLISECONDS. Use when user specifies an end date. If only start date given, omit this to show data from start date to now"),
 		visualizationType: z
 			.enum(["table", "bar", "line", "pie"])
 			.optional()

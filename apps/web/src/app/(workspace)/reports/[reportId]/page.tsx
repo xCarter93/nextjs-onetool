@@ -31,10 +31,17 @@ import {
 	Table as TableIcon,
 	Pencil,
 	Eye,
+	Settings2,
+	Database,
+	Calendar,
+	LayoutGrid,
 } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
 import type { Id } from "@onetool/backend/convex/_generated/dataModel";
 import { ReportPreview } from "../components/report-preview";
+import { StyledButton } from "@/components/ui/styled/styled-button";
+import DatePickerRange from "@/components/shared/date-picker-range";
+import { DateRange } from "react-day-picker";
 
 const entityOptions = [
 	{ value: "clients", label: "Clients" },
@@ -78,10 +85,17 @@ const visualizationOptions = [
 ];
 
 const dateRangeOptions = [
+	{ value: "all_time", label: "All Time" },
+	{ value: "today", label: "Today" },
+	{ value: "this_week", label: "This Week" },
 	{ value: "this_month", label: "This Month" },
 	{ value: "this_quarter", label: "This Quarter" },
 	{ value: "this_year", label: "This Year" },
-	{ value: "all_time", label: "All Time" },
+	{ value: "last_7_days", label: "Last 7 Days" },
+	{ value: "last_30_days", label: "Last 30 Days" },
+	{ value: "last_90_days", label: "Last 90 Days" },
+	{ value: "last_year", label: "Last Year" },
+	{ value: "custom", label: "Custom Range" },
 ];
 
 type EntityType = "clients" | "projects" | "tasks" | "quotes" | "invoices" | "activities";
@@ -105,6 +119,7 @@ export default function ReportViewPage() {
 	const [groupBy, setGroupBy] = useState<string>("status");
 	const [vizType, setVizType] = useState<VizType>("bar");
 	const [dateRangePreset, setDateRangePreset] = useState<string>("this_month");
+	const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>(undefined);
 
 	// Initialize form state when report loads
 	useEffect(() => {
@@ -123,6 +138,17 @@ export default function ReportViewPage() {
 		}
 	}, [report]);
 
+	// Get effective date range (custom or preset)
+	const getEffectiveDateRange = () => {
+		if (dateRangePreset === "custom" && customDateRange) {
+			return {
+				start: customDateRange.from?.getTime(),
+				end: customDateRange.to ? new Date(customDateRange.to).setHours(23, 59, 59, 999) : undefined,
+			};
+		}
+		return getDateRange(dateRangePreset);
+	};
+
 	const handleSave = async () => {
 		if (!name.trim()) return;
 
@@ -136,7 +162,7 @@ export default function ReportViewPage() {
 				config: {
 					entityType,
 					groupBy: groupBy ? [groupBy] : undefined,
-					dateRange: getDateRange(dateRangePreset),
+					dateRange: getEffectiveDateRange(),
 				},
 				visualization: {
 					type: vizType,
@@ -175,11 +201,11 @@ export default function ReportViewPage() {
 			<div className="p-6 text-center">
 				<h1 className="text-xl font-semibold text-foreground mb-2">Report not found</h1>
 				<p className="text-muted-foreground mb-4">
-					This report may have been deleted or you don't have access to it.
+					This report may have been deleted or you do not have access to it.
 				</p>
-				<Button intent="primary" onPress={() => router.push("/reports")}>
+				<StyledButton intent="primary" onClick={() => router.push("/reports")}>
 					Back to Reports
-				</Button>
+				</StyledButton>
 			</div>
 		);
 	}
@@ -188,7 +214,7 @@ export default function ReportViewPage() {
 	const config = {
 		entityType,
 		groupBy: groupBy ? [groupBy] : undefined,
-		dateRange: getDateRange(dateRangePreset),
+		dateRange: getEffectiveDateRange(),
 	};
 
 	const visualization = {
@@ -222,13 +248,14 @@ export default function ReportViewPage() {
 				<div className="flex items-center gap-2">
 					{isEditing ? (
 						<>
-							<Button intent="outline" onPress={handleCancel}>
+							<StyledButton intent="outline" onClick={handleCancel} showArrow={false}>
 								Cancel
-							</Button>
-							<Button
+							</StyledButton>
+							<StyledButton
 								intent="primary"
-								onPress={handleSave}
-								isDisabled={!name.trim() || isSaving}
+								onClick={handleSave}
+								disabled={!name.trim() || isSaving}
+								showArrow={false}
 							>
 								{isSaving ? (
 									<Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -236,13 +263,13 @@ export default function ReportViewPage() {
 									<Save className="w-4 h-4 mr-2" />
 								)}
 								Save Changes
-							</Button>
+							</StyledButton>
 						</>
 					) : (
-						<Button intent="outline" onPress={() => setIsEditing(true)}>
+						<StyledButton intent="outline" onClick={() => setIsEditing(true)} showArrow={false}>
 							<Pencil className="w-4 h-4 mr-2" />
 							Edit
-						</Button>
+						</StyledButton>
 					)}
 				</div>
 			</div>
@@ -258,101 +285,151 @@ export default function ReportViewPage() {
 								Update your report settings
 							</CardDescription>
 						</CardHeader>
-						<CardContent className="relative z-10 space-y-4">
-							<div className="space-y-2">
-								<Label htmlFor="name">Report Name</Label>
-								<Input
-									id="name"
-									value={name}
-									onChange={(e) => setName(e.target.value)}
-								/>
+						<CardContent className="relative z-10 space-y-6">
+							{/* Basic Info Section */}
+							<div className="space-y-4">
+								<div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+									<Settings2 className="w-4 h-4" />
+									<span>Basic Information</span>
+								</div>
+								<div className="space-y-4 pl-6">
+									<div className="space-y-2">
+										<Label htmlFor="name">Report Name</Label>
+										<Input
+											id="name"
+											value={name}
+											onChange={(e) => setName(e.target.value)}
+											className="transition-all focus:ring-2 focus:ring-primary/20"
+										/>
+									</div>
+
+									<div className="space-y-2">
+										<Label htmlFor="description">Description</Label>
+										<Textarea
+											id="description"
+											value={description}
+											onChange={(e) => setDescription(e.target.value)}
+											rows={2}
+											className="transition-all focus:ring-2 focus:ring-primary/20"
+										/>
+									</div>
+								</div>
 							</div>
 
-							<div className="space-y-2">
-								<Label htmlFor="description">Description</Label>
-								<Textarea
-									id="description"
-									value={description}
-									onChange={(e) => setDescription(e.target.value)}
-									rows={2}
-								/>
-							</div>
+							<div className="border-t border-border/50" />
 
-							<div className="space-y-2">
-								<Label>Data Source</Label>
-								<Select
-									value={entityType}
-									onValueChange={(v) => {
-										setEntityType(v as EntityType);
-										const firstOption = groupByOptions[v]?.[0]?.value;
-										if (firstOption) setGroupBy(firstOption);
-									}}
-								>
-									<SelectTrigger>
-										<SelectValue />
-									</SelectTrigger>
-									<SelectContent>
-										{entityOptions.map((opt) => (
-											<SelectItem key={opt.value} value={opt.value}>
-												{opt.label}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-							</div>
-
-							<div className="space-y-2">
-								<Label>Group By</Label>
-								<Select value={groupBy} onValueChange={setGroupBy}>
-									<SelectTrigger>
-										<SelectValue />
-									</SelectTrigger>
-									<SelectContent>
-										{groupByOptions[entityType]?.map((opt) => (
-											<SelectItem key={opt.value} value={opt.value}>
-												{opt.label}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-							</div>
-
-							<div className="space-y-2">
-								<Label>Date Range</Label>
-								<Select value={dateRangePreset} onValueChange={setDateRangePreset}>
-									<SelectTrigger>
-										<SelectValue />
-									</SelectTrigger>
-									<SelectContent>
-										{dateRangeOptions.map((opt) => (
-											<SelectItem key={opt.value} value={opt.value}>
-												{opt.label}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-							</div>
-
-							<div className="space-y-2">
-								<Label>Visualization</Label>
-								<div className="grid grid-cols-4 gap-2">
-									{visualizationOptions.map((opt) => {
-										const Icon = opt.icon;
-										return (
-											<button
-												key={opt.value}
-												onClick={() => setVizType(opt.value as VizType)}
-												className={`flex flex-col items-center gap-1.5 p-3 rounded-lg border transition-all ${
-													vizType === opt.value
-														? "border-primary bg-primary/10 text-primary"
-														: "border-border hover:border-primary/50"
-												}`}
+							{/* Data Configuration Section */}
+							<div className="space-y-4">
+								<div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+									<Database className="w-4 h-4" />
+									<span>Data Configuration</span>
+								</div>
+								<div className="pl-6">
+									<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+										<div className="space-y-2">
+											<Label>Data Source</Label>
+											<Select
+												value={entityType}
+												onValueChange={(v) => {
+													setEntityType(v as EntityType);
+													const firstOption = groupByOptions[v]?.[0]?.value;
+													if (firstOption) setGroupBy(firstOption);
+												}}
 											>
-												<Icon className="w-5 h-5" />
-												<span className="text-xs">{opt.label}</span>
-											</button>
-										);
-									})}
+												<SelectTrigger className="transition-all focus:ring-2 focus:ring-primary/20">
+													<SelectValue />
+												</SelectTrigger>
+												<SelectContent>
+													{entityOptions.map((opt) => (
+														<SelectItem key={opt.value} value={opt.value}>
+															{opt.label}
+														</SelectItem>
+													))}
+												</SelectContent>
+											</Select>
+										</div>
+
+										<div className="space-y-2">
+											<Label>Group By</Label>
+											<Select value={groupBy} onValueChange={setGroupBy}>
+												<SelectTrigger className="transition-all focus:ring-2 focus:ring-primary/20">
+													<SelectValue />
+												</SelectTrigger>
+												<SelectContent>
+													{groupByOptions[entityType]?.map((opt) => (
+														<SelectItem key={opt.value} value={opt.value}>
+															{opt.label}
+														</SelectItem>
+													))}
+												</SelectContent>
+											</Select>
+										</div>
+
+										<div className="space-y-2">
+											<Label>Date Range</Label>
+											<Select value={dateRangePreset} onValueChange={(value) => {
+												setDateRangePreset(value);
+												if (value !== "custom") {
+													setCustomDateRange(undefined);
+												}
+											}}>
+												<SelectTrigger className="transition-all focus:ring-2 focus:ring-primary/20">
+													<SelectValue />
+												</SelectTrigger>
+												<SelectContent>
+													{dateRangeOptions.map((opt) => (
+														<SelectItem key={opt.value} value={opt.value}>
+															{opt.label}
+														</SelectItem>
+													))}
+												</SelectContent>
+											</Select>
+										</div>
+									</div>
+									{dateRangePreset === "custom" && (
+										<div className="mt-3 p-4 rounded-xl bg-muted/30 border border-border/50 space-y-3">
+											<div className="flex items-center gap-2">
+												<div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center">
+													<Calendar className="w-3 h-3 text-primary" />
+												</div>
+												<p className="text-xs font-medium text-muted-foreground">Select a custom date range</p>
+											</div>
+											<DatePickerRange
+												value={customDateRange}
+												onChange={(range) => setCustomDateRange(range)}
+												showArrow={false}
+											/>
+										</div>
+									)}
+								</div>
+							</div>
+
+							<div className="border-t border-border/50" />
+
+							{/* Visualization Section */}
+							<div className="space-y-4">
+								<div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+									<LayoutGrid className="w-4 h-4" />
+									<span>Visualization</span>
+								</div>
+								<div className="pl-6">
+									<div className="grid grid-cols-4 gap-2">
+										{visualizationOptions.map((opt) => {
+											const Icon = opt.icon;
+											return (
+												<StyledButton
+													key={opt.value}
+													onClick={() => setVizType(opt.value as VizType)}
+													intent={vizType === opt.value ? "primary" : "outline"}
+													className="flex flex-col items-center gap-1.5 p-3 h-auto transition-all hover:scale-[1.02]"
+													showArrow={false}
+												>
+													<Icon className="w-5 h-5" />
+													<span className="text-xs">{opt.label}</span>
+												</StyledButton>
+											);
+										})}
+									</div>
 								</div>
 							</div>
 						</CardContent>
@@ -364,7 +441,7 @@ export default function ReportViewPage() {
 					<div className="absolute inset-0 bg-linear-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
 					<CardHeader className="relative z-10">
 						<CardTitle className="text-base flex items-center gap-2">
-							<Eye className="w-4 h-4" />
+							<Eye className="w-4 h-4 text-primary" />
 							{isEditing ? "Preview" : "Report Data"}
 						</CardTitle>
 						<CardDescription>
@@ -385,8 +462,22 @@ export default function ReportViewPage() {
 function getDateRange(preset: string): { start?: number; end?: number } | undefined {
 	const now = new Date();
 	const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+	const endOfToday = new Date(today);
+	endOfToday.setHours(23, 59, 59, 999);
 
 	switch (preset) {
+		case "today": {
+			return { start: today.getTime(), end: endOfToday.getTime() };
+		}
+		case "this_week": {
+			const dayOfWeek = today.getDay();
+			const startOfWeek = new Date(today);
+			startOfWeek.setDate(today.getDate() - dayOfWeek);
+			const endOfWeek = new Date(startOfWeek);
+			endOfWeek.setDate(startOfWeek.getDate() + 6);
+			endOfWeek.setHours(23, 59, 59, 999);
+			return { start: startOfWeek.getTime(), end: endOfWeek.getTime() };
+		}
 		case "this_month": {
 			const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 			const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
@@ -405,6 +496,27 @@ function getDateRange(preset: string): { start?: number; end?: number } | undefi
 			const endOfYear = new Date(today.getFullYear(), 11, 31);
 			endOfYear.setHours(23, 59, 59, 999);
 			return { start: startOfYear.getTime(), end: endOfYear.getTime() };
+		}
+		case "last_7_days": {
+			const start = new Date(today);
+			start.setDate(today.getDate() - 6);
+			return { start: start.getTime(), end: endOfToday.getTime() };
+		}
+		case "last_30_days": {
+			const start = new Date(today);
+			start.setDate(today.getDate() - 29);
+			return { start: start.getTime(), end: endOfToday.getTime() };
+		}
+		case "last_90_days": {
+			const start = new Date(today);
+			start.setDate(today.getDate() - 89);
+			return { start: start.getTime(), end: endOfToday.getTime() };
+		}
+		case "last_year": {
+			const startOfLastYear = new Date(today.getFullYear() - 1, 0, 1);
+			const endOfLastYear = new Date(today.getFullYear() - 1, 11, 31);
+			endOfLastYear.setHours(23, 59, 59, 999);
+			return { start: startOfLastYear.getTime(), end: endOfLastYear.getTime() };
 		}
 		case "all_time":
 		default:

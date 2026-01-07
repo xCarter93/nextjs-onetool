@@ -27,6 +27,7 @@ import { useRouter } from "next/navigation";
 import type { Doc, Id } from "@onetool/backend/convex/_generated/dataModel";
 import DeleteConfirmationModal from "@/components/ui/delete-confirmation-modal";
 import { Badge } from "@/components/ui/badge";
+import { StyledButton } from "@/components/ui/styled/styled-button";
 
 const formatDate = (timestamp: number) => {
 	return new Date(timestamp).toLocaleDateString("en-US", {
@@ -210,19 +211,14 @@ export default function ReportsPage() {
 						</p>
 					</div>
 				</div>
-				<button
+				<StyledButton
 					onClick={() => router.push("/reports/new")}
-					className="group inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80 transition-all duration-200 px-4 py-2 rounded-lg bg-primary/10 hover:bg-primary/15 ring-1 ring-primary/30 hover:ring-primary/40 shadow-sm hover:shadow-md backdrop-blur-sm"
+					intent="primary"
+					size="md"
+					icon={<Plus className="h-4 w-4" />}
 				>
-					<Plus className="h-4 w-4" />
 					New Report
-					<span
-						aria-hidden="true"
-						className="group-hover:translate-x-1 transition-transform duration-200"
-					>
-						→
-					</span>
-				</button>
+				</StyledButton>
 			</div>
 
 			{/* Stats Cards */}
@@ -297,19 +293,14 @@ export default function ReportsPage() {
 						<p className="text-muted-foreground mb-6 max-w-sm mx-auto">
 							Create your first report to visualize your business data and gain insights.
 						</p>
-						<button
+						<StyledButton
 							onClick={() => router.push("/reports/new")}
-							className="group inline-flex items-center gap-2 rounded-lg bg-primary/10 px-4 py-2 text-sm font-semibold text-primary shadow-sm transition-all duration-200 hover:bg-primary/15 hover:text-primary/80 hover:shadow-md ring-1 ring-primary/30 hover:ring-primary/40 backdrop-blur-sm"
+							intent="primary"
+							size="md"
+							icon={<Plus className="h-4 w-4" />}
 						>
-							<Plus className="h-4 w-4" />
 							Create Your First Report
-							<span
-								aria-hidden="true"
-								className="transition-transform duration-200 group-hover:translate-x-1"
-							>
-								→
-							</span>
-						</button>
+						</StyledButton>
 					</CardContent>
 				</Card>
 			) : isLoading ? (
