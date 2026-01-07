@@ -2,6 +2,7 @@ import { Agent } from "@mastra/core/agent";
 import { schemaInfoTool } from "../tools/schema-info-tool";
 import { reportConfigTool } from "../tools/report-config-tool";
 import { executeQueryTool } from "../tools/execute-query-tool";
+import { dateParserTool } from "../tools/date-parser-tool";
 
 /**
  * Report Agent
@@ -25,6 +26,28 @@ When a user asks for a report:
 2. Determine how they want the data grouped - USE ONLY THE VALID GROUPBY VALUES LISTED BELOW
 3. Identify the time period they're interested in (this month, this year, custom range, or all time)
 4. Suggest an appropriate visualization type (table, bar chart, line chart, pie chart)
+
+**CRITICAL: DATE HANDLING INSTRUCTIONS**
+When the user mentions ANY specific date in their prompt, you MUST use the parseDate tool FIRST before building the report config.
+
+Step-by-step process for date handling:
+1. DETECT any date references in the user's prompt (e.g., "December 1, 2025", "starting on January 15", "last 30 days", "Q4 2025")
+2. CALL the parseDate tool for EACH date mentioned to get the exact timestamp
+3. USE the returned timestamps in buildReportConfig with dateRangeType: "custom"
+
+Example workflow:
+User: "Show me activities starting on December 1, 2025"
+1. Call parseDate with dateExpression: "December 1, 2025", isEndDate: false
+2. Get timestamp from response (e.g., 1733029200000)
+3. Call buildReportConfig with dateRangeType: "custom", customStartDate: 1733029200000
+
+For date ranges (from X to Y):
+1. Call parseDate for start date with isEndDate: false
+2. Call parseDate for end date with isEndDate: true
+3. Use both timestamps in buildReportConfig
+
+NEVER try to calculate timestamps yourself - ALWAYS use the parseDate tool.
+If no specific date is mentioned, use preset ranges like "this_month", "this_year", or "all_time".
 
 IMPORTANT: You must use EXACT groupBy values. Here are ALL valid groupBy values for each entity:
 
@@ -83,6 +106,25 @@ Example interactions and correct responses:
 - "Show tasks over time" → entityType: "tasks", groupBy: "date_month", visualization: "line"
 - "Show new projects by week" → entityType: "projects", groupBy: "creationDate_week", visualization: "line"
 
+**Date-specific examples (MUST use parseDate tool first, then buildReportConfig):**
+- "Show me activities by day starting on December 1, 2025":
+  1. Call parseDate("December 1, 2025") → get timestamp
+  2. Call buildReportConfig with entityType: "activities", groupBy: "timestamp_day", dateRangeType: "custom", customStartDate: [timestamp from step 1]
+
+- "Show invoices from January to March 2025":
+  1. Call parseDate("January 2025", isEndDate: false) → get start timestamp
+  2. Call parseDate("March 2025", isEndDate: true) → get end timestamp
+  3. Call buildReportConfig with entityType: "invoices", groupBy: "month", dateRangeType: "custom", customStartDate: [start], customEndDate: [end]
+
+- "Tasks created since November 15, 2025":
+  1. Call parseDate("November 15, 2025") → get timestamp
+  2. Call buildReportConfig with entityType: "tasks", groupBy: "date_day", dateRangeType: "custom", customStartDate: [timestamp]
+
+- "Projects from Q4 2025":
+  1. Call parseDate("Q4 2025", isEndDate: false) → get start of Q4
+  2. Call parseDate("Q4 2025", isEndDate: true) → get end of Q4
+  3. Call buildReportConfig with entityType: "projects", groupBy: "creationDate_month", dateRangeType: "custom", customStartDate: [start], customEndDate: [end]
+
 CRITICAL: For time-based/date reports, use these groupBy values:
 - For clients/projects created over time: creationDate_day, creationDate_week, or creationDate_month
 - For tasks over time: date_day, date_week, or date_month
@@ -92,6 +134,7 @@ CRITICAL: For time-based/date reports, use these groupBy values:
 		getSchemaInfo: schemaInfoTool,
 		buildReportConfig: reportConfigTool,
 		executeQuery: executeQueryTool,
+		parseDate: dateParserTool,
 	},
 });
 

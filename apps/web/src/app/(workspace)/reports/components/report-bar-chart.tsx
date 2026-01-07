@@ -16,6 +16,7 @@ import {
 	ChartTooltip,
 	ChartTooltipContent,
 } from "@/components/ui/chart";
+import { CHART_COLORS, getChartColor } from "@/lib/chart-colors";
 
 interface DataPoint {
 	name: string;
@@ -31,18 +32,6 @@ interface ReportBarChartProps {
 	entityType: string;
 }
 
-// Glass blue color palette - variations of the primary blue
-const COLORS = [
-	"rgb(0, 166, 244)",      // Primary glass blue
-	"rgb(56, 189, 248)",     // Lighter blue (sky-400)
-	"rgb(14, 165, 233)",     // Slightly darker (sky-500)
-	"rgb(2, 132, 199)",      // Medium blue (sky-600)
-	"rgb(3, 105, 161)",      // Darker blue (sky-700)
-	"rgb(125, 211, 252)",    // Pale blue (sky-300)
-	"rgb(7, 89, 133)",       // Deep blue (sky-800)
-	"rgb(186, 230, 253)",    // Very light blue (sky-200)
-];
-
 export function ReportBarChart({
 	data,
 	total,
@@ -53,14 +42,14 @@ export function ReportBarChart({
 	const chartConfig: ChartConfig = data.reduce((acc, item, index) => {
 		acc[item.name] = {
 			label: item.name,
-			color: COLORS[index % COLORS.length],
+			color: getChartColor(index, CHART_COLORS.primary),
 		};
 		return acc;
 	}, {} as ChartConfig);
 
 	chartConfig.value = {
 		label: "Count",
-		color: COLORS[0],
+		color: getChartColor(0, CHART_COLORS.primary),
 	};
 
 	const formatValue = (value: number) => {
@@ -121,7 +110,7 @@ export function ReportBarChart({
 						{data.map((entry, index) => (
 							<Cell
 								key={`cell-${index}`}
-								fill={COLORS[index % COLORS.length]}
+								fill={getChartColor(index, CHART_COLORS.primary)}
 							/>
 						))}
 					</Bar>
@@ -134,7 +123,7 @@ export function ReportBarChart({
 					<div key={item.name} className="flex items-center gap-1.5 text-xs">
 						<div
 							className="w-2.5 h-2.5 rounded-sm"
-							style={{ backgroundColor: COLORS[index % COLORS.length] }}
+							style={{ backgroundColor: getChartColor(index, CHART_COLORS.primary) }}
 						/>
 						<span className="text-muted-foreground">{item.name}</span>
 						<span className="font-medium text-foreground">({item.value})</span>

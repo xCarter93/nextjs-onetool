@@ -30,6 +30,7 @@ import type * as lib_activities from "../lib/activities.js";
 import type * as lib_aggregates from "../lib/aggregates.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_memberships from "../lib/memberships.js";
+import type * as lib_organization from "../lib/organization.js";
 import type * as lib_permissions from "../lib/permissions.js";
 import type * as lib_shared from "../lib/shared.js";
 import type * as lib_storage from "../lib/storage.js";
@@ -87,6 +88,7 @@ declare const fullApi: ApiFromModules<{
   "lib/aggregates": typeof lib_aggregates;
   "lib/auth": typeof lib_auth;
   "lib/memberships": typeof lib_memberships;
+  "lib/organization": typeof lib_organization;
   "lib/permissions": typeof lib_permissions;
   "lib/shared": typeof lib_shared;
   "lib/storage": typeof lib_storage;

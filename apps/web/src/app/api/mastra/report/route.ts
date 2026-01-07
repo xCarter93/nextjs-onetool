@@ -73,6 +73,109 @@ Respond with a JSON object containing:
 }
 
 /**
+ * Parse specific dates from prompt text
+ * Handles patterns like "December 1, 2025", "since November 2025", "from X to Y"
+ */
+function parseSpecificDates(prompt: string): { start?: number; end?: number } | null {
+	const MONTH_NAMES: Record<string, number> = {
+		january: 0, jan: 0,
+		february: 1, feb: 1,
+		march: 2, mar: 2,
+		april: 3, apr: 3,
+		may: 4,
+		june: 5, jun: 5,
+		july: 6, jul: 6,
+		august: 7, aug: 7,
+		september: 8, sep: 8, sept: 8,
+		october: 9, oct: 9,
+		november: 10, nov: 10,
+		december: 11, dec: 11,
+	};
+
+	// Helper to parse a date string into a Date object
+	const parseDate = (dateStr: string): Date | null => {
+		const input = dateStr.toLowerCase().trim();
+
+		// "Month Day, Year" (e.g., "december 1, 2025")
+		const monthDayYearMatch = input.match(/([a-z]+)\s+(\d{1,2})(?:st|nd|rd|th)?,?\s*(\d{4})/);
+		if (monthDayYearMatch) {
+			const month = MONTH_NAMES[monthDayYearMatch[1]];
+			const day = parseInt(monthDayYearMatch[2], 10);
+			const year = parseInt(monthDayYearMatch[3], 10);
+			if (month !== undefined && day >= 1 && day <= 31 && year >= 1900 && year <= 2100) {
+				return new Date(year, month, day);
+			}
+		}
+
+		// "Day Month Year" (e.g., "1 december 2025")
+		const dayMonthYearMatch = input.match(/(\d{1,2})(?:st|nd|rd|th)?\s+([a-z]+),?\s*(\d{4})/);
+		if (dayMonthYearMatch) {
+			const day = parseInt(dayMonthYearMatch[1], 10);
+			const month = MONTH_NAMES[dayMonthYearMatch[2]];
+			const year = parseInt(dayMonthYearMatch[3], 10);
+			if (month !== undefined && day >= 1 && day <= 31 && year >= 1900 && year <= 2100) {
+				return new Date(year, month, day);
+			}
+		}
+
+		// "Month Year" (e.g., "december 2025" - assumes first of month)
+		const monthYearMatch = input.match(/([a-z]+)\s+(\d{4})/);
+		if (monthYearMatch) {
+			const month = MONTH_NAMES[monthYearMatch[1]];
+			const year = parseInt(monthYearMatch[2], 10);
+			if (month !== undefined && year >= 1900 && year <= 2100) {
+				return new Date(year, month, 1);
+			}
+		}
+
+		return null;
+	};
+
+	// Look for "since [date]", "starting on [date]", "from [date]", "after [date]"
+	const sinceMatch = prompt.match(/(?:since|starting\s+(?:on|from)?|from|after)\s+([a-z]+\s+\d{1,2}(?:st|nd|rd|th)?,?\s*\d{4})/i);
+	if (sinceMatch) {
+		const startDate = parseDate(sinceMatch[1]);
+		if (startDate) {
+			return { start: startDate.getTime() };
+		}
+	}
+
+	// Look for "since [month year]" (e.g., "since november 2025")
+	const sinceMonthMatch = prompt.match(/(?:since|starting\s+(?:on|from|in)?|from|after|in)\s+([a-z]+\s+\d{4})/i);
+	if (sinceMonthMatch) {
+		const startDate = parseDate(sinceMonthMatch[1]);
+		if (startDate) {
+			return { start: startDate.getTime() };
+		}
+	}
+
+	// Look for standalone specific date (e.g., "december 1, 2025")
+	const standaloneMatch = prompt.match(/([a-z]+)\s+(\d{1,2})(?:st|nd|rd|th)?,?\s*(\d{4})/i);
+	if (standaloneMatch) {
+		const month = MONTH_NAMES[standaloneMatch[1].toLowerCase()];
+		const day = parseInt(standaloneMatch[2], 10);
+		const year = parseInt(standaloneMatch[3], 10);
+		if (month !== undefined && day >= 1 && day <= 31 && year >= 1900 && year <= 2100) {
+			const startDate = new Date(year, month, day);
+			return { start: startDate.getTime() };
+		}
+	}
+
+	// Look for "from [date] to [date]"
+	const fromToMatch = prompt.match(/from\s+([a-z]+\s+\d{1,2}(?:st|nd|rd|th)?,?\s*\d{4})\s+to\s+([a-z]+\s+\d{1,2}(?:st|nd|rd|th)?,?\s*\d{4})/i);
+	if (fromToMatch) {
+		const startDate = parseDate(fromToMatch[1]);
+		const endDate = parseDate(fromToMatch[2]);
+		if (startDate && endDate) {
+			endDate.setHours(23, 59, 59, 999);
+			return { start: startDate.getTime(), end: endDate.getTime() };
+		}
+	}
+
+	return null;
+}
+
+/**
  * Infer report configuration from natural language prompt
  * Fallback when agent parsing fails
  */
@@ -118,9 +221,42 @@ function inferConfigFromPrompt(prompt: string): {
 	) {
 		groupBy = "leadSource";
 	} else if (promptLower.includes("by type")) {
-		groupBy = entityType === "projects" ? "projectType" : "type";
+		groupBy = entityType === "projects" ? "projectType" : "activityType";
 	} else if (promptLower.includes("by month") || promptLower.includes("monthly")) {
-		groupBy = "month";
+		// Use the correct month groupBy based on entity type
+		if (entityType === "invoices") {
+			groupBy = "month";
+		} else if (entityType === "activities") {
+			groupBy = "timestamp_month";
+		} else if (entityType === "tasks") {
+			groupBy = "date_month";
+		} else {
+			groupBy = "creationDate_month";
+		}
+	} else if (promptLower.includes("by week") || promptLower.includes("weekly")) {
+		if (entityType === "activities") {
+			groupBy = "timestamp_week";
+		} else if (entityType === "tasks") {
+			groupBy = "date_week";
+		} else {
+			groupBy = "creationDate_week";
+		}
+	} else if (
+		promptLower.includes("by day") ||
+		promptLower.includes("daily") ||
+		promptLower.includes("by date") ||
+		promptLower.includes("by created date") ||
+		promptLower.includes("grouped by date") ||
+		promptLower.includes("grouped by created")
+	) {
+		// Use the correct day groupBy based on entity type
+		if (entityType === "activities") {
+			groupBy = "timestamp_day";
+		} else if (entityType === "tasks") {
+			groupBy = "date_day";
+		} else {
+			groupBy = "creationDate_day";
+		}
 	} else if (promptLower.includes("by client")) {
 		groupBy = "client";
 	} else if (
@@ -137,11 +273,24 @@ function inferConfigFromPrompt(prompt: string): {
 
 	// Detect visualization type
 	let vizType = "bar";
+
+	// Check if it's a time-series groupBy
+	const isTimeSeries = groupBy && (
+		groupBy.startsWith("creationDate_") ||
+		groupBy.startsWith("timestamp_") ||
+		groupBy.startsWith("date_") ||
+		groupBy === "month"
+	);
+
 	if (
+		promptLower.includes("line chart") ||
 		promptLower.includes("trend") ||
 		promptLower.includes("over time") ||
 		promptLower.includes("monthly") ||
-		groupBy === "month"
+		promptLower.includes("by day") ||
+		promptLower.includes("by date") ||
+		promptLower.includes("by week") ||
+		isTimeSeries
 	) {
 		vizType = "line";
 	} else if (
@@ -152,6 +301,8 @@ function inferConfigFromPrompt(prompt: string): {
 		vizType = "pie";
 	} else if (promptLower.includes("table") || promptLower.includes("list")) {
 		vizType = "table";
+	} else if (promptLower.includes("bar chart") || promptLower.includes("bar graph")) {
+		vizType = "bar";
 	}
 
 	// Detect date range
@@ -159,7 +310,11 @@ function inferConfigFromPrompt(prompt: string): {
 	const now = new Date();
 	const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-	if (promptLower.includes("this month")) {
+	// Try to parse specific dates first
+	const specificDateRange = parseSpecificDates(promptLower);
+	if (specificDateRange) {
+		dateRange = specificDateRange;
+	} else if (promptLower.includes("this month")) {
 		const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 		const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
 		endOfMonth.setHours(23, 59, 59, 999);
@@ -178,6 +333,18 @@ function inferConfigFromPrompt(prompt: string): {
 		const endOfYear = new Date(today.getFullYear(), 11, 31);
 		endOfYear.setHours(23, 59, 59, 999);
 		dateRange = { start: startOfYear.getTime(), end: endOfYear.getTime() };
+	} else if (promptLower.includes("last 7 days") || promptLower.includes("last week")) {
+		const startDate = new Date(today);
+		startDate.setDate(startDate.getDate() - 7);
+		dateRange = { start: startDate.getTime(), end: now.getTime() };
+	} else if (promptLower.includes("last 30 days") || promptLower.includes("last month")) {
+		const startDate = new Date(today);
+		startDate.setDate(startDate.getDate() - 30);
+		dateRange = { start: startDate.getTime(), end: now.getTime() };
+	} else if (promptLower.includes("last 90 days") || promptLower.includes("last 3 months")) {
+		const startDate = new Date(today);
+		startDate.setDate(startDate.getDate() - 90);
+		dateRange = { start: startDate.getTime(), end: now.getTime() };
 	}
 
 	// Generate name

@@ -32,9 +32,17 @@ import {
 	PieChart,
 	Table as TableIcon,
 	Send,
+	Settings2,
+	Eye,
+	Database,
+	Calendar,
+	LayoutGrid,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { ReportPreview } from "../components/report-preview";
+import { StyledButton } from "@/components/ui/styled/styled-button";
+import DatePickerRange from "@/components/shared/date-picker-range";
+import { DateRange } from "react-day-picker";
 
 const entityOptions = [
 	{ value: "clients", label: "Clients", description: "Customer and prospect data" },
@@ -102,6 +110,7 @@ const dateRangeOptions = [
 	{ value: "last_30_days", label: "Last 30 Days" },
 	{ value: "last_90_days", label: "Last 90 Days" },
 	{ value: "last_year", label: "Last Year" },
+	{ value: "custom", label: "Custom Range" },
 ];
 
 type ReportConfig = {
@@ -126,6 +135,7 @@ export default function NewReportPage() {
 	const [groupBy, setGroupBy] = useState<string>("status");
 	const [vizType, setVizType] = useState<Visualization["type"]>("bar");
 	const [dateRange, setDateRange] = useState<string>("all_time");
+	const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>(undefined);
 	const [isPublic, setIsPublic] = useState(false);
 
 	// AI input state
@@ -136,10 +146,20 @@ export default function NewReportPage() {
 	const [isSaving, setIsSaving] = useState(false);
 
 	// Build config for preview
+	const getEffectiveDateRange = () => {
+		if (dateRange === "custom" && customDateRange) {
+			return {
+				start: customDateRange.from?.getTime(),
+				end: customDateRange.to ? new Date(customDateRange.to).setHours(23, 59, 59, 999) : undefined,
+			};
+		}
+		return getDateRange(dateRange);
+	};
+
 	const config: ReportConfig = {
 		entityType,
 		groupBy: groupBy ? [groupBy] : undefined,
-		dateRange: getDateRange(dateRange),
+		dateRange: getEffectiveDateRange(),
 	};
 
 	const visualization: Visualization = {
@@ -224,7 +244,7 @@ export default function NewReportPage() {
 				config: {
 					entityType,
 					groupBy: groupBy ? [groupBy] : undefined,
-					dateRange: getDateRange(dateRange),
+					dateRange: getEffectiveDateRange(),
 				},
 				visualization: {
 					type: vizType,
@@ -260,10 +280,11 @@ export default function NewReportPage() {
 						</p>
 					</div>
 				</div>
-				<Button
+				<StyledButton
 					intent="primary"
-					onPress={handleSave}
-					isDisabled={!name.trim() || isSaving}
+					onClick={handleSave}
+					disabled={!name.trim() || isSaving}
+					showArrow={false}
 				>
 					{isSaving ? (
 						<Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -271,7 +292,7 @@ export default function NewReportPage() {
 						<Save className="w-4 h-4 mr-2" />
 					)}
 					Save Report
-				</Button>
+				</StyledButton>
 			</div>
 
 			<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -295,123 +316,178 @@ export default function NewReportPage() {
 									</TabsTrigger>
 								</TabsList>
 
-								<TabsContent value="manual" className="space-y-4">
-									<div className="space-y-2">
-										<Label htmlFor="name">Report Name</Label>
-										<Input
-											id="name"
-											placeholder="e.g., Monthly Client Acquisition"
-											value={name}
-											onChange={(e) => setName(e.target.value)}
-										/>
+								<TabsContent value="manual" className="space-y-6">
+									{/* Basic Info Section */}
+									<div className="space-y-4">
+										<div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+											<Settings2 className="w-4 h-4" />
+											<span>Basic Information</span>
+										</div>
+										<div className="space-y-4 pl-6">
+											<div className="space-y-2">
+												<Label htmlFor="name">Report Name</Label>
+												<Input
+													id="name"
+													placeholder="e.g., Monthly Client Acquisition"
+													value={name}
+													onChange={(e) => setName(e.target.value)}
+													className="transition-all focus:ring-2 focus:ring-primary/20"
+												/>
+											</div>
+
+											<div className="space-y-2">
+												<Label htmlFor="description">Description (optional)</Label>
+												<Textarea
+													id="description"
+													placeholder="Describe what this report shows..."
+													value={description}
+													onChange={(e) => setDescription(e.target.value)}
+													rows={2}
+													className="transition-all focus:ring-2 focus:ring-primary/20"
+												/>
+											</div>
+										</div>
 									</div>
 
-									<div className="space-y-2">
-										<Label htmlFor="description">Description (optional)</Label>
-										<Textarea
-											id="description"
-											placeholder="Describe what this report shows..."
-											value={description}
-											onChange={(e) => setDescription(e.target.value)}
-											rows={2}
-										/>
-									</div>
+									<div className="border-t border-border/50" />
 
-									<div className="space-y-2">
-										<Label>Data Source</Label>
-										<Select value={entityType} onValueChange={(v) => {
-											setEntityType(v as ReportConfig["entityType"]);
-											// Reset groupBy when entity changes
-											const firstOption = groupByOptions[v]?.[0]?.value;
-											if (firstOption) setGroupBy(firstOption);
-										}}>
-											<SelectTrigger>
-												<SelectValue />
-											</SelectTrigger>
-											<SelectContent>
-												{entityOptions.map((opt) => (
-													<SelectItem key={opt.value} value={opt.value}>
-														<div className="flex flex-col">
-															<span>{opt.label}</span>
+									{/* Data Configuration Section */}
+									<div className="space-y-4">
+										<div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+											<Database className="w-4 h-4" />
+											<span>Data Configuration</span>
+										</div>
+										<div className="pl-6">
+											<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+												<div className="space-y-2">
+													<Label>Data Source</Label>
+													<Select value={entityType} onValueChange={(v) => {
+														setEntityType(v as ReportConfig["entityType"]);
+														// Reset groupBy when entity changes
+														const firstOption = groupByOptions[v]?.[0]?.value;
+														if (firstOption) setGroupBy(firstOption);
+													}}>
+														<SelectTrigger className="transition-all focus:ring-2 focus:ring-primary/20">
+															<SelectValue />
+														</SelectTrigger>
+														<SelectContent>
+															{entityOptions.map((opt) => (
+																<SelectItem key={opt.value} value={opt.value}>
+																	<div className="flex flex-col">
+																		<span>{opt.label}</span>
+																	</div>
+																</SelectItem>
+															))}
+														</SelectContent>
+													</Select>
+												</div>
+
+												<div className="space-y-2">
+													<Label>Group By</Label>
+													<Select value={groupBy} onValueChange={setGroupBy}>
+														<SelectTrigger className="transition-all focus:ring-2 focus:ring-primary/20">
+															<SelectValue />
+														</SelectTrigger>
+														<SelectContent>
+															{groupByOptions[entityType]?.map((opt) => (
+																<SelectItem key={opt.value} value={opt.value}>
+																	{opt.label}
+																</SelectItem>
+															))}
+														</SelectContent>
+													</Select>
+												</div>
+
+												<div className="space-y-2">
+													<Label>Date Range</Label>
+													<Select value={dateRange} onValueChange={(value) => {
+														setDateRange(value);
+														if (value !== "custom") {
+															setCustomDateRange(undefined);
+														}
+													}}>
+														<SelectTrigger className="transition-all focus:ring-2 focus:ring-primary/20">
+															<SelectValue />
+														</SelectTrigger>
+														<SelectContent>
+															{dateRangeOptions.map((opt) => (
+																<SelectItem key={opt.value} value={opt.value}>
+																	{opt.label}
+																</SelectItem>
+															))}
+														</SelectContent>
+													</Select>
+												</div>
+											</div>
+											{dateRange === "custom" && (
+												<div className="mt-3 p-4 rounded-xl bg-muted/30 border border-border/50 space-y-3">
+													<div className="flex items-center gap-2">
+														<div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center">
+															<Calendar className="w-3 h-3 text-primary" />
 														</div>
-													</SelectItem>
-												))}
-											</SelectContent>
-										</Select>
+														<p className="text-xs font-medium text-muted-foreground">Select a custom date range</p>
+													</div>
+													<DatePickerRange
+														value={customDateRange}
+														onChange={(range) => setCustomDateRange(range)}
+														showArrow={false}
+													/>
+												</div>
+											)}
+										</div>
 									</div>
 
-									<div className="space-y-2">
-										<Label>Group By</Label>
-										<Select value={groupBy} onValueChange={setGroupBy}>
-											<SelectTrigger>
-												<SelectValue />
-											</SelectTrigger>
-											<SelectContent>
-												{groupByOptions[entityType]?.map((opt) => (
-													<SelectItem key={opt.value} value={opt.value}>
-														{opt.label}
-													</SelectItem>
-												))}
-											</SelectContent>
-										</Select>
-									</div>
+									<div className="border-t border-border/50" />
 
-									<div className="space-y-2">
-										<Label>Date Range</Label>
-										<Select value={dateRange} onValueChange={setDateRange}>
-											<SelectTrigger>
-												<SelectValue />
-											</SelectTrigger>
-											<SelectContent>
-												{dateRangeOptions.map((opt) => (
-													<SelectItem key={opt.value} value={opt.value}>
-														{opt.label}
-													</SelectItem>
-												))}
-											</SelectContent>
-										</Select>
-									</div>
-
-									<div className="space-y-2">
-										<Label>Visualization</Label>
-										<div className="grid grid-cols-4 gap-2">
-											{visualizationOptions.map((opt) => {
-												const Icon = opt.icon;
-												return (
-													<button
-														key={opt.value}
-														onClick={() => setVizType(opt.value as Visualization["type"])}
-														className={`flex flex-col items-center gap-1.5 p-3 rounded-lg border transition-all ${
-															vizType === opt.value
-																? "border-primary bg-primary/10 text-primary"
-																: "border-border hover:border-primary/50"
-														}`}
-													>
-														<Icon className="w-5 h-5" />
-														<span className="text-xs">{opt.label}</span>
-													</button>
-												);
-											})}
+									{/* Visualization Section */}
+									<div className="space-y-4">
+										<div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+											<LayoutGrid className="w-4 h-4" />
+											<span>Visualization</span>
+										</div>
+										<div className="pl-6">
+											<div className="grid grid-cols-4 gap-2">
+												{visualizationOptions.map((opt) => {
+													const Icon = opt.icon;
+													return (
+														<StyledButton
+															key={opt.value}
+															onClick={() => setVizType(opt.value as Visualization["type"])}
+															intent={vizType === opt.value ? "primary" : "outline"}
+															className="flex flex-col items-center gap-1.5 p-3 h-auto transition-all hover:scale-[1.02]"
+															showArrow={false}
+														>
+															<Icon className="w-5 h-5" />
+															<span className="text-xs">{opt.label}</span>
+														</StyledButton>
+													);
+												})}
+											</div>
 										</div>
 									</div>
 								</TabsContent>
 
-								<TabsContent value="ai" className="space-y-4">
-									<div className="space-y-2">
-										<Label>Describe your report</Label>
+								<TabsContent value="ai" className="space-y-5">
+									<div className="space-y-3">
+										<div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+											<Sparkles className="w-4 h-4" />
+											<span>Describe your report</span>
+										</div>
 										<Textarea
 											placeholder="e.g., Show me revenue by client for this quarter, or Client acquisition by lead source this year"
 											value={aiPrompt}
 											onChange={(e) => setAiPrompt(e.target.value)}
 											rows={4}
+											className="transition-all focus:ring-2 focus:ring-primary/20"
 										/>
 									</div>
 
-									<Button
+									<StyledButton
 										intent="primary"
-										onPress={handleAiGenerate}
-										isDisabled={!aiPrompt.trim() || aiLoading}
-										className="w-full"
+										onClick={handleAiGenerate}
+										disabled={!aiPrompt.trim() || aiLoading}
+										className="w-full justify-center"
+										showArrow={false}
 									>
 										{aiLoading ? (
 											<Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -419,25 +495,43 @@ export default function NewReportPage() {
 											<Send className="w-4 h-4 mr-2" />
 										)}
 										Generate Report Configuration
-									</Button>
+									</StyledButton>
 
 									{aiResponse && (
-										<div className="p-3 rounded-lg bg-muted text-sm">
-											{aiResponse}
+										<div className="p-4 rounded-lg bg-muted/50 border border-border/50 text-sm flex items-start gap-3">
+											<div className="w-2 h-2 rounded-full bg-primary mt-1.5 shrink-0" />
+											<span>{aiResponse}</span>
 										</div>
 									)}
 
 									{name && (
-										<div className="p-3 rounded-lg border border-primary/30 bg-primary/5 space-y-2">
-											<p className="text-sm font-medium text-foreground">
-												Generated Configuration:
-											</p>
-											<ul className="text-sm text-muted-foreground space-y-1">
-												<li>• Name: {name}</li>
-												<li>• Data: {entityOptions.find(e => e.value === entityType)?.label}</li>
-												<li>• Grouped by: {groupByOptions[entityType]?.find(g => g.value === groupBy)?.label || groupBy}</li>
-												<li>• Chart: {visualizationOptions.find(v => v.value === vizType)?.label}</li>
-											</ul>
+										<div className="p-4 rounded-xl border border-primary/30 bg-primary/5 space-y-3">
+											<div className="flex items-center gap-2">
+												<div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
+													<Sparkles className="w-3.5 h-3.5 text-primary" />
+												</div>
+												<p className="text-sm font-semibold text-foreground">
+													Generated Configuration
+												</p>
+											</div>
+											<div className="grid grid-cols-2 gap-3 text-sm">
+												<div className="space-y-1">
+													<p className="text-xs text-muted-foreground">Report Name</p>
+													<p className="font-medium text-foreground">{name}</p>
+												</div>
+												<div className="space-y-1">
+													<p className="text-xs text-muted-foreground">Data Source</p>
+													<p className="font-medium text-foreground">{entityOptions.find(e => e.value === entityType)?.label}</p>
+												</div>
+												<div className="space-y-1">
+													<p className="text-xs text-muted-foreground">Grouped By</p>
+													<p className="font-medium text-foreground">{groupByOptions[entityType]?.find(g => g.value === groupBy)?.label || groupBy}</p>
+												</div>
+												<div className="space-y-1">
+													<p className="text-xs text-muted-foreground">Visualization</p>
+													<p className="font-medium text-foreground">{visualizationOptions.find(v => v.value === vizType)?.label}</p>
+												</div>
+											</div>
 										</div>
 									)}
 								</TabsContent>
@@ -448,10 +542,13 @@ export default function NewReportPage() {
 
 				{/* Preview Panel */}
 				<div className="space-y-6">
-					<Card className="group relative backdrop-blur-md overflow-hidden ring-1 ring-border/20 dark:ring-border/40">
+					<Card className="group relative backdrop-blur-md overflow-hidden ring-1 ring-border/20 dark:ring-border/40 h-fit lg:sticky lg:top-6">
 						<div className="absolute inset-0 bg-linear-to-br from-white/10 via-white/5 to-transparent dark:from-white/5 dark:via-white/2 dark:to-transparent rounded-2xl" />
 						<CardHeader className="relative z-10">
-							<CardTitle className="text-base">Preview</CardTitle>
+							<CardTitle className="text-base flex items-center gap-2">
+								<Eye className="w-4 h-4 text-primary" />
+								Preview
+							</CardTitle>
 							<CardDescription>
 								Live preview of your report data
 							</CardDescription>
