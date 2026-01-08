@@ -44,10 +44,8 @@ describe("Clients", () => {
 			const clientId = await asUser.mutation(api.clients.create, {
 				companyName: "Test Company",
 				status: "active",
-				emailOptIn: true,
-				smsOptIn: false,
-				industry: "Technology",
-				category: "development",
+				leadSource: "website",
+				notes: "Test notes",
 			});
 
 			expect(clientId).toBeDefined();
@@ -56,8 +54,7 @@ describe("Clients", () => {
 			expect(client).toMatchObject({
 				companyName: "Test Company",
 				status: "active",
-				industry: "Technology",
-				category: "development",
+				leadSource: "website",
 				orgId,
 			});
 		});
@@ -92,8 +89,6 @@ describe("Clients", () => {
 			const clientId = await asUser.mutation(api.clients.create, {
 				companyName: "Minimal Client",
 				status: "lead",
-				emailOptIn: false,
-				smsOptIn: false,
 			});
 
 			expect(clientId).toBeDefined();
@@ -139,20 +134,14 @@ describe("Clients", () => {
 					{
 						companyName: "Client 1",
 						status: "active",
-						emailOptIn: true,
-						smsOptIn: false,
 					},
 					{
 						companyName: "Client 2",
-						status: "prospect",
-						emailOptIn: false,
-						smsOptIn: false,
+						status: "lead",
 					},
 					{
 						companyName: "Client 3",
 						status: "lead",
-						emailOptIn: true,
-						smsOptIn: true,
 					},
 				],
 			});
@@ -196,14 +185,10 @@ describe("Clients", () => {
 					{
 						companyName: "Valid Client",
 						status: "active",
-						emailOptIn: true,
-						smsOptIn: false,
 					},
 					{
 						companyName: "", // Invalid: empty name
 						status: "lead",
-						emailOptIn: false,
-						smsOptIn: false,
 					},
 				],
 			});
@@ -282,22 +267,16 @@ describe("Clients", () => {
 			await asUser.mutation(api.clients.create, {
 				companyName: "Active Client",
 				status: "active",
-				emailOptIn: true,
-				smsOptIn: false,
 			});
 
 			await asUser.mutation(api.clients.create, {
 				companyName: "Lead Client",
 				status: "lead",
-				emailOptIn: false,
-				smsOptIn: false,
 			});
 
 			await asUser.mutation(api.clients.create, {
-				companyName: "Prospect Client",
-				status: "prospect",
-				emailOptIn: true,
-				smsOptIn: false,
+				companyName: "Inactive Client",
+				status: "inactive",
 			});
 
 			const activeClients = await asUser.query(api.clients.list, {
@@ -346,15 +325,11 @@ describe("Clients", () => {
 			const activeClientId = await asUser.mutation(api.clients.create, {
 				companyName: "Active Client",
 				status: "active",
-				emailOptIn: true,
-				smsOptIn: false,
 			});
 
 			const archivedClientId = await asUser.mutation(api.clients.create, {
 				companyName: "To Archive",
 				status: "active",
-				emailOptIn: true,
-				smsOptIn: false,
 			});
 
 			// Archive one client
@@ -399,8 +374,6 @@ describe("Clients", () => {
 					orgId,
 					companyName: "Original Name",
 					status: "lead",
-					emailOptIn: true,
-					smsOptIn: false,
 				});
 
 				return { userId, clientId };
@@ -415,16 +388,16 @@ describe("Clients", () => {
 				id: clientId,
 				companyName: "Updated Name",
 				status: "active",
-				industry: "Technology",
-				priorityLevel: "high",
+				leadSource: "website",
+				notes: "Updated notes",
 			});
 
 			const client = await asUser.query(api.clients.get, { id: clientId });
 			expect(client).toMatchObject({
 				companyName: "Updated Name",
 				status: "active",
-				industry: "Technology",
-				priorityLevel: "high",
+				leadSource: "website",
+				notes: "Updated notes",
 			});
 		});
 
@@ -453,8 +426,6 @@ describe("Clients", () => {
 					orgId,
 					companyName: "Test Client",
 					status: "active",
-					emailOptIn: true,
-					smsOptIn: false,
 				});
 
 				return { userId, clientId };
@@ -499,8 +470,6 @@ describe("Clients", () => {
 					orgId,
 					companyName: "Test Client",
 					status: "active",
-					emailOptIn: true,
-					smsOptIn: false,
 				});
 
 				return { userId, clientId };
@@ -544,8 +513,6 @@ describe("Clients", () => {
 					companyName: "Test Client",
 					status: "archived",
 					archivedAt: Date.now(),
-					emailOptIn: true,
-					smsOptIn: false,
 				});
 
 				return { userId, clientId };
@@ -588,8 +555,6 @@ describe("Clients", () => {
 					orgId,
 					companyName: "Test Client",
 					status: "active",
-					emailOptIn: true,
-					smsOptIn: false,
 				});
 
 				return { userId, clientId };
@@ -638,33 +603,25 @@ describe("Clients", () => {
 			await asUser.mutation(api.clients.create, {
 				companyName: "Active Client 1",
 				status: "active",
-				emailOptIn: true,
-				smsOptIn: false,
-				category: "development",
+				leadSource: "website",
 			});
 
 			await asUser.mutation(api.clients.create, {
 				companyName: "Active Client 2",
 				status: "active",
-				emailOptIn: true,
-				smsOptIn: false,
-				category: "design",
+				leadSource: "referral",
 			});
 
 			await asUser.mutation(api.clients.create, {
 				companyName: "Lead Client",
 				status: "lead",
-				emailOptIn: false,
-				smsOptIn: false,
-				category: "development",
+				leadSource: "website",
 			});
 
 			await asUser.mutation(api.clients.create, {
-				companyName: "Prospect Client",
-				status: "prospect",
-				emailOptIn: true,
-				smsOptIn: false,
-				category: "consulting",
+				companyName: "Inactive Client",
+				status: "inactive",
+				leadSource: "word-of-mouth",
 			});
 
 			const stats = await asUser.query(api.clients.getStats, {});
@@ -672,16 +629,12 @@ describe("Clients", () => {
 			expect(stats.total).toBe(4);
 			expect(stats.byStatus.active).toBe(2);
 			expect(stats.byStatus.lead).toBe(1);
-			expect(stats.byStatus.prospect).toBe(1);
-			expect(stats.byStatus.inactive).toBe(0);
+			expect(stats.byStatus.inactive).toBe(1);
 			expect(stats.byStatus.archived).toBe(0);
 
 			expect(stats.groupedByStatus.active).toBe(2);
-			expect(stats.groupedByStatus.prospective).toBe(2); // lead + prospect
-
-			expect(stats.byCategory.development).toBe(2);
-			expect(stats.byCategory.design).toBe(1);
-			expect(stats.byCategory.consulting).toBe(1);
+			expect(stats.groupedByStatus.prospective).toBe(1); // only lead
+			expect(stats.groupedByStatus.inactive).toBe(1);
 		});
 	});
 
@@ -711,9 +664,6 @@ describe("Clients", () => {
 					orgId,
 					companyName: "Test Client",
 					status: "active",
-					emailOptIn: true,
-					smsOptIn: false,
-					industry: "Technology",
 				});
 
 				// Create some projects for this client
@@ -754,7 +704,6 @@ describe("Clients", () => {
 			expect(clients).toHaveLength(1);
 			expect(clients[0]).toMatchObject({
 				name: "Test Client",
-				industry: "Technology",
 				activeProjects: 2, // Only in-progress and planned
 				status: "Active",
 			});
@@ -785,8 +734,6 @@ describe("Clients", () => {
 					orgId,
 					companyName: "Test Client",
 					status: "active",
-					emailOptIn: true,
-					smsOptIn: false,
 				});
 
 				// Create primary contact

@@ -38,8 +38,6 @@ describe("Tasks", () => {
 					orgId,
 					companyName: "Test Client",
 					status: "active",
-					emailOptIn: true,
-					smsOptIn: false,
 				});
 
 				return { orgId, userId, clientId };
@@ -98,8 +96,6 @@ describe("Tasks", () => {
 					orgId,
 					companyName: "Test Client",
 					status: "active",
-					emailOptIn: true,
-					smsOptIn: false,
 				});
 
 				return { userId, clientId };
@@ -146,8 +142,6 @@ describe("Tasks", () => {
 					orgId,
 					companyName: "Test Client",
 					status: "active",
-					emailOptIn: true,
-					smsOptIn: false,
 				});
 
 				return { userId, clientId };
@@ -195,8 +189,6 @@ describe("Tasks", () => {
 					orgId,
 					companyName: "Test Client",
 					status: "active",
-					emailOptIn: true,
-					smsOptIn: false,
 				});
 
 				return { userId, clientId };
@@ -245,8 +237,6 @@ describe("Tasks", () => {
 					orgId,
 					companyName: "Test Client",
 					status: "active",
-					emailOptIn: true,
-					smsOptIn: false,
 				});
 
 				return { userId, clientId };
@@ -420,8 +410,6 @@ describe("Tasks", () => {
 					orgId,
 					companyName: "Test Client",
 					status: "active",
-					emailOptIn: true,
-					smsOptIn: false,
 				});
 
 				return { userId, clientId };
@@ -487,16 +475,12 @@ describe("Tasks", () => {
 					orgId,
 					companyName: "Client 1",
 					status: "active",
-					emailOptIn: true,
-					smsOptIn: false,
 				});
 
 				const clientId2 = await ctx.db.insert("clients", {
 					orgId,
 					companyName: "Client 2",
 					status: "active",
-					emailOptIn: true,
-					smsOptIn: false,
 				});
 
 				return { userId, clientId1, clientId2 };
@@ -581,8 +565,6 @@ describe("Tasks", () => {
 					orgId,
 					companyName: "Test Client",
 					status: "active",
-					emailOptIn: true,
-					smsOptIn: false,
 				});
 
 				return { member1Id, member2Id, clientId };
@@ -662,8 +644,6 @@ describe("Tasks", () => {
 					orgId,
 					companyName: "Test Client",
 					status: "active",
-					emailOptIn: true,
-					smsOptIn: false,
 				});
 
 				const taskId = await ctx.db.insert("tasks", {
@@ -687,14 +667,12 @@ describe("Tasks", () => {
 				id: taskId,
 				title: "Updated Title",
 				description: "New description",
-				priority: "high",
 			});
 
 			const task = await asUser.query(api.tasks.get, { id: taskId });
 			expect(task).toMatchObject({
 				title: "Updated Title",
 				description: "New description",
-				priority: "high",
 			});
 		});
 
@@ -723,8 +701,6 @@ describe("Tasks", () => {
 					orgId,
 					companyName: "Test Client",
 					status: "active",
-					emailOptIn: true,
-					smsOptIn: false,
 				});
 
 				const taskId = await ctx.db.insert("tasks", {
@@ -779,8 +755,6 @@ describe("Tasks", () => {
 					orgId,
 					companyName: "Test Client",
 					status: "active",
-					emailOptIn: true,
-					smsOptIn: false,
 				});
 
 				const taskId = await ctx.db.insert("tasks", {
@@ -832,8 +806,6 @@ describe("Tasks", () => {
 					orgId,
 					companyName: "Test Client",
 					status: "active",
-					emailOptIn: true,
-					smsOptIn: false,
 				});
 
 				const taskId = await ctx.db.insert("tasks", {
@@ -886,8 +858,6 @@ describe("Tasks", () => {
 					orgId,
 					companyName: "Test Client",
 					status: "active",
-					emailOptIn: true,
-					smsOptIn: false,
 				});
 
 				return { userId, clientId };
@@ -967,8 +937,6 @@ describe("Tasks", () => {
 					orgId,
 					companyName: "Test Client",
 					status: "active",
-					emailOptIn: true,
-					smsOptIn: false,
 				});
 
 				const taskId = await ctx.db.insert("tasks", {
