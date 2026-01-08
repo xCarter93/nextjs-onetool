@@ -7,6 +7,7 @@ export default defineConfig({
 		// Web app tests should be in src/ - backend tests are in packages/backend
 		include: ["src/**/*.test.ts", "src/**/*.spec.ts"],
 		exclude: ["**/node_modules/**", "**/dist/**", "**/.next/**"],
+		passWithNoTests: true,
 		coverage: {
 			provider: "v8",
 			reporter: ["text", "json", "html"],

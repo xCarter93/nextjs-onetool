@@ -35,6 +35,10 @@
 		},
 		"test": {
 			"dependsOn": ["^build"]
+		},
+		"test:once": {
+			"dependsOn": ["^build"],
+			"cache": false
 		}
 	}
 }
