@@ -38,7 +38,8 @@
 		},
 		"test:once": {
 			"dependsOn": ["^build"],
-			"cache": false
+			"cache": false,
+			"outputLogs": "full"
 		}
 	}
 }

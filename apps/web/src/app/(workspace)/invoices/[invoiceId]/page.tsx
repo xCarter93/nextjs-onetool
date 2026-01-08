@@ -1,12 +1,13 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useMemo } from "react";
+import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@onetool/backend/convex/_generated/api";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusProgressBar } from "@/components/shared/status-progress-bar";
+import { Progress } from "@/components/ui/progress";
 import {
 	Table,
 	TableBody,
@@ -28,6 +29,13 @@ import {
 	Mail,
 	CheckCircle,
 	XCircle,
+	Settings,
+	CreditCard,
+	Copy,
+	ExternalLink,
+	Clock,
+	AlertCircle,
+	Ban,
 } from "lucide-react";
 import { StickyFormFooter } from "@/components/shared/sticky-form-footer";
 import { pdf } from "@react-pdf/renderer";
@@ -35,6 +43,7 @@ import InvoicePDF from "@/app/(workspace)/invoices/components/InvoicePDF";
 import type { Id } from "@onetool/backend/convex/_generated/dataModel";
 import type { Id as StorageId } from "@onetool/backend/convex/_generated/dataModel";
 import { StyledButton } from "@/components/ui/styled/styled-button";
+import { PaymentsConfigurationModal } from "../components/payments-configuration-modal";
 
 type InvoiceStatus = "draft" | "sent" | "paid" | "overdue" | "cancelled";
 
@@ -87,14 +96,65 @@ const formatStatus = (status: InvoiceStatus) => {
 	}
 };
 
+type PaymentStatus = "pending" | "sent" | "paid" | "overdue" | "cancelled";
+
+const paymentStatusConfig: Record<
+	PaymentStatus,
+	{
+		label: string;
+		variant: "default" | "secondary" | "destructive" | "outline";
+		icon: React.ReactNode;
+		className?: string;
+	}
+> = {
+	pending: {
+		label: "Pending",
+		variant: "outline",
+		icon: <Clock className="h-3 w-3" />,
+	},
+	sent: {
+		label: "Sent",
+		variant: "secondary",
+		icon: <Mail className="h-3 w-3" />,
+	},
+	paid: {
+		label: "Paid",
+		variant: "default",
+		icon: <CheckCircle className="h-3 w-3" />,
+	},
+	overdue: {
+		label: "Overdue",
+		variant: "destructive",
+		icon: <AlertCircle className="h-3 w-3" />,
+	},
+	cancelled: {
+		label: "Cancelled",
+		variant: "outline",
+		icon: <Ban className="h-3 w-3" />,
+		className: "line-through opacity-60",
+	},
+};
+
+const formatPaymentDueDate = (timestamp: number): string => {
+	return new Date(timestamp).toLocaleDateString("en-US", {
+		month: "short",
+		day: "numeric",
+		year: "numeric",
+	});
+};
+
 export default function InvoiceDetailPage() {
 	const router = useRouter();
 	const params = useParams();
 	const toast = useToast();
 	const invoiceId = params.invoiceId as Id<"invoices">;
 
-	// Fetch invoice data from Convex
-	const invoice = useQuery(api.invoices.get, { id: invoiceId });
+	// Modal state for payments configuration
+	const [isPaymentsModalOpen, setIsPaymentsModalOpen] = useState(false);
+
+	// Fetch invoice data from Convex with payments
+	const invoiceWithPayments = useQuery(api.invoices.getWithPayments, { id: invoiceId });
+	const invoice = invoiceWithPayments; // Alias for backwards compatibility with existing code
 	const client = useQuery(
 		api.clients.get,
 		invoice?.clientId ? { id: invoice.clientId } : "skip"
@@ -130,14 +190,31 @@ export default function InvoiceDetailPage() {
 		latestDocument ? { id: latestDocument._id } : "skip"
 	);
 
-	const payUrl = useMemo(() => {
-		if (!invoice?.publicToken) return "";
+	// Helper to construct payment URL from a public token
+	const getPaymentUrl = (publicToken: string): string => {
 		const origin =
 			typeof window !== "undefined"
 				? window.location.origin
 				: (process.env.NEXT_PUBLIC_APP_URL ?? "");
-		return origin ? `${origin}/pay/${invoice.publicToken}` : "";
-	}, [invoice?.publicToken]);
+		return origin ? `${origin}/pay/${publicToken}` : "";
+	};
+
+	// Copy payment link helper
+	const handleCopyPaymentLink = (paymentUrl: string, paymentDescription?: string) => {
+		navigator.clipboard
+			.writeText(paymentUrl)
+			.then(() =>
+				toast.success(
+					"Link copied",
+					paymentDescription
+						? `Payment link for "${paymentDescription}" copied.`
+						: "Payment link copied."
+				)
+			)
+			.catch(() =>
+				toast.error("Copy failed", "Unable to copy the link.")
+			);
+	};
 
 	const handleStatusChange = async (status: InvoiceStatus) => {
 		try {
@@ -630,6 +707,16 @@ export default function InvoiceDetailPage() {
 												<DollarSign className="h-5 w-5" />
 												Line Items
 											</CardTitle>
+											<Button
+												intent="outline"
+												size="sm"
+												onPress={() =>
+													router.push(`/invoices/${invoiceId}/lineEditor`)
+												}
+											>
+												<Settings className="h-4 w-4 mr-2" />
+												Edit Line Items
+											</Button>
 										</CardHeader>
 										<CardContent>
 											{lineItems && lineItems.length > 0 ? (
@@ -720,6 +807,164 @@ export default function InvoiceDetailPage() {
 										</CardContent>
 									</Card>
 								</div>
+
+								{/* Payment Schedule */}
+								<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-xl shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50">
+									<Card className="bg-transparent border-none shadow-none ring-0">
+										<CardHeader className="flex flex-row items-center justify-between">
+											<CardTitle className="flex items-center gap-2 text-xl">
+												<CreditCard className="h-5 w-5" />
+												Payment Schedule
+											</CardTitle>
+											<Button
+												intent="outline"
+												size="sm"
+												onClick={() => setIsPaymentsModalOpen(true)}
+											>
+												<Settings className="h-4 w-4 mr-1" />
+												Configure
+											</Button>
+										</CardHeader>
+										<CardContent className="space-y-4">
+											{!organization?.stripeConnectAccountId ? (
+												<p className="text-sm text-muted-foreground">
+													Connect Stripe payments to enable payment
+													collection for this invoice.
+												</p>
+											) : invoiceWithPayments?.payments &&
+											  invoiceWithPayments.payments.length > 0 ? (
+												<>
+													{/* Payment Progress */}
+													<div className="space-y-2">
+														<div className="flex items-center justify-between text-sm">
+															<span className="text-muted-foreground">
+																{invoiceWithPayments.paymentSummary.paidCount} of{" "}
+																{invoiceWithPayments.paymentSummary.totalPayments} payments complete
+															</span>
+															<span className="font-medium">
+																{invoiceWithPayments.paymentSummary.percentPaid}%
+															</span>
+														</div>
+														<Progress
+															value={invoiceWithPayments.paymentSummary.percentPaid}
+															className="h-2"
+														/>
+														<div className="flex justify-between text-xs text-muted-foreground">
+															<span>
+																{formatCurrency(invoiceWithPayments.paymentSummary.paidAmount)} paid
+															</span>
+															<span>
+																{formatCurrency(invoiceWithPayments.paymentSummary.remainingAmount)} remaining
+															</span>
+														</div>
+													</div>
+
+													{/* Payment List - Grid layout for wider area */}
+													<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
+														{invoiceWithPayments.payments.map((payment, index) => {
+															const statusConfig = paymentStatusConfig[payment.status as PaymentStatus];
+															const paymentUrl = getPaymentUrl(payment.publicToken);
+
+															return (
+																<div
+																	key={payment._id}
+																	className={`rounded-lg border p-4 ${
+																		payment.status === "paid"
+																			? "border-green-200 bg-green-50/50 dark:border-green-800/50 dark:bg-green-950/20"
+																			: payment.status === "overdue"
+																				? "border-red-200 bg-red-50/50 dark:border-red-800/50 dark:bg-red-950/20"
+																				: "border-border"
+																	}`}
+																>
+																	{/* Payment Header */}
+																	<div className="flex items-start justify-between mb-3">
+																		<div className="flex items-center gap-2">
+																			<span className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-sm font-semibold">
+																				{index + 1}
+																			</span>
+																			<div>
+																				<p className="text-sm font-medium">
+																					{payment.description || `Payment ${index + 1}`}
+																				</p>
+																				<p className="text-xs text-muted-foreground">
+																					Due: {formatPaymentDueDate(payment.dueDate)}
+																				</p>
+																			</div>
+																		</div>
+																		<Badge
+																			variant={statusConfig?.variant || "outline"}
+																			className={`gap-1 ${statusConfig?.className || ""}`}
+																		>
+																			{statusConfig?.icon}
+																			{statusConfig?.label || payment.status}
+																		</Badge>
+																	</div>
+
+																	{/* Payment Amount */}
+																	<div className="mb-3">
+																		<span className="text-xl font-bold">
+																			{formatCurrency(payment.paymentAmount)}
+																		</span>
+																	</div>
+
+																	{/* Payment Actions */}
+																	{payment.status !== "paid" && payment.status !== "cancelled" && (
+																		<div className="flex gap-2 pt-3 border-t border-border/50">
+																			<Button
+																				intent="outline"
+																				size="sm"
+																				className="flex-1"
+																				onClick={() =>
+																					handleCopyPaymentLink(
+																						paymentUrl,
+																						payment.description
+																					)
+																				}
+																			>
+																				<Copy className="h-3 w-3 mr-1" />
+																				Copy Link
+																			</Button>
+																			<Button
+																				intent="outline"
+																				size="sm"
+																				className="flex-1"
+																				onClick={() => {
+																					window.open(
+																						paymentUrl,
+																						"_blank",
+																						"noopener,noreferrer"
+																					);
+																				}}
+																			>
+																				<ExternalLink className="h-3 w-3 mr-1" />
+																				Open
+																			</Button>
+																		</div>
+																	)}
+																</div>
+															);
+														})}
+													</div>
+												</>
+											) : (
+												<div className="text-center py-8">
+													<CreditCard className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+													<p className="text-sm text-muted-foreground mb-3">
+														No payments configured
+													</p>
+													<StyledButton
+														intent="outline"
+														size="sm"
+														onClick={() => setIsPaymentsModalOpen(true)}
+													>
+														<Settings className="h-4 w-4 mr-1" />
+														Configure Payments
+													</StyledButton>
+												</div>
+											)}
+										</CardContent>
+									</Card>
+								</div>
 							</div>
 
 							{/* Invoice Details Sidebar - Right Column */}
@@ -784,75 +1029,6 @@ export default function InvoiceDetailPage() {
 															: formatCurrency(invoice.total)}
 													</span>
 												</div>
-											</CardContent>
-										</Card>
-									</div>
-
-									{/* Public Payment Link */}
-									<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-xl shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50">
-										<Card className="bg-transparent border-none shadow-none ring-0">
-											<CardHeader>
-												<CardTitle className="text-lg">Payment Link</CardTitle>
-											</CardHeader>
-											<CardContent className="space-y-3">
-												{!organization?.stripeConnectAccountId ? (
-													<p className="text-sm text-muted-foreground">
-														Connect Stripe payments to enable the public
-														checkout link for this invoice.
-													</p>
-												) : payUrl ? (
-													<>
-														<p className="text-sm text-muted-foreground break-all">
-															{payUrl}
-														</p>
-														<div className="flex flex-col gap-2">
-															<StyledButton
-																intent="outline"
-																size="sm"
-																onClick={() => {
-																	navigator.clipboard
-																		.writeText(payUrl)
-																		.then(() =>
-																			toast.success(
-																				"Link copied",
-																				"Public payment link copied."
-																			)
-																		)
-																		.catch(() =>
-																			toast.error(
-																				"Copy failed",
-																				"Unable to copy the link."
-																			)
-																		);
-																}}
-															>
-																Copy link
-															</StyledButton>
-															<StyledButton
-																size="sm"
-																intent="primary"
-																showArrow={false}
-																onClick={() => {
-																	window.open(
-																		payUrl,
-																		"_blank",
-																		"noopener,noreferrer"
-																	);
-																}}
-															>
-																Open test link
-															</StyledButton>
-														</div>
-														<p className="text-xs text-muted-foreground">
-															This public link uses the invoice token; share it
-															with your client to pay via Stripe.
-														</p>
-													</>
-												) : (
-													<p className="text-sm text-muted-foreground">
-														No payment link available for this invoice.
-													</p>
-												)}
 											</CardContent>
 										</Card>
 									</div>
@@ -984,6 +1160,13 @@ export default function InvoiceDetailPage() {
 						: []),
 					// Right side buttons - Actions
 					{
+						label: "Configure Payments",
+						intent: "outline",
+						icon: <CreditCard className="h-4 w-4" />,
+						onClick: () => setIsPaymentsModalOpen(true),
+						position: "right" as const,
+					},
+					{
 						label: "Generate PDF",
 						intent: "outline",
 						icon: <FileText className="h-4 w-4" />,
@@ -1005,6 +1188,26 @@ export default function InvoiceDetailPage() {
 				]}
 				fullWidth
 			/>
+
+			{/* Payments Configuration Modal */}
+			{invoice && (
+				<PaymentsConfigurationModal
+					isOpen={isPaymentsModalOpen}
+					onClose={() => setIsPaymentsModalOpen(false)}
+					invoiceId={invoiceId}
+					invoiceTotal={invoice.total}
+					existingPayments={
+						invoiceWithPayments?.payments?.map((p) => ({
+							_id: p._id,
+							paymentAmount: p.paymentAmount,
+							dueDate: p.dueDate,
+							description: p.description,
+							status: p.status,
+							sortOrder: p.sortOrder,
+						})) || []
+					}
+				/>
+			)}
 		</div>
 	);
 }

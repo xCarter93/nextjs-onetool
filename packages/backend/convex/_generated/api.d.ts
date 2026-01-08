@@ -44,6 +44,7 @@ import type * as migrations_seedServiceStatus from "../migrations/seedServiceSta
 import type * as notifications from "../notifications.js";
 import type * as organizationDocuments from "../organizationDocuments.js";
 import type * as organizations from "../organizations.js";
+import type * as payments from "../payments.js";
 import type * as projects from "../projects.js";
 import type * as quoteLineItems from "../quoteLineItems.js";
 import type * as quotes from "../quotes.js";
@@ -103,6 +104,7 @@ declare const fullApi: ApiFromModules<{
   notifications: typeof notifications;
   organizationDocuments: typeof organizationDocuments;
   organizations: typeof organizations;
+  payments: typeof payments;
   projects: typeof projects;
   quoteLineItems: typeof quoteLineItems;
   quotes: typeof quotes;
