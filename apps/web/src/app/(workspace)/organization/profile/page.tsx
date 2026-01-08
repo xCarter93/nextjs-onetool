@@ -8,7 +8,6 @@ import { useMutation, useQuery } from "convex/react";
 import {
 	Users,
 	Building2,
-	Globe,
 	AlertTriangle,
 	FileText,
 	Upload,
@@ -23,6 +22,7 @@ import {
 	Loader2,
 	RefreshCcw,
 	ExternalLink,
+	Globe,
 } from "lucide-react";
 import {
 	ConnectPayouts,

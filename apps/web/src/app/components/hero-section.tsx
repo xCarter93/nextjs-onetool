@@ -179,7 +179,11 @@ export default function HeroSection() {
 											size="lg"
 											className="w-auto"
 											onClick={() => {
-												// Handle Start Free Trial action
+												const pricingSection =
+													document.getElementById("pricing");
+												if (pricingSection) {
+													pricingSection.scrollIntoView({ behavior: "smooth" });
+												}
 											}}
 										>
 											Start Free Trial
@@ -205,8 +209,12 @@ export default function HeroSection() {
 											icon={<AppleLogo className="w-8 h-8" />}
 										>
 											<div className="flex flex-col items-start text-left -my-1">
-												<span className="text-[10px] leading-tight font-normal">Coming Soon on the</span>
-												<span className="text-lg font-semibold leading-tight -mt-0.5">App Store</span>
+												<span className="text-[10px] leading-tight font-normal">
+													Coming Soon on the
+												</span>
+												<span className="text-lg font-semibold leading-tight -mt-0.5">
+													App Store
+												</span>
 											</div>
 										</StyledButton>
 									</div>
@@ -220,8 +228,8 @@ export default function HeroSection() {
 									>
 										<div className="space-y-4">
 											<p className="text-sm text-gray-600 dark:text-gray-400">
-												Fill out the form below and we'll reach out within 24
-												hours to schedule your personalized demo.
+												Fill out the form below and we&apos;ll reach out within
+												24 hours to schedule your personalized demo.
 											</p>
 
 											<form onSubmit={handleScheduleDemo} className="space-y-4">

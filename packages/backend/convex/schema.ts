@@ -127,6 +127,7 @@ export default defineSchema({
 				v.literal("advertising"),
 				v.literal("trade-show"),
 				v.literal("cold-outreach"),
+				v.literal("community-page"),
 				v.literal("other")
 			)
 		),
@@ -719,6 +720,35 @@ export default defineSchema({
 	})
 		.index("by_email", ["emailMessageId"])
 		.index("by_org", ["orgId"]),
+
+	// Community Pages - public mini-websites for organizations
+	communityPages: defineTable({
+		orgId: v.id("organizations"),
+
+		// URL and visibility
+		slug: v.string(), // Unique URL slug (e.g., "joes-landscaping")
+		isPublic: v.boolean(), // Whether the page is publicly accessible
+
+		// Branding
+		bannerStorageId: v.optional(v.id("_storage")), // Hero banner image
+		avatarStorageId: v.optional(v.id("_storage")), // Avatar/logo (optional, falls back to org logo)
+
+		// Content (TipTap JSON format)
+		draftContent: v.optional(v.any()), // Current editing state (TipTap JSON)
+		publishedContent: v.optional(v.any()), // What's publicly visible (TipTap JSON)
+
+		// Metadata
+		pageTitle: v.optional(v.string()), // Custom page title (falls back to org name)
+		metaDescription: v.optional(v.string()), // SEO description
+
+		// Timestamps
+		createdAt: v.number(),
+		updatedAt: v.number(),
+		publishedAt: v.optional(v.number()), // Last publish timestamp
+	})
+		.index("by_org", ["orgId"])
+		.index("by_slug", ["slug"])
+		.index("by_public", ["isPublic"]),
 
 	// Reports - saved report configurations
 	reports: defineTable({

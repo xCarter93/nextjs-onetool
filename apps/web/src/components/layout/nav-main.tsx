@@ -59,6 +59,8 @@ export function NavMain({
 		url: string;
 		icon?: LucideIcon;
 		isActive?: boolean;
+		disabled?: boolean;
+		disabledTooltip?: string;
 		badgeCount?: number;
 		badgeVariant?: "alert";
 		items?: {
@@ -393,6 +395,28 @@ export function NavMain({
 						}
 
 						// If no nested items, render as simple link
+						// Handle disabled items with tooltip
+						if (item.disabled) {
+							return (
+								<SidebarMenuItem key={item.title}>
+									<Tooltip>
+										<TooltipTrigger asChild>
+											<SidebarMenuButton
+												className="opacity-60 cursor-not-allowed"
+												onClick={(e) => e.preventDefault()}
+											>
+												{item.icon && <item.icon />}
+												<span>{item.title}</span>
+											</SidebarMenuButton>
+										</TooltipTrigger>
+										<TooltipContent>
+											<p>{item.disabledTooltip || "This feature is not available"}</p>
+										</TooltipContent>
+									</Tooltip>
+								</SidebarMenuItem>
+							);
+						}
+
 						return (
 							<SidebarMenuItem key={item.title}>
 								<SidebarMenuButton asChild isActive={item.isActive}>
