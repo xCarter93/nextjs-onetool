@@ -17,6 +17,7 @@ import type * as calendar from "../calendar.js";
 import type * as clientContacts from "../clientContacts.js";
 import type * as clientProperties from "../clientProperties.js";
 import type * as clients from "../clients.js";
+import type * as communityPages from "../communityPages.js";
 import type * as crons from "../crons.js";
 import type * as documents from "../documents.js";
 import type * as emailAttachments from "../emailAttachments.js";
@@ -75,6 +76,7 @@ declare const fullApi: ApiFromModules<{
   clientContacts: typeof clientContacts;
   clientProperties: typeof clientProperties;
   clients: typeof clients;
+  communityPages: typeof communityPages;
   crons: typeof crons;
   documents: typeof documents;
   emailAttachments: typeof emailAttachments;

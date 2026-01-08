@@ -1,5 +1,9 @@
 import type { NextConfig } from "next";
 
+// Extract hostname from Convex URL for image optimization
+const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
+const convexHostname = convexUrl ? new URL(convexUrl).hostname : null;
+
 const nextConfig: NextConfig = {
 	experimental: {
 		viewTransition: true,
@@ -19,6 +23,15 @@ const nextConfig: NextConfig = {
 				protocol: "https",
 				hostname: "img.clerk.com",
 			},
+			// Convex storage for community page images
+			...(convexHostname
+				? [
+						{
+							protocol: "https" as const,
+							hostname: convexHostname,
+						},
+					]
+				: []),
 		],
 	},
 };

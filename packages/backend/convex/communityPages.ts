@@ -1,0 +1,463 @@
+import { query, mutation, QueryCtx, MutationCtx } from "./_generated/server";
+import { v } from "convex/values";
+import { Doc, Id } from "./_generated/dataModel";
+import {
+	getCurrentUserOrThrow,
+	getCurrentUserOrgId,
+} from "./lib/auth";
+
+// Type definitions
+type CommunityPageDocument = Doc<"communityPages">;
+type CommunityPageId = Id<"communityPages">;
+
+// ============================================
+// AUTHENTICATED QUERIES/MUTATIONS (Admin use)
+// ============================================
+
+/**
+ * Get the community page for the current organization
+ */
+export const get = query({
+	args: {},
+	handler: async (ctx): Promise<CommunityPageDocument | null> => {
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) return null;
+
+		return await ctx.db
+			.query("communityPages")
+			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
+			.first();
+	},
+});
+
+/**
+ * Create or update community page (upsert pattern)
+ */
+export const upsert = mutation({
+	args: {
+		slug: v.optional(v.string()),
+		isPublic: v.optional(v.boolean()),
+		bannerStorageId: v.optional(v.id("_storage")),
+		avatarStorageId: v.optional(v.id("_storage")),
+		draftContent: v.optional(v.any()),
+		pageTitle: v.optional(v.string()),
+		metaDescription: v.optional(v.string()),
+	},
+	handler: async (ctx, args): Promise<CommunityPageId> => {
+		await getCurrentUserOrThrow(ctx);
+		const userOrgId = await getCurrentUserOrgId(ctx);
+
+		const existing = await ctx.db
+			.query("communityPages")
+			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
+			.first();
+
+		const now = Date.now();
+
+		if (existing) {
+			// Update existing page
+			const updates: Partial<CommunityPageDocument> = {
+				updatedAt: now,
+			};
+
+			if (args.slug !== undefined) {
+				// Validate slug uniqueness
+				await validateSlugUnique(ctx, args.slug, existing._id);
+				updates.slug = args.slug;
+			}
+			if (args.isPublic !== undefined) updates.isPublic = args.isPublic;
+			if (args.bannerStorageId !== undefined)
+				updates.bannerStorageId = args.bannerStorageId;
+			if (args.avatarStorageId !== undefined)
+				updates.avatarStorageId = args.avatarStorageId;
+			if (args.draftContent !== undefined)
+				updates.draftContent = args.draftContent;
+			if (args.pageTitle !== undefined) updates.pageTitle = args.pageTitle;
+			if (args.metaDescription !== undefined)
+				updates.metaDescription = args.metaDescription;
+
+			await ctx.db.patch(existing._id, updates);
+			return existing._id;
+		} else {
+			// Create new page
+			const org = await ctx.db.get(userOrgId);
+			const defaultSlug =
+				args.slug || generateSlugFromName(org?.name || "community-page");
+
+			await validateSlugUnique(ctx, defaultSlug);
+
+			return await ctx.db.insert("communityPages", {
+				orgId: userOrgId,
+				slug: defaultSlug,
+				isPublic: args.isPublic ?? false,
+				bannerStorageId: args.bannerStorageId,
+				avatarStorageId: args.avatarStorageId,
+				draftContent: args.draftContent,
+				pageTitle: args.pageTitle,
+				metaDescription: args.metaDescription,
+				createdAt: now,
+				updatedAt: now,
+			});
+		}
+	},
+});
+
+/**
+ * Publish draft content to live page
+ */
+export const publish = mutation({
+	args: {},
+	handler: async (ctx): Promise<void> => {
+		await getCurrentUserOrThrow(ctx);
+		const userOrgId = await getCurrentUserOrgId(ctx);
+
+		const page = await ctx.db
+			.query("communityPages")
+			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
+			.first();
+
+		if (!page) throw new Error("Community page not found");
+		if (!page.draftContent) throw new Error("No draft content to publish");
+
+		await ctx.db.patch(page._id, {
+			publishedContent: page.draftContent,
+			publishedAt: Date.now(),
+			updatedAt: Date.now(),
+		});
+	},
+});
+
+/**
+ * Generate upload URL for images
+ */
+export const generateUploadUrl = mutation({
+	args: {},
+	handler: async (ctx) => {
+		await getCurrentUserOrThrow(ctx);
+		return await ctx.storage.generateUploadUrl();
+	},
+});
+
+/**
+ * Get image URL from storage
+ */
+export const getImageUrl = query({
+	args: { storageId: v.id("_storage") },
+	handler: async (ctx, args): Promise<string | null> => {
+		return await ctx.storage.getUrl(args.storageId);
+	},
+});
+
+/**
+ * Check if slug is available
+ */
+export const checkSlugAvailable = query({
+	args: { slug: v.string() },
+	handler: async (ctx, args): Promise<boolean> => {
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+
+		const existing = await ctx.db
+			.query("communityPages")
+			.withIndex("by_slug", (q) => q.eq("slug", args.slug))
+			.first();
+
+		// Available if no page exists with this slug, or it's the current org's page
+		return !existing || (userOrgId !== null && existing.orgId === userOrgId);
+	},
+});
+
+/**
+ * Delete the community page banner image
+ */
+export const deleteBannerImage = mutation({
+	args: {},
+	handler: async (ctx): Promise<void> => {
+		await getCurrentUserOrThrow(ctx);
+		const userOrgId = await getCurrentUserOrgId(ctx);
+
+		const page = await ctx.db
+			.query("communityPages")
+			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
+			.first();
+
+		if (!page) throw new Error("Community page not found");
+
+		if (page.bannerStorageId) {
+			await ctx.storage.delete(page.bannerStorageId);
+		}
+
+		await ctx.db.patch(page._id, {
+			bannerStorageId: undefined,
+			updatedAt: Date.now(),
+		});
+	},
+});
+
+/**
+ * Delete the community page avatar image
+ */
+export const deleteAvatarImage = mutation({
+	args: {},
+	handler: async (ctx): Promise<void> => {
+		await getCurrentUserOrThrow(ctx);
+		const userOrgId = await getCurrentUserOrgId(ctx);
+
+		const page = await ctx.db
+			.query("communityPages")
+			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
+			.first();
+
+		if (!page) throw new Error("Community page not found");
+
+		if (page.avatarStorageId) {
+			await ctx.storage.delete(page.avatarStorageId);
+		}
+
+		await ctx.db.patch(page._id, {
+			avatarStorageId: undefined,
+			updatedAt: Date.now(),
+		});
+	},
+});
+
+// ============================================
+// UNAUTHENTICATED QUERIES (Public access)
+// ============================================
+
+/**
+ * Get public page by slug (for public viewing)
+ */
+export const getBySlug = query({
+	args: { slug: v.string() },
+	handler: async (ctx, args) => {
+		const page = await ctx.db
+			.query("communityPages")
+			.withIndex("by_slug", (q) => q.eq("slug", args.slug))
+			.first();
+
+		if (!page || !page.isPublic) return null;
+
+		// Get organization details
+		const org = await ctx.db.get(page.orgId);
+
+		// Get image URLs
+		const bannerUrl = page.bannerStorageId
+			? await ctx.storage.getUrl(page.bannerStorageId)
+			: null;
+		const avatarUrl = page.avatarStorageId
+			? await ctx.storage.getUrl(page.avatarStorageId)
+			: org?.logoUrl || null;
+
+		return {
+			slug: page.slug,
+			pageTitle: page.pageTitle || org?.name || "Community Page",
+			metaDescription: page.metaDescription,
+			content: page.publishedContent,
+			bannerUrl,
+			avatarUrl,
+			organization: org
+				? {
+						name: org.name,
+						email: org.email,
+						phone: org.phone,
+						website: org.website,
+					}
+				: null,
+		};
+	},
+});
+
+/**
+ * List all public pages (for showcase)
+ */
+export const listPublic = query({
+	args: { limit: v.optional(v.number()) },
+	handler: async (ctx, args) => {
+		const limit = args.limit || 12;
+
+		const pages = await ctx.db
+			.query("communityPages")
+			.withIndex("by_public", (q) => q.eq("isPublic", true))
+			.take(limit);
+
+		// Enrich with org details and images
+		const enrichedPages = await Promise.all(
+			pages.map(async (page) => {
+				const org = await ctx.db.get(page.orgId);
+				const avatarUrl = page.avatarStorageId
+					? await ctx.storage.getUrl(page.avatarStorageId)
+					: org?.logoUrl || null;
+
+				return {
+					slug: page.slug,
+					pageTitle: page.pageTitle || org?.name || "Community Page",
+					avatarUrl,
+					organizationName: org?.name,
+				};
+			})
+		);
+
+		return enrichedPages;
+	},
+});
+
+/**
+ * Submit interest form (creates lead client) - UNAUTHENTICATED
+ * This is called from public pages without user authentication
+ */
+export const submitInterest = mutation({
+	args: {
+		slug: v.string(),
+		name: v.string(),
+		email: v.string(),
+		phone: v.optional(v.string()),
+		message: v.optional(v.string()),
+	},
+	handler: async (ctx, args) => {
+		// Input validation
+		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+		if (!emailRegex.test(args.email)) {
+			throw new Error("Please provide a valid email address");
+		}
+
+		const sanitizedName = args.name.trim();
+		if (sanitizedName.length < 2) {
+			throw new Error("Please provide your name");
+		}
+		if (sanitizedName.length > 100) {
+			throw new Error("Name is too long");
+		}
+
+		// Find the community page
+		const page = await ctx.db
+			.query("communityPages")
+			.withIndex("by_slug", (q) => q.eq("slug", args.slug))
+			.first();
+
+		if (!page || !page.isPublic) {
+			throw new Error("Community page not found");
+		}
+
+		// Check for duplicate email to prevent spam
+		const normalizedEmail = args.email.toLowerCase().trim();
+		const existingContact = await ctx.db
+			.query("clientContacts")
+			.withIndex("by_org", (q) => q.eq("orgId", page.orgId))
+			.filter((q) => q.eq(q.field("email"), normalizedEmail))
+			.first();
+
+		if (existingContact) {
+			// Return success without creating duplicate (prevents enumeration)
+			return { success: true, clientId: existingContact.clientId };
+		}
+
+		// Build notes with message if provided
+		const notesParts: string[] = [];
+		notesParts.push(`Lead from community page: ${args.slug}`);
+		if (args.message) {
+			const sanitizedMessage = args.message.trim().substring(0, 2000);
+			if (sanitizedMessage) {
+				notesParts.push(`Message: ${sanitizedMessage}`);
+			}
+		}
+
+		// Create client as lead
+		const clientId = await ctx.db.insert("clients", {
+			orgId: page.orgId,
+			companyName: sanitizedName,
+			status: "lead",
+			leadSource: "community-page",
+			notes: notesParts.join("\n\n"),
+		});
+
+		// Create primary contact
+		const nameParts = sanitizedName.split(/\s+/);
+		const firstName = nameParts[0] || sanitizedName;
+		const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
+
+		await ctx.db.insert("clientContacts", {
+			clientId,
+			orgId: page.orgId,
+			firstName,
+			lastName,
+			email: normalizedEmail,
+			phone: args.phone?.trim(),
+			isPrimary: true,
+		});
+
+		return { success: true, clientId };
+	},
+});
+
+// ============================================
+// HELPER FUNCTIONS
+// ============================================
+
+function generateSlugFromName(name: string): string {
+	return name
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, "-")
+		.replace(/^-|-$/g, "")
+		.substring(0, 50);
+}
+
+async function validateSlugUnique(
+	ctx: QueryCtx | MutationCtx,
+	slug: string,
+	excludeId?: CommunityPageId
+): Promise<void> {
+	// Validate slug format
+	if (!/^[a-z0-9-]+$/.test(slug)) {
+		throw new Error(
+			"Slug can only contain lowercase letters, numbers, and hyphens"
+		);
+	}
+
+	if (slug.length < 3) {
+		throw new Error("Slug must be at least 3 characters long");
+	}
+
+	if (slug.length > 50) {
+		throw new Error("Slug must be 50 characters or less");
+	}
+
+	// Check for reserved slugs
+	const reservedSlugs = [
+		"new",
+		"create",
+		"edit",
+		"delete",
+		"admin",
+		"api",
+		"login",
+		"signup",
+		"signin",
+		"signout",
+		"logout",
+		"settings",
+		"profile",
+		"dashboard",
+		"help",
+		"support",
+		"terms",
+		"privacy",
+		"about",
+		"contact",
+		"home",
+		"index",
+		"showcase",
+		"interest",
+	];
+	if (reservedSlugs.includes(slug)) {
+		throw new Error("This slug is reserved. Please choose another.");
+	}
+
+	const existing = await ctx.db
+		.query("communityPages")
+		.withIndex("by_slug", (q) => q.eq("slug", slug))
+		.first();
+
+	if (existing && existing._id !== excludeId) {
+		throw new Error("This URL slug is already taken. Please choose another.");
+	}
+}

@@ -13,6 +13,8 @@ const isPublicRoute = createRouteMatcher([
 	"/",
 	"/privacy-policy",
 	"/terms-of-service",
+	"/communities(.*)", // Public community pages
+	"/api/communities(.*)", // Public community API routes
 ]);
 
 export default clerkMiddleware(async (auth, request) => {

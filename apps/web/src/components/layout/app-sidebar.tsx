@@ -14,6 +14,7 @@ import {
 	Briefcase,
 	ListCheck,
 	BarChart3,
+	Globe,
 } from "lucide-react";
 
 import { NavMain } from "@/components/layout/nav-main";
@@ -99,6 +100,11 @@ const data = {
 			title: "Reports",
 			url: "/reports",
 			icon: BarChart3,
+		},
+		{
+			title: "Community",
+			url: "/community",
+			icon: Globe,
 		},
 		{
 			title: "Settings",
@@ -208,6 +214,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 			return pathname.startsWith("/reports") || pathname.startsWith("/report");
 		}
 
+		if (title === "Community") {
+			return pathname.startsWith("/community");
+		}
+
 		// Fallback for other items (like Home)
 		return pathname.startsWith(navUrl);
 	};
@@ -216,7 +226,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 	const navigationItems = data.navMain
 		.filter((item) => {
 			// Filter navigation items based on user role
-			// Members can only see Projects and Tasks
+			// Members can only see Projects and Tasks (not Community, Settings, etc.)
 			if (isMember && hasOrganization) {
 				return item.title === "Projects" || item.title === "Tasks";
 			}
@@ -268,11 +278,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 			const isDisabled =
 				!hasOrganization && item.title !== "Settings" && item.title !== "Home";
 
+			// Community is always disabled (coming soon)
+			const isCommunityDisabled = item.title === "Community";
+
 			return {
 				...item,
 				items: subItems,
 				isActive,
-				disabled: isDisabled,
+				disabled: isDisabled || isCommunityDisabled,
+				disabledTooltip: isCommunityDisabled
+					? "Communities feature is coming soon"
+					: undefined,
 				badgeCount:
 					item.title === "Tasks" && tasksDueToday > 0
 						? tasksDueToday
