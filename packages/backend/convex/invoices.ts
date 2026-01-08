@@ -846,6 +846,73 @@ export const createFromQuote = mutation({
 			await AggregateHelpers.addInvoice(ctx, invoice as InvoiceDocument);
 		}
 
+		// Create default payment for the full invoice amount
+		await ctx.db.insert("payments", {
+			orgId: userOrgId,
+			invoiceId,
+			paymentAmount: total,
+			dueDate,
+			description: "Full Payment",
+			sortOrder: 0,
+			status: "pending",
+			publicToken: generatePublicToken(),
+		});
+
 		return invoiceId;
+	},
+});
+
+/**
+ * Get an invoice with all its payments and aggregated payment status
+ */
+export const getWithPayments = query({
+	args: { id: v.id("invoices") },
+	handler: async (ctx, args) => {
+		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		if (!userOrgId) {
+			return null;
+		}
+
+		const invoice = await getInvoiceWithOrgValidation(ctx, args.id);
+		if (!invoice) {
+			return null;
+		}
+
+		// Calculate totals from line items
+		const { subtotal, total } = await calculateInvoiceTotals(ctx, args.id);
+
+		// Get all payments for this invoice
+		const payments = await ctx.db
+			.query("payments")
+			.withIndex("by_invoice", (q) => q.eq("invoiceId", args.id))
+			.collect();
+
+		// Sort by sortOrder
+		const sortedPayments = payments.sort((a, b) => a.sortOrder - b.sortOrder);
+
+		// Calculate payment summary
+		const paidPayments = sortedPayments.filter((p) => p.status === "paid");
+		const pendingPayments = sortedPayments.filter(
+			(p) => p.status === "pending" || p.status === "sent" || p.status === "overdue"
+		);
+
+		const paidAmount = paidPayments.reduce((sum, p) => sum + p.paymentAmount, 0);
+		const remainingAmount = total - paidAmount;
+
+		return {
+			...invoice,
+			subtotal,
+			total,
+			payments: sortedPayments,
+			paymentSummary: {
+				totalPayments: sortedPayments.length,
+				paidCount: paidPayments.length,
+				pendingCount: pendingPayments.length,
+				paidAmount,
+				remainingAmount,
+				allPaymentsPaid: sortedPayments.length > 0 && sortedPayments.every((p) => p.status === "paid"),
+				percentPaid: total > 0 ? Math.round((paidAmount / total) * 100) : 0,
+			},
+		};
 	},
 });

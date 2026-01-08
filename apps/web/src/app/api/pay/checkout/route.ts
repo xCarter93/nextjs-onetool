@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
 
 		if (!body.token) {
 			return NextResponse.json(
-				{ error: "Missing invoice token" },
+				{ error: "Missing token" },
 				{ status: 400 }
 			);
 		}
@@ -28,24 +28,114 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		// Fetch invoice + org payment metadata.
 		const convex = getConvexClient();
-		const data = await convex.query(api.invoices.getByPublicToken, {
+
+		// First, try to find a payment by token (new payment splitting flow)
+		const paymentData = await convex.query(api.payments.getByPublicToken, {
 			publicToken: body.token,
 		});
 
-		if (!data) {
-			return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
+		// If payment found, use payment-specific flow
+		if (paymentData) {
+			if (paymentData.payment.status === "paid") {
+				return NextResponse.json(
+					{ error: "This payment has already been paid." },
+					{ status: 400 }
+				);
+			}
+
+			const accountId = paymentData.org?.stripeConnectAccountId;
+			if (!accountId) {
+				return NextResponse.json(
+					{
+						error:
+							"Payments are not enabled for this organization. Complete onboarding first.",
+					},
+					{ status: 400 }
+				);
+			}
+
+			const amountInCents = Math.max(
+				0,
+				Math.round((paymentData.payment.paymentAmount ?? 0) * 100)
+			);
+			if (!amountInCents) {
+				return NextResponse.json(
+					{ error: "Payment amount is zero or invalid." },
+					{ status: 400 }
+				);
+			}
+
+			const stripe = getStripeClient();
+
+			// Build descriptive name for the line item
+			const paymentDescription = paymentData.payment.description
+				? `${paymentData.invoice.invoiceNumber} - ${paymentData.payment.description}`
+				: `${paymentData.invoice.invoiceNumber} - Payment ${paymentData.paymentContext.paymentNumber} of ${paymentData.paymentContext.totalPayments}`;
+
+			const session = await stripe.checkout.sessions.create(
+				{
+					customer_creation: "always",
+					invoice_creation: {
+						enabled: true,
+					},
+					mode: "payment",
+					line_items: [
+						{
+							price_data: {
+								currency: "usd",
+								product_data: {
+									name: paymentDescription,
+									description: `Payment for ${paymentData.org?.name ?? "organization"}`,
+								},
+								unit_amount: amountInCents,
+							},
+							quantity: 1,
+						},
+					],
+					payment_intent_data: {
+						application_fee_amount: parseInt(
+							process.env.STRIPE_APPLICATION_FEE_CENTS || "100"
+						),
+						metadata: {
+							publicToken: paymentData.payment.publicToken,
+							paymentId: paymentData.payment._id,
+							invoiceNumber: paymentData.invoice.invoiceNumber ?? "",
+						},
+					},
+					metadata: {
+						publicToken: paymentData.payment.publicToken,
+						paymentId: paymentData.payment._id,
+						invoiceId: paymentData.invoice._id,
+					},
+					success_url: `${origin}/pay/${paymentData.payment.publicToken}?session_id={CHECKOUT_SESSION_ID}`,
+					cancel_url: `${origin}/pay/${paymentData.payment.publicToken}?canceled=1`,
+				},
+				{
+					stripeAccount: accountId,
+				}
+			);
+
+			return NextResponse.json({ url: session.url });
 		}
 
-		if (data.invoice.status === "paid") {
+		// Fall back to legacy invoice token flow
+		const invoiceData = await convex.query(api.invoices.getByPublicToken, {
+			publicToken: body.token,
+		});
+
+		if (!invoiceData) {
+			return NextResponse.json({ error: "Invoice or payment not found" }, { status: 404 });
+		}
+
+		if (invoiceData.invoice.status === "paid") {
 			return NextResponse.json(
 				{ error: "Invoice is already paid." },
 				{ status: 400 }
 			);
 		}
 
-		const accountId = data.org?.stripeConnectAccountId;
+		const accountId = invoiceData.org?.stripeConnectAccountId;
 		if (!accountId) {
 			return NextResponse.json(
 				{
@@ -58,7 +148,7 @@ export async function POST(request: NextRequest) {
 
 		const amountInCents = Math.max(
 			0,
-			Math.round((data.invoice.total ?? 0) * 100)
+			Math.round((invoiceData.invoice.total ?? 0) * 100)
 		);
 		if (!amountInCents) {
 			return NextResponse.json(
@@ -79,11 +169,11 @@ export async function POST(request: NextRequest) {
 				line_items: [
 					{
 						price_data: {
-							currency: "usd", // Adjust if you add multi-currency invoices.
+							currency: "usd",
 							product_data: {
-								name: data.invoice.invoiceNumber ?? "Invoice payment",
+								name: invoiceData.invoice.invoiceNumber ?? "Invoice payment",
 								description: `Invoice payment for ${
-									data.org?.name ?? "organization"
+									invoiceData.org?.name ?? "organization"
 								}`,
 							},
 							unit_amount: amountInCents,
@@ -96,16 +186,16 @@ export async function POST(request: NextRequest) {
 						process.env.STRIPE_APPLICATION_FEE_CENTS || "100"
 					),
 					metadata: {
-						publicToken: data.invoice.publicToken,
-						invoiceNumber: data.invoice.invoiceNumber ?? "",
+						publicToken: invoiceData.invoice.publicToken,
+						invoiceNumber: invoiceData.invoice.invoiceNumber ?? "",
 					},
 				},
 				metadata: {
-					publicToken: data.invoice.publicToken,
-					invoiceId: data.invoice._id,
+					publicToken: invoiceData.invoice.publicToken,
+					invoiceId: invoiceData.invoice._id,
 				},
-				success_url: `${origin}/pay/${data.invoice.publicToken}?session_id={CHECKOUT_SESSION_ID}`,
-				cancel_url: `${origin}/pay/${data.invoice.publicToken}?canceled=1`,
+				success_url: `${origin}/pay/${invoiceData.invoice.publicToken}?session_id={CHECKOUT_SESSION_ID}`,
+				cancel_url: `${origin}/pay/${invoiceData.invoice.publicToken}?canceled=1`,
 			},
 			{
 				stripeAccount: accountId,

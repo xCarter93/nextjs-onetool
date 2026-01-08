@@ -416,6 +416,43 @@ export default defineSchema({
 		.index("by_invoice", ["invoiceId"])
 		.index("by_org", ["orgId"]),
 
+	// Payments - individual payment installments for invoices
+	payments: defineTable({
+		orgId: v.id("organizations"),
+		invoiceId: v.id("invoices"),
+
+		// Payment details
+		paymentAmount: v.number(),
+		dueDate: v.number(),
+		description: v.optional(v.string()), // e.g., "Deposit", "Final Payment", "Milestone 1"
+
+		// Sequential ordering
+		sortOrder: v.number(),
+
+		// Status tracking
+		status: v.union(
+			v.literal("pending"),
+			v.literal("sent"),
+			v.literal("paid"),
+			v.literal("overdue"),
+			v.literal("cancelled")
+		),
+		paidAt: v.optional(v.number()),
+
+		// Public access token for payment URL
+		publicToken: v.string(),
+
+		// Stripe integration
+		stripeSessionId: v.optional(v.string()),
+		stripePaymentIntentId: v.optional(v.string()),
+	})
+		.index("by_org", ["orgId"])
+		.index("by_invoice", ["invoiceId"])
+		.index("by_public_token", ["publicToken"])
+		.index("by_status", ["orgId", "status"])
+		.index("by_due_date", ["orgId", "dueDate"])
+		.index("by_invoice_sort", ["invoiceId", "sortOrder"]),
+
 	// PDF Documents (for quotes and invoices)
 	documents: defineTable({
 		orgId: v.id("organizations"),
@@ -485,6 +522,11 @@ export default defineSchema({
 			v.literal("invoice_created"),
 			v.literal("invoice_sent"),
 			v.literal("invoice_paid"),
+			v.literal("payment_created"),
+			v.literal("payment_updated"),
+			v.literal("payment_paid"),
+			v.literal("payment_cancelled"),
+			v.literal("payments_configured"),
 			v.literal("task_created"),
 			v.literal("task_completed"),
 			v.literal("user_invited"),
@@ -500,6 +542,7 @@ export default defineSchema({
 			v.literal("project"),
 			v.literal("quote"),
 			v.literal("invoice"),
+			v.literal("payment"),
 			v.literal("task"),
 			v.literal("user"),
 			v.literal("organization")
