@@ -36,10 +36,24 @@ const aggregateSchema = defineSchema({
 });
 
 // Modules for aggregate components
+// In pnpm monorepo, dependencies are hoisted to root node_modules
+// Try multiple paths to find the aggregate component modules
 // @ts-expect-error - import.meta.glob is provided by Vitest
-const aggregateModules = import.meta.glob(
-	"../node_modules/@convex-dev/aggregate/dist/esm/component/**/*.js"
-);
+const aggregateModulesRoot = import.meta.glob(
+	"/node_modules/@convex-dev/aggregate/dist/esm/component/**/*.js"
+) as Record<string, () => Promise<unknown>>;
+
+// Fallback: try relative path from packages/backend
+// @ts-expect-error - import.meta.glob is provided by Vitest
+const aggregateModulesRelative = import.meta.glob(
+	"../../node_modules/@convex-dev/aggregate/dist/esm/component/**/*.js"
+) as Record<string, () => Promise<unknown>>;
+
+// Use whichever path found the modules
+const aggregateModules =
+	Object.keys(aggregateModulesRoot).length > 0
+		? aggregateModulesRoot
+		: aggregateModulesRelative;
 
 /**
  * Creates a test instance with all components registered
@@ -48,12 +62,19 @@ const aggregateModules = import.meta.glob(
 export function setupConvexTest() {
 	const t = convexTest(schema, modules);
 
-	// Register aggregate components
-	t.registerComponent("clientCounts", aggregateSchema, aggregateModules);
-	t.registerComponent("projectCounts", aggregateSchema, aggregateModules);
-	t.registerComponent("quoteCounts", aggregateSchema, aggregateModules);
-	t.registerComponent("invoiceRevenue", aggregateSchema, aggregateModules);
-	t.registerComponent("invoiceCounts", aggregateSchema, aggregateModules);
+	// Register aggregate components if available
+	// Some tests may not need aggregates, so we register conditionally
+	if (Object.keys(aggregateModules).length > 0) {
+		t.registerComponent("clientCounts", aggregateSchema, aggregateModules);
+		t.registerComponent("projectCounts", aggregateSchema, aggregateModules);
+		t.registerComponent("quoteCounts", aggregateSchema, aggregateModules);
+		t.registerComponent("invoiceRevenue", aggregateSchema, aggregateModules);
+		t.registerComponent("invoiceCounts", aggregateSchema, aggregateModules);
+	} else {
+		console.warn(
+			"Warning: Aggregate modules not found. Tests requiring aggregates may fail."
+		);
+	}
 
 	return t;
 }

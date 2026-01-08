@@ -37,8 +37,6 @@ describe("Quotes", () => {
 					orgId,
 					companyName: "Test Client",
 					status: "active",
-					emailOptIn: true,
-					smsOptIn: false,
 				});
 
 				return { userId, orgId, clientId };
@@ -96,8 +94,6 @@ describe("Quotes", () => {
 					orgId,
 					companyName: "Test Client",
 					status: "active",
-					emailOptIn: true,
-					smsOptIn: false,
 				});
 
 				return { userId, clientId };
@@ -203,8 +199,6 @@ describe("Quotes", () => {
 					orgId,
 					companyName: "Test Client",
 					status: "active",
-					emailOptIn: true,
-					smsOptIn: false,
 				});
 
 				return { userId, clientId };
@@ -281,16 +275,12 @@ describe("Quotes", () => {
 					orgId,
 					companyName: "Client 1",
 					status: "active",
-					emailOptIn: true,
-					smsOptIn: false,
 				});
 
 				const clientId2 = await ctx.db.insert("clients", {
 					orgId,
 					companyName: "Client 2",
 					status: "active",
-					emailOptIn: true,
-					smsOptIn: false,
 				});
 
 				return { userId, clientId1, clientId2 };
@@ -351,8 +341,6 @@ describe("Quotes", () => {
 					orgId,
 					companyName: "Test Client",
 					status: "active",
-					emailOptIn: true,
-					smsOptIn: false,
 				});
 
 				const quoteId = await ctx.db.insert("quotes", {
@@ -409,8 +397,6 @@ describe("Quotes", () => {
 					orgId,
 					companyName: "Test Client",
 					status: "active",
-					emailOptIn: true,
-					smsOptIn: false,
 				});
 
 				return { userId, clientId };
