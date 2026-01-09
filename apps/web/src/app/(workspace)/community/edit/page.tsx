@@ -78,6 +78,22 @@ export default function CommunityEditPage() {
 	const [slugError, setSlugError] = useState<string | null>(null);
 	const [copied, setCopied] = useState(false);
 	const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+	const [debouncedSlug, setDebouncedSlug] = useState("");
+
+	// Check slug availability (debounced)
+	useEffect(() => {
+		const timer = setTimeout(() => {
+			if (slug.length >= 3) {
+				setDebouncedSlug(slug);
+			}
+		}, 300);
+		return () => clearTimeout(timer);
+	}, [slug]);
+
+	const isSlugAvailable = useQuery(
+		api.communityPages.checkSlugAvailable,
+		debouncedSlug.length >= 3 ? { slug: debouncedSlug } : "skip"
+	);
 
 	// Refs
 	const bannerInputRef = useRef<HTMLInputElement>(null);
@@ -554,46 +570,80 @@ export default function CommunityEditPage() {
 
 			{/* Page Settings */}
 			<StyledCard>
-				<StyledCardHeader>
+				<StyledCardHeader className="pb-6">
 					<StyledCardTitle>Page Settings</StyledCardTitle>
-					<StyledCardDescription>
+					<StyledCardDescription className="mt-2">
 						Configure your page title, URL, and SEO settings
 					</StyledCardDescription>
 				</StyledCardHeader>
-				<StyledCardContent className="space-y-6">
-					<div className="space-y-2">
-						<Label htmlFor="pageTitle">Page Title</Label>
-						<StyledInput
-							id="pageTitle"
-							value={pageTitle}
-							onChange={(e) => {
-								setPageTitle(e.target.value);
-								setHasUnsavedChanges(true);
-							}}
-							placeholder={organization?.name || "Your Business Name"}
-						/>
-					</div>
-
-					<div className="space-y-2">
-						<Label htmlFor="slug">URL Slug</Label>
-						<div className="flex items-center gap-2">
-							<span className="text-sm text-muted-fg whitespace-nowrap">
-								/communities/
-							</span>
+				<StyledCardContent className="space-y-8">
+					{/* Page Title and URL in a grid on larger screens */}
+					<div className="grid gap-8 lg:grid-cols-2">
+						<div className="space-y-3">
+							<Label htmlFor="pageTitle">Page Title</Label>
 							<StyledInput
-								id="slug"
-								value={slug}
-								onChange={handleSlugChange}
-								placeholder="your-business-name"
-								className={cn(slugError && "border-danger")}
+								id="pageTitle"
+								value={pageTitle}
+								onChange={(e) => {
+									setPageTitle(e.target.value);
+									setHasUnsavedChanges(true);
+								}}
+								placeholder={organization?.name || "Your Business Name"}
 							/>
+							<p className="text-xs text-muted-fg">
+								This will be displayed as the main heading on your page
+							</p>
 						</div>
-						{slugError && (
-							<p className="text-sm text-danger">{slugError}</p>
-						)}
+
+						<div className="space-y-3">
+							<Label htmlFor="slug">Page URL</Label>
+							<div className="flex items-center gap-3">
+								<div className="flex">
+									<div className="flex shrink-0 items-center rounded-l-md bg-muted px-3 py-2 text-sm text-muted-fg border border-r-0 border-border">
+										onetool.biz/communities/
+									</div>
+									<input
+										id="slug"
+										type="text"
+										value={slug}
+										onChange={handleSlugChange}
+										placeholder="your-business-name"
+										className={cn(
+											"block w-48 rounded-r-md border border-border bg-bg px-3 py-2 text-sm text-fg placeholder:text-muted-fg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent",
+											slugError && "border-danger focus:ring-danger",
+											!slugError && isSlugAvailable === false && "border-danger focus:ring-danger"
+										)}
+									/>
+								</div>
+								{slugError ? (
+									<span className="text-sm text-danger">{slugError}</span>
+								) : slug.length >= 3 && isSlugAvailable !== undefined ? (
+									<div className="flex items-center gap-1.5">
+										<span
+											className={cn(
+												"size-2 rounded-full",
+												isSlugAvailable ? "bg-green-500" : "bg-red-500"
+											)}
+										/>
+										<span
+											className={cn(
+												"text-sm font-medium",
+												isSlugAvailable ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+											)}
+										>
+											{isSlugAvailable ? "Available" : "Taken"}
+										</span>
+									</div>
+								) : null}
+							</div>
+							<p className="text-xs text-muted-fg">
+								Only lowercase letters, numbers, and hyphens allowed
+							</p>
+						</div>
 					</div>
 
-					<div className="space-y-2">
+					{/* SEO Description - full width */}
+					<div className="space-y-3">
 						<Label htmlFor="metaDescription">SEO Description</Label>
 						<StyledInput
 							id="metaDescription"
@@ -605,36 +655,40 @@ export default function CommunityEditPage() {
 							placeholder="A brief description for search engines (optional)"
 						/>
 						<p className="text-xs text-muted-fg">
-							{metaDescription.length}/160 characters recommended
+							{metaDescription.length}/160 characters recommended for search engines
 						</p>
 					</div>
 
 					{/* Public Toggle */}
-					<div className="flex items-center justify-between p-4 rounded-lg bg-muted/50 border border-border">
-						<div className="flex items-center gap-3">
+					<div className="flex items-center justify-between p-5 rounded-xl bg-muted/50 border border-border">
+						<div className="flex items-center gap-4">
 							{isPublic ? (
-								<Globe className="size-5 text-success" />
+								<div className="flex items-center justify-center size-10 rounded-full bg-success/10">
+									<Globe className="size-5 text-success" />
+								</div>
 							) : (
-								<GlobeLock className="size-5 text-muted-fg" />
+								<div className="flex items-center justify-center size-10 rounded-full bg-muted">
+									<GlobeLock className="size-5 text-muted-fg" />
+								</div>
 							)}
 							<div>
-								<p className="font-medium text-fg">
+								<p className="font-semibold text-fg">
 									{isPublic ? "Public" : "Private"}
 								</p>
 								<p className="text-sm text-muted-fg">
 									{isPublic
-										? "Anyone can view this page"
+										? "Anyone with the link can view this page"
 										: "Only you can see this page"}
 								</p>
 							</div>
 						</div>
-						<Button
+						<StyledButton
 							intent={isPublic ? "secondary" : "primary"}
 							size="sm"
-							onPress={handleTogglePublic}
+							onClick={handleTogglePublic}
 						>
 							{isPublic ? "Make Private" : "Make Public"}
-						</Button>
+						</StyledButton>
 					</div>
 				</StyledCardContent>
 			</StyledCard>
@@ -673,7 +727,7 @@ export default function CommunityEditPage() {
 					<StyledButton
 						intent="secondary"
 						onClick={handleSaveDraft}
-						disabled={isSaving || isPublishing}
+						disabled={isSaving || isPublishing || isSlugAvailable === false}
 					>
 						{isSaving ? (
 							<Loader2 className="size-4 mr-2 animate-spin" />
@@ -686,7 +740,7 @@ export default function CommunityEditPage() {
 					<StyledButton
 						intent="primary"
 						onClick={handlePublish}
-						disabled={isSaving || isPublishing || !draftContent}
+						disabled={isSaving || isPublishing || !draftContent || isSlugAvailable === false}
 					>
 						{isPublishing ? (
 							<Loader2 className="size-4 mr-2 animate-spin" />
