@@ -200,7 +200,7 @@ export const TextHighlighter = forwardRef<
 		};
 
 		const defaultGradient =
-			"bg-gradient-to-r from-orange-400 to-orange-200 dark:from-orange-500 dark:to-orange-300";
+			"bg-linear-to-r from-orange-400 to-orange-200 dark:from-orange-500 dark:to-orange-300";
 
 		const getHighlightStyles = (): React.CSSProperties => {
 			const baseStyles: React.CSSProperties = {

@@ -392,7 +392,18 @@ export default function QuoteDetailPage() {
 			const element = (
 				<QuotePDF
 					quote={quote}
-					client={client ? { companyName: client.companyName } : undefined}
+					client={
+						client
+							? {
+									companyName: client.companyName,
+									streetAddress: primaryProperty?.streetAddress,
+									city: primaryProperty?.city,
+									state: primaryProperty?.state,
+									zipCode: primaryProperty?.zipCode,
+									country: primaryProperty?.country,
+								}
+							: undefined
+					}
 					items={lineItems}
 					organization={
 						organization

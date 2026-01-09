@@ -32,6 +32,11 @@ type Invoice = {
 
 type Client = {
 	companyName: string;
+	streetAddress?: string;
+	city?: string;
+	state?: string;
+	zipCode?: string;
+	country?: string;
 };
 
 type Organization = {
@@ -53,248 +58,243 @@ const styles = StyleSheet.create({
 	page: {
 		flexDirection: "column",
 		backgroundColor: "#FFFFFF",
-		padding: 28,
-		fontSize: 11,
+		padding: 40,
+		fontSize: 9,
 		fontFamily: "Helvetica",
 	},
-	logoSection: {
-		marginBottom: 16,
+	// Header section
+	header: {
+		flexDirection: "row",
+		justifyContent: "space-between",
+		marginBottom: 20,
+	},
+	title: {
+		fontSize: 28,
+		fontWeight: "bold",
+		letterSpacing: 6,
+		color: "#000000",
+	},
+	headerRight: {
+		flexDirection: "row",
 		alignItems: "flex-start",
 	},
+	companyInfo: {
+		textAlign: "right",
+		marginRight: 12,
+	},
+	companyName: {
+		fontSize: 9,
+		fontWeight: "bold",
+		marginBottom: 2,
+	},
+	companyDetail: {
+		fontSize: 8,
+		color: "#333333",
+		lineHeight: 1.4,
+	},
 	logoContainer: {
-		width: 160,
-		height: 60,
+		width: 60,
+		height: 50,
 	},
 	logo: {
 		width: "100%",
 		height: "100%",
 		objectFit: "contain",
-		objectPosition: "left center",
 	},
-	header: {
-		flexDirection: "row",
-		justifyContent: "space-between",
-		marginBottom: 24,
-		paddingBottom: 12,
-		borderBottomWidth: 2,
-		borderBottomColor: "#000000",
-	},
-	headerLeft: {
-		flexDirection: "column",
-		maxWidth: 280,
-	},
-	headerRight: {
-		flexDirection: "column",
-		alignItems: "flex-end",
-		justifyContent: "flex-start",
-	},
-	title: {
-		fontSize: 32,
-		fontWeight: "bold",
-		color: "#000000",
-		marginBottom: 8,
-		letterSpacing: 1,
-	},
-	subtitle: {
-		fontSize: 10,
-		color: "#374151",
-		marginBottom: 2,
-		lineHeight: 1.5,
-	},
-	invoiceNumber: {
-		fontSize: 20,
-		fontWeight: "bold",
-		color: "#000000",
-		marginBottom: 8,
-	},
-	invoiceMeta: {
-		backgroundColor: "#F9FAFB",
-		borderWidth: 1,
-		borderColor: "#E5E7EB",
-		borderRadius: 4,
-		padding: 10,
-		minWidth: 200,
-	},
+	// Meta row (invoice number, date)
 	metaRow: {
 		flexDirection: "row",
 		justifyContent: "space-between",
-		marginBottom: 4,
+		marginBottom: 16,
+	},
+	metaItem: {
+		flexDirection: "row",
+		alignItems: "center",
+		flex: 1,
 	},
 	metaLabel: {
-		fontSize: 10,
-		color: "#6B7280",
+		fontSize: 9,
 		fontWeight: "bold",
+		marginRight: 8,
 	},
 	metaValue: {
-		fontSize: 10,
-		color: "#1F2937",
-		marginLeft: 16,
+		fontSize: 9,
+		borderBottomWidth: 1,
+		borderBottomColor: "#000000",
+		paddingBottom: 2,
+		flex: 1,
+		maxWidth: 150,
 	},
-	statusBadge: {
-		backgroundColor: "#10B981",
+	// Section bar
+	sectionBar: {
+		backgroundColor: "#000000",
 		paddingVertical: 4,
 		paddingHorizontal: 8,
-		borderRadius: 4,
-		marginTop: 6,
+		marginBottom: 12,
 	},
-	statusText: {
-		fontSize: 9,
+	sectionBarText: {
 		color: "#FFFFFF",
+		fontSize: 9,
 		fontWeight: "bold",
-		textTransform: "uppercase",
 	},
-	billToSection: {
-		marginTop: 8,
-		marginBottom: 16,
-		padding: 12,
-		backgroundColor: "#F9FAFB",
-		borderRadius: 4,
+	// Bill To section
+	billToGrid: {
+		flexDirection: "row",
+		marginBottom: 20,
 	},
-	sectionTitle: {
-		fontSize: 11,
-		fontWeight: "bold",
-		color: "#1F2937",
+	billToColumn: {
+		flex: 1,
+	},
+	billToRow: {
+		flexDirection: "row",
 		marginBottom: 8,
-		textTransform: "uppercase",
-		letterSpacing: 0.5,
 	},
-	billToContent: {
-		fontSize: 11,
-		color: "#374151",
-		lineHeight: 1.6,
+	billToLabel: {
+		fontSize: 9,
+		width: 80,
+		color: "#333333",
 	},
-	itemsTable: {
-		marginTop: 12,
+	billToValue: {
+		fontSize: 9,
+		borderBottomWidth: 1,
+		borderBottomColor: "#000000",
+		paddingBottom: 2,
+		flex: 1,
+		marginRight: 16,
+	},
+	// Items table
+	table: {
 		marginBottom: 16,
-		borderWidth: 1,
-		borderColor: "#E5E7EB",
-		borderRadius: 4,
 	},
 	tableHeader: {
 		flexDirection: "row",
-		backgroundColor: "#1F2937",
-		paddingVertical: 10,
-		paddingHorizontal: 12,
+		borderBottomWidth: 1,
+		borderBottomColor: "#000000",
+		paddingBottom: 4,
+		marginBottom: 4,
 	},
 	tableRow: {
 		flexDirection: "row",
-		borderBottomWidth: 1,
-		borderBottomColor: "#E5E7EB",
-		paddingVertical: 10,
-		paddingHorizontal: 12,
-		backgroundColor: "#FFFFFF",
+		borderBottomWidth: 0.5,
+		borderBottomColor: "#CCCCCC",
+		paddingVertical: 6,
 	},
-	tableCell: {
-		fontSize: 10,
-		color: "#374151",
-		lineHeight: 1.4,
+	colDescription: {
+		flex: 3,
+		fontSize: 9,
 	},
-	tableCellDescription: { flex: 3 },
-	tableCellQuantity: { flex: 1, textAlign: "center" },
-	tableCellPrice: { flex: 1.5, textAlign: "right" },
-	tableCellTotal: {
-		flex: 1.5,
+	colQty: {
+		flex: 0.7,
+		fontSize: 9,
+		textAlign: "center",
+	},
+	colPrice: {
+		flex: 1,
+		fontSize: 9,
 		textAlign: "right",
-		fontWeight: "bold",
-		color: "#1F2937",
 	},
-	tableHeaderCell: {
-		fontSize: 10,
-		fontWeight: "bold",
-		color: "#FFFFFF",
-		textTransform: "uppercase",
-		letterSpacing: 0.8,
+	colAmount: {
+		flex: 1,
+		fontSize: 9,
+		textAlign: "right",
 	},
+	tableHeaderText: {
+		fontWeight: "bold",
+		fontSize: 9,
+	},
+	// Totals section
 	totalsSection: {
 		flexDirection: "row",
 		justifyContent: "flex-end",
 		marginTop: 12,
-		marginBottom: 16,
 	},
 	totalsContainer: {
-		width: 260,
-		borderWidth: 1,
-		borderColor: "#E5E7EB",
-		borderRadius: 4,
-		padding: 12,
-		backgroundColor: "#F9FAFB",
+		width: 200,
 	},
 	totalRow: {
 		flexDirection: "row",
 		justifyContent: "space-between",
-		paddingVertical: 4,
+		paddingVertical: 3,
 	},
 	totalLabel: {
-		fontSize: 11,
-		color: "#6B7280",
+		fontSize: 9,
+		color: "#333333",
 	},
 	totalValue: {
-		fontSize: 11,
-		color: "#374151",
-		fontWeight: "bold",
+		fontSize: 9,
+		textAlign: "right",
 	},
 	grandTotalRow: {
 		flexDirection: "row",
 		justifyContent: "space-between",
-		paddingVertical: 8,
-		paddingTop: 10,
-		borderTopWidth: 2,
-		borderTopColor: "#1F2937",
-		marginTop: 6,
+		backgroundColor: "#000000",
+		paddingVertical: 6,
+		paddingHorizontal: 8,
+		marginTop: 4,
 	},
 	grandTotalLabel: {
-		fontSize: 14,
+		fontSize: 10,
 		fontWeight: "bold",
-		color: "#000000",
+		color: "#FFFFFF",
 	},
 	grandTotalValue: {
-		fontSize: 16,
+		fontSize: 10,
 		fontWeight: "bold",
-		color: "#000000",
+		color: "#FFFFFF",
 	},
-	amountDueSection: {
-		marginTop: 12,
-		padding: 12,
+	// Status notices
+	noticeSection: {
+		marginTop: 16,
+	},
+	amountDueNotice: {
 		backgroundColor: "#FEF3C7",
-		borderRadius: 4,
-		borderLeftWidth: 4,
+		padding: 12,
+		borderLeftWidth: 3,
 		borderLeftColor: "#F59E0B",
 	},
-	amountDueText: {
-		fontSize: 12,
+	amountDueLabel: {
+		fontSize: 10,
 		fontWeight: "bold",
 		color: "#92400E",
-		marginBottom: 4,
+		marginBottom: 2,
 	},
 	amountDueValue: {
-		fontSize: 18,
+		fontSize: 14,
 		fontWeight: "bold",
 		color: "#92400E",
 	},
-	paymentNotice: {
-		marginTop: 12,
-		padding: 12,
+	amountDueDate: {
+		fontSize: 8,
+		color: "#92400E",
+		marginTop: 4,
+	},
+	paidNotice: {
 		backgroundColor: "#D1FAE5",
-		borderRadius: 4,
-		borderLeftWidth: 4,
+		padding: 12,
+		borderLeftWidth: 3,
 		borderLeftColor: "#10B981",
 	},
-	paymentNoticeText: {
-		fontSize: 11,
-		color: "#065F46",
+	paidText: {
+		fontSize: 10,
 		fontWeight: "bold",
+		color: "#065F46",
 	},
+	paidSubtext: {
+		fontSize: 8,
+		color: "#065F46",
+		marginTop: 4,
+	},
+	// Footer
 	footer: {
 		marginTop: 24,
-		paddingTop: 12,
 		borderTopWidth: 1,
-		borderTopColor: "#E5E7EB",
+		borderTopColor: "#EEEEEE",
+		paddingTop: 12,
 	},
 	footerText: {
-		fontSize: 9,
-		color: "#6B7280",
+		fontSize: 8,
+		color: "#666666",
 		textAlign: "center",
-		lineHeight: 1.4,
 	},
 });
 
@@ -306,8 +306,8 @@ const formatCurrency = (amount: number) =>
 const formatDate = (timestamp: number) =>
 	new Date(timestamp).toLocaleDateString("en-US", {
 		year: "numeric",
-		month: "long",
-		day: "numeric",
+		month: "2-digit",
+		day: "2-digit",
 	});
 
 export const InvoicePDF: React.FC<InvoicePDFProps> = ({
@@ -320,116 +320,113 @@ export const InvoicePDF: React.FC<InvoicePDFProps> = ({
 	const isOverdue =
 		!isPaid && invoice.status === "sent" && invoice.dueDate < Date.now();
 
+	// Format client address
+	const clientAddress = client
+		? [
+				client.streetAddress,
+				[client.city, client.state, client.zipCode].filter(Boolean).join(", "),
+				client.country && client.country !== "USA" ? client.country : null,
+			]
+				.filter(Boolean)
+				.join("\n")
+		: "";
+
 	return (
 		<Document>
 			<Page size="A4" style={styles.page}>
-				{/* Logo Section */}
-				{organization?.logoUrl ? (
-					<View style={styles.logoSection}>
-						<View style={styles.logoContainer}>
-							{/* eslint-disable-next-line jsx-a11y/alt-text */}
-							<Image style={styles.logo} src={organization.logoUrl} />
-						</View>
-					</View>
-				) : null}
-
 				{/* Header */}
 				<View style={styles.header}>
-					<View style={styles.headerLeft}>
-						<Text style={styles.title}>INVOICE</Text>
-						{organization?.name ? (
-							<Text style={styles.subtitle}>{organization.name}</Text>
-						) : null}
-						{organization?.address ? (
-							<Text style={styles.subtitle}>{organization.address}</Text>
-						) : null}
-						{organization?.phone ? (
-							<Text style={styles.subtitle}>Phone: {organization.phone}</Text>
-						) : null}
-						{organization?.email ? (
-							<Text style={styles.subtitle}>Email: {organization.email}</Text>
-						) : null}
-					</View>
+					<Text style={styles.title}>INVOICE</Text>
 					<View style={styles.headerRight}>
-						<Text style={styles.invoiceNumber}>{invoice.invoiceNumber}</Text>
-						<View style={styles.invoiceMeta}>
-							<View style={styles.metaRow}>
-								<Text style={styles.metaLabel}>Issued:</Text>
-								<Text style={styles.metaValue}>
-									{formatDate(invoice.issuedDate)}
-								</Text>
-							</View>
-							<View style={styles.metaRow}>
-								<Text style={styles.metaLabel}>Due Date:</Text>
-								<Text style={styles.metaValue}>
-									{formatDate(invoice.dueDate)}
-								</Text>
-							</View>
-							{isPaid && invoice.paidAt && (
-								<View style={styles.metaRow}>
-									<Text style={styles.metaLabel}>Paid:</Text>
-									<Text style={styles.metaValue}>
-										{formatDate(invoice.paidAt)}
-									</Text>
-								</View>
-							)}
-						</View>
-						{isPaid && (
-							<View style={styles.statusBadge}>
-								<Text style={styles.statusText}>PAID</Text>
+						{organization && (
+							<View style={styles.companyInfo}>
+								<Text style={styles.companyName}>{organization.name}</Text>
+								{organization.address && (
+									<Text style={styles.companyDetail}>{organization.address}</Text>
+								)}
+								{organization.phone && (
+									<Text style={styles.companyDetail}>{organization.phone}</Text>
+								)}
+								{organization.email && (
+									<Text style={styles.companyDetail}>{organization.email}</Text>
+								)}
 							</View>
 						)}
+						{organization?.logoUrl && (
+							<View style={styles.logoContainer}>
+								{/* eslint-disable-next-line jsx-a11y/alt-text */}
+								<Image style={styles.logo} src={organization.logoUrl} />
+							</View>
+						)}
+					</View>
+				</View>
+
+				{/* Meta Row (Invoice Number & Date) */}
+				<View style={styles.metaRow}>
+					<View style={styles.metaItem}>
+						<Text style={styles.metaLabel}>Invoice #</Text>
+						<Text style={styles.metaValue}>{invoice.invoiceNumber}</Text>
+					</View>
+					<View style={styles.metaItem}>
+						<Text style={styles.metaLabel}>Issued</Text>
+						<Text style={styles.metaValue}>{formatDate(invoice.issuedDate)}</Text>
+					</View>
+					<View style={styles.metaItem}>
+						<Text style={styles.metaLabel}>Due Date</Text>
+						<Text style={styles.metaValue}>{formatDate(invoice.dueDate)}</Text>
 					</View>
 				</View>
 
 				{/* Bill To Section */}
-				<View style={styles.billToSection} wrap={false}>
-					<Text style={styles.sectionTitle}>Bill To:</Text>
-					<View style={styles.billToContent}>
-						{client ? (
-							<Text>{client.companyName}</Text>
-						) : (
-							<Text>Client details unavailable</Text>
-						)}
+				<View style={styles.sectionBar}>
+					<Text style={styles.sectionBarText}>BILL TO:</Text>
+				</View>
+				<View style={styles.billToGrid}>
+					<View style={styles.billToColumn}>
+						<View style={styles.billToRow}>
+							<Text style={styles.billToLabel}>Client</Text>
+							<Text style={styles.billToValue}>
+								{client?.companyName || "—"}
+							</Text>
+						</View>
+					</View>
+					<View style={styles.billToColumn}>
+						<View style={styles.billToRow}>
+							<Text style={styles.billToLabel}>Address</Text>
+							<Text style={styles.billToValue}>{clientAddress || "—"}</Text>
+						</View>
 					</View>
 				</View>
 
 				{/* Items Table */}
-				<View style={styles.itemsTable} wrap={false}>
+				<View style={styles.sectionBar}>
+					<Text style={styles.sectionBarText}>ITEMS:</Text>
+				</View>
+				<View style={styles.table}>
 					<View style={styles.tableHeader}>
-						<Text style={[styles.tableHeaderCell, styles.tableCellDescription]}>
+						<Text style={[styles.colDescription, styles.tableHeaderText]}>
 							Description
 						</Text>
-						<Text style={[styles.tableHeaderCell, styles.tableCellQuantity]}>
-							Qty
-						</Text>
-						<Text style={[styles.tableHeaderCell, styles.tableCellPrice]}>
+						<Text style={[styles.colQty, styles.tableHeaderText]}>Qty</Text>
+						<Text style={[styles.colPrice, styles.tableHeaderText]}>
 							Unit Price
 						</Text>
-						<Text style={[styles.tableHeaderCell, styles.tableCellTotal]}>
-							Total
+						<Text style={[styles.colAmount, styles.tableHeaderText]}>
+							Amount
 						</Text>
 					</View>
 					{items.map((item) => (
 						<View key={String(item._id)} style={styles.tableRow}>
-							<Text style={[styles.tableCell, styles.tableCellDescription]}>
-								{item.description}
-							</Text>
-							<Text style={[styles.tableCell, styles.tableCellQuantity]}>
-								{item.quantity}
-							</Text>
-							<Text style={[styles.tableCell, styles.tableCellPrice]}>
-								{formatCurrency(item.unitPrice)}
-							</Text>
-							<Text style={[styles.tableCell, styles.tableCellTotal]}>
-								{formatCurrency(item.total)}
-							</Text>
+							<Text style={styles.colDescription}>{item.description}</Text>
+							<Text style={styles.colQty}>{item.quantity}</Text>
+							<Text style={styles.colPrice}>{formatCurrency(item.unitPrice)}</Text>
+							<Text style={styles.colAmount}>{formatCurrency(item.total)}</Text>
 						</View>
 					))}
 				</View>
 
 				{/* Totals */}
-				<View style={styles.totalsSection} wrap={false}>
+				<View style={styles.totalsSection}>
 					<View style={styles.totalsContainer}>
 						<View style={styles.totalRow}>
 							<Text style={styles.totalLabel}>Subtotal:</Text>
@@ -441,7 +438,7 @@ export const InvoicePDF: React.FC<InvoicePDFProps> = ({
 							<View style={styles.totalRow}>
 								<Text style={styles.totalLabel}>Discount:</Text>
 								<Text style={styles.totalValue}>
-									- {formatCurrency(invoice.discountAmount)}
+									-{formatCurrency(invoice.discountAmount)}
 								</Text>
 							</View>
 						) : null}
@@ -454,7 +451,7 @@ export const InvoicePDF: React.FC<InvoicePDFProps> = ({
 							</View>
 						) : null}
 						<View style={styles.grandTotalRow}>
-							<Text style={styles.grandTotalLabel}>Total:</Text>
+							<Text style={styles.grandTotalLabel}>Total</Text>
 							<Text style={styles.grandTotalValue}>
 								{formatCurrency(invoice.total)}
 							</Text>
@@ -462,33 +459,31 @@ export const InvoicePDF: React.FC<InvoicePDFProps> = ({
 					</View>
 				</View>
 
-				{/* Amount Due Notice (if not paid) */}
-				{!isPaid && (
-					<View style={styles.amountDueSection} wrap={false}>
-						<Text style={styles.amountDueText}>
-							{isOverdue ? "AMOUNT OVERDUE" : "AMOUNT DUE"}
-						</Text>
-						<Text style={styles.amountDueValue}>
-							{formatCurrency(invoice.total)}
-						</Text>
-						<Text style={{ fontSize: 10, color: "#92400E", marginTop: 4 }}>
-							Payment due by {formatDate(invoice.dueDate)}
-						</Text>
-					</View>
-				)}
-
-				{/* Payment Confirmation (if paid) */}
-				{isPaid && (
-					<View style={styles.paymentNotice} wrap={false}>
-						<Text style={styles.paymentNoticeText}>
-							✓ Payment received on{" "}
-							{invoice.paidAt && formatDate(invoice.paidAt)}
-						</Text>
-						<Text style={{ fontSize: 10, color: "#065F46", marginTop: 4 }}>
-							Thank you for your business!
-						</Text>
-					</View>
-				)}
+				{/* Payment Status Notices */}
+				<View style={styles.noticeSection}>
+					{!isPaid && (
+						<View style={styles.amountDueNotice}>
+							<Text style={styles.amountDueLabel}>
+								{isOverdue ? "AMOUNT OVERDUE" : "AMOUNT DUE"}
+							</Text>
+							<Text style={styles.amountDueValue}>
+								{formatCurrency(invoice.total)}
+							</Text>
+							<Text style={styles.amountDueDate}>
+								Payment due by {formatDate(invoice.dueDate)}
+							</Text>
+						</View>
+					)}
+					{isPaid && (
+						<View style={styles.paidNotice}>
+							<Text style={styles.paidText}>
+								✓ Payment received
+								{invoice.paidAt && ` on ${formatDate(invoice.paidAt)}`}
+							</Text>
+							<Text style={styles.paidSubtext}>Thank you for your business!</Text>
+						</View>
+					)}
+				</View>
 
 				{/* Footer */}
 				<View style={styles.footer}>
@@ -498,7 +493,7 @@ export const InvoicePDF: React.FC<InvoicePDFProps> = ({
 					</Text>
 					{organization?.name && (
 						<Text style={styles.footerText}>
-							{organization.name} • Invoice {invoice.invoiceNumber}
+							{organization.name} • {invoice.invoiceNumber}
 						</Text>
 					)}
 				</View>

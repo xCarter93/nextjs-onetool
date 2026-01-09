@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Outfit } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import ConvexClientProvider from "@/providers/ConvexClientProvider";
+import { PostHogProvider } from "@/providers/PostHogProvider";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { ToastProvider } from "@/hooks/use-toast";
 import { ConfirmDialogProvider } from "@/hooks/use-confirm-dialog";
@@ -34,14 +35,16 @@ export default function RootLayout({
 						cssLayerName: "clerk",
 					}}
 				>
-					<ConvexClientProvider>
-						<ThemeProvider>
-							<DynamicTitle />
-							<ToastProvider position="top-right" maxToasts={5}>
-								<ConfirmDialogProvider>{children}</ConfirmDialogProvider>
-							</ToastProvider>
-						</ThemeProvider>
-					</ConvexClientProvider>
+					<PostHogProvider>
+						<ConvexClientProvider>
+							<ThemeProvider>
+								<DynamicTitle />
+								<ToastProvider position="top-right" maxToasts={5}>
+									<ConfirmDialogProvider>{children}</ConfirmDialogProvider>
+								</ToastProvider>
+							</ThemeProvider>
+						</ConvexClientProvider>
+					</PostHogProvider>
 				</ClerkProvider>
 			</body>
 		</html>

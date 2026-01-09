@@ -37,6 +37,11 @@ type Quote = {
 
 type Client = {
 	companyName: string;
+	streetAddress?: string;
+	city?: string;
+	state?: string;
+	zipCode?: string;
+	country?: string;
 };
 
 type Organization = {
@@ -58,230 +63,239 @@ const styles = StyleSheet.create({
 	page: {
 		flexDirection: "column",
 		backgroundColor: "#FFFFFF",
-		padding: 28,
-		fontSize: 11,
+		padding: 40,
+		fontSize: 9,
 		fontFamily: "Helvetica",
 	},
-	logoSection: {
-		marginBottom: 16,
+	// Header section
+	header: {
+		flexDirection: "row",
+		justifyContent: "space-between",
+		marginBottom: 20,
+	},
+	title: {
+		fontSize: 28,
+		fontWeight: "bold",
+		letterSpacing: 6,
+		color: "#000000",
+	},
+	headerRight: {
+		flexDirection: "row",
 		alignItems: "flex-start",
 	},
+	companyInfo: {
+		textAlign: "right",
+		marginRight: 12,
+	},
+	companyName: {
+		fontSize: 9,
+		fontWeight: "bold",
+		marginBottom: 2,
+	},
+	companyDetail: {
+		fontSize: 8,
+		color: "#333333",
+		lineHeight: 1.4,
+	},
 	logoContainer: {
-		width: 160,
-		height: 60,
+		width: 60,
+		height: 50,
 	},
 	logo: {
 		width: "100%",
 		height: "100%",
 		objectFit: "contain",
-		objectPosition: "left center",
 	},
-	header: {
-		flexDirection: "row",
-		justifyContent: "space-between",
-		marginBottom: 24,
-		paddingBottom: 12,
-		borderBottomWidth: 2,
-		borderBottomColor: "#000000",
-	},
-	headerLeft: {
-		flexDirection: "column",
-		maxWidth: 280,
-	},
-	headerRight: {
-		flexDirection: "column",
-		alignItems: "flex-end",
-		justifyContent: "flex-start",
-	},
-	title: {
-		fontSize: 32,
-		fontWeight: "bold",
-		color: "#000000",
-		marginBottom: 8,
-		letterSpacing: 1,
-	},
-	subtitle: {
-		fontSize: 10,
-		color: "#374151",
-		marginBottom: 2,
-		lineHeight: 1.5,
-	},
-	quoteNumber: {
-		fontSize: 20,
-		fontWeight: "bold",
-		color: "#000000",
-		marginBottom: 8,
-	},
-	date: {
-		fontSize: 10,
-		color: "#6B7280",
-	},
-	quoteMeta: {
-		backgroundColor: "#F9FAFB",
-		borderWidth: 1,
-		borderColor: "#E5E7EB",
-		borderRadius: 4,
-		padding: 10,
-		minWidth: 200,
-	},
+	// Meta row (quote number, date)
 	metaRow: {
 		flexDirection: "row",
 		justifyContent: "space-between",
-		marginBottom: 4,
+		marginBottom: 16,
+	},
+	metaItem: {
+		flexDirection: "row",
+		alignItems: "center",
+		flex: 1,
 	},
 	metaLabel: {
-		fontSize: 10,
-		color: "#6B7280",
+		fontSize: 9,
 		fontWeight: "bold",
+		marginRight: 8,
 	},
 	metaValue: {
-		fontSize: 10,
-		color: "#1F2937",
-		marginLeft: 16,
+		fontSize: 9,
+		borderBottomWidth: 1,
+		borderBottomColor: "#000000",
+		paddingBottom: 2,
+		flex: 1,
+		maxWidth: 150,
 	},
-	billToSection: {
-		marginTop: 8,
-		marginBottom: 16,
-		padding: 12,
-		backgroundColor: "#F9FAFB",
-		borderRadius: 4,
+	// Section bar
+	sectionBar: {
+		backgroundColor: "#000000",
+		paddingVertical: 4,
+		paddingHorizontal: 8,
+		marginBottom: 12,
 	},
-	sectionTitle: {
-		fontSize: 11,
+	sectionBarText: {
+		color: "#FFFFFF",
+		fontSize: 9,
 		fontWeight: "bold",
-		color: "#1F2937",
+	},
+	// Bill To section
+	billToGrid: {
+		flexDirection: "row",
+		marginBottom: 20,
+	},
+	billToColumn: {
+		flex: 1,
+	},
+	billToRow: {
+		flexDirection: "row",
 		marginBottom: 8,
-		textTransform: "uppercase",
-		letterSpacing: 0.5,
 	},
-	billToContent: {
-		fontSize: 11,
-		color: "#374151",
-		lineHeight: 1.6,
+	billToLabel: {
+		fontSize: 9,
+		width: 80,
+		color: "#333333",
 	},
-	itemsTable: {
-		marginTop: 12,
+	billToValue: {
+		fontSize: 9,
+		borderBottomWidth: 1,
+		borderBottomColor: "#000000",
+		paddingBottom: 2,
+		flex: 1,
+		marginRight: 16,
+	},
+	// Items table
+	table: {
 		marginBottom: 16,
-		borderWidth: 1,
-		borderColor: "#E5E7EB",
-		borderRadius: 4,
 	},
 	tableHeader: {
 		flexDirection: "row",
-		backgroundColor: "#1F2937",
-		paddingVertical: 10,
-		paddingHorizontal: 12,
+		borderBottomWidth: 1,
+		borderBottomColor: "#000000",
+		paddingBottom: 4,
+		marginBottom: 4,
 	},
 	tableRow: {
 		flexDirection: "row",
-		borderBottomWidth: 1,
-		borderBottomColor: "#E5E7EB",
-		paddingVertical: 10,
-		paddingHorizontal: 12,
-		backgroundColor: "#FFFFFF",
+		borderBottomWidth: 0.5,
+		borderBottomColor: "#CCCCCC",
+		paddingVertical: 6,
 	},
-	tableCell: {
-		fontSize: 10,
-		color: "#374151",
-		lineHeight: 1.4,
+	colDescription: {
+		flex: 3,
+		fontSize: 9,
 	},
-	tableCellDescription: { flex: 3 },
-	tableCellQuantity: { flex: 1, textAlign: "center" },
-	tableCellUnit: { flex: 1, textAlign: "center" },
-	tableCellPrice: { flex: 1.5, textAlign: "right" },
-	tableCellTotal: {
-		flex: 1.5,
+	colQty: {
+		flex: 0.6,
+		fontSize: 9,
+		textAlign: "center",
+	},
+	colUnit: {
+		flex: 0.6,
+		fontSize: 9,
+		textAlign: "center",
+	},
+	colRate: {
+		flex: 1,
+		fontSize: 9,
 		textAlign: "right",
-		fontWeight: "bold",
-		color: "#1F2937",
 	},
-	tableHeaderCell: {
-		fontSize: 10,
-		fontWeight: "bold",
-		color: "#FFFFFF",
-		textTransform: "uppercase",
-		letterSpacing: 0.8,
+	colAmount: {
+		flex: 1,
+		fontSize: 9,
+		textAlign: "right",
 	},
+	tableHeaderText: {
+		fontWeight: "bold",
+		fontSize: 9,
+	},
+	// Totals section
 	totalsSection: {
 		flexDirection: "row",
 		justifyContent: "flex-end",
 		marginTop: 12,
-		marginBottom: 16,
 	},
 	totalsContainer: {
-		width: 260,
-		borderWidth: 1,
-		borderColor: "#E5E7EB",
-		borderRadius: 4,
-		padding: 12,
-		backgroundColor: "#F9FAFB",
+		width: 200,
 	},
 	totalRow: {
 		flexDirection: "row",
 		justifyContent: "space-between",
-		paddingVertical: 4,
+		paddingVertical: 3,
 	},
 	totalLabel: {
-		fontSize: 11,
-		color: "#6B7280",
+		fontSize: 9,
+		color: "#333333",
 	},
 	totalValue: {
-		fontSize: 11,
-		color: "#374151",
-		fontWeight: "bold",
+		fontSize: 9,
+		textAlign: "right",
 	},
 	grandTotalRow: {
 		flexDirection: "row",
 		justifyContent: "space-between",
-		paddingVertical: 8,
-		paddingTop: 10,
-		borderTopWidth: 2,
-		borderTopColor: "#1F2937",
-		marginTop: 6,
+		backgroundColor: "#000000",
+		paddingVertical: 6,
+		paddingHorizontal: 8,
+		marginTop: 4,
 	},
 	grandTotalLabel: {
-		fontSize: 14,
+		fontSize: 10,
 		fontWeight: "bold",
-		color: "#000000",
+		color: "#FFFFFF",
 	},
 	grandTotalValue: {
-		fontSize: 16,
-		fontWeight: "bold",
-		color: "#000000",
-	},
-	termsSection: {
-		marginTop: 6,
-		marginBottom: 12,
-		padding: 12,
-		backgroundColor: "#F9FAFB",
-		borderRadius: 4,
-		borderLeftWidth: 3,
-		borderLeftColor: "#1F2937",
-	},
-	termsContent: {
 		fontSize: 10,
-		color: "#4B5563",
-		lineHeight: 1.6,
+		fontWeight: "bold",
+		color: "#FFFFFF",
 	},
+	// Terms section
+	termsSection: {
+		marginTop: 16,
+		marginBottom: 12,
+	},
+	termsBox: {
+		borderWidth: 0.5,
+		borderColor: "#CCCCCC",
+		padding: 10,
+	},
+	termsLabel: {
+		fontSize: 8,
+		fontWeight: "bold",
+		color: "#333333",
+		marginBottom: 4,
+	},
+	termsText: {
+		fontSize: 8,
+		color: "#555555",
+		lineHeight: 1.4,
+	},
+	// Signature section
 	signatureSection: {
-		marginTop: 32,
+		marginTop: 24,
 		flexDirection: "row",
 		justifyContent: "space-between",
-		gap: 40,
 	},
 	signatureBox: {
-		flex: 1,
-		borderBottomWidth: 1.5,
-		borderBottomColor: "#1F2937",
-		paddingBottom: 8,
+		width: "45%",
 	},
 	signatureLabel: {
-		fontSize: 10,
-		color: "#6B7280",
-		marginBottom: 32,
-		fontWeight: "bold",
-		textTransform: "uppercase",
-		letterSpacing: 0.5,
+		fontSize: 9,
+		color: "#333333",
+		marginBottom: 4,
+	},
+	signatureLine: {
+		borderBottomWidth: 1,
+		borderBottomColor: "#000000",
+		marginTop: 24,
+	},
+	// BoldSign hidden text (white on white - used for e-signature positioning)
+	boldSignText: {
+		fontSize: 8,
+		color: "#FFFFFF",
 	},
 });
 
@@ -293,8 +307,8 @@ const formatCurrency = (amount: number) =>
 const formatDate = (timestamp: number) =>
 	new Date(timestamp).toLocaleDateString("en-US", {
 		year: "numeric",
-		month: "long",
-		day: "numeric",
+		month: "2-digit",
+		day: "2-digit",
 	});
 
 export const QuotePDF: React.FC<QuotePDFProps> = ({
@@ -303,113 +317,115 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({
 	items,
 	organization,
 }) => {
+	// Format client address
+	const clientAddress = client
+		? [
+				client.streetAddress,
+				[client.city, client.state, client.zipCode].filter(Boolean).join(", "),
+				client.country && client.country !== "USA" ? client.country : null,
+			]
+				.filter(Boolean)
+				.join("\n")
+		: "";
+
 	return (
 		<Document>
 			<Page size="A4" style={styles.page}>
-				{/* Logo Section */}
-				{organization?.logoUrl ? (
-					<View style={styles.logoSection}>
-						<View style={styles.logoContainer}>
-							{/* eslint-disable-next-line jsx-a11y/alt-text */}
-							<Image style={styles.logo} src={organization.logoUrl} />
-						</View>
-					</View>
-				) : null}
-
 				{/* Header */}
 				<View style={styles.header}>
-					<View style={styles.headerLeft}>
-						<Text style={styles.title}>QUOTE</Text>
-						{organization?.name ? (
-							<Text style={styles.subtitle}>{organization.name}</Text>
-						) : null}
-						{organization?.address ? (
-							<Text style={styles.subtitle}>{organization.address}</Text>
-						) : null}
-						{organization?.phone ? (
-							<Text style={styles.subtitle}>Phone: {organization.phone}</Text>
-						) : null}
-						{organization?.email ? (
-							<Text style={styles.subtitle}>Email: {organization.email}</Text>
-						) : null}
-					</View>
+					<Text style={styles.title}>QUOTE</Text>
 					<View style={styles.headerRight}>
-						<Text style={styles.quoteNumber}>
-							Quote {quote.quoteNumber || `#${quote._id.slice(-6)}`}
-						</Text>
-						<View style={styles.quoteMeta}>
-							<View style={styles.metaRow}>
-								<Text style={styles.metaLabel}>Date:</Text>
-								<Text style={styles.metaValue}>
-									{formatDate(quote._creationTime)}
-								</Text>
+						{organization && (
+							<View style={styles.companyInfo}>
+								<Text style={styles.companyName}>{organization.name}</Text>
+								{organization.address && (
+									<Text style={styles.companyDetail}>{organization.address}</Text>
+								)}
+								{organization.phone && (
+									<Text style={styles.companyDetail}>{organization.phone}</Text>
+								)}
+								{organization.email && (
+									<Text style={styles.companyDetail}>{organization.email}</Text>
+								)}
 							</View>
-							{quote.validUntil ? (
-								<View style={styles.metaRow}>
-									<Text style={styles.metaLabel}>Valid Until:</Text>
-									<Text style={styles.metaValue}>
-										{formatDate(quote.validUntil)}
-									</Text>
-								</View>
-							) : null}
-						</View>
-					</View>
-				</View>
-
-				{/* Bill To Section */}
-				<View style={styles.billToSection} wrap={false}>
-					<Text style={styles.sectionTitle}>Bill To:</Text>
-					<View style={styles.billToContent}>
-						{client ? (
-							<Text>{client.companyName}</Text>
-						) : (
-							<Text>Client details unavailable</Text>
+						)}
+						{organization?.logoUrl && (
+							<View style={styles.logoContainer}>
+								{/* eslint-disable-next-line jsx-a11y/alt-text */}
+								<Image style={styles.logo} src={organization.logoUrl} />
+							</View>
 						)}
 					</View>
 				</View>
 
+				{/* Meta Row (Quote Number & Dates) */}
+				<View style={styles.metaRow}>
+					<View style={styles.metaItem}>
+						<Text style={styles.metaLabel}>Quote #</Text>
+						<Text style={styles.metaValue}>
+							{quote.quoteNumber || `#${quote._id.slice(-6)}`}
+						</Text>
+					</View>
+					<View style={styles.metaItem}>
+						<Text style={styles.metaLabel}>Date</Text>
+						<Text style={styles.metaValue}>{formatDate(quote._creationTime)}</Text>
+					</View>
+					{quote.validUntil && (
+						<View style={styles.metaItem}>
+							<Text style={styles.metaLabel}>Valid Until</Text>
+							<Text style={styles.metaValue}>{formatDate(quote.validUntil)}</Text>
+						</View>
+					)}
+				</View>
+
+				{/* Bill To Section */}
+				<View style={styles.sectionBar}>
+					<Text style={styles.sectionBarText}>BILL TO:</Text>
+				</View>
+				<View style={styles.billToGrid}>
+					<View style={styles.billToColumn}>
+						<View style={styles.billToRow}>
+							<Text style={styles.billToLabel}>Client</Text>
+							<Text style={styles.billToValue}>
+								{client?.companyName || "—"}
+							</Text>
+						</View>
+					</View>
+					<View style={styles.billToColumn}>
+						<View style={styles.billToRow}>
+							<Text style={styles.billToLabel}>Address</Text>
+							<Text style={styles.billToValue}>{clientAddress || "—"}</Text>
+						</View>
+					</View>
+				</View>
+
 				{/* Items Table */}
-				<View style={styles.itemsTable} wrap={false}>
+				<View style={styles.sectionBar}>
+					<Text style={styles.sectionBarText}>ITEMS:</Text>
+				</View>
+				<View style={styles.table}>
 					<View style={styles.tableHeader}>
-						<Text style={[styles.tableHeaderCell, styles.tableCellDescription]}>
+						<Text style={[styles.colDescription, styles.tableHeaderText]}>
 							Description
 						</Text>
-						<Text style={[styles.tableHeaderCell, styles.tableCellQuantity]}>
-							Qty
-						</Text>
-						<Text style={[styles.tableHeaderCell, styles.tableCellUnit]}>
-							Unit
-						</Text>
-						<Text style={[styles.tableHeaderCell, styles.tableCellPrice]}>
-							Rate
-						</Text>
-						<Text style={[styles.tableHeaderCell, styles.tableCellTotal]}>
-							Amount
-						</Text>
+						<Text style={[styles.colQty, styles.tableHeaderText]}>Qty</Text>
+						<Text style={[styles.colUnit, styles.tableHeaderText]}>Unit</Text>
+						<Text style={[styles.colRate, styles.tableHeaderText]}>Rate</Text>
+						<Text style={[styles.colAmount, styles.tableHeaderText]}>Amount</Text>
 					</View>
 					{items.map((item) => (
 						<View key={String(item._id)} style={styles.tableRow}>
-							<Text style={[styles.tableCell, styles.tableCellDescription]}>
-								{item.description}
-							</Text>
-							<Text style={[styles.tableCell, styles.tableCellQuantity]}>
-								{item.quantity}
-							</Text>
-							<Text style={[styles.tableCell, styles.tableCellUnit]}>
-								{item.unit}
-							</Text>
-							<Text style={[styles.tableCell, styles.tableCellPrice]}>
-								{formatCurrency(item.rate)}
-							</Text>
-							<Text style={[styles.tableCell, styles.tableCellTotal]}>
-								{formatCurrency(item.amount)}
-							</Text>
+							<Text style={styles.colDescription}>{item.description}</Text>
+							<Text style={styles.colQty}>{item.quantity}</Text>
+							<Text style={styles.colUnit}>{item.unit}</Text>
+							<Text style={styles.colRate}>{formatCurrency(item.rate)}</Text>
+							<Text style={styles.colAmount}>{formatCurrency(item.amount)}</Text>
 						</View>
 					))}
 				</View>
 
 				{/* Totals */}
-				<View style={styles.totalsSection} wrap={false}>
+				<View style={styles.totalsSection}>
 					<View style={styles.totalsContainer}>
 						<View style={styles.totalRow}>
 							<Text style={styles.totalLabel}>Subtotal:</Text>
@@ -423,7 +439,7 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({
 								<Text style={styles.totalValue}>
 									{quote.discountType === "percentage"
 										? `-${quote.discountAmount}%`
-										: `- ${formatCurrency(quote.discountAmount)}`}
+										: `-${formatCurrency(quote.discountAmount)}`}
 								</Text>
 							</View>
 						) : null}
@@ -436,7 +452,7 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({
 							</View>
 						) : null}
 						<View style={styles.grandTotalRow}>
-							<Text style={styles.grandTotalLabel}>Total:</Text>
+							<Text style={styles.grandTotalLabel}>Total</Text>
 							<Text style={styles.grandTotalValue}>
 								{formatCurrency(quote.total)}
 							</Text>
@@ -444,55 +460,43 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({
 					</View>
 				</View>
 
-				{/* Terms & Client Message */}
-				{quote.terms ? (
-					<View style={styles.termsSection} wrap={false}>
-						<Text style={styles.sectionTitle}>Terms & Conditions:</Text>
-						<Text style={styles.termsContent}>{quote.terms}</Text>
+				{/* Terms & Conditions */}
+				{quote.terms && (
+					<View style={styles.termsSection}>
+						<View style={styles.termsBox}>
+							<Text style={styles.termsLabel}>Terms & Conditions:</Text>
+							<Text style={styles.termsText}>{quote.terms}</Text>
+						</View>
 					</View>
-				) : null}
-				{quote.clientMessage ? (
-					<View style={styles.termsSection} wrap={false}>
-						<Text style={styles.sectionTitle}>Message to Client:</Text>
-						<Text style={styles.termsContent}>{quote.clientMessage}</Text>
+				)}
+
+				{/* Client Message */}
+				{quote.clientMessage && (
+					<View style={styles.termsSection}>
+						<View style={styles.termsBox}>
+							<Text style={styles.termsLabel}>Note:</Text>
+							<Text style={styles.termsText}>{quote.clientMessage}</Text>
+						</View>
 					</View>
-				) : null}
+				)}
 
 				{/* Signature Section with BoldSign text tags */}
 				<View style={styles.signatureSection} wrap={false}>
-					<View style={{ width: "45%" }}>
-						<Text style={{ fontSize: 10, color: "#1F2937", marginBottom: 5 }}>
-							Signature:
-						</Text>
+					<View style={styles.signatureBox}>
+						<Text style={styles.signatureLabel}>Signature:</Text>
 						{/* BoldSign text tag - no placeholder for sign fields */}
-						<Text style={{ fontSize: 8, color: "#FFFFFF" }}>
+						<Text style={styles.boldSignText}>
 							{`{{sign|1|*||client_signature}}`}
 						</Text>
-						<View
-							style={{
-								borderBottomWidth: 1,
-								borderBottomColor: "#1F2937",
-								marginTop: 20,
-								width: "100%",
-							}}
-						/>
+						<View style={styles.signatureLine} />
 					</View>
-					<View style={{ width: "45%" }}>
-						<Text style={{ fontSize: 10, color: "#1F2937", marginBottom: 5 }}>
-							Date:
-						</Text>
+					<View style={styles.signatureBox}>
+						<Text style={styles.signatureLabel}>Date:</Text>
 						{/* BoldSign text tag - no placeholder for date fields */}
-						<Text style={{ fontSize: 8, color: "#FFFFFF" }}>
+						<Text style={styles.boldSignText}>
 							{`{{date|1|*||date_signed}}`}
 						</Text>
-						<View
-							style={{
-								borderBottomWidth: 1,
-								borderBottomColor: "#1F2937",
-								marginTop: 20,
-								width: "100%",
-							}}
-						/>
+						<View style={styles.signatureLine} />
 					</View>
 				</View>
 			</Page>

@@ -1,9 +1,11 @@
 import type { ReactNode } from "react";
 import { SidebarWithHeader } from "@/components/layout/sidebar-with-header";
+import { AnalyticsIdentity } from "@/components/analytics-identity";
 
 export default function WorkspaceLayout({ children }: { children: ReactNode }) {
 	return (
 		<div className="min-h-screen flex-1 md:min-h-min">
+			<AnalyticsIdentity />
 			{/* Modern Background with Subtle Texture */}
 			<div className="relative bg-background min-h-screen">
 				{/* Ambient Light Effects */}
