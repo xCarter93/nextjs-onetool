@@ -82,11 +82,11 @@ export default function CommunityEditPage() {
 
 	// Check slug availability (debounced)
 	useEffect(() => {
-		const timer = setTimeout(() => {
-			if (slug.length >= 3) {
-				setDebouncedSlug(slug);
-			}
-		}, 300);
+		if (slug.length < 3) {
+			setDebouncedSlug("");
+			return;
+		}
+		const timer = setTimeout(() => setDebouncedSlug(slug), 300);
 		return () => clearTimeout(timer);
 	}, [slug]);
 
@@ -617,7 +617,7 @@ export default function CommunityEditPage() {
 								</div>
 								{slugError ? (
 									<span className="text-sm text-danger">{slugError}</span>
-								) : slug.length >= 3 && isSlugAvailable !== undefined ? (
+								) : slug.length >= 3 && debouncedSlug === slug && isSlugAvailable !== undefined ? (
 									<div className="flex items-center gap-1.5">
 										<span
 											className={cn(
@@ -727,7 +727,7 @@ export default function CommunityEditPage() {
 					<StyledButton
 						intent="secondary"
 						onClick={handleSaveDraft}
-						disabled={isSaving || isPublishing || isSlugAvailable === false}
+						disabled={isSaving || isPublishing || !!slugError || isSlugAvailable === false}
 					>
 						{isSaving ? (
 							<Loader2 className="size-4 mr-2 animate-spin" />
@@ -740,7 +740,7 @@ export default function CommunityEditPage() {
 					<StyledButton
 						intent="primary"
 						onClick={handlePublish}
-						disabled={isSaving || isPublishing || !draftContent || isSlugAvailable === false}
+						disabled={isSaving || isPublishing || !draftContent || !!slugError || isSlugAvailable === false}
 					>
 						{isPublishing ? (
 							<Loader2 className="size-4 mr-2 animate-spin" />
