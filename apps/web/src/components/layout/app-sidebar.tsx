@@ -34,6 +34,7 @@ import {
 	useCanPerformAction,
 } from "@/hooks/use-feature-access";
 import { useRoleAccess } from "@/hooks/use-role-access";
+import { useFeatureFlagEnabled } from "posthog-js/react";
 import {
 	TourElement,
 	HomeTour,
@@ -150,6 +151,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 	const tasksDueToday = taskStats?.todayTasks ?? 0;
 	const { hasOrganization, hasPremiumAccess } = useFeatureAccess();
 	const { isAdmin, isMember } = useRoleAccess();
+	const isCommunityEnabled = useFeatureFlagEnabled("community-pages-access");
 
 	// Check if user can create new clients
 	const {
@@ -278,8 +280,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 			const isDisabled =
 				!hasOrganization && item.title !== "Settings" && item.title !== "Home";
 
-			// Community is always disabled (coming soon)
-			const isCommunityDisabled = item.title === "Community";
+			// Community is disabled unless feature flag is enabled
+			const isCommunityDisabled =
+				item.title === "Community" && !isCommunityEnabled;
 
 			return {
 				...item,
@@ -287,7 +290,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 				isActive,
 				disabled: isDisabled || isCommunityDisabled,
 				disabledTooltip: isCommunityDisabled
-					? "Communities feature is coming soon"
+					? "Communities feature coming soon"
 					: undefined,
 				badgeCount:
 					item.title === "Tasks" && tasksDueToday > 0
