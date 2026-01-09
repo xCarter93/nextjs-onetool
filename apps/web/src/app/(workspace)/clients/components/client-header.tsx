@@ -11,19 +11,24 @@ import {
 	SelectItem,
 } from "@/components/ui/styled";
 import { EmailThreadListPopover } from "./email-thread-list-popover";
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
-import { Plus, FolderOpen, Receipt, FileText, ClipboardList } from "lucide-react";
+import {
+	Popover,
+	PopoverTrigger,
+	PopoverContent,
+} from "@/components/ui/popover";
+import {
+	Plus,
+	FolderOpen,
+	Receipt,
+	FileText,
+	ClipboardList,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 
-const STATUS_OPTIONS = [
-	"lead",
-	"active",
-	"inactive",
-	"archived",
-] as const;
+const STATUS_OPTIONS = ["lead", "active", "inactive", "archived"] as const;
 
 function formatStatus(status: string): string {
 	return status.charAt(0).toUpperCase() + status.slice(1);
@@ -98,7 +103,7 @@ export function ClientHeader({
 		<div className="mb-8">
 			<div className="flex items-start justify-between gap-6 mb-6">
 				<div className="flex items-start gap-6">
-					<div className="flex items-center justify-center w-16 h-16 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 shrink-0 shadow-md">
+					<div className="flex items-center justify-center w-16 h-16 rounded-lg bg-linear-to-br from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 shrink-0 shadow-md">
 						<BuildingOffice2Icon className="h-8 w-8 text-white" />
 					</div>
 					<div className="flex-1 min-w-0">
@@ -107,7 +112,10 @@ export function ClientHeader({
 								{client.companyName}
 							</h1>
 							{isEditing ? (
-								<StyledSelect value={statusValue} onValueChange={onStatusChange}>
+								<StyledSelect
+									value={statusValue}
+									onValueChange={onStatusChange}
+								>
 									<StyledSelectTrigger className="w-auto">
 										<SelectValue />
 									</StyledSelectTrigger>
@@ -234,8 +242,8 @@ export function ClientHeader({
 														project.status === "completed"
 															? "bg-green-500"
 															: project.status === "in-progress"
-															? "bg-yellow-500"
-															: "bg-blue-500"
+																? "bg-yellow-500"
+																: "bg-blue-500"
 													}`}
 												/>
 												<div className="flex-1 min-w-0">
@@ -310,7 +318,9 @@ export function ClientHeader({
 								<Button
 									intent="outline"
 									size="sm"
-									onPress={() => router.push(`/quotes/new?clientId=${clientId}`)}
+									onPress={() =>
+										router.push(`/quotes/new?clientId=${clientId}`)
+									}
 								>
 									<Plus className="h-4 w-4 mr-2" />
 									New
@@ -439,8 +449,8 @@ export function ClientHeader({
 														invoice.status === "paid"
 															? "bg-green-500"
 															: invoice.status === "sent"
-															? "bg-yellow-500"
-															: "bg-red-500"
+																? "bg-yellow-500"
+																: "bg-red-500"
 													}`}
 												/>
 												<div className="flex-1 min-w-0">
@@ -537,8 +547,8 @@ export function ClientHeader({
 														task.status === "completed"
 															? "bg-green-500"
 															: task.status === "cancelled"
-															? "bg-red-500"
-															: "bg-yellow-500"
+																? "bg-red-500"
+																: "bg-yellow-500"
 													}`}
 												/>
 												<div className="flex-1 min-w-0">
@@ -576,4 +586,3 @@ export function ClientHeader({
 		</div>
 	);
 }
-

@@ -184,7 +184,7 @@ export default function RevenueGoalSetter() {
 								</div>
 								<div className="w-full bg-muted rounded-full h-2">
 									<div
-										className="bg-gradient-to-r from-emerald-500 to-emerald-600 h-2 rounded-full transition-all duration-500 ease-out"
+										className="bg-linear-to-r from-emerald-500 to-emerald-600 h-2 rounded-full transition-all duration-500 ease-out"
 										style={{
 											width: `${Math.min(revenueGoalProgress.percentage, 100)}%`,
 										}}

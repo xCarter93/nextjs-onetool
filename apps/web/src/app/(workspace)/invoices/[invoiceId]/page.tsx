@@ -374,7 +374,18 @@ export default function InvoiceDetailPage() {
 			const element = (
 				<InvoicePDF
 					invoice={invoice}
-					client={client ? { companyName: client.companyName } : undefined}
+					client={
+						client
+							? {
+									companyName: client.companyName,
+									streetAddress: primaryProperty?.streetAddress,
+									city: primaryProperty?.city,
+									state: primaryProperty?.state,
+									zipCode: primaryProperty?.zipCode,
+									country: primaryProperty?.country,
+								}
+							: undefined
+					}
 					items={lineItems}
 					organization={
 						organization
