@@ -26,21 +26,31 @@ function PostHogPageView() {
 
 export function PostHogProvider({ children }: { children: React.ReactNode }) {
 	useEffect(() => {
-		posthog.init(env.NEXT_PUBLIC_POSTHOG_KEY, {
-			api_host: env.NEXT_PUBLIC_POSTHOG_HOST,
-			defaults: "2025-11-30",
-			capture_pageview: false, // Manual for App Router
-			capture_pageleave: true,
-			capture_performance: true,
-			autocapture: true,
-			capture_exceptions: true,
-			capture_heatmaps: true,
-			enable_heatmaps: true,
-			persistence: "localStorage+cookie",
-			loaded: (ph) => {
-				if (process.env.NODE_ENV === "development") ph.debug();
-			},
-		});
+		try {
+			posthog.init(env.NEXT_PUBLIC_POSTHOG_KEY, {
+				api_host: env.NEXT_PUBLIC_POSTHOG_HOST,
+				defaults: "2025-11-30",
+				// Pageview handling
+				capture_pageview: false, // Manual tracking for App Router (see PostHogPageView)
+				capture_pageleave: true, // Track when users leave pages
+				// Performance & debugging (can disable if data volume is a concern)
+				capture_performance: true, // Web vitals & performance metrics
+				autocapture: true, // Auto-track clicks, form submissions, etc.
+				capture_exceptions: true, // Capture JavaScript errors
+				// Heatmaps (can disable if not using this feature)
+				capture_heatmaps: true,
+				enable_heatmaps: true,
+				// Storage
+				persistence: "localStorage+cookie",
+				loaded: (ph) => {
+					if (process.env.NODE_ENV === "development") ph.debug();
+				},
+			});
+		} catch (error) {
+			// PostHog initialization can fail due to ad blockers, network issues, or invalid config.
+			// Log the error but don't break the app - analytics is non-critical.
+			console.error("PostHog initialization failed:", error);
+		}
 	}, []);
 
 	return (
