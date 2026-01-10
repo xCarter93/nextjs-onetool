@@ -11,6 +11,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@onetool/backend/convex/_generated/api";
 import { motion } from "motion/react";
 import { useAutoTimezone } from "@/hooks/use-auto-timezone";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { LayoutDashboard, CalendarDays } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -40,6 +41,10 @@ export default function Page() {
 
 	// Automatically detect and save timezone if not set
 	useAutoTimezone();
+
+	// Detect desktop breakpoint (xl = 1280px) to conditionally render ActivityFeed
+	// This prevents duplicate queries from rendering both mobile and desktop versions
+	const isDesktop = useMediaQuery("(min-width: 1280px)");
 
 	// Load view preference from localStorage
 	useEffect(() => {
@@ -226,35 +231,20 @@ export default function Page() {
 							</TourElement>
 						</motion.div>
 
-						{/* Enhanced Dashboard Layout */}
-						<motion.div
-							className="grid grid-cols-1 xl:grid-cols-12 gap-6 lg:gap-8"
-							initial={{ opacity: 0, y: 20 }}
-							animate={{ opacity: 1, y: 0 }}
-							transition={{ duration: 0.5, delay: 0.3 }}
-						>
+						{/* Dashboard Layout with Sticky Activity Sidebar */}
+						<div className="flex flex-col xl:flex-row gap-6 lg:gap-8">
 							{/* Main Content Area */}
-							<div className="xl:col-span-7 space-y-6 lg:space-y-8">
-								{/* Getting Started Section - Tour Step */}
-								<motion.div
-									transition={{ type: "spring", stiffness: 300, damping: 30 }}
-								>
-									<TourElement<HomeTour>
-										TourContext={HomeTourContext}
-										stepId={HomeTour.GETTING_STARTED}
-										title={HOME_TOUR_CONTENT[HomeTour.GETTING_STARTED].title}
-										description={HOME_TOUR_CONTENT[HomeTour.GETTING_STARTED].description}
-										tooltipPosition={HOME_TOUR_CONTENT[HomeTour.GETTING_STARTED].tooltipPosition}
-									>
-										<GettingStarted />
-									</TourElement>
-								</motion.div>
-
-								{/* Tasks Section - Tour Step */}
+							<motion.div
+								className="flex-1 min-w-0 space-y-6 lg:space-y-8"
+								initial={{ opacity: 0, y: 20 }}
+								animate={{ opacity: 1, y: 0 }}
+								transition={{ duration: 0.5, delay: 0.3 }}
+							>
+								{/* Tasks Section - Most actionable, daily priority */}
 								<motion.div
 									initial={{ opacity: 0, y: 20 }}
 									animate={{ opacity: 1, y: 0 }}
-									transition={{ duration: 0.5, delay: 0.5 }}
+									transition={{ duration: 0.5, delay: 0.35 }}
 								>
 									<TourElement<HomeTour>
 										TourContext={HomeTourContext}
@@ -266,14 +256,11 @@ export default function Page() {
 										<HomeTaskList />
 									</TourElement>
 								</motion.div>
-							</div>
 
-							{/* Enhanced Sidebar */}
-							<div className="xl:col-span-5 space-y-6 lg:space-y-8">
-								{/* Revenue Goal - Tour Step */}
+								{/* Revenue Goal - Quick KPI */}
 								<motion.div
-									initial={{ opacity: 0, x: 20 }}
-									animate={{ opacity: 1, x: 0 }}
+									initial={{ opacity: 0, y: 20 }}
+									animate={{ opacity: 1, y: 0 }}
 									transition={{ duration: 0.5, delay: 0.4 }}
 								>
 									<TourElement<HomeTour>
@@ -287,10 +274,10 @@ export default function Page() {
 									</TourElement>
 								</motion.div>
 
-								{/* Activity Feed - Tour Step */}
+								{/* Getting Started Section - Onboarding journey */}
 								<motion.div
-									initial={{ opacity: 0, x: 20 }}
-									animate={{ opacity: 1, x: 0 }}
+									initial={{ opacity: 0, y: 20 }}
+									animate={{ opacity: 1, y: 0 }}
 									transition={{
 										type: "spring",
 										stiffness: 300,
@@ -300,16 +287,56 @@ export default function Page() {
 								>
 									<TourElement<HomeTour>
 										TourContext={HomeTourContext}
-										stepId={HomeTour.ACTIVITY_FEED}
-										title={HOME_TOUR_CONTENT[HomeTour.ACTIVITY_FEED].title}
-										description={HOME_TOUR_CONTENT[HomeTour.ACTIVITY_FEED].description}
-										tooltipPosition={HOME_TOUR_CONTENT[HomeTour.ACTIVITY_FEED].tooltipPosition}
+										stepId={HomeTour.GETTING_STARTED}
+										title={HOME_TOUR_CONTENT[HomeTour.GETTING_STARTED].title}
+										description={HOME_TOUR_CONTENT[HomeTour.GETTING_STARTED].description}
+										tooltipPosition={HOME_TOUR_CONTENT[HomeTour.GETTING_STARTED].tooltipPosition}
 									>
-										<ActivityFeed />
+										<GettingStarted />
 									</TourElement>
 								</motion.div>
-							</div>
-						</motion.div>
+							</motion.div>
+
+							{/* Activity Feed - Single instance, conditionally rendered for desktop vs mobile */}
+							{isDesktop ? (
+								<motion.div
+									className="w-[450px] shrink-0"
+									initial={{ opacity: 0, x: 20 }}
+									animate={{ opacity: 1, x: 0 }}
+									transition={{
+										type: "spring",
+										stiffness: 300,
+										damping: 30,
+										delay: 0.4,
+									}}
+								>
+									<div className="sticky top-24">
+										<TourElement<HomeTour>
+											TourContext={HomeTourContext}
+											stepId={HomeTour.ACTIVITY_FEED}
+											title={HOME_TOUR_CONTENT[HomeTour.ACTIVITY_FEED].title}
+											description={HOME_TOUR_CONTENT[HomeTour.ACTIVITY_FEED].description}
+											tooltipPosition={HOME_TOUR_CONTENT[HomeTour.ACTIVITY_FEED].tooltipPosition}
+										>
+											<ActivityFeed />
+										</TourElement>
+									</div>
+								</motion.div>
+							) : isDesktop === false ? (
+								<motion.div
+									initial={{ opacity: 0, y: 20 }}
+									animate={{ opacity: 1, y: 0 }}
+									transition={{
+										type: "spring",
+										stiffness: 300,
+										damping: 30,
+										delay: 0.55,
+									}}
+								>
+									<ActivityFeed />
+								</motion.div>
+							) : null}
+						</div>
 					</>
 				) : (
 					<motion.div
@@ -351,7 +378,7 @@ function TourAutoStart({ tourStarted }: { tourStarted: boolean }) {
 		if (!tourStarted) {
 			hasStartedRef.current = false;
 		}
-	}, [tourStarted, contextValue?.isRegistered, contextValue?.state.isActive]);
+	}, [tourStarted, contextValue]);
 
 	return null;
 }
