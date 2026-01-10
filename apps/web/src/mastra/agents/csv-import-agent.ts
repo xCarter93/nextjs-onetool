@@ -1,11 +1,12 @@
 import { Agent } from "@mastra/core/agent";
+import { openai } from "@ai-sdk/openai";
 import { parseCsvTool } from "../tools/parse-csv-tool";
 import { mapSchemaTool } from "../tools/map-schema-tool";
 import { validateDataTool } from "../tools/validate-data-tool";
 
 export const csvImportAgent = new Agent({
 	id: "csv-import-agent",
-	name: "CSV Import Agent",
+	name: "csv-import-agent",
 	instructions: `You are an AI assistant specialized in analyzing CSV files and mapping them to database schemas.
 
 Your primary responsibilities:
@@ -46,7 +47,7 @@ For array fields (tags, assignedUserIds):
 - They will be automatically split into arrays during import
 
 Be helpful and provide actionable feedback to users about their data quality.`,
-	model: "openai/gpt-4o",
+	model: openai("gpt-4o"),
 	tools: {
 		parseCsv: parseCsvTool,
 		mapSchema: mapSchemaTool,

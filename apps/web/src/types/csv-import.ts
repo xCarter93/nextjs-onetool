@@ -90,6 +90,7 @@ export const CLIENT_SCHEMA_FIELDS = {
 			"advertising",
 			"trade-show",
 			"cold-outreach",
+			"community-page",
 			"other",
 		],
 	},

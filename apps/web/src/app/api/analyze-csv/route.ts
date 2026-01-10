@@ -51,9 +51,7 @@ export async function POST(request: NextRequest) {
 			: `Analyze this CSV file and determine if it contains client or project data. Then parse, map, and validate accordingly. Here's the CSV content:\n\n${csvContent}`;
 
 		// Call the agent to analyze the CSV
-		console.log("Calling agent with prompt length:", prompt.length);
 		const response = await agent.generate(prompt, { maxSteps: 10 });
-		console.log("Agent response received");
 
 		// Extract tool results from the agent's response
 		type ToolResult = {
@@ -63,6 +61,7 @@ export async function POST(request: NextRequest) {
 			};
 		};
 
+		// In Mastra v1, toolName uses the property name from the tools object
 		const parseResult = response.toolResults?.find(
 			(tr: ToolResult) => tr.payload?.toolName === "parseCsv"
 		)?.payload?.result as
@@ -95,10 +94,6 @@ export async function POST(request: NextRequest) {
 			  }
 			| undefined;
 
-		console.log("Parse result:", parseResult);
-		console.log("Map result:", mapResult);
-		console.log("Validate result:", validateResult);
-
 		// Build the analysis result from tool outputs
 		const analysisResult: CsvAnalysisResult = {
 			entityType: entityType || "clients",
@@ -124,17 +119,10 @@ export async function POST(request: NextRequest) {
 		return NextResponse.json(analysisResult);
 	} catch (error) {
 		console.error("Error analyzing CSV:", error);
-		console.error(
-			"Error stack:",
-			error instanceof Error ? error.stack : "No stack"
-		);
-		console.error("Error details:", JSON.stringify(error, null, 2));
 		return NextResponse.json(
 			{
 				error: "Failed to analyze CSV",
 				details: error instanceof Error ? error.message : "Unknown error",
-				errorType:
-					error instanceof Error ? error.constructor.name : typeof error,
 			},
 			{ status: 500 }
 		);
