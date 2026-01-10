@@ -12,8 +12,8 @@ import { dateParserTool } from "../tools/date-parser-tool";
  * natural language requests and translating them into report configurations.
  */
 export const reportAgent = new Agent({
-	id: "report-agent",
-	name: "report-agent",
+	id: "reportAgent",
+	name: "reportAgent",
 	description: "An AI assistant that helps users create and configure reports from their business data.",
 	instructions: `You are an AI assistant specialized in helping users build business reports and analytics.
 

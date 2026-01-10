@@ -5,8 +5,8 @@ import { mapSchemaTool } from "../tools/map-schema-tool";
 import { validateDataTool } from "../tools/validate-data-tool";
 
 export const csvImportAgent = new Agent({
-	id: "csv-import-agent",
-	name: "csv-import-agent",
+	id: "csvImportAgent",
+	name: "csvImportAgent",
 	instructions: `You are an AI assistant specialized in analyzing CSV files and mapping them to database schemas.
 
 Your primary responsibilities:
