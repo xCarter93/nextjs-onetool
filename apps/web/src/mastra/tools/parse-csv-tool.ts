@@ -1,5 +1,5 @@
 import { createTool } from "@mastra/core/tools";
-import { z } from "zod";
+import { z } from 'zod/v3';
 import Papa from "papaparse";
 
 export const parseCsvTool = createTool({
@@ -24,8 +24,8 @@ export const parseCsvTool = createTool({
 			.record(z.string(), z.string())
 			.describe("Detected data types for each column"),
 	}),
-	execute: async ({ context }) => {
-		const { csvContent, sampleSize } = context;
+	execute: async (input) => {
+		const { csvContent, sampleSize } = input;
 
 		return new Promise((resolve, reject) => {
 			Papa.parse(csvContent, {

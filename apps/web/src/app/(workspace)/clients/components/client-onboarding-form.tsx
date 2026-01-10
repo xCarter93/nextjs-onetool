@@ -3,7 +3,7 @@
 
 import React from "react";
 import { useForm } from "@tanstack/react-form";
-import * as z from "zod";
+import * as z from 'zod/v3';
 import Accordion from "@/components/ui/accordion";
 import { useToastOperations } from "@/hooks/use-toast";
 import {

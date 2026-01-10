@@ -3,7 +3,7 @@
 
 import React, { useEffect, useMemo } from "react";
 import { useForm } from "@tanstack/react-form";
-import * as z from "zod";
+import * as z from 'zod/v3';
 import { useToastOperations } from "@/hooks/use-toast";
 import {
 	Field,

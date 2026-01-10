@@ -1,5 +1,5 @@
 import { createTool } from "@mastra/core/tools";
-import { z } from "zod";
+import { z } from 'zod/v3';
 import {
 	CLIENT_SCHEMA_FIELDS,
 	PROJECT_SCHEMA_FIELDS,
@@ -40,6 +40,15 @@ export const validateDataTool = createTool({
 				})
 			)
 			.describe("Validation errors found"),
+		warnings: z
+			.array(
+				z.object({
+					field: z.string(),
+					message: z.string(),
+					severity: z.enum(["error", "warning"]),
+				})
+			)
+			.describe("Validation warnings found"),
 		missingRequiredFields: z
 			.array(z.string())
 			.describe("Required fields that are missing"),
@@ -47,8 +56,8 @@ export const validateDataTool = createTool({
 			.record(z.string(), z.union([z.string(), z.boolean(), z.number()]))
 			.describe("Suggested default values for missing fields"),
 	}),
-	execute: async ({ context }) => {
-		const { entityType, mappings, sampleRows } = context;
+	execute: async (input) => {
+		const { entityType, mappings, sampleRows } = input;
 
 		// Select the appropriate schema
 		const schema =

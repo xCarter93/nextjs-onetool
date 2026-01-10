@@ -1,5 +1,5 @@
 import { createTool } from "@mastra/core/tools";
-import { z } from "zod";
+import { z } from 'zod/v3';
 
 /**
  * Report Configuration Builder Tool
@@ -229,7 +229,7 @@ export const reportConfigTool = createTool({
 		suggestedName: z.string().describe("Suggested name for the report"),
 		suggestedDescription: z.string().describe("Suggested description for the report"),
 	}),
-	execute: async ({ context }) => {
+	execute: async (input) => {
 		const {
 			intent,
 			entityType,
@@ -241,7 +241,7 @@ export const reportConfigTool = createTool({
 			customEndDate,
 			visualizationType,
 			filters,
-		} = context;
+		} = input;
 
 		// Normalize the groupBy value to a valid one
 		const groupBy = normalizeGroupBy(entityType, rawGroupBy);
