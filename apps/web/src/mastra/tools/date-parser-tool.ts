@@ -1,5 +1,5 @@
 import { createTool } from "@mastra/core/tools";
-import { z } from "zod";
+import { z } from 'zod/v3';
 
 /**
  * Date Parser Tool
@@ -227,10 +227,10 @@ ALWAYS call this tool when you see date references in user prompts like:
 		isoDate: z.string().describe("ISO 8601 formatted date string"),
 		humanReadable: z.string().describe("Human-readable date format"),
 		success: z.boolean().describe("Whether parsing was successful"),
-		error: z.string().optional().describe("Error message if parsing failed"),
+		errorMessage: z.string().optional().describe("Error message if parsing failed"),
 	}),
-	execute: async ({ context }) => {
-		const { dateExpression, isEndDate } = context;
+	execute: async (input) => {
+		const { dateExpression, isEndDate } = input;
 
 		try {
 			const parsedDate = parseNaturalDate(dateExpression);
@@ -241,7 +241,7 @@ ALWAYS call this tool when you see date references in user prompts like:
 					isoDate: "",
 					humanReadable: "",
 					success: false,
-					error: `Could not parse date expression: "${dateExpression}". Try formats like "December 1, 2025", "last 30 days", or "Q4 2025".`,
+					errorMessage: `Could not parse date expression: "${dateExpression}". Try formats like "December 1, 2025", "last 30 days", or "Q4 2025".`,
 				};
 			}
 
@@ -270,13 +270,13 @@ ALWAYS call this tool when you see date references in user prompts like:
 				}),
 				success: true,
 			};
-		} catch (error) {
+		} catch (err) {
 			return {
 				timestamp: 0,
 				isoDate: "",
 				humanReadable: "",
 				success: false,
-				error: `Error parsing date: ${error instanceof Error ? error.message : "Unknown error"}`,
+				errorMessage: `Error parsing date: ${err instanceof Error ? err.message : "Unknown error"}`,
 			};
 		}
 	},

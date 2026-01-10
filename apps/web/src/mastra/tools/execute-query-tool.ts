@@ -1,5 +1,5 @@
 import { createTool } from "@mastra/core/tools";
-import { z } from "zod";
+import { z } from 'zod/v3';
 
 /**
  * Execute Query Tool
@@ -59,8 +59,8 @@ export const executeQueryTool = createTool({
 			)
 			.describe("Fields that will be returned in the data"),
 	}),
-	execute: async ({ context }) => {
-		const { entityType, groupBy, dateRange, limit } = context;
+	execute: async (input) => {
+		const { entityType, groupBy, dateRange, limit } = input;
 
 		// Map entity type and groupBy to the appropriate Convex query
 		const queryMapping: Record<string, Record<string, string>> = {

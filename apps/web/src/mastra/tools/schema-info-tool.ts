@@ -1,5 +1,5 @@
 import { createTool } from "@mastra/core/tools";
-import { z } from "zod";
+import { z } from 'zod/v3';
 
 /**
  * Schema information for report building
@@ -201,8 +201,8 @@ export const schemaInfoTool = createTool({
 			)
 			.describe("Available entities with their schemas"),
 	}),
-	execute: async ({ context }) => {
-		const { entityType } = context;
+	execute: async (input) => {
+		const { entityType } = input;
 
 		// Helper to transform readonly fields to mutable for output schema compatibility
 		const transformFields = (

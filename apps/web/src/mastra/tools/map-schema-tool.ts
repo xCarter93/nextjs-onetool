@@ -1,5 +1,5 @@
 import { createTool } from "@mastra/core/tools";
-import { z } from "zod";
+import { z } from 'zod/v3';
 import {
 	CLIENT_SCHEMA_FIELDS,
 	PROJECT_SCHEMA_FIELDS,
@@ -41,8 +41,8 @@ export const mapSchemaTool = createTool({
 			.array(z.string())
 			.describe("Required schema fields not found in CSV"),
 	}),
-	execute: async ({ context }) => {
-		const { entityType, headers, sampleRows } = context;
+	execute: async (input) => {
+		const { entityType, headers, sampleRows } = input;
 
 		// Select the appropriate schema
 		const schema =
