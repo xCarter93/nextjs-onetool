@@ -2,6 +2,7 @@
 
 import { CsvUploadZone } from "@/app/(workspace)/clients/components/csv-upload-zone";
 import { CsvMappingPreview } from "@/app/(workspace)/clients/components/csv-mapping-preview";
+import { CsvSchemaGuide } from "@/app/(workspace)/clients/components/csv-schema-guide";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Users, Building2, Check } from "lucide-react";
@@ -126,6 +127,9 @@ export function CsvImportStep({
 					</div>
 				</RadioGroup>
 			</div>
+
+			{/* Schema Guide - Show available fields before upload */}
+			<CsvSchemaGuide entityType={entityType} />
 
 			{/* CSV Upload */}
 			<div>

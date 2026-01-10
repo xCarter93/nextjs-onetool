@@ -1,5 +1,5 @@
 import { createTool } from "@mastra/core/tools";
-import { z } from 'zod/v3';
+import { z } from "zod";
 
 /**
  * Report Configuration Builder Tool

@@ -1,4 +1,5 @@
 import { Agent } from "@mastra/core/agent";
+import { openai } from "@ai-sdk/openai";
 import { schemaInfoTool } from "../tools/schema-info-tool";
 import { reportConfigTool } from "../tools/report-config-tool";
 import { executeQueryTool } from "../tools/execute-query-tool";
@@ -11,8 +12,8 @@ import { dateParserTool } from "../tools/date-parser-tool";
  * natural language requests and translating them into report configurations.
  */
 export const reportAgent = new Agent({
-	id: "report-agent",
-	name: "Report Agent",
+	id: "reportAgent",
+	name: "reportAgent",
 	description: "An AI assistant that helps users create and configure reports from their business data.",
 	instructions: `You are an AI assistant specialized in helping users build business reports and analytics.
 
@@ -130,7 +131,7 @@ CRITICAL: For time-based/date reports, use these groupBy values:
 - For clients/projects created over time: creationDate_day, creationDate_week, or creationDate_month
 - For tasks over time: date_day, date_week, or date_month
 - For invoice revenue over time: month`,
-	model: "openai/gpt-4o",
+	model: openai("gpt-4o"),
 	tools: {
 		getSchemaInfo: schemaInfoTool,
 		buildReportConfig: reportConfigTool,

@@ -1,5 +1,5 @@
 import { createTool } from "@mastra/core/tools";
-import { z } from 'zod/v3';
+import { z } from "zod";
 import {
 	CLIENT_SCHEMA_FIELDS,
 	PROJECT_SCHEMA_FIELDS,

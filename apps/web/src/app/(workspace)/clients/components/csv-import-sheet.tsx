@@ -68,7 +68,9 @@ export function CsvImportSheet({
 			});
 
 			if (!response.ok) {
-				throw new Error("Failed to analyze CSV");
+				const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
+				console.error("CSV analysis API error:", errorData);
+				throw new Error(errorData.details || errorData.error || "Failed to analyze CSV");
 			}
 
 			const analysisResult: CsvAnalysisResult = await response.json();
