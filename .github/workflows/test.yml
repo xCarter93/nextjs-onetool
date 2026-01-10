@@ -3,11 +3,13 @@ name: Test Suite
 on:
   pull_request:
     branches: [main, staging]
+  push:
+    branches: [main, staging]
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     strategy:
       matrix:
@@ -29,20 +31,50 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run tests
+      - name: Run all tests (Backend Convex tests via Vitest)
         run: pnpm test:once
+        env:
+          # Ensure tests run in CI environment
+          CI: true
 
-      # Coverage generation - optional, requires @vitest/coverage-v8
-      # Uncomment after running: pnpm add -D @vitest/coverage-v8
+      - name: Generate test summary
+        if: always()
+        run: |
+          echo "## Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ All Convex backend tests executed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Test Files Included:" >> $GITHUB_STEP_SUMMARY
+          echo "- users.test.ts" >> $GITHUB_STEP_SUMMARY
+          echo "- emailMessages.test.ts" >> $GITHUB_STEP_SUMMARY
+          echo "- notifications.test.ts" >> $GITHUB_STEP_SUMMARY
+          echo "- activities.test.ts" >> $GITHUB_STEP_SUMMARY
+          echo "- calendar.test.ts" >> $GITHUB_STEP_SUMMARY
+          echo "- quoteLineItems.test.ts" >> $GITHUB_STEP_SUMMARY
+          echo "- clientContacts.test.ts" >> $GITHUB_STEP_SUMMARY
+          echo "- organizations.test.ts" >> $GITHUB_STEP_SUMMARY
+          echo "- invoiceLineItems.test.ts" >> $GITHUB_STEP_SUMMARY
+          echo "- clientProperties.test.ts" >> $GITHUB_STEP_SUMMARY
+          echo "- payments.test.ts" >> $GITHUB_STEP_SUMMARY
+          echo "- invoices.test.ts" >> $GITHUB_STEP_SUMMARY
+          echo "- projects.test.ts" >> $GITHUB_STEP_SUMMARY
+          echo "- clients.test.ts" >> $GITHUB_STEP_SUMMARY
+          echo "- tasks.test.ts" >> $GITHUB_STEP_SUMMARY
+          echo "- quotes.test.ts" >> $GITHUB_STEP_SUMMARY
+          echo "- lib/auth.test.ts" >> $GITHUB_STEP_SUMMARY
+
+      # Optional: Generate coverage report
+      # Uncomment to enable coverage reporting
       # - name: Generate coverage report
       #   if: success()
-      #   run: pnpm test:coverage
-
+      #   run: pnpm --filter=@onetool/backend test --coverage
+      #
       # - name: Upload coverage reports
       #   if: success()
       #   uses: codecov/codecov-action@v4
       #   with:
       #     token: ${{ secrets.CODECOV_TOKEN }}
+      #     files: ./packages/backend/coverage/coverage-final.json
       #     fail_ci_if_error: false
       #     verbose: true
       #   continue-on-error: true

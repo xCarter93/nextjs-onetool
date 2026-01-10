@@ -27,7 +27,9 @@
     "deploy": "convex deploy",
     "generate": "convex codegen",
     "test": "vitest",
-    "test:once": "vitest run"
+    "test:once": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:ui": "vitest --ui"
   },
   "dependencies": {
     "@clerk/backend": "^2.19.1",
