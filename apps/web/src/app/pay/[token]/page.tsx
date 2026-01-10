@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams, useParams } from "next/navigation";
 import Image from "next/image";
 import { StyledButton } from "@/components/ui/styled/styled-button";
+import PaymentSuccessMessage from "../components/success-message";
 
 type PaymentResponse = {
 	payment: {
@@ -94,24 +95,6 @@ function LockIcon({ className }: { className?: string }) {
 		>
 			<rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
 			<path d="M7 11V7a5 5 0 0 1 10 0v4" />
-		</svg>
-	);
-}
-
-// Check circle icon for completed payments
-function CheckCircleIcon({ className }: { className?: string }) {
-	return (
-		<svg
-			className={className}
-			viewBox="0 0 24 24"
-			fill="none"
-			stroke="currentColor"
-			strokeWidth="2"
-			strokeLinecap="round"
-			strokeLinejoin="round"
-		>
-			<circle cx="12" cy="12" r="10" />
-			<path d="m9 12 2 2 4-4" />
 		</svg>
 	);
 }
@@ -275,6 +258,18 @@ export default function PayPage() {
 				paymentContext.totalRemaining - payment.paymentAmount;
 			const isPaid = paid || payment.status === "paid";
 
+			// Show success message for completed payments
+			if (isPaid) {
+				return (
+					<PaymentSuccessMessage
+						amount={formatCurrency(payment.paymentAmount)}
+						organizationName={org?.name}
+						invoiceNumber={invoice.invoiceNumber}
+						paymentDescription={payment.description}
+					/>
+				);
+			}
+
 			return (
 				<div className="space-y-6">
 					{/* Invoice Header */}
@@ -299,12 +294,6 @@ export default function PayPage() {
 							<p className="mt-0.5 text-3xl font-bold tracking-tight text-slate-900">
 								{formatCurrency(payment.paymentAmount)}
 							</p>
-							{isPaid && (
-								<span className="mt-1 inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700">
-									<CheckCircleIcon className="h-3 w-3" />
-									Paid
-								</span>
-							)}
 						</div>
 					</div>
 
@@ -324,13 +313,7 @@ export default function PayPage() {
 					<div className="rounded-xl border border-slate-200 bg-linear-to-br from-slate-50 to-white p-4">
 						<div className="flex items-center justify-between">
 							<div className="flex items-center gap-3">
-								<div
-									className={`flex h-10 w-10 items-center justify-center rounded-full ${
-										isPaid
-											? "bg-emerald-100 text-emerald-600"
-											: "bg-cyan-100 text-cyan-600"
-									}`}
-								>
+								<div className="flex h-10 w-10 items-center justify-center rounded-full bg-cyan-100 text-cyan-600">
 									<span className="text-sm font-bold">
 										{paymentContext.paymentNumber}
 									</span>
@@ -347,14 +330,8 @@ export default function PayPage() {
 								</div>
 							</div>
 							<div className="text-right">
-								<p
-									className={`text-sm font-semibold ${
-										isPaid ? "text-emerald-600" : "text-amber-600"
-									}`}
-								>
-									{isPaid ? "Completed" : "Due"}
-								</p>
-								{payment.dueDate && !isPaid && (
+								<p className="text-sm font-semibold text-amber-600">Due</p>
+								{payment.dueDate && (
 									<p className="text-xs text-slate-500">
 										{new Date(payment.dueDate).toLocaleDateString("en-US", {
 											month: "short",
@@ -397,45 +374,31 @@ export default function PayPage() {
 						</div>
 					</div>
 
-					{/* Action Button */}
+					{/* Pay Button */}
 					<div className="pt-2">
-						{isPaid ? (
-							<div className="flex items-center justify-center gap-3 rounded-xl border border-emerald-200 bg-linear-to-r from-emerald-50 to-green-50 px-6 py-4">
-								<CheckCircleIcon className="h-6 w-6 text-emerald-500" />
-								<div className="text-center">
-									<p className="font-semibold text-emerald-800">
-										Payment Received
-									</p>
-									<p className="text-sm text-emerald-600">
-										Thank you for your payment!
-									</p>
-								</div>
-							</div>
-						) : (
-							<div className="group relative overflow-hidden rounded-lg">
-								<StyledButton
-									size="lg"
-									intent="primary"
-									className="w-full justify-center py-4"
-									onClick={handleCheckout}
-									disabled={loading || confirming}
-									showArrow={false}
-									icon={
-										loading ? (
-											<div className="h-4 w-4 animate-spin rounded-full border-2 border-current/30 border-t-current" />
-										) : (
-											<LockIcon className="h-4 w-4" />
-										)
-									}
-								>
-									{loading
-										? "Starting checkout..."
-										: `Pay ${formatCurrency(payment.paymentAmount)}`}
-								</StyledButton>
-								{/* Shimmer effect overlay */}
-								<div className="pointer-events-none absolute inset-0 -translate-x-full bg-linear-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-							</div>
-						)}
+						<div className="group relative overflow-hidden rounded-lg">
+							<StyledButton
+								size="lg"
+								intent="primary"
+								className="w-full justify-center py-4"
+								onClick={handleCheckout}
+								disabled={loading || confirming}
+								showArrow={false}
+								icon={
+									loading ? (
+										<div className="h-4 w-4 animate-spin rounded-full border-2 border-current/30 border-t-current" />
+									) : (
+										<LockIcon className="h-4 w-4" />
+									)
+								}
+							>
+								{loading
+									? "Starting checkout..."
+									: `Pay ${formatCurrency(payment.paymentAmount)}`}
+							</StyledButton>
+							{/* Shimmer effect overlay */}
+							<div className="pointer-events-none absolute inset-0 -translate-x-full bg-linear-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+						</div>
 					</div>
 
 					{confirming && (
@@ -451,6 +414,17 @@ export default function PayPage() {
 		// Legacy invoice flow
 		const { invoice, org } = paymentData.data;
 		const isPaid = paid || invoice.status === "paid";
+
+		// Show success message for completed payments
+		if (isPaid) {
+			return (
+				<PaymentSuccessMessage
+					amount={displayAmount}
+					organizationName={org?.name}
+					invoiceNumber={invoice.invoiceNumber ?? undefined}
+				/>
+			);
+		}
 
 		return (
 			<div className="space-y-6">
@@ -476,12 +450,6 @@ export default function PayPage() {
 						<p className="mt-0.5 text-3xl font-bold tracking-tight text-slate-900">
 							{displayAmount}
 						</p>
-						{isPaid && (
-							<span className="mt-1 inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700">
-								<CheckCircleIcon className="h-3 w-3" />
-								Paid
-							</span>
-						)}
 					</div>
 				</div>
 
@@ -490,11 +458,7 @@ export default function PayPage() {
 					<div className="space-y-3 text-sm">
 						<div className="flex justify-between">
 							<span className="text-slate-500">Status</span>
-							<span
-								className={`font-semibold ${isPaid ? "text-emerald-600" : "text-amber-600"}`}
-							>
-								{isPaid ? "Paid" : "Unpaid"}
-							</span>
+							<span className="font-semibold text-amber-600">Unpaid</span>
 						</div>
 						{invoice.dueDate && (
 							<div className="flex justify-between">
@@ -511,43 +475,29 @@ export default function PayPage() {
 					</div>
 				</div>
 
-				{/* Action Button */}
+				{/* Pay Button */}
 				<div className="pt-2">
-					{isPaid ? (
-						<div className="flex items-center justify-center gap-3 rounded-xl border border-emerald-200 bg-linear-to-r from-emerald-50 to-green-50 px-6 py-4">
-							<CheckCircleIcon className="h-6 w-6 text-emerald-500" />
-							<div className="text-center">
-								<p className="font-semibold text-emerald-800">
-									Payment Received
-								</p>
-								<p className="text-sm text-emerald-600">
-									Thank you for your payment!
-								</p>
-							</div>
-						</div>
-					) : (
-						<div className="group relative overflow-hidden rounded-lg">
-							<StyledButton
-								size="lg"
-								intent="primary"
-								className="w-full justify-center py-4"
-								onClick={handleCheckout}
-								disabled={loading || confirming}
-								showArrow={false}
-								icon={
-									loading ? (
-										<div className="h-4 w-4 animate-spin rounded-full border-2 border-current/30 border-t-current" />
-									) : (
-										<LockIcon className="h-4 w-4" />
-									)
-								}
-							>
-								{loading ? "Starting checkout..." : `Pay ${displayAmount}`}
-							</StyledButton>
-							{/* Shimmer effect overlay */}
-							<div className="pointer-events-none absolute inset-0 -translate-x-full bg-linear-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-						</div>
-					)}
+					<div className="group relative overflow-hidden rounded-lg">
+						<StyledButton
+							size="lg"
+							intent="primary"
+							className="w-full justify-center py-4"
+							onClick={handleCheckout}
+							disabled={loading || confirming}
+							showArrow={false}
+							icon={
+								loading ? (
+									<div className="h-4 w-4 animate-spin rounded-full border-2 border-current/30 border-t-current" />
+								) : (
+									<LockIcon className="h-4 w-4" />
+								)
+							}
+						>
+							{loading ? "Starting checkout..." : `Pay ${displayAmount}`}
+						</StyledButton>
+						{/* Shimmer effect overlay */}
+						<div className="pointer-events-none absolute inset-0 -translate-x-full bg-linear-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+					</div>
 				</div>
 
 				{confirming && (
@@ -560,9 +510,21 @@ export default function PayPage() {
 		);
 	};
 
-	// Derive header text based on payment type
+	// Derive header text based on payment type and status
 	const headerText = useMemo(() => {
-		if (!paymentData) return "Invoice Payment";
+		if (!paymentData) return { title: "Invoice Payment", subtitle: null };
+
+		// Check if payment is complete
+		const isPaid =
+			paid ||
+			(paymentData.type === "payment"
+				? paymentData.data.payment.status === "paid"
+				: paymentData.data.invoice.status === "paid");
+
+		if (isPaid) {
+			return { title: "Payment Complete", subtitle: null };
+		}
+
 		if (paymentData.type === "payment") {
 			const { paymentContext, payment } = paymentData.data;
 			const description = payment.description
@@ -574,7 +536,7 @@ export default function PayPage() {
 			};
 		}
 		return { title: "Invoice Payment", subtitle: null };
-	}, [paymentData]);
+	}, [paymentData, paid]);
 
 	return (
 		<div className="relative min-h-screen overflow-hidden text-slate-900">
@@ -610,9 +572,9 @@ export default function PayPage() {
 				{/* Header */}
 				<div className="mb-8 text-center">
 					<h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
-						{typeof headerText === "string" ? headerText : headerText.title}
+						{headerText.title}
 					</h1>
-					{typeof headerText !== "string" && headerText.subtitle && (
+					{headerText.subtitle && (
 						<p className="mt-2 text-base font-medium text-slate-600">
 							{headerText.subtitle}
 						</p>
