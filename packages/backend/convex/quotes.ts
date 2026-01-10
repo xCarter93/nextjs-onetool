@@ -511,6 +511,12 @@ export const update = mutation({
 				showTotals: v.boolean(),
 			})
 		),
+		// Countersignature settings
+		requiresCountersignature: v.optional(v.boolean()),
+		countersignerId: v.optional(v.id("users")),
+		signingOrder: v.optional(
+			v.union(v.literal("client_first"), v.literal("org_first"))
+		),
 	},
 	handler: async (ctx, args): Promise<QuoteId> => {
 		const { id, ...updates } = args;
@@ -543,6 +549,21 @@ export const update = mutation({
 		// Validate expiration date
 		if (updates.validUntil && updates.validUntil <= Date.now()) {
 			throw new Error("Valid until date must be in the future");
+		}
+
+		// Validate countersignature settings
+		if (updates.requiresCountersignature === true && !updates.countersignerId) {
+			throw new Error(
+				"Countersigner is required when countersignature is enabled"
+			);
+		}
+
+		// Validate countersigner exists if provided
+		if (updates.countersignerId) {
+			const countersigner = await ctx.db.get(updates.countersignerId);
+			if (!countersigner) {
+				throw new Error("Countersigner not found");
+			}
 		}
 
 		// Filter and validate updates

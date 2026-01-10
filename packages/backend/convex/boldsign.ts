@@ -68,6 +68,7 @@ export const updateDocumentWithBoldSign = internalMutation({
 				name: v.string(),
 				email: v.string(),
 				signerType: v.union(v.literal("Signer"), v.literal("CC")),
+				signerOrder: v.optional(v.number()),
 			})
 		),
 		viewUrl: v.optional(v.string()),

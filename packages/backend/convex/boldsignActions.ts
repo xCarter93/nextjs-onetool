@@ -48,6 +48,7 @@ export const sendDocumentForSignature = action({
 				name: v.string(),
 				email: v.string(),
 				signerType: v.union(v.literal("Signer"), v.literal("CC")),
+				signerOrder: v.optional(v.number()), // Explicit signing order (1-based)
 			})
 		),
 		documentUrl: v.string(), // URL to the generated PDF
@@ -75,13 +76,21 @@ export const sendDocumentForSignature = action({
 		const signers: InstanceType<typeof DocumentSigner>[] = [];
 		const ccs: InstanceType<typeof DocumentCC>[] = [];
 
-		args.recipients.forEach((recipient, index) => {
+		// Track if any recipient has explicit signing order
+		const hasExplicitOrder = args.recipients.some(
+			(r) => r.signerType === "Signer" && r.signerOrder !== undefined
+		);
+
+		let signerIndex = 1;
+		args.recipients.forEach((recipient) => {
 			if (recipient.signerType === "Signer") {
 				const signer = new DocumentSigner();
 				signer.name = recipient.name;
 				signer.emailAddress = recipient.email;
-				signer.signerOrder = index + 1;
+				// Use explicit order if provided, otherwise fall back to sequential
+				signer.signerOrder = recipient.signerOrder ?? signerIndex;
 				signers.push(signer);
+				signerIndex++;
 			} else if (recipient.signerType === "CC") {
 				const cc = new DocumentCC();
 				cc.emailAddress = recipient.email;
@@ -111,7 +120,8 @@ export const sendDocumentForSignature = action({
 		}
 		sendForSign.files = [file];
 		sendForSign.useTextTags = true; // Enable text tag detection with correct format
-		sendForSign.enableSigningOrder = false;
+		// Enable signing order when there are multiple signers with explicit ordering
+		sendForSign.enableSigningOrder = hasExplicitOrder && signers.length > 1;
 		sendForSign.reminderSettings = {
 			enableAutoReminder: true,
 			reminderDays: 3,
