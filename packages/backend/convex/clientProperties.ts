@@ -3,66 +3,80 @@ import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
 import { getCurrentUserOrgId } from "./lib/auth";
 import { ActivityHelpers } from "./lib/activities";
+import {
+	getEntityWithOrgValidation,
+	getEntityOrThrow,
+	validateParentAccess,
+	filterUndefined,
+	requireUpdates,
+} from "./lib/crud";
+import { getOptionalOrgId, emptyListResult } from "./lib/queries";
 
 /**
- * Client Property operations with embedded CRUD helpers
- * All client property-specific logic lives in this file for better organization
+ * Client Property operations
+ *
+ * Uses shared CRUD utilities from lib/crud.ts for consistent patterns.
+ * Entity-specific business logic (like isPrimary handling) remains here.
  */
 
-// Client Property-specific helper functions
+// ============================================================================
+// Local Helper Functions (entity-specific logic only)
+// ============================================================================
 
 /**
- * Get a client property by ID with organization and client validation
+ * Get a client property with org validation (wrapper for shared utility)
  */
 async function getPropertyWithValidation(
 	ctx: QueryCtx | MutationCtx,
 	id: Id<"clientProperties">
 ): Promise<Doc<"clientProperties"> | null> {
-	const userOrgId = await getCurrentUserOrgId(ctx);
-	const property = await ctx.db.get(id);
-
-	if (!property) {
-		return null;
-	}
-
-	if (property.orgId !== userOrgId) {
-		throw new Error("Property does not belong to your organization");
-	}
-
-	return property;
+	return await getEntityWithOrgValidation(
+		ctx,
+		"clientProperties",
+		id,
+		"Property"
+	);
 }
 
 /**
- * Get a client property by ID, throwing if not found
+ * Get a client property, throwing if not found (wrapper for shared utility)
  */
 async function getPropertyOrThrow(
 	ctx: QueryCtx | MutationCtx,
 	id: Id<"clientProperties">
 ): Promise<Doc<"clientProperties">> {
-	const property = await getPropertyWithValidation(ctx, id);
-	if (!property) {
-		throw new Error("Client property not found");
-	}
-	return property;
+	return await getEntityOrThrow(ctx, "clientProperties", id, "Client property");
 }
 
 /**
- * Validate client exists and belongs to user's org
+ * Validate client access (wrapper for shared utility)
  */
 async function validateClientAccess(
 	ctx: QueryCtx | MutationCtx,
 	clientId: Id<"clients">,
 	existingOrgId?: Id<"organizations">
 ): Promise<void> {
-	const userOrgId = existingOrgId ?? (await getCurrentUserOrgId(ctx));
-	const client = await ctx.db.get(clientId);
+	await validateParentAccess(ctx, "clients", clientId, "Client", existingOrgId);
+}
 
-	if (!client) {
-		throw new Error("Client not found");
-	}
+/**
+ * Handle primary property uniqueness constraint.
+ * Unsets existing primary property before setting a new one.
+ */
+async function handlePrimaryProperty(
+	ctx: MutationCtx,
+	clientId: Id<"clients">,
+	currentPropertyId?: Id<"clientProperties">
+): Promise<void> {
+	const existingPrimary = await ctx.db
+		.query("clientProperties")
+		.withIndex("by_primary", (q) =>
+			q.eq("clientId", clientId).eq("isPrimary", true)
+		)
+		.unique();
 
-	if (client.orgId !== userOrgId) {
-		throw new Error("Client does not belong to your organization");
+	if (existingPrimary && existingPrimary._id !== currentPropertyId) {
+		await ctx.db.patch(existingPrimary._id, { isPrimary: false });
 	}
 }
 
@@ -78,37 +92,19 @@ async function createPropertyWithOrg(
 	// Validate client access
 	await validateClientAccess(ctx, data.clientId);
 
-	const propertyData = {
+	return await ctx.db.insert("clientProperties", {
 		...data,
 		orgId: userOrgId,
-	};
-
-	return await ctx.db.insert("clientProperties", propertyData);
-}
-
-/**
- * Update a client property with validation
- */
-async function updatePropertyWithValidation(
-	ctx: MutationCtx,
-	id: Id<"clientProperties">,
-	updates: Partial<Doc<"clientProperties">>
-): Promise<void> {
-	// Validate property exists and belongs to user's org
-	await getPropertyOrThrow(ctx, id);
-
-	// If clientId is being updated, validate the new client
-	if (updates.clientId) {
-		await validateClientAccess(ctx, updates.clientId);
-	}
-
-	// Update the property
-	await ctx.db.patch(id, updates);
+	});
 }
 
 // Define specific types for client property operations
 type ClientPropertyDocument = Doc<"clientProperties">;
 type ClientPropertyId = Id<"clientProperties">;
+
+// ============================================================================
+// Queries
+// ============================================================================
 
 /**
  * Get all properties for a specific client
@@ -116,12 +112,10 @@ type ClientPropertyId = Id<"clientProperties">;
 export const listByClient = query({
 	args: { clientId: v.id("clients") },
 	handler: async (ctx, args): Promise<ClientPropertyDocument[]> => {
-		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
-		if (!userOrgId) {
-			return [];
-		}
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) return emptyListResult();
 
-		await validateClientAccess(ctx, args.clientId, userOrgId);
+		await validateClientAccess(ctx, args.clientId, orgId);
 
 		return await ctx.db
 			.query("clientProperties")
@@ -136,14 +130,12 @@ export const listByClient = query({
 export const list = query({
 	args: {},
 	handler: async (ctx): Promise<ClientPropertyDocument[]> => {
-		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
-		if (!userOrgId) {
-			return [];
-		}
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) return emptyListResult();
 
 		return await ctx.db
 			.query("clientProperties")
-			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
+			.withIndex("by_org", (q) => q.eq("orgId", orgId))
 			.collect();
 	},
 });
@@ -155,10 +147,9 @@ export const list = query({
 export const get = query({
 	args: { id: v.id("clientProperties") },
 	handler: async (ctx, args): Promise<ClientPropertyDocument | null> => {
-		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
-		if (!userOrgId) {
-			return null;
-		}
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) return null;
+
 		return await getPropertyWithValidation(ctx, args.id);
 	},
 });
@@ -184,6 +175,10 @@ export const getPrimaryProperty = query({
 			.unique();
 	},
 });
+
+// ============================================================================
+// Mutations
+// ============================================================================
 
 /**
  * Create a new client property
@@ -224,30 +219,17 @@ export const create = mutation({
 			throw new Error("ZIP code is required");
 		}
 
-		// If setting as primary, ensure no other primary property exists for this client
+		// Handle primary property uniqueness
 		if (args.isPrimary) {
-			const existingPrimary = await ctx.db
-				.query("clientProperties")
-				.withIndex("by_primary", (q) =>
-					q.eq("clientId", args.clientId).eq("isPrimary", true)
-				)
-				.unique();
-
-			if (existingPrimary) {
-				// Unset the existing primary property
-				await ctx.db.patch(existingPrimary._id, { isPrimary: false });
-			}
+			await handlePrimaryProperty(ctx, args.clientId);
 		}
 
 		const propertyId = await createPropertyWithOrg(ctx, args);
 
-		// Get the created property for activity logging
-		const property = await ctx.db.get(propertyId);
-		if (property) {
-			await ActivityHelpers.clientUpdated(
-				ctx,
-				(await ctx.db.get(property.clientId)) as Doc<"clients">
-			);
+		// Log activity on the client
+		const client = await ctx.db.get(args.clientId);
+		if (client) {
+			await ActivityHelpers.clientUpdated(ctx, client);
 		}
 
 		return propertyId;
@@ -296,35 +278,25 @@ export const update = mutation({
 			throw new Error("ZIP code cannot be empty");
 		}
 
-		// Filter out undefined values
-		const filteredUpdates = Object.fromEntries(
-			Object.entries(updates).filter(([, value]) => value !== undefined)
-		) as Partial<ClientPropertyDocument>;
+		// Filter and validate updates
+		const filteredUpdates = filterUndefined(updates);
+		requireUpdates(filteredUpdates);
 
-		if (Object.keys(filteredUpdates).length === 0) {
-			throw new Error("No valid updates provided");
-		}
-
-		// Get current property to check clientId for primary validation
+		// Get current property and determine clientId
 		const currentProperty = await getPropertyOrThrow(ctx, id);
 		const clientId = filteredUpdates.clientId || currentProperty.clientId;
 
-		// If setting as primary, ensure no other primary property exists for this client
-		if (filteredUpdates.isPrimary === true) {
-			const existingPrimary = await ctx.db
-				.query("clientProperties")
-				.withIndex("by_primary", (q) =>
-					q.eq("clientId", clientId).eq("isPrimary", true)
-				)
-				.unique();
-
-			if (existingPrimary && existingPrimary._id !== id) {
-				// Unset the existing primary property
-				await ctx.db.patch(existingPrimary._id, { isPrimary: false });
-			}
+		// Validate new clientId if changing
+		if (filteredUpdates.clientId) {
+			await validateClientAccess(ctx, filteredUpdates.clientId);
 		}
 
-		await updatePropertyWithValidation(ctx, id, filteredUpdates);
+		// Handle primary property uniqueness
+		if (filteredUpdates.isPrimary === true) {
+			await handlePrimaryProperty(ctx, clientId, id);
+		}
+
+		await ctx.db.patch(id, filteredUpdates);
 
 		// Log activity on the client
 		const client = await ctx.db.get(clientId);
@@ -405,7 +377,7 @@ export const search = query({
 			);
 		}
 
-		// Search in property name, address, city, state, and description
+		// Search in property name, address, city, state, and zip code
 		const searchQuery = args.query.toLowerCase();
 		return properties.filter(
 			(property: ClientPropertyDocument) =>
@@ -429,16 +401,7 @@ export const setPrimary = mutation({
 		const property = await getPropertyOrThrow(ctx, args.id);
 
 		// Unset any existing primary property for this client
-		const existingPrimary = await ctx.db
-			.query("clientProperties")
-			.withIndex("by_primary", (q) =>
-				q.eq("clientId", property.clientId).eq("isPrimary", true)
-			)
-			.unique();
-
-		if (existingPrimary && existingPrimary._id !== args.id) {
-			await ctx.db.patch(existingPrimary._id, { isPrimary: false });
-		}
+		await handlePrimaryProperty(ctx, property.clientId, args.id);
 
 		// Set this property as primary
 		await ctx.db.patch(args.id, { isPrimary: true });
@@ -503,16 +466,7 @@ export const bulkCreate = mutation({
 
 		// If setting a primary property, unset existing primary
 		if (hasPrimary) {
-			const existingPrimary = await ctx.db
-				.query("clientProperties")
-				.withIndex("by_primary", (q) =>
-					q.eq("clientId", args.clientId).eq("isPrimary", true)
-				)
-				.unique();
-
-			if (existingPrimary) {
-				await ctx.db.patch(existingPrimary._id, { isPrimary: false });
-			}
+			await handlePrimaryProperty(ctx, args.clientId);
 		}
 
 		// Create all properties
@@ -557,8 +511,8 @@ export const bulkCreate = mutation({
 export const getStats = query({
 	args: {},
 	handler: async (ctx) => {
-		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
-		if (!userOrgId) {
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) {
 			return {
 				total: 0,
 				byType: {
@@ -574,9 +528,10 @@ export const getStats = query({
 				citiesServed: 0,
 			};
 		}
+
 		const properties = await ctx.db
 			.query("clientProperties")
-			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
+			.withIndex("by_org", (q) => q.eq("orgId", orgId))
 			.collect();
 
 		const stats = {

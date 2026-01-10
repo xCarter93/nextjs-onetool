@@ -2,66 +2,67 @@ import { query, mutation, QueryCtx, MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
 import { getCurrentUserOrgId } from "./lib/auth";
+import { filterUndefined, requireUpdates } from "./lib/crud";
+import { getOptionalOrgId, emptyListResult } from "./lib/queries";
+import {
+	validateQuoteLineItemFields,
+	calculateQuoteLineItemAmount,
+	recalculateLineItemTotal,
+	getNextLineItemSortOrder,
+	sortLineItems,
+	calculateLineItemStats,
+	validateQuoteAccess,
+	getLineItemWithValidation,
+	getLineItemOrThrow,
+	validateBulkLineItems,
+} from "./lib/lineItems";
 
 /**
- * Quote Line Item operations with embedded CRUD helpers
- * All quote line item-specific logic lives in this file for better organization
+ * Quote Line Item operations
+ *
+ * Uses shared utilities from lib/lineItems.ts and lib/crud.ts for consistent patterns.
+ * Entity-specific business logic remains in this file.
  */
 
-// Quote Line Item-specific helper functions
+// ============================================================================
+// Types
+// ============================================================================
+
+type QuoteLineItemDocument = Doc<"quoteLineItems">;
+type QuoteLineItemId = Id<"quoteLineItems">;
+
+// ============================================================================
+// Local Helper Functions (entity-specific wrappers)
+// ============================================================================
 
 /**
- * Get a quote line item by ID with organization validation
+ * Get a quote line item with org validation (wrapper for shared utility)
  */
-async function getLineItemWithOrgValidation(
+async function getQuoteLineItemWithValidation(
 	ctx: QueryCtx | MutationCtx,
 	id: Id<"quoteLineItems">
 ): Promise<Doc<"quoteLineItems"> | null> {
-	const userOrgId = await getCurrentUserOrgId(ctx);
-	const lineItem = await ctx.db.get(id);
-
-	if (!lineItem) {
-		return null;
-	}
-
-	if (lineItem.orgId !== userOrgId) {
-		throw new Error("Quote line item does not belong to your organization");
-	}
-
-	return lineItem;
+	return await getLineItemWithValidation(
+		ctx,
+		"quoteLineItems",
+		id,
+		"Quote line item"
+	);
 }
 
 /**
- * Get a quote line item by ID, throwing if not found
+ * Get a quote line item, throwing if not found (wrapper for shared utility)
  */
-async function getLineItemOrThrow(
+async function getQuoteLineItemOrThrow(
 	ctx: QueryCtx | MutationCtx,
 	id: Id<"quoteLineItems">
 ): Promise<Doc<"quoteLineItems">> {
-	const lineItem = await getLineItemWithOrgValidation(ctx, id);
-	if (!lineItem) {
-		throw new Error("Quote line item not found");
-	}
-	return lineItem;
-}
-
-/**
- * Validate quote exists and belongs to user's org
- */
-async function validateQuoteAccess(
-	ctx: QueryCtx | MutationCtx,
-	quoteId: Id<"quotes">
-): Promise<void> {
-	const userOrgId = await getCurrentUserOrgId(ctx);
-	const quote = await ctx.db.get(quoteId);
-
-	if (!quote) {
-		throw new Error("Quote not found");
-	}
-
-	if (quote.orgId !== userOrgId) {
-		throw new Error("Quote does not belong to your organization");
-	}
+	return await getLineItemOrThrow(
+		ctx,
+		"quoteLineItems",
+		id,
+		"Quote line item"
+	);
 }
 
 /**
@@ -76,37 +77,15 @@ async function createLineItemWithOrg(
 	// Validate quote access
 	await validateQuoteAccess(ctx, data.quoteId);
 
-	const lineItemData = {
+	return await ctx.db.insert("quoteLineItems", {
 		...data,
 		orgId: userOrgId,
-	};
-
-	return await ctx.db.insert("quoteLineItems", lineItemData);
+	});
 }
 
-/**
- * Update a quote line item with validation
- */
-async function updateLineItemWithValidation(
-	ctx: MutationCtx,
-	id: Id<"quoteLineItems">,
-	updates: Partial<Doc<"quoteLineItems">>
-): Promise<void> {
-	// Validate line item exists and belongs to user's org
-	await getLineItemOrThrow(ctx, id);
-
-	// If quoteId is being updated, validate the new quote
-	if (updates.quoteId) {
-		await validateQuoteAccess(ctx, updates.quoteId);
-	}
-
-	// Update the line item
-	await ctx.db.patch(id, updates);
-}
-
-// Define specific types for quote line item operations
-type QuoteLineItemDocument = Doc<"quoteLineItems">;
-type QuoteLineItemId = Id<"quoteLineItems">;
+// ============================================================================
+// Queries
+// ============================================================================
 
 /**
  * Get all line items for a specific quote
@@ -114,15 +93,17 @@ type QuoteLineItemId = Id<"quoteLineItems">;
 export const listByQuote = query({
 	args: { quoteId: v.id("quotes") },
 	handler: async (ctx, args): Promise<QuoteLineItemDocument[]> => {
-		await validateQuoteAccess(ctx, args.quoteId);
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) return emptyListResult();
+
+		await validateQuoteAccess(ctx, args.quoteId, orgId);
 
 		const lineItems = await ctx.db
 			.query("quoteLineItems")
 			.withIndex("by_quote", (q) => q.eq("quoteId", args.quoteId))
 			.collect();
 
-		// Sort by sortOrder
-		return lineItems.sort((a, b) => a.sortOrder - b.sortOrder);
+		return sortLineItems(lineItems);
 	},
 });
 
@@ -132,11 +113,12 @@ export const listByQuote = query({
 export const list = query({
 	args: {},
 	handler: async (ctx): Promise<QuoteLineItemDocument[]> => {
-		const userOrgId = await getCurrentUserOrgId(ctx);
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) return emptyListResult();
 
 		return await ctx.db
 			.query("quoteLineItems")
-			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
+			.withIndex("by_org", (q) => q.eq("orgId", orgId))
 			.collect();
 	},
 });
@@ -148,9 +130,53 @@ export const list = query({
 export const get = query({
 	args: { id: v.id("quoteLineItems") },
 	handler: async (ctx, args): Promise<QuoteLineItemDocument | null> => {
-		return await getLineItemWithOrgValidation(ctx, args.id);
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) return null;
+
+		return await getQuoteLineItemWithValidation(ctx, args.id);
 	},
 });
+
+/**
+ * Get quote line item statistics
+ */
+// TODO: Candidate for deletion if confirmed unused.
+export const getStats = query({
+	args: { quoteId: v.id("quotes") },
+	handler: async (ctx, args) => {
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) {
+			return {
+				totalItems: 0,
+				totalAmount: 0,
+				averageRate: 0,
+				totalQuantity: 0,
+			};
+		}
+
+		await validateQuoteAccess(ctx, args.quoteId, orgId);
+
+		const lineItems = await ctx.db
+			.query("quoteLineItems")
+			.withIndex("by_quote", (q) => q.eq("quoteId", args.quoteId))
+			.collect();
+
+		const baseStats = calculateLineItemStats(lineItems, "amount");
+
+		// Calculate average rate (quote-specific)
+		const totalRate = lineItems.reduce((sum, item) => sum + item.rate, 0);
+		const averageRate = lineItems.length > 0 ? totalRate / lineItems.length : 0;
+
+		return {
+			...baseStats,
+			averageRate,
+		};
+	},
+});
+
+// ============================================================================
+// Mutations
+// ============================================================================
 
 /**
  * Create a new quote line item
@@ -167,34 +193,11 @@ export const create = mutation({
 		sortOrder: v.number(),
 	},
 	handler: async (ctx, args): Promise<QuoteLineItemId> => {
-		// Validate required fields
-		if (!args.description.trim()) {
-			throw new Error("Description is required");
-		}
-
-		if (!args.unit.trim()) {
-			throw new Error("Unit is required");
-		}
-
-		// Validate numeric values
-		if (args.quantity <= 0) {
-			throw new Error("Quantity must be positive");
-		}
-
-		if (args.rate < 0) {
-			throw new Error("Rate cannot be negative");
-		}
-
-		if (args.cost !== undefined && args.cost < 0) {
-			throw new Error("Cost cannot be negative");
-		}
-
-		if (args.sortOrder < 0) {
-			throw new Error("Sort order cannot be negative");
-		}
+		// Validate all fields using shared utility
+		validateQuoteLineItemFields(args, { isUpdate: false });
 
 		// Calculate amount
-		const amount = args.quantity * args.rate;
+		const amount = calculateQuoteLineItemAmount(args.quantity, args.rate);
 
 		const lineItemId = await createLineItemWithOrg(ctx, {
 			...args,
@@ -222,55 +225,31 @@ export const update = mutation({
 	handler: async (ctx, args): Promise<QuoteLineItemId> => {
 		const { id, ...updates } = args;
 
-		// Validate fields if being updated
-		if (updates.description !== undefined && !updates.description.trim()) {
-			throw new Error("Description cannot be empty");
+		// Validate fields using shared utility
+		validateQuoteLineItemFields(updates, { isUpdate: true });
+
+		// Filter and validate updates
+		const filteredUpdates = filterUndefined(updates);
+		requireUpdates(filteredUpdates);
+
+		// Get current line item
+		const currentLineItem = await getQuoteLineItemOrThrow(ctx, id);
+
+		// Validate new quoteId if changing
+		if (filteredUpdates.quoteId) {
+			await validateQuoteAccess(ctx, filteredUpdates.quoteId);
 		}
-
-		if (updates.unit !== undefined && !updates.unit.trim()) {
-			throw new Error("Unit cannot be empty");
-		}
-
-		if (updates.quantity !== undefined && updates.quantity <= 0) {
-			throw new Error("Quantity must be positive");
-		}
-
-		if (updates.rate !== undefined && updates.rate < 0) {
-			throw new Error("Rate cannot be negative");
-		}
-
-		if (updates.cost !== undefined && updates.cost < 0) {
-			throw new Error("Cost cannot be negative");
-		}
-
-		if (updates.sortOrder !== undefined && updates.sortOrder < 0) {
-			throw new Error("Sort order cannot be negative");
-		}
-
-		// Filter out undefined values
-		const filteredUpdates = Object.fromEntries(
-			Object.entries(updates).filter(([, value]) => value !== undefined)
-		) as Partial<QuoteLineItemDocument>;
-
-		if (Object.keys(filteredUpdates).length === 0) {
-			throw new Error("No valid updates provided");
-		}
-
-		// Get current line item to calculate new amount if needed
-		const currentLineItem = await getLineItemOrThrow(ctx, id);
 
 		// Recalculate amount if quantity or rate changed
-		const quantity = filteredUpdates.quantity ?? currentLineItem.quantity;
-		const rate = filteredUpdates.rate ?? currentLineItem.rate;
-
 		if (
 			filteredUpdates.quantity !== undefined ||
 			filteredUpdates.rate !== undefined
 		) {
-			filteredUpdates.amount = quantity * rate;
+			(filteredUpdates as Record<string, unknown>).amount =
+				recalculateLineItemTotal(filteredUpdates, currentLineItem, "quote");
 		}
 
-		await updateLineItemWithValidation(ctx, id, filteredUpdates);
+		await ctx.db.patch(id, filteredUpdates);
 
 		return id;
 	},
@@ -282,7 +261,7 @@ export const update = mutation({
 export const remove = mutation({
 	args: { id: v.id("quoteLineItems") },
 	handler: async (ctx, args): Promise<QuoteLineItemId> => {
-		await getLineItemOrThrow(ctx, args.id); // Validate access
+		await getQuoteLineItemOrThrow(ctx, args.id);
 		await ctx.db.delete(args.id);
 		return args.id;
 	},
@@ -309,33 +288,18 @@ export const bulkCreate = mutation({
 		// Validate quote access once
 		await validateQuoteAccess(ctx, args.quoteId);
 
+		// Validate all items using shared utility
+		validateBulkLineItems(args.lineItems, "quote");
+
 		const userOrgId = await getCurrentUserOrgId(ctx);
 		const createdIds: QuoteLineItemId[] = [];
 
 		for (const itemData of args.lineItems) {
-			// Validate each item
-			if (!itemData.description.trim()) {
-				throw new Error("All descriptions are required");
-			}
-
-			if (!itemData.unit.trim()) {
-				throw new Error("All units are required");
-			}
-
-			if (itemData.quantity <= 0) {
-				throw new Error("All quantities must be positive");
-			}
-
-			if (itemData.rate < 0) {
-				throw new Error("Rate cannot be negative");
-			}
-
-			if (itemData.cost !== undefined && itemData.cost < 0) {
-				throw new Error("Cost cannot be negative");
-			}
-
 			// Calculate amount and create item
-			const amount = itemData.quantity * itemData.rate;
+			const amount = calculateQuoteLineItemAmount(
+				itemData.quantity,
+				itemData.rate
+			);
 
 			const lineItemId = await ctx.db.insert("quoteLineItems", {
 				...itemData,
@@ -363,19 +327,13 @@ export const reorder = mutation({
 	handler: async (ctx, args): Promise<void> => {
 		await validateQuoteAccess(ctx, args.quoteId);
 
-		// Validate that all line items belong to the quote
-		for (const lineItemId of args.lineItemIds) {
-			const lineItem = await getLineItemOrThrow(ctx, lineItemId);
+		// Validate that all line items belong to the quote and update sort order
+		for (let i = 0; i < args.lineItemIds.length; i++) {
+			const lineItem = await getQuoteLineItemOrThrow(ctx, args.lineItemIds[i]);
 			if (lineItem.quoteId !== args.quoteId) {
 				throw new Error("All line items must belong to the specified quote");
 			}
-		}
-
-		// Update sort order for each item
-		for (let i = 0; i < args.lineItemIds.length; i++) {
-			await ctx.db.patch(args.lineItemIds[i], {
-				sortOrder: i,
-			});
+			await ctx.db.patch(args.lineItemIds[i], { sortOrder: i });
 		}
 	},
 });
@@ -387,69 +345,29 @@ export const reorder = mutation({
 export const duplicate = mutation({
 	args: { id: v.id("quoteLineItems") },
 	handler: async (ctx, args): Promise<QuoteLineItemId> => {
-		const originalItem = await getLineItemOrThrow(ctx, args.id);
+		const originalItem = await getQuoteLineItemOrThrow(ctx, args.id);
 
-		// Get the highest sort order for the quote to append the duplicate
+		// Get all items for the quote to determine next sort order
 		const allItems = await ctx.db
 			.query("quoteLineItems")
 			.withIndex("by_quote", (q) => q.eq("quoteId", originalItem.quoteId))
 			.collect();
 
-		const maxSortOrder = Math.max(
-			...allItems.map((item) => item.sortOrder),
-			-1
-		);
+		const nextSortOrder = getNextLineItemSortOrder(allItems);
 
-	// Create duplicate with incremented sort order
-	const duplicateId = await ctx.db.insert("quoteLineItems", {
-		quoteId: originalItem.quoteId,
-		orgId: originalItem.orgId,
-		description: `${originalItem.description} (Copy)`,
-		quantity: originalItem.quantity,
-		unit: originalItem.unit,
-		rate: originalItem.rate,
-		amount: originalItem.amount,
-		cost: originalItem.cost,
-		sortOrder: maxSortOrder + 1,
-	});
+		// Create duplicate with incremented sort order
+		const duplicateId = await ctx.db.insert("quoteLineItems", {
+			quoteId: originalItem.quoteId,
+			orgId: originalItem.orgId,
+			description: `${originalItem.description} (Copy)`,
+			quantity: originalItem.quantity,
+			unit: originalItem.unit,
+			rate: originalItem.rate,
+			amount: originalItem.amount,
+			cost: originalItem.cost,
+			sortOrder: nextSortOrder,
+		});
 
-	return duplicateId;
-	},
-});
-
-/**
- * Get quote line item statistics
- */
-// TODO: Candidate for deletion if confirmed unused.
-export const getStats = query({
-	args: { quoteId: v.id("quotes") },
-	handler: async (ctx, args) => {
-		await validateQuoteAccess(ctx, args.quoteId);
-
-		const lineItems = await ctx.db
-			.query("quoteLineItems")
-			.withIndex("by_quote", (q) => q.eq("quoteId", args.quoteId))
-			.collect();
-
-	const stats = {
-		totalItems: lineItems.length,
-		totalAmount: 0,
-		averageRate: 0,
-		totalQuantity: 0,
-	};
-
-		let totalRate = 0;
-
-	lineItems.forEach((item: QuoteLineItemDocument) => {
-		stats.totalAmount += item.amount;
-		stats.totalQuantity += item.quantity;
-		totalRate += item.rate;
-	});
-
-		if (lineItems.length > 0) {
-			stats.averageRate = totalRate / lineItems.length;
-		}
-
-		return stats;
+		return duplicateId;
 	},
 });

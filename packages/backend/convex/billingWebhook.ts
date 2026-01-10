@@ -1,5 +1,7 @@
-import { internalMutation } from "./_generated/server";
+import { internalMutation, MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
+import { Doc } from "./_generated/dataModel";
+import { logWebhookReceived, logWebhookSuccess, logWebhookError } from "./lib/webhooks";
 
 /**
  * Clerk Billing Webhook Handlers
@@ -7,6 +9,70 @@ import { v } from "convex/values";
  * Handles subscription and payment events from Clerk Billing
  * Note: Only organization-level billing is supported
  */
+
+// ============================================================================
+// Constants
+// ============================================================================
+
+const WEBHOOK_SERVICE = "Clerk Billing";
+
+// ============================================================================
+// Types
+// ============================================================================
+
+/**
+ * Valid subscription status values from Clerk
+ */
+type SubscriptionStatus =
+	| "active"
+	| "past_due"
+	| "canceled"
+	| "incomplete"
+	| "incomplete_expired"
+	| "trialing"
+	| "unpaid";
+
+// ============================================================================
+// Helpers
+// ============================================================================
+
+/**
+ * Look up organization by Clerk organization ID
+ * Returns null if not found (logs error internally)
+ */
+async function getOrganizationByClerkId(
+	ctx: MutationCtx,
+	clerkOrganizationId: string
+): Promise<Doc<"organizations"> | null> {
+	const org = await ctx.db
+		.query("organizations")
+		.withIndex("by_clerk_org", (q) =>
+			q.eq("clerkOrganizationId", clerkOrganizationId)
+		)
+		.first();
+
+	if (!org) {
+		logWebhookError(
+			WEBHOOK_SERVICE,
+			"organization lookup",
+			`Organization not found for Clerk ID: ${clerkOrganizationId}`,
+			clerkOrganizationId
+		);
+	}
+
+	return org;
+}
+
+/**
+ * Cast raw status string to typed SubscriptionStatus
+ */
+function toSubscriptionStatus(status: string): SubscriptionStatus {
+	return status as SubscriptionStatus;
+}
+
+// ============================================================================
+// Payment Attempt Handlers
+// ============================================================================
 
 /**
  * Handle paymentAttempt.created event
@@ -18,10 +84,7 @@ export const handlePaymentAttemptCreated = internalMutation({
 		amount: v.optional(v.number()),
 	},
 	handler: async (ctx, args) => {
-		console.log("Payment attempt created:", {
-			paymentAttemptId: args.paymentAttemptId,
-			organizationId: args.organizationId,
-		});
+		logWebhookReceived(WEBHOOK_SERVICE, "paymentAttempt.created", args.paymentAttemptId);
 
 		// Log the payment attempt - you could store this in a payments table if needed
 		// For now, we just log it
@@ -40,11 +103,11 @@ export const handlePaymentAttemptUpdated = internalMutation({
 		organizationId: v.optional(v.string()),
 	},
 	handler: async (ctx, args) => {
-		console.log("Payment attempt updated:", {
-			id: args.paymentAttemptId,
-			status: args.status,
-			organizationId: args.organizationId,
-		});
+		logWebhookReceived(
+			WEBHOOK_SERVICE,
+			`paymentAttempt.updated (${args.status})`,
+			args.paymentAttemptId
+		);
 
 		// You could update a payments table here if tracking payment history
 		// For now, we just log the status change
@@ -52,6 +115,10 @@ export const handlePaymentAttemptUpdated = internalMutation({
 		return { success: true };
 	},
 });
+
+// ============================================================================
+// Subscription Handlers
+// ============================================================================
 
 /**
  * Handle subscription.created event
@@ -65,46 +132,21 @@ export const handleSubscriptionCreated = internalMutation({
 		currentPeriodStart: v.optional(v.number()),
 	},
 	handler: async (ctx, args) => {
-		console.log("Subscription created:", {
-			subscriptionId: args.subscriptionId,
-			organizationId: args.organizationId,
-			planId: args.planId,
-		});
+		logWebhookReceived(WEBHOOK_SERVICE, "subscription.created", args.subscriptionId);
 
-		const org = await ctx.db
-			.query("organizations")
-			.withIndex("by_clerk_org", (q) =>
-				q.eq("clerkOrganizationId", args.organizationId)
-			)
-			.first();
-
+		const org = await getOrganizationByClerkId(ctx, args.organizationId);
 		if (!org) {
-			console.error(
-				`Organization not found for Clerk ID: ${args.organizationId}`
-			);
 			return { success: false, error: "Organization not found" };
 		}
-
-		const statusValue = args.status as
-			| "active"
-			| "past_due"
-			| "canceled"
-			| "incomplete"
-			| "incomplete_expired"
-			| "trialing"
-			| "unpaid";
 
 		await ctx.db.patch(org._id, {
 			clerkSubscriptionId: args.subscriptionId,
 			clerkPlanId: args.planId,
-			subscriptionStatus: statusValue,
+			subscriptionStatus: toSubscriptionStatus(args.status),
 			billingCycleStart: args.currentPeriodStart || Date.now(),
 		});
 
-		console.log(
-			`Updated organization ${org._id} with subscription ${args.subscriptionId}`
-		);
-
+		logWebhookSuccess(WEBHOOK_SERVICE, "subscription.created", org._id);
 		return { success: true };
 	},
 });
@@ -120,22 +162,10 @@ export const handleSubscriptionActive = internalMutation({
 		currentPeriodStart: v.optional(v.number()),
 	},
 	handler: async (ctx, args) => {
-		console.log("Subscription activated:", {
-			subscriptionId: args.subscriptionId,
-			organizationId: args.organizationId,
-		});
+		logWebhookReceived(WEBHOOK_SERVICE, "subscription.active", args.subscriptionId);
 
-		const org = await ctx.db
-			.query("organizations")
-			.withIndex("by_clerk_org", (q) =>
-				q.eq("clerkOrganizationId", args.organizationId)
-			)
-			.first();
-
+		const org = await getOrganizationByClerkId(ctx, args.organizationId);
 		if (!org) {
-			console.error(
-				`Organization not found for Clerk ID: ${args.organizationId}`
-			);
 			return { success: false, error: "Organization not found" };
 		}
 
@@ -146,8 +176,7 @@ export const handleSubscriptionActive = internalMutation({
 			billingCycleStart: args.currentPeriodStart || Date.now(),
 		});
 
-		console.log(`Activated subscription for organization ${org._id}`);
-
+		logWebhookSuccess(WEBHOOK_SERVICE, "subscription.active", org._id);
 		return { success: true };
 	},
 });
@@ -164,44 +193,25 @@ export const handleSubscriptionUpdated = internalMutation({
 		currentPeriodStart: v.optional(v.number()),
 	},
 	handler: async (ctx, args) => {
-		console.log("Subscription updated:", {
-			subscriptionId: args.subscriptionId,
-			status: args.status,
-			organizationId: args.organizationId,
-		});
+		logWebhookReceived(
+			WEBHOOK_SERVICE,
+			`subscription.updated (${args.status})`,
+			args.subscriptionId
+		);
 
-		const org = await ctx.db
-			.query("organizations")
-			.withIndex("by_clerk_org", (q) =>
-				q.eq("clerkOrganizationId", args.organizationId)
-			)
-			.first();
-
+		const org = await getOrganizationByClerkId(ctx, args.organizationId);
 		if (!org) {
-			console.error(
-				`Organization not found for Clerk ID: ${args.organizationId}`
-			);
 			return { success: false, error: "Organization not found" };
 		}
-
-		const statusValue = args.status as
-			| "active"
-			| "past_due"
-			| "canceled"
-			| "incomplete"
-			| "incomplete_expired"
-			| "trialing"
-			| "unpaid";
 
 		await ctx.db.patch(org._id, {
 			clerkSubscriptionId: args.subscriptionId,
 			clerkPlanId: args.planId,
-			subscriptionStatus: statusValue,
+			subscriptionStatus: toSubscriptionStatus(args.status),
 			billingCycleStart: args.currentPeriodStart,
 		});
 
-		console.log(`Updated subscription for organization ${org._id}`);
-
+		logWebhookSuccess(WEBHOOK_SERVICE, "subscription.updated", org._id);
 		return { success: true };
 	},
 });
@@ -215,22 +225,10 @@ export const handleSubscriptionPastDue = internalMutation({
 		organizationId: v.string(),
 	},
 	handler: async (ctx, args) => {
-		console.log("Subscription past due:", {
-			subscriptionId: args.subscriptionId,
-			organizationId: args.organizationId,
-		});
+		logWebhookReceived(WEBHOOK_SERVICE, "subscription.pastDue", args.subscriptionId);
 
-		const org = await ctx.db
-			.query("organizations")
-			.withIndex("by_clerk_org", (q) =>
-				q.eq("clerkOrganizationId", args.organizationId)
-			)
-			.first();
-
+		const org = await getOrganizationByClerkId(ctx, args.organizationId);
 		if (!org) {
-			console.error(
-				`Organization not found for Clerk ID: ${args.organizationId}`
-			);
 			return { success: false, error: "Organization not found" };
 		}
 
@@ -238,8 +236,7 @@ export const handleSubscriptionPastDue = internalMutation({
 			subscriptionStatus: "past_due",
 		});
 
-		console.log(`Marked subscription as past due for organization ${org._id}`);
-
+		logWebhookSuccess(WEBHOOK_SERVICE, "subscription.pastDue", org._id);
 		return { success: true };
 	},
 });

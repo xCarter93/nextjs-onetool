@@ -4,66 +4,80 @@ import { Doc, Id } from "./_generated/dataModel";
 import { getCurrentUserOrgId } from "./lib/auth";
 import { ActivityHelpers } from "./lib/activities";
 import { ValidationPatterns } from "./lib/shared";
+import {
+	getEntityWithOrgValidation,
+	getEntityOrThrow,
+	validateParentAccess,
+	filterUndefined,
+	requireUpdates,
+} from "./lib/crud";
+import { getOptionalOrgId, emptyListResult } from "./lib/queries";
 
 /**
- * Client Contact operations with embedded CRUD helpers
- * All client contact-specific logic lives in this file for better organization
+ * Client Contact operations
+ *
+ * Uses shared CRUD utilities from lib/crud.ts for consistent patterns.
+ * Entity-specific business logic (like isPrimary handling) remains here.
  */
 
-// Client Contact-specific helper functions
+// ============================================================================
+// Local Helper Functions (entity-specific logic only)
+// ============================================================================
 
 /**
- * Get a client contact by ID with organization and client validation
+ * Get a client contact with org validation (wrapper for shared utility)
  */
 async function getContactWithValidation(
 	ctx: QueryCtx | MutationCtx,
 	id: Id<"clientContacts">
 ): Promise<Doc<"clientContacts"> | null> {
-	const userOrgId = await getCurrentUserOrgId(ctx);
-	const contact = await ctx.db.get(id);
-
-	if (!contact) {
-		return null;
-	}
-
-	if (contact.orgId !== userOrgId) {
-		throw new Error("Contact does not belong to your organization");
-	}
-
-	return contact;
+	return await getEntityWithOrgValidation(
+		ctx,
+		"clientContacts",
+		id,
+		"Contact"
+	);
 }
 
 /**
- * Get a client contact by ID, throwing if not found
+ * Get a client contact, throwing if not found (wrapper for shared utility)
  */
 async function getContactOrThrow(
 	ctx: QueryCtx | MutationCtx,
 	id: Id<"clientContacts">
 ): Promise<Doc<"clientContacts">> {
-	const contact = await getContactWithValidation(ctx, id);
-	if (!contact) {
-		throw new Error("Client contact not found");
-	}
-	return contact;
+	return await getEntityOrThrow(ctx, "clientContacts", id, "Client contact");
 }
 
 /**
- * Validate client exists and belongs to user's org
+ * Validate client access (wrapper for shared utility)
  */
 async function validateClientAccess(
 	ctx: QueryCtx | MutationCtx,
 	clientId: Id<"clients">,
 	existingOrgId?: Id<"organizations">
 ): Promise<void> {
-	const userOrgId = existingOrgId ?? (await getCurrentUserOrgId(ctx));
-	const client = await ctx.db.get(clientId);
+	await validateParentAccess(ctx, "clients", clientId, "Client", existingOrgId);
+}
 
-	if (!client) {
-		throw new Error("Client not found");
-	}
+/**
+ * Handle primary contact uniqueness constraint.
+ * Unsets existing primary contact before setting a new one.
+ */
+async function handlePrimaryContact(
+	ctx: MutationCtx,
+	clientId: Id<"clients">,
+	currentContactId?: Id<"clientContacts">
+): Promise<void> {
+	const existingPrimary = await ctx.db
+		.query("clientContacts")
+		.withIndex("by_primary", (q) =>
+			q.eq("clientId", clientId).eq("isPrimary", true)
+		)
+		.unique();
 
-	if (client.orgId !== userOrgId) {
-		throw new Error("Client does not belong to your organization");
+	if (existingPrimary && existingPrimary._id !== currentContactId) {
+		await ctx.db.patch(existingPrimary._id, { isPrimary: false });
 	}
 }
 
@@ -79,37 +93,19 @@ async function createContactWithOrg(
 	// Validate client access
 	await validateClientAccess(ctx, data.clientId);
 
-	const contactData = {
+	return await ctx.db.insert("clientContacts", {
 		...data,
 		orgId: userOrgId,
-	};
-
-	return await ctx.db.insert("clientContacts", contactData);
-}
-
-/**
- * Update a client contact with validation
- */
-async function updateContactWithValidation(
-	ctx: MutationCtx,
-	id: Id<"clientContacts">,
-	updates: Partial<Doc<"clientContacts">>
-): Promise<void> {
-	// Validate contact exists and belongs to user's org
-	await getContactOrThrow(ctx, id);
-
-	// If clientId is being updated, validate the new client
-	if (updates.clientId) {
-		await validateClientAccess(ctx, updates.clientId);
-	}
-
-	// Update the contact
-	await ctx.db.patch(id, updates);
+	});
 }
 
 // Define specific types for client contact operations
 type ClientContactDocument = Doc<"clientContacts">;
 type ClientContactId = Id<"clientContacts">;
+
+// ============================================================================
+// Queries
+// ============================================================================
 
 /**
  * Get all contacts for a specific client
@@ -117,12 +113,10 @@ type ClientContactId = Id<"clientContacts">;
 export const listByClient = query({
 	args: { clientId: v.id("clients") },
 	handler: async (ctx, args): Promise<ClientContactDocument[]> => {
-		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
-		if (!userOrgId) {
-			return [];
-		}
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) return emptyListResult();
 
-		await validateClientAccess(ctx, args.clientId, userOrgId);
+		await validateClientAccess(ctx, args.clientId, orgId);
 
 		return await ctx.db
 			.query("clientContacts")
@@ -137,14 +131,12 @@ export const listByClient = query({
 export const list = query({
 	args: {},
 	handler: async (ctx): Promise<ClientContactDocument[]> => {
-		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
-		if (!userOrgId) {
-			return [];
-		}
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) return emptyListResult();
 
 		return await ctx.db
 			.query("clientContacts")
-			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
+			.withIndex("by_org", (q) => q.eq("orgId", orgId))
 			.collect();
 	},
 });
@@ -155,10 +147,9 @@ export const list = query({
 export const get = query({
 	args: { id: v.id("clientContacts") },
 	handler: async (ctx, args): Promise<ClientContactDocument | null> => {
-		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
-		if (!userOrgId) {
-			return null;
-		}
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) return null;
+
 		return await getContactWithValidation(ctx, args.id);
 	},
 });
@@ -184,6 +175,10 @@ export const getPrimaryContact = query({
 	},
 });
 
+// ============================================================================
+// Mutations
+// ============================================================================
+
 /**
  * Create a new client contact
  */
@@ -208,30 +203,17 @@ export const create = mutation({
 			throw new Error("Invalid phone format");
 		}
 
-		// If setting as primary, ensure no other primary contact exists for this client
+		// Handle primary contact uniqueness
 		if (args.isPrimary) {
-			const existingPrimary = await ctx.db
-				.query("clientContacts")
-				.withIndex("by_primary", (q) =>
-					q.eq("clientId", args.clientId).eq("isPrimary", true)
-				)
-				.unique();
-
-			if (existingPrimary) {
-				// Unset the existing primary contact
-				await ctx.db.patch(existingPrimary._id, { isPrimary: false });
-			}
+			await handlePrimaryContact(ctx, args.clientId);
 		}
 
 		const contactId = await createContactWithOrg(ctx, args);
 
-		// Get the created contact for activity logging
-		const contact = await ctx.db.get(contactId);
-		if (contact) {
-			await ActivityHelpers.clientUpdated(
-				ctx,
-				(await ctx.db.get(contact.clientId)) as Doc<"clients">
-			);
+		// Log activity on the client
+		const client = await ctx.db.get(args.clientId);
+		if (client) {
+			await ActivityHelpers.clientUpdated(ctx, client);
 		}
 
 		return contactId;
@@ -265,35 +247,25 @@ export const update = mutation({
 			throw new Error("Invalid phone format");
 		}
 
-		// Filter out undefined values
-		const filteredUpdates = Object.fromEntries(
-			Object.entries(updates).filter(([, value]) => value !== undefined)
-		) as Partial<ClientContactDocument>;
+		// Filter and validate updates
+		const filteredUpdates = filterUndefined(updates);
+		requireUpdates(filteredUpdates);
 
-		if (Object.keys(filteredUpdates).length === 0) {
-			throw new Error("No valid updates provided");
-		}
-
-		// Get current contact to check clientId for primary validation
+		// Get current contact and determine clientId
 		const currentContact = await getContactOrThrow(ctx, id);
 		const clientId = filteredUpdates.clientId || currentContact.clientId;
 
-		// If setting as primary, ensure no other primary contact exists for this client
-		if (filteredUpdates.isPrimary === true) {
-			const existingPrimary = await ctx.db
-				.query("clientContacts")
-				.withIndex("by_primary", (q) =>
-					q.eq("clientId", clientId).eq("isPrimary", true)
-				)
-				.unique();
-
-			if (existingPrimary && existingPrimary._id !== id) {
-				// Unset the existing primary contact
-				await ctx.db.patch(existingPrimary._id, { isPrimary: false });
-			}
+		// Validate new clientId if changing
+		if (filteredUpdates.clientId) {
+			await validateClientAccess(ctx, filteredUpdates.clientId);
 		}
 
-		await updateContactWithValidation(ctx, id, filteredUpdates);
+		// Handle primary contact uniqueness
+		if (filteredUpdates.isPrimary === true) {
+			await handlePrimaryContact(ctx, clientId, id);
+		}
+
+		await ctx.db.patch(id, filteredUpdates);
 
 		// Log activity on the client
 		const client = await ctx.db.get(clientId);

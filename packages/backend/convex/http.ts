@@ -1,8 +1,19 @@
 import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import { internal } from "./_generated/api";
-import type { WebhookEvent } from "@clerk/backend";
-import { Webhook } from "svix";
+import {
+	verifySvixWebhook,
+	verifyBoldSignWebhook,
+	webhookSuccess,
+	webhookError,
+	webhookUnauthorized,
+	webhookBadRequest,
+	logWebhookReceived,
+	logWebhookSuccess,
+	logWebhookError,
+	secondsToMilliseconds,
+	isoToMilliseconds,
+} from "./lib/webhooks";
 
 const http = httpRouter();
 
@@ -30,10 +41,19 @@ http.route({
 	path: "/clerk-users-webhook",
 	method: "POST",
 	handler: httpAction(async (ctx, request) => {
-		const event = await validateRequest(request);
-		if (!event) {
-			return new Response("Error occured", { status: 400 });
+		const result = await verifySvixWebhook(
+			request,
+			process.env.CLERK_USER_WEBHOOK_SECRET!
+		);
+
+		if (!result.valid || !result.payload) {
+			console.error("Clerk webhook verification failed:", result.error);
+			return webhookBadRequest("Error occurred");
 		}
+
+		const event = result.payload;
+		logWebhookReceived("Clerk", event.type);
+
 		switch (event.type) {
 			case "user.created": // intentional fallthrough
 			case "user.updated":
@@ -59,12 +79,7 @@ http.route({
 			// Organization events
 			case "organization.created": {
 				const orgData = event.data;
-				console.log("Processing organization.created webhook:", {
-					orgId: orgData.id,
-					name: orgData.name,
-					createdBy: orgData.created_by,
-					imageUrl: orgData.image_url,
-				});
+				logWebhookReceived("Clerk", "organization.created", orgData.id);
 
 				if (!orgData.id || !orgData.name || !orgData.created_by) {
 					console.error("Missing required organization data:", orgData);
@@ -78,12 +93,9 @@ http.route({
 						ownerClerkUserId: orgData.created_by,
 						logoUrl: orgData.image_url || undefined,
 					});
-					console.log("Successfully created organization:", orgData.id);
+					logWebhookSuccess("Clerk", "organization.created", orgData.id);
 				} catch (error) {
-					console.error("Failed to create organization:", {
-						orgId: orgData.id,
-						error: error instanceof Error ? error.message : String(error),
-					});
+					logWebhookError("Clerk", "organization.created", error, orgData.id);
 					// Don't throw - let webhook succeed but log the error
 				}
 				break;
@@ -91,11 +103,7 @@ http.route({
 
 			case "organization.updated": {
 				const orgData = event.data;
-				console.log("Processing organization.updated webhook:", {
-					orgId: orgData.id,
-					name: orgData.name,
-					imageUrl: orgData.image_url,
-				});
+				logWebhookReceived("Clerk", "organization.updated", orgData.id);
 
 				if (!orgData.id || !orgData.name) {
 					console.error(
@@ -111,21 +119,16 @@ http.route({
 						name: orgData.name,
 						logoUrl: orgData.image_url || undefined,
 					});
-					console.log("Successfully updated organization:", orgData.id);
+					logWebhookSuccess("Clerk", "organization.updated", orgData.id);
 				} catch (error) {
-					console.error("Failed to update organization:", {
-						orgId: orgData.id,
-						error: error instanceof Error ? error.message : String(error),
-					});
+					logWebhookError("Clerk", "organization.updated", error, orgData.id);
 				}
 				break;
 			}
 
 			case "organization.deleted": {
 				const orgData = event.data;
-				console.log("Processing organization.deleted webhook:", {
-					orgId: orgData.id,
-				});
+				logWebhookReceived("Clerk", "organization.deleted", orgData.id);
 
 				if (!orgData.id) {
 					console.error("Missing organization ID for deletion:", orgData);
@@ -136,15 +139,9 @@ http.route({
 					await ctx.runMutation(internal.organizations.deleteFromClerk, {
 						clerkOrganizationId: orgData.id,
 					});
-					console.log(
-						"Successfully processed organization deletion:",
-						orgData.id
-					);
+					logWebhookSuccess("Clerk", "organization.deleted", orgData.id);
 				} catch (error) {
-					console.error("Failed to process organization deletion:", {
-						orgId: orgData.id,
-						error: error instanceof Error ? error.message : String(error),
-					});
+					logWebhookError("Clerk", "organization.deleted", error, orgData.id);
 				}
 				break;
 			}
@@ -154,11 +151,11 @@ http.route({
 				const userId = membershipData.public_user_data?.user_id;
 				const orgId = membershipData.organization?.id;
 
-				console.log("Processing organizationMembership.created webhook:", {
-					userId,
-					orgId,
-					role: membershipData.role,
-				});
+				logWebhookReceived(
+					"Clerk",
+					"organizationMembership.created",
+					`user:${userId} org:${orgId}`
+				);
 
 				if (!userId || !orgId) {
 					console.error("Missing required membership data:", {
@@ -175,16 +172,18 @@ http.route({
 						clerkOrganizationId: orgId,
 						role: membershipData.role ?? undefined,
 					});
-					console.log("Successfully added user to organization:", {
-						userId,
-						orgId,
-					});
+					logWebhookSuccess(
+						"Clerk",
+						"organizationMembership.created",
+						`user:${userId} org:${orgId}`
+					);
 				} catch (error) {
-					console.error("Failed to add user to organization:", {
-						userId,
-						orgId,
-						error: error instanceof Error ? error.message : String(error),
-					});
+					logWebhookError(
+						"Clerk",
+						"organizationMembership.created",
+						error,
+						`user:${userId} org:${orgId}`
+					);
 				}
 				break;
 			}
@@ -194,11 +193,11 @@ http.route({
 				const userId = membershipData.public_user_data?.user_id;
 				const orgId = membershipData.organization?.id;
 
-				console.log("Processing organizationMembership.updated webhook:", {
-					userId,
-					orgId,
-					role: membershipData.role,
-				});
+				logWebhookReceived(
+					"Clerk",
+					"organizationMembership.updated",
+					`user:${userId} org:${orgId}`
+				);
 
 				if (!userId || !orgId) {
 					console.error("Missing required membership data for update:", {
@@ -215,17 +214,18 @@ http.route({
 						clerkOrganizationId: orgId,
 						role: membershipData.role ?? undefined,
 					});
-					console.log("Successfully updated user organization membership:", {
-						userId,
-						orgId,
-						role: membershipData.role,
-					});
+					logWebhookSuccess(
+						"Clerk",
+						"organizationMembership.updated",
+						`user:${userId} org:${orgId}`
+					);
 				} catch (error) {
-					console.error("Failed to update user organization membership:", {
-						userId,
-						orgId,
-						error: error instanceof Error ? error.message : String(error),
-					});
+					logWebhookError(
+						"Clerk",
+						"organizationMembership.updated",
+						error,
+						`user:${userId} org:${orgId}`
+					);
 				}
 				break;
 			}
@@ -233,11 +233,13 @@ http.route({
 			case "organizationMembership.deleted": {
 				const membershipData = event.data;
 				const userId = membershipData.public_user_data?.user_id;
+				const orgId = membershipData.organization?.id;
 
-				console.log("Processing organizationMembership.deleted webhook:", {
-					userId,
-					orgId: membershipData.organization?.id,
-				});
+				logWebhookReceived(
+					"Clerk",
+					"organizationMembership.deleted",
+					`user:${userId} org:${orgId}`
+				);
 
 				if (!userId) {
 					console.error(
@@ -247,7 +249,6 @@ http.route({
 					break;
 				}
 
-				const orgId = membershipData.organization?.id;
 				if (!orgId) {
 					console.error(
 						"Missing organization ID for membership deletion:",
@@ -261,12 +262,18 @@ http.route({
 						clerkUserId: userId,
 						clerkOrganizationId: orgId,
 					});
-					console.log("Successfully removed user from organization:", userId);
+					logWebhookSuccess(
+						"Clerk",
+						"organizationMembership.deleted",
+						`user:${userId}`
+					);
 				} catch (error) {
-					console.error("Failed to remove user from organization:", {
-						userId,
-						error: error instanceof Error ? error.message : String(error),
-					});
+					logWebhookError(
+						"Clerk",
+						"organizationMembership.deleted",
+						error,
+						`user:${userId}`
+					);
 				}
 				break;
 			}
@@ -275,43 +282,9 @@ http.route({
 				console.log("Ignored Clerk webhook event", event.type);
 		}
 
-		return new Response(null, { status: 200 });
+		return webhookSuccess();
 	}),
 });
-
-async function validateRequest(req: Request): Promise<WebhookEvent | null> {
-	const payloadString = await req.text();
-	const svixHeaders = {
-		"svix-id": req.headers.get("svix-id")!,
-		"svix-timestamp": req.headers.get("svix-timestamp")!,
-		"svix-signature": req.headers.get("svix-signature")!,
-	};
-	const wh = new Webhook(process.env.CLERK_USER_WEBHOOK_SECRET!);
-	try {
-		return wh.verify(payloadString, svixHeaders) as unknown as WebhookEvent;
-	} catch (error) {
-		console.error("Error verifying webhook event", error);
-		return null;
-	}
-}
-
-async function validateBillingRequest(
-	req: Request
-): Promise<WebhookEvent | null> {
-	const payloadString = await req.text();
-	const svixHeaders = {
-		"svix-id": req.headers.get("svix-id")!,
-		"svix-timestamp": req.headers.get("svix-timestamp")!,
-		"svix-signature": req.headers.get("svix-signature")!,
-	};
-	const wh = new Webhook(process.env.CLERK_BILLING_WEBHOOK_SECRET!);
-	try {
-		return wh.verify(payloadString, svixHeaders) as unknown as WebhookEvent;
-	} catch (error) {
-		console.error("Error verifying billing webhook event", error);
-		return null;
-	}
-}
 
 /**
  * BoldSign Webhook Handler
@@ -327,96 +300,44 @@ http.route({
 	path: "/boldsign-webhook",
 	method: "POST",
 	handler: httpAction(async (ctx, request) => {
-		const payloadString = await request.text();
+		// BoldSign verification requests need special handling (no signature)
+		// Clone the request so we can read the body twice if needed
+		const clonedRequest = request.clone();
+		const payloadString = await clonedRequest.text();
 
 		// Handle BoldSign verification event (sent during webhook setup)
 		const event = JSON.parse(payloadString);
 		if (event.event?.eventType === "Verification") {
-			console.log("BoldSign webhook verification received");
-			return new Response("OK", { status: 200 });
+			logWebhookReceived("BoldSign", "Verification");
+			return webhookSuccess("OK");
 		}
 
-		// Verify webhook signature for actual events (optional)
-		const signatureHeader = request.headers.get("x-boldsign-signature");
-
-		// Only verify if we have a webhook secret configured
+		// Verify webhook signature for actual events (if secret configured)
 		if (process.env.BOLDSIGN_WEBHOOK_SECRET) {
-			if (!signatureHeader) {
-				console.warn("BoldSign webhook received without signature header");
-				return new Response("Unauthorized", { status: 401 });
-			} else {
-				// Parse the signature header: "t=timestamp, s0=signature"
-				const sigParts: Record<string, string> = {};
-				signatureHeader.split(",").forEach((part) => {
-					const [key, value] = part.trim().split("=");
-					sigParts[key] = value;
-				});
+			const result = await verifyBoldSignWebhook(
+				request,
+				process.env.BOLDSIGN_WEBHOOK_SECRET
+			);
 
-				const timestamp = sigParts["t"];
-				const signature = sigParts["s0"]; // Primary signature
-
-				if (!timestamp || !signature) {
-					console.error("Invalid BoldSign signature format:", signatureHeader);
-					return new Response("Unauthorized", { status: 401 });
-				}
-
-				// Create the signed payload: timestamp.payload
-				const signedPayload = `${timestamp}.${payloadString}`;
-
-				// Use Web Crypto API for HMAC verification
-				const encoder = new TextEncoder();
-				const key = await crypto.subtle.importKey(
-					"raw",
-					encoder.encode(process.env.BOLDSIGN_WEBHOOK_SECRET),
-					{ name: "HMAC", hash: "SHA-256" },
-					false,
-					["sign"]
-				);
-
-				const signatureBytes = await crypto.subtle.sign(
-					"HMAC",
-					key,
-					encoder.encode(signedPayload)
-				);
-
-				// Convert to hex string
-				const expectedSignature = Array.from(new Uint8Array(signatureBytes))
-					.map((b) => b.toString(16).padStart(2, "0"))
-					.join("");
-
-				if (signature !== expectedSignature) {
-					console.error(
-						"BoldSign webhook signature verification failed",
-						"Expected:",
-						expectedSignature.substring(0, 20) + "...",
-						"Received:",
-						signature?.substring(0, 20) + "..."
-					);
-					return new Response("Unauthorized", { status: 401 });
-				}
-
-				console.log("BoldSign webhook signature verified successfully");
+			if (!result.valid) {
+				console.error("BoldSign webhook verification failed:", result.error);
+				return webhookUnauthorized();
 			}
+			console.log("BoldSign webhook signature verified successfully");
 		} else {
 			console.log(
 				"BoldSign webhook received (signature verification skipped - no secret configured)"
 			);
 		}
 
-		// Handle document status events
-		console.log(
-			"BoldSign webhook event received:",
-			event.event?.eventType,
-			"for document:",
-			event.data?.documentId || event.documentId
-		);
-
 		const eventType = event.event?.eventType;
 		const boldsignDocumentId = event.data?.documentId || event.documentId;
 
+		logWebhookReceived("BoldSign", eventType, boldsignDocumentId);
+
 		// BoldSign returns timestamps in seconds, convert to milliseconds
 		const eventTimestamp = event.event?.created
-			? event.event.created * 1000
+			? secondsToMilliseconds(event.event.created)
 			: undefined;
 
 		// Handle all signature lifecycle events
@@ -433,15 +354,13 @@ http.route({
 					eventType,
 					eventTimestamp,
 				});
-				console.log(
-					`Document status updated successfully: ${eventType} for ${boldsignDocumentId}`
-				);
+				logWebhookSuccess("BoldSign", eventType, boldsignDocumentId);
 				break;
 			default:
 				console.log("Unhandled BoldSign event type:", eventType);
 		}
 
-		return new Response("OK", { status: 200 });
+		return webhookSuccess("OK");
 	}),
 });
 
@@ -460,12 +379,18 @@ http.route({
 	path: "/clerk-billing-webhook",
 	method: "POST",
 	handler: httpAction(async (ctx, request) => {
-		const event = await validateBillingRequest(request);
-		if (!event) {
-			return new Response("Error validating webhook", { status: 400 });
+		const result = await verifySvixWebhook(
+			request,
+			process.env.CLERK_BILLING_WEBHOOK_SECRET!
+		);
+
+		if (!result.valid || !result.payload) {
+			console.error("Clerk billing webhook verification failed:", result.error);
+			return webhookBadRequest("Error validating webhook");
 		}
 
-		console.log("Received billing webhook event:", event.type);
+		const event = result.payload;
+		logWebhookReceived("ClerkBilling", event.type);
 
 		// Type definitions for Clerk billing webhook data
 		interface BillingWebhookData {
@@ -520,7 +445,6 @@ http.route({
 				const data = event.data as BillingWebhookData;
 				const organizationId =
 					data.payer?.organization_id || data.organization_id;
-				const userId = data.payer?.user_id || data.user_id;
 
 				if (!organizationId) {
 					console.error("No organization_id in subscription.created event");
@@ -534,7 +458,7 @@ http.route({
 						planId: data.plan_id || data.plan?.id || "",
 						status: data.status || "active",
 						currentPeriodStart: data.current_period_start
-							? data.current_period_start * 1000
+							? secondsToMilliseconds(data.current_period_start)
 							: undefined,
 					}
 				);
@@ -545,7 +469,6 @@ http.route({
 				const data = event.data as BillingWebhookData;
 				const organizationId =
 					data.payer?.organization_id || data.organization_id;
-				const userId = data.payer?.user_id || data.user_id;
 
 				if (!organizationId) {
 					console.error("No organization_id in subscription.active event");
@@ -558,7 +481,7 @@ http.route({
 						organizationId: organizationId,
 						planId: data.plan_id || data.plan?.id || "",
 						currentPeriodStart: data.current_period_start
-							? data.current_period_start * 1000
+							? secondsToMilliseconds(data.current_period_start)
 							: undefined,
 					}
 				);
@@ -571,7 +494,6 @@ http.route({
 
 				const organizationId =
 					data.payer?.organization_id || data.organization_id;
-				const userId = data.payer?.user_id || data.user_id;
 
 				if (!organizationId) {
 					console.error("No organization_id in subscription.updated event");
@@ -585,7 +507,7 @@ http.route({
 						planId: data.plan_id || data.plan?.id || "",
 						status: data.status || "active",
 						currentPeriodStart: data.current_period_start
-							? data.current_period_start * 1000
+							? secondsToMilliseconds(data.current_period_start)
 							: undefined,
 					}
 				);
@@ -596,7 +518,6 @@ http.route({
 				const data = event.data as BillingWebhookData;
 				const organizationId =
 					data.payer?.organization_id || data.organization_id;
-				const userId = data.payer?.user_id || data.user_id;
 
 				if (!organizationId) {
 					console.error("No organization_id in subscription.pastDue event");
@@ -616,7 +537,7 @@ http.route({
 				console.log("Ignored billing webhook event:", event.type);
 		}
 
-		return new Response(null, { status: 200 });
+		return webhookSuccess();
 	}),
 });
 
@@ -634,61 +555,62 @@ http.route({
 	path: "/resend-webhook",
 	method: "POST",
 	handler: httpAction(async (ctx, request) => {
-		const payloadString = await request.text();
-
 		try {
-			const event = JSON.parse(payloadString);
-
-			// Validate webhook signature if secret is configured
-			if (process.env.RESEND_WEBHOOK_SECRET) {
-				const signatureHeader = request.headers.get("svix-signature");
-				const svixId = request.headers.get("svix-id");
-				const svixTimestamp = request.headers.get("svix-timestamp");
-
-				if (!signatureHeader) {
-					console.warn("Resend webhook received without signature header");
-					return new Response("Unauthorized", { status: 401 });
-				}
-
-				if (!svixId) {
-					console.error("Resend webhook received without svix-id header");
-					return new Response("Unauthorized", { status: 401 });
-				}
-
-				if (!svixTimestamp) {
-					console.error(
-						"Resend webhook received without svix-timestamp header"
-					);
-					return new Response("Unauthorized", { status: 401 });
-				}
-
-				// Use svix to validate (Resend uses Svix for webhooks)
-				const wh = new Webhook(process.env.RESEND_WEBHOOK_SECRET);
-				try {
-					wh.verify(payloadString, {
-						"svix-id": svixId,
-						"svix-timestamp": svixTimestamp,
-						"svix-signature": signatureHeader,
-					});
-				} catch (error) {
-					console.error("Resend webhook signature verification failed:", error);
-					return new Response("Unauthorized", { status: 401 });
-				}
+			// Resend uses Svix for webhooks - verify if secret is configured
+			// Type matches the Resend webhook payload structure
+			interface ResendAttachment {
+				id: string;
+				filename: string;
+				content_type: string;
+				content_disposition?: string;
+				content_id?: string;
 			}
 
-			console.log("Resend webhook event received:", event.type);
+			let event: {
+				type: string;
+				created_at?: string;
+				data: {
+					email_id?: string;
+					from?: string;
+					to?: string[];
+					subject?: string;
+					message_id?: string;
+					in_reply_to?: string;
+					references?: string[];
+					attachments?: ResendAttachment[];
+				};
+			};
+
+			if (process.env.RESEND_WEBHOOK_SECRET) {
+				const result = await verifySvixWebhook(
+					request,
+					process.env.RESEND_WEBHOOK_SECRET
+				);
+
+				if (!result.valid || !result.payload) {
+					console.error("Resend webhook verification failed:", result.error);
+					return webhookUnauthorized();
+				}
+				event = result.payload as typeof event;
+			} else {
+				// No verification - just parse the payload
+				const payloadString = await request.text();
+				event = JSON.parse(payloadString);
+			}
 
 			const eventType = event.type;
 			const emailId = event.data?.email_id;
 
+			logWebhookReceived("Resend", eventType, emailId);
+
 			if (!emailId) {
 				console.warn("No email_id in Resend webhook event");
-				return new Response("Bad Request", { status: 400 });
+				return webhookBadRequest("Missing email_id");
 			}
 
 			// Resend timestamps are in ISO format, convert to milliseconds
 			const eventTimestamp = event.created_at
-				? new Date(event.created_at).getTime()
+				? isoToMilliseconds(event.created_at)
 				: Date.now();
 
 			// Handle email events
@@ -704,14 +626,14 @@ http.route({
 						emailId,
 						timestamp: eventTimestamp,
 					});
-					console.log(`Processed Resend webhook: ${eventType} for ${emailId}`);
+					logWebhookSuccess("Resend", eventType, emailId);
 					break;
 
 				case "email.received":
 					// Handle inbound email (use runAction instead of runMutation)
 					// Note: Webhook payload does NOT include html/text content, only metadata
 					// We need to fetch content separately using the Received emails API
-					console.log("Processing inbound email:", emailId);
+					logWebhookReceived("Resend", "email.received (inbound)", emailId);
 					try {
 						await ctx.runAction(internal.resendReceiving.handleInboundEmail, {
 							emailId,
@@ -723,9 +645,9 @@ http.route({
 							references: event.data.references,
 							attachments: event.data.attachments || [],
 						});
-						console.log(`Successfully processed inbound email: ${emailId}`);
+						logWebhookSuccess("Resend", "email.received (inbound)", emailId);
 					} catch (error) {
-						console.error("Error processing inbound email:", error);
+						logWebhookError("Resend", "email.received (inbound)", error, emailId);
 						// Return 200 anyway to prevent Resend from retrying
 					}
 					break;
@@ -734,10 +656,10 @@ http.route({
 					console.log("Unhandled Resend event type:", eventType);
 			}
 
-			return new Response("OK", { status: 200 });
+			return webhookSuccess("OK");
 		} catch (error) {
 			console.error("Error processing Resend webhook:", error);
-			return new Response("Internal Server Error", { status: 500 });
+			return webhookError(500, "Internal Server Error");
 		}
 	}),
 });

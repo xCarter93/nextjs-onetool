@@ -1,11 +1,18 @@
-import { query } from "./_generated/server";
+import { query, QueryCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { Doc } from "./_generated/dataModel";
-import { getCurrentUser, getCurrentUserOrgId } from "./lib/auth";
+import { getOptionalOrgId, emptyListResult } from "./lib/queries";
 
 /**
  * Activity operations for activity feed
+ *
+ * Uses shared query utilities from lib/queries.ts for consistent patterns.
+ * Activity-specific logic (like user enrichment) remains here.
  */
+
+// ============================================================================
+// Types
+// ============================================================================
 
 export interface ActivityWithUser extends Doc<"activities"> {
 	user: {
@@ -15,6 +22,41 @@ export interface ActivityWithUser extends Doc<"activities"> {
 	};
 }
 
+// ============================================================================
+// Local Helper Functions
+// ============================================================================
+
+/**
+ * Enrich activities with user data
+ * Fetches user information for each activity and filters out activities with missing users
+ */
+async function enrichActivitiesWithUsers(
+	ctx: QueryCtx,
+	activities: Doc<"activities">[]
+): Promise<ActivityWithUser[]> {
+	const activitiesWithUsers: ActivityWithUser[] = [];
+
+	for (const activity of activities) {
+		const activityUser = await ctx.db.get(activity.userId);
+		if (activityUser) {
+			activitiesWithUsers.push({
+				...activity,
+				user: {
+					name: activityUser.name,
+					email: activityUser.email,
+					image: activityUser.image,
+				},
+			});
+		}
+	}
+
+	return activitiesWithUsers;
+}
+
+// ============================================================================
+// Queries
+// ============================================================================
+
 /**
  * Get recent activities for the current organization with time filtering
  */
@@ -23,14 +65,8 @@ export const getRecent = query({
 		limit: v.optional(v.number()), // Max activities to fetch
 	},
 	handler: async (ctx, args): Promise<ActivityWithUser[]> => {
-		const user = await getCurrentUser(ctx);
-		if (!user) {
-			return []; // Return empty array for new users who don't have a user record yet
-		}
-		const orgId = await getCurrentUserOrgId(ctx, { require: false });
-		if (!orgId) {
-			return [];
-		}
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) return emptyListResult();
 
 		// Query all recent activities for the organization, ordered by timestamp (newest first)
 		const activities = await ctx.db
@@ -40,23 +76,7 @@ export const getRecent = query({
 			.filter((q) => q.eq(q.field("isVisible"), true))
 			.take(args.limit || 1000); // Default to last 1000 activities
 
-		// Fetch user data for each activity
-		const activitiesWithUsers: ActivityWithUser[] = [];
-		for (const activity of activities) {
-			const activityUser = await ctx.db.get(activity.userId);
-			if (activityUser) {
-				activitiesWithUsers.push({
-					...activity,
-					user: {
-						name: activityUser.name,
-						email: activityUser.email,
-						image: activityUser.image,
-					},
-				});
-			}
-		}
-
-		return activitiesWithUsers;
+		return await enrichActivitiesWithUsers(ctx, activities);
 	},
 });
 
@@ -88,14 +108,8 @@ export const getByType = query({
 		limit: v.optional(v.number()),
 	},
 	handler: async (ctx, args): Promise<ActivityWithUser[]> => {
-		const user = await getCurrentUser(ctx);
-		if (!user) {
-			return []; // Return empty array for new users who don't have a user record yet
-		}
-		const orgId = await getCurrentUserOrgId(ctx, { require: false });
-		if (!orgId) {
-			return [];
-		}
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) return emptyListResult();
 
 		const activities = await ctx.db
 			.query("activities")
@@ -106,23 +120,7 @@ export const getByType = query({
 			.filter((q) => q.eq(q.field("isVisible"), true))
 			.take(args.limit || 25);
 
-		// Fetch user data for each activity
-		const activitiesWithUsers: ActivityWithUser[] = [];
-		for (const activity of activities) {
-			const activityUser = await ctx.db.get(activity.userId);
-			if (activityUser) {
-				activitiesWithUsers.push({
-					...activity,
-					user: {
-						name: activityUser.name,
-						email: activityUser.email,
-						image: activityUser.image,
-					},
-				});
-			}
-		}
-
-		return activitiesWithUsers;
+		return await enrichActivitiesWithUsers(ctx, activities);
 	},
 });
 
@@ -145,14 +143,8 @@ export const getByEntity = query({
 		limit: v.optional(v.number()),
 	},
 	handler: async (ctx, args): Promise<ActivityWithUser[]> => {
-		const user = await getCurrentUser(ctx);
-		if (!user) {
-			return []; // Return empty array for new users who don't have a user record yet
-		}
-		const orgId = await getCurrentUserOrgId(ctx, { require: false });
-		if (!orgId) {
-			return [];
-		}
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) return emptyListResult();
 
 		const activities = await ctx.db
 			.query("activities")
@@ -165,23 +157,7 @@ export const getByEntity = query({
 			.order("desc")
 			.take(args.limit || 25);
 
-		// Fetch user data for each activity
-		const activitiesWithUsers: ActivityWithUser[] = [];
-		for (const activity of activities) {
-			const activityUser = await ctx.db.get(activity.userId);
-			if (activityUser) {
-				activitiesWithUsers.push({
-					...activity,
-					user: {
-						name: activityUser.name,
-						email: activityUser.email,
-						image: activityUser.image,
-					},
-				});
-			}
-		}
-
-		return activitiesWithUsers;
+		return await enrichActivitiesWithUsers(ctx, activities);
 	},
 });
 
@@ -215,14 +191,8 @@ export const getCount = query({
 		),
 	},
 	handler: async (ctx, args): Promise<number> => {
-		const user = await getCurrentUser(ctx);
-		if (!user) {
-			return 0; // Return 0 for new users who don't have a user record yet
-		}
-		const orgId = await getCurrentUserOrgId(ctx, { require: false });
-		if (!orgId) {
-			return 0;
-		}
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) return 0;
 
 		// Calculate timestamp filter if dayRange is provided
 		let timestampFilter: number | undefined;

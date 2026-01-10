@@ -188,7 +188,7 @@ export function MentionFeed({ entityType, entityId }: MentionFeedProps) {
 					{/* Avatar - showing the author (person who sent the message) */}
 					<Avatar className="h-10 w-10 shrink-0">
 						<AvatarImage
-							src={mention.author?.image}
+							src={mention.author?.image ?? undefined}
 							alt={mention.author?.name || mention.author?.email || "User"}
 						/>
 						<AvatarFallback className="text-sm">

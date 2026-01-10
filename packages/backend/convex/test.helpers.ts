@@ -187,7 +187,7 @@ export async function createTestQuote(
 		quoteNumber?: string;
 		status?: "draft" | "sent" | "approved" | "declined" | "expired";
 		subtotal?: number;
-		tax?: number;
+		taxAmount?: number;
 		total?: number;
 		projectId?: Id<"projects">;
 	} = {}
@@ -200,7 +200,7 @@ export async function createTestQuote(
 		quoteNumber: overrides.quoteNumber ?? `Q-${Date.now()}`,
 		status: overrides.status ?? "draft",
 		subtotal: overrides.subtotal ?? 1000,
-		tax: overrides.tax ?? 100,
+		taxAmount: overrides.taxAmount ?? 100,
 		total: overrides.total ?? 1100,
 	});
 }

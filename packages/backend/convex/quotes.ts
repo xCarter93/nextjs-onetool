@@ -5,85 +5,73 @@ import { getCurrentUserOrgId } from "./lib/auth";
 import { ActivityHelpers } from "./lib/activities";
 import { AggregateHelpers } from "./lib/aggregates";
 import { BusinessUtils } from "./lib/shared";
+import {
+	getEntityWithOrgValidation,
+	getEntityOrThrow,
+	validateParentAccess,
+	filterUndefined,
+	requireUpdates,
+} from "./lib/crud";
+import { getOptionalOrgId, emptyListResult } from "./lib/queries";
 
 /**
- * Quote operations with embedded CRUD helpers
- * All quote-specific logic lives in this file for better organization
+ * Quote operations
+ *
+ * Uses shared CRUD utilities from lib/crud.ts for consistent patterns.
+ * Entity-specific business logic (like quote numbering, status transitions,
+ * BoldSign integration) remains here.
  */
 
-// Quote-specific helper functions
+// ============================================================================
+// Local Helper Functions (entity-specific logic only)
+// ============================================================================
 
 /**
- * Get a quote by ID with organization validation
+ * Get a quote with org validation (wrapper for shared utility)
  */
-async function getQuoteWithOrgValidation(
+async function getQuoteWithValidation(
 	ctx: QueryCtx | MutationCtx,
 	id: Id<"quotes">
 ): Promise<Doc<"quotes"> | null> {
-	const userOrgId = await getCurrentUserOrgId(ctx);
-	const quote = await ctx.db.get(id);
-
-	if (!quote) {
-		return null;
-	}
-
-	if (quote.orgId !== userOrgId) {
-		throw new Error("Quote does not belong to your organization");
-	}
-
-	return quote;
+	return await getEntityWithOrgValidation(ctx, "quotes", id, "Quote");
 }
 
 /**
- * Get a quote by ID, throwing if not found
+ * Get a quote, throwing if not found (wrapper for shared utility)
  */
 async function getQuoteOrThrow(
 	ctx: QueryCtx | MutationCtx,
 	id: Id<"quotes">
 ): Promise<Doc<"quotes">> {
-	const quote = await getQuoteWithOrgValidation(ctx, id);
-	if (!quote) {
-		throw new Error("Quote not found");
-	}
-	return quote;
+	return await getEntityOrThrow(ctx, "quotes", id, "Quote");
 }
 
 /**
- * Validate client exists and belongs to user's org
+ * Validate client access (wrapper for shared utility)
  */
 async function validateClientAccess(
 	ctx: QueryCtx | MutationCtx,
-	clientId: Id<"clients">
+	clientId: Id<"clients">,
+	existingOrgId?: Id<"organizations">
 ): Promise<void> {
-	const userOrgId = await getCurrentUserOrgId(ctx);
-	const client = await ctx.db.get(clientId);
-
-	if (!client) {
-		throw new Error("Client not found");
-	}
-
-	if (client.orgId !== userOrgId) {
-		throw new Error("Client does not belong to your organization");
-	}
+	await validateParentAccess(ctx, "clients", clientId, "Client", existingOrgId);
 }
 
 /**
- * Validate project exists and belongs to user's org (if provided)
+ * Validate project access (wrapper for shared utility)
  */
 async function validateProjectAccess(
 	ctx: QueryCtx | MutationCtx,
-	projectId: Id<"projects">
+	projectId: Id<"projects">,
+	existingOrgId?: Id<"organizations">
 ): Promise<void> {
-	const userOrgId = await getCurrentUserOrgId(ctx);
-	const project = await ctx.db.get(projectId);
-
-	if (!project) {
-		throw new Error("Project not found");
-	}
-
-	if (project.orgId !== userOrgId) {
-		throw new Error("Project does not belong to your organization");
-	}
+	await validateParentAccess(
+		ctx,
+		"projects",
+		projectId,
+		"Project",
+		existingOrgId
+	);
 }
 
 /**
@@ -277,18 +265,19 @@ export const list = query({
 		projectId: v.optional(v.id("projects")),
 	},
 	handler: async (ctx, args): Promise<QuoteDocument[]> => {
-		const userOrgId = await getCurrentUserOrgId(ctx);
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) return emptyListResult();
 
 		let quotes: QuoteDocument[];
 
 		if (args.projectId) {
-			await validateProjectAccess(ctx, args.projectId);
+			await validateProjectAccess(ctx, args.projectId, orgId);
 			quotes = await ctx.db
 				.query("quotes")
 				.withIndex("by_project", (q) => q.eq("projectId", args.projectId))
 				.collect();
 		} else if (args.clientId) {
-			await validateClientAccess(ctx, args.clientId);
+			await validateClientAccess(ctx, args.clientId, orgId);
 			quotes = await ctx.db
 				.query("quotes")
 				.withIndex("by_client", (q) => q.eq("clientId", args.clientId!))
@@ -297,13 +286,13 @@ export const list = query({
 			quotes = await ctx.db
 				.query("quotes")
 				.withIndex("by_status", (q) =>
-					q.eq("orgId", userOrgId).eq("status", args.status!)
+					q.eq("orgId", orgId).eq("status", args.status!)
 				)
 				.collect();
 		} else {
 			quotes = await ctx.db
 				.query("quotes")
-				.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
+				.withIndex("by_org", (q) => q.eq("orgId", orgId))
 				.collect();
 		}
 
@@ -311,7 +300,7 @@ export const list = query({
 		// This avoids N+1 query problem (1 query for quotes + 1 query for all line items = 2 total)
 		const allLineItems = await ctx.db
 			.query("quoteLineItems")
-			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
+			.withIndex("by_org", (q) => q.eq("orgId", orgId))
 			.collect();
 
 		// Group line items by quoteId for O(1) lookup
@@ -372,7 +361,10 @@ export const list = query({
 export const get = query({
 	args: { id: v.id("quotes") },
 	handler: async (ctx, args): Promise<QuoteDocument | null> => {
-		const quote = await getQuoteWithOrgValidation(ctx, args.id);
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) return null;
+
+		const quote = await getQuoteWithValidation(ctx, args.id);
 		if (!quote) return null;
 
 		// Calculate totals from line items
@@ -553,14 +545,9 @@ export const update = mutation({
 			throw new Error("Valid until date must be in the future");
 		}
 
-		// Filter out undefined values
-		const filteredUpdates = Object.fromEntries(
-			Object.entries(updates).filter(([, value]) => value !== undefined)
-		) as Partial<QuoteDocument>;
-
-		if (Object.keys(filteredUpdates).length === 0) {
-			throw new Error("No valid updates provided");
-		}
+		// Filter and validate updates
+		const filteredUpdates = filterUndefined(updates) as Partial<QuoteDocument>;
+		requireUpdates(filteredUpdates);
 
 		// Get current quote to check for status changes
 		const currentQuote = await getQuoteOrThrow(ctx, id);
@@ -714,10 +701,12 @@ export const search = query({
 		clientId: v.optional(v.id("clients")),
 	},
 	handler: async (ctx, args): Promise<QuoteDocument[]> => {
-		const userOrgId = await getCurrentUserOrgId(ctx);
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) return emptyListResult();
+
 		let quotes = await ctx.db
 			.query("quotes")
-			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
+			.withIndex("by_org", (q) => q.eq("orgId", orgId))
 			.collect();
 
 		// Filter by status if specified
@@ -727,7 +716,7 @@ export const search = query({
 
 		// Filter by client if specified
 		if (args.clientId) {
-			await validateClientAccess(ctx, args.clientId);
+			await validateClientAccess(ctx, args.clientId, orgId);
 			quotes = quotes.filter((quote) => quote.clientId === args.clientId);
 		}
 
@@ -751,10 +740,27 @@ export const search = query({
 export const getStats = query({
 	args: {},
 	handler: async (ctx): Promise<QuoteStats> => {
-		const userOrgId = await getCurrentUserOrgId(ctx);
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) {
+			return {
+				total: 0,
+				byStatus: {
+					draft: 0,
+					sent: 0,
+					approved: 0,
+					declined: 0,
+					expired: 0,
+				},
+				totalValue: 0,
+				averageValue: 0,
+				approvalRate: 0,
+				thisMonth: 0,
+			};
+		}
+
 		const quotes = await ctx.db
 			.query("quotes")
-			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
+			.withIndex("by_org", (q) => q.eq("orgId", orgId))
 			.collect();
 
 		const stats: QuoteStats = {
@@ -824,12 +830,14 @@ export const getStats = query({
 export const getExpiringSoon = query({
 	args: { days: v.optional(v.number()) },
 	handler: async (ctx, args): Promise<QuoteDocument[]> => {
-		const userOrgId = await getCurrentUserOrgId(ctx);
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) return emptyListResult();
+
 		const daysAhead = args.days || 7;
 
 		const quotes = await ctx.db
 			.query("quotes")
-			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
+			.withIndex("by_org", (q) => q.eq("orgId", orgId))
 			.collect();
 
 		const now = Date.now();

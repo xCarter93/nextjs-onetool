@@ -7,68 +7,55 @@ import { AggregateHelpers } from "./lib/aggregates";
 import { DateUtils } from "./lib/shared";
 import { requireMembership } from "./lib/memberships";
 import { isMember, getCurrentUserId } from "./lib/permissions";
+import {
+	getEntityWithOrgValidation,
+	getEntityOrThrow,
+	validateParentAccess,
+	filterUndefined,
+	requireUpdates,
+} from "./lib/crud";
+import { getOptionalOrgId, emptyListResult } from "./lib/queries";
 
 /**
- * Project operations with embedded CRUD helpers
- * All project-specific logic lives in this file for better organization
+ * Project operations
+ *
+ * Uses shared CRUD utilities from lib/crud.ts for consistent patterns.
+ * Entity-specific business logic (like status transitions, aggregate updates) remains here.
  */
 
-// Project-specific helper functions
+// ============================================================================
+// Local Helper Functions (entity-specific logic only)
+// ============================================================================
 
 /**
- * Get a project by ID with organization validation
+ * Get a project with org validation (wrapper for shared utility)
  */
-async function getProjectWithOrgValidation(
+async function getProjectWithValidation(
 	ctx: QueryCtx | MutationCtx,
-	id: Id<"projects">,
-	existingOrgId?: Id<"organizations">
+	id: Id<"projects">
 ): Promise<Doc<"projects"> | null> {
-	const userOrgId = existingOrgId ?? (await getCurrentUserOrgId(ctx));
-	const project = await ctx.db.get(id);
-
-	if (!project) {
-		return null;
-	}
-
-	if (project.orgId !== userOrgId) {
-		throw new Error("Project does not belong to your organization");
-	}
-
-	return project;
+	return await getEntityWithOrgValidation(ctx, "projects", id, "Project");
 }
 
 /**
- * Get a project by ID, throwing if not found
+ * Get a project, throwing if not found (wrapper for shared utility)
  */
 async function getProjectOrThrow(
 	ctx: QueryCtx | MutationCtx,
 	id: Id<"projects">
 ): Promise<Doc<"projects">> {
-	const project = await getProjectWithOrgValidation(ctx, id);
-	if (!project) {
-		throw new Error("Project not found");
-	}
-	return project;
+	return await getEntityOrThrow(ctx, "projects", id, "Project");
 }
 
 /**
- * Validate client exists and belongs to user's org
+ * Validate client access (wrapper for shared utility)
  */
 async function validateClientAccess(
 	ctx: QueryCtx | MutationCtx,
 	clientId: Id<"clients">,
 	existingOrgId?: Id<"organizations">
 ): Promise<void> {
-	const userOrgId = existingOrgId ?? (await getCurrentUserOrgId(ctx));
-	const client = await ctx.db.get(clientId);
-
-	if (!client) {
-		throw new Error("Client not found");
-	}
-
-	if (client.orgId !== userOrgId) {
-		throw new Error("Client does not belong to your organization");
-	}
+	await validateParentAccess(ctx, "clients", clientId, "Client", existingOrgId);
 }
 
 /**
@@ -195,10 +182,8 @@ export const list = query({
 		clientId: v.optional(v.id("clients")),
 	},
 	handler: async (ctx: QueryCtx, args: any): Promise<ProjectDocument[]> => {
-		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
-		if (!userOrgId) {
-			return [];
-		}
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) return emptyListResult();
 
 		// Check if user is a member (non-admin) - members can only see their assigned projects
 		const isUserMember = await isMember(ctx);
@@ -207,7 +192,7 @@ export const list = query({
 		let projects: ProjectDocument[];
 
 		if (args.clientId) {
-			await validateClientAccess(ctx, args.clientId, userOrgId);
+			await validateClientAccess(ctx, args.clientId, orgId);
 			projects = await ctx.db
 				.query("projects")
 				.withIndex("by_client", (q: any) => q.eq("clientId", args.clientId!))
@@ -216,13 +201,13 @@ export const list = query({
 			projects = await ctx.db
 				.query("projects")
 				.withIndex("by_status", (q: any) =>
-					q.eq("orgId", userOrgId).eq("status", args.status!)
+					q.eq("orgId", orgId).eq("status", args.status!)
 				)
 				.collect();
 		} else {
 			projects = await ctx.db
 				.query("projects")
-				.withIndex("by_org", (q: any) => q.eq("orgId", userOrgId))
+				.withIndex("by_org", (q: any) => q.eq("orgId", orgId))
 				.collect();
 		}
 
@@ -248,12 +233,10 @@ export const get = query({
 		ctx: QueryCtx,
 		args: any
 	): Promise<ProjectDocument | null> => {
-		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
-		if (!userOrgId) {
-			return null;
-		}
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) return null;
 
-		const project = await getProjectWithOrgValidation(ctx, args.id, userOrgId);
+		const project = await getProjectWithValidation(ctx, args.id);
 		if (!project) {
 			return null;
 		}
@@ -425,10 +408,11 @@ export const bulkCreate = mutation({
 					clientId,
 				});
 
-				// Get the created project for activity logging
+				// Get the created project for activity logging and aggregate updates
 				const project = await ctx.db.get(projectId);
 				if (project) {
 					await ActivityHelpers.projectCreated(ctx, project as ProjectDocument);
+					await AggregateHelpers.addProject(ctx, project as ProjectDocument);
 				}
 
 				results.push({
@@ -481,14 +465,9 @@ export const update = mutation({
 			throw new Error("Project title cannot be empty");
 		}
 
-		// Filter out undefined values
-		const filteredUpdates = Object.fromEntries(
-			Object.entries(updates).filter(([, value]) => value !== undefined)
-		) as Partial<ProjectDocument>;
-
-		if (Object.keys(filteredUpdates).length === 0) {
-			throw new Error("No valid updates provided");
-		}
+		// Filter and validate updates
+		const filteredUpdates = filterUndefined(updates) as Partial<ProjectDocument>;
+		requireUpdates(filteredUpdates);
 
 		// Get current project for date validation
 		const currentProject = await getProjectOrThrow(ctx, id);
@@ -667,10 +646,8 @@ export const search = query({
 		clientId: v.optional(v.id("clients")),
 	},
 	handler: async (ctx: QueryCtx, args: any): Promise<ProjectDocument[]> => {
-		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
-		if (!userOrgId) {
-			return [];
-		}
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) return emptyListResult();
 
 		// Check if user is a member (non-admin) - members can only see their assigned projects
 		const isUserMember = await isMember(ctx);
@@ -678,7 +655,7 @@ export const search = query({
 
 		let projects = await ctx.db
 			.query("projects")
-			.withIndex("by_org", (q: any) => q.eq("orgId", userOrgId))
+			.withIndex("by_org", (q: any) => q.eq("orgId", orgId))
 			.collect();
 
 		// Filter by assignment if user is a member
@@ -692,7 +669,7 @@ export const search = query({
 
 		// Filter by client if specified
 		if (args.clientId) {
-			await validateClientAccess(ctx, args.clientId, userOrgId);
+			await validateClientAccess(ctx, args.clientId, orgId);
 			projects = projects.filter(
 				(project: ProjectDocument) => project.clientId === args.clientId
 			);
@@ -731,8 +708,8 @@ export const search = query({
 export const getStats = query({
 	args: {},
 	handler: async (ctx: QueryCtx): Promise<ProjectStats> => {
-		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
-		if (!userOrgId) {
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) {
 			return createEmptyProjectStats();
 		}
 
@@ -742,7 +719,7 @@ export const getStats = query({
 
 		let projects = await ctx.db
 			.query("projects")
-			.withIndex("by_org", (q: any) => q.eq("orgId", userOrgId))
+			.withIndex("by_org", (q: any) => q.eq("orgId", orgId))
 			.collect();
 
 		// Filter by assignment if user is a member
@@ -810,13 +787,11 @@ export const getStats = query({
 export const getByAssignee = query({
 	args: { userId: v.id("users") },
 	handler: async (ctx: QueryCtx, args: any): Promise<ProjectDocument[]> => {
-		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
-		if (!userOrgId) {
-			return [];
-		}
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) return emptyListResult();
 
 		// Validate user belongs to organization
-		await validateUserAccess(ctx, [args.userId], userOrgId);
+		await validateUserAccess(ctx, [args.userId], orgId);
 
 		// Check if user is a member (non-admin) - members can only see their assigned projects
 		const isUserMember = await isMember(ctx);
@@ -824,7 +799,7 @@ export const getByAssignee = query({
 
 		const projects = await ctx.db
 			.query("projects")
-			.withIndex("by_org", (q: any) => q.eq("orgId", userOrgId))
+			.withIndex("by_org", (q: any) => q.eq("orgId", orgId))
 			.collect();
 
 		// Filter projects where user is assigned
@@ -853,10 +828,8 @@ export const getByAssignee = query({
 export const getUpcomingDeadlines = query({
 	args: { days: v.optional(v.number()) },
 	handler: async (ctx: QueryCtx, args: any): Promise<ProjectDocument[]> => {
-		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
-		if (!userOrgId) {
-			return [];
-		}
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) return emptyListResult();
 
 		// Check if user is a member (non-admin) - members can only see their assigned projects
 		const isUserMember = await isMember(ctx);
@@ -866,7 +839,7 @@ export const getUpcomingDeadlines = query({
 
 		let projects = await ctx.db
 			.query("projects")
-			.withIndex("by_org", (q: any) => q.eq("orgId", userOrgId))
+			.withIndex("by_org", (q: any) => q.eq("orgId", orgId))
 			.collect();
 
 		// Filter by assignment if user is a member
@@ -899,14 +872,12 @@ export const getUpcomingDeadlines = query({
 export const getOverdue = query({
 	args: {},
 	handler: async (ctx: QueryCtx): Promise<ProjectDocument[]> => {
-		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
-		if (!userOrgId) {
-			return [];
-		}
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) return emptyListResult();
 
 		const projects = await ctx.db
 			.query("projects")
-			.withIndex("by_org", (q: any) => q.eq("orgId", userOrgId))
+			.withIndex("by_org", (q: any) => q.eq("orgId", orgId))
 			.collect();
 
 		const now = Date.now();

@@ -1,5 +1,8 @@
 import { internalMutation } from "./_generated/server";
 import { v } from "convex/values";
+import { logWebhookError, logWebhookSuccess } from "./lib/webhooks";
+
+const WEBHOOK_SERVICE = "Resend";
 
 /**
  * Process Resend webhook events for email tracking
@@ -30,8 +33,11 @@ export const handleWebhookEvent = internalMutation({
 			// This can happen for outbound emails if the webhook arrives before we've saved the record,
 			// or if this is an email sent from another source.
 			// For inbound emails, this shouldn't happen as we create them when processing.
-			console.warn(
-				`Email message not found for Resend ID: ${args.emailId} (event: ${args.eventType})`
+			logWebhookError(
+				WEBHOOK_SERVICE,
+				args.eventType,
+				new Error("Email message not found"),
+				args.emailId
 			);
 			return { success: false, message: "Email message not found" };
 		}
@@ -80,7 +86,12 @@ export const handleWebhookEvent = internalMutation({
 				const currentState = await ctx.db.get(emailMessage._id);
 
 				if (!currentState) {
-					console.warn(`Email message ${emailMessage._id} no longer exists`);
+					logWebhookError(
+						WEBHOOK_SERVICE,
+						args.eventType,
+						new Error("Email message no longer exists"),
+						String(emailMessage._id)
+					);
 					break;
 				}
 
@@ -140,6 +151,7 @@ export const handleWebhookEvent = internalMutation({
 				break;
 		}
 
+		logWebhookSuccess(WEBHOOK_SERVICE, args.eventType, args.emailId);
 		return { success: true };
 	},
 });
