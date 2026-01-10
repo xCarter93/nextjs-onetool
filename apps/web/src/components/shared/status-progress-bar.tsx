@@ -122,40 +122,97 @@ export function StatusProgressBar({
 		});
 	};
 
-	// Get background color for each step status
-	const getBackgroundColor = (stepStatus: StepStatus): string => {
+	// Get styles for each step status - softer colors with 3D effect
+	const getStepStyles = (stepStatus: StepStatus) => {
 		if (stepStatus === "complete") {
-			// Completed steps are always green
-			return "#22c55e"; // emerald-500
+			return {
+				// Soft emerald with depth
+				background: "linear-gradient(180deg, #6ee7b7 0%, #34d399 50%, #10b981 100%)",
+				boxShadow: "inset 0 1px 1px rgba(255,255,255,0.3), inset 0 -2px 4px rgba(0,0,0,0.1), 0 2px 4px rgba(16,185,129,0.2)",
+				textColor: "text-emerald-950",
+				labelColor: "text-emerald-900/70",
+				iconBg: "bg-emerald-200/50",
+				iconRing: "ring-emerald-300/60",
+				iconColor: "text-emerald-800",
+			};
 		}
 		if (stepStatus === "current") {
-			// Current step color depends on variant
 			if (variant === "success") {
-				return "#22c55e"; // emerald-500
+				return {
+					background: "linear-gradient(180deg, #6ee7b7 0%, #34d399 50%, #10b981 100%)",
+					boxShadow: "inset 0 1px 1px rgba(255,255,255,0.3), inset 0 -2px 4px rgba(0,0,0,0.1), 0 2px 4px rgba(16,185,129,0.2)",
+					textColor: "text-emerald-950",
+					labelColor: "text-emerald-900/70",
+					iconBg: "bg-emerald-200/50",
+					iconRing: "ring-emerald-300/60",
+					iconColor: "text-emerald-800",
+				};
 			}
 			if (variant === "destructive") {
-				return "#ef4444"; // red-500
+				return {
+					// Soft rose/coral with depth
+					background: "linear-gradient(180deg, #fda4af 0%, #fb7185 50%, #f43f5e 100%)",
+					boxShadow: "inset 0 1px 1px rgba(255,255,255,0.3), inset 0 -2px 4px rgba(0,0,0,0.1), 0 2px 4px rgba(244,63,94,0.2)",
+					textColor: "text-rose-950",
+					labelColor: "text-rose-900/70",
+					iconBg: "bg-rose-200/50",
+					iconRing: "ring-rose-300/60",
+					iconColor: "text-rose-800",
+				};
 			}
-			return "#2563eb"; // blue-600 (dark blue like in image)
+			// In-progress: soft sky blue with depth
+			return {
+				background: "linear-gradient(180deg, #7dd3fc 0%, #38bdf8 50%, #0ea5e9 100%)",
+				boxShadow: "inset 0 1px 1px rgba(255,255,255,0.3), inset 0 -2px 4px rgba(0,0,0,0.1), 0 2px 4px rgba(14,165,233,0.2)",
+				textColor: "text-sky-950",
+				labelColor: "text-sky-900/70",
+				iconBg: "bg-sky-200/50",
+				iconRing: "ring-sky-300/60",
+				iconColor: "text-sky-800",
+			};
 		}
-		// Upcoming steps are light gray
-		return "#f1f5f9"; // slate-100
+		// Upcoming: soft neutral with recessed look
+		return {
+			background: "linear-gradient(180deg, #f5f5f4 0%, #e7e5e4 100%)",
+			boxShadow: "inset 0 2px 4px rgba(0,0,0,0.06), inset 0 -1px 0 rgba(255,255,255,0.8)",
+			textColor: "text-stone-600 dark:text-zinc-300",
+			labelColor: "text-stone-500 dark:text-zinc-400",
+			iconBg: "bg-white dark:bg-zinc-700",
+			iconRing: "ring-stone-300 dark:ring-zinc-500",
+			iconColor: "text-stone-500 dark:text-zinc-400",
+		};
 	};
 
-	// Get text color for each step status
-	const getTextColor = (stepStatus: StepStatus): string => {
-		if (stepStatus === "complete" || stepStatus === "current") {
-			return "text-white";
+	// Get dark mode styles
+	const getDarkStepStyles = (stepStatus: StepStatus) => {
+		if (stepStatus === "complete") {
+			return {
+				background: "linear-gradient(180deg, #059669 0%, #047857 50%, #065f46 100%)",
+				boxShadow: "inset 0 1px 1px rgba(255,255,255,0.15), inset 0 -2px 4px rgba(0,0,0,0.3), 0 2px 8px rgba(16,185,129,0.3)",
+			};
 		}
-		return "text-gray-700";
-	};
-
-	// Get label text color
-	const getLabelColor = (stepStatus: StepStatus): string => {
-		if (stepStatus === "complete" || stepStatus === "current") {
-			return "text-white/80";
+		if (stepStatus === "current") {
+			if (variant === "success") {
+				return {
+					background: "linear-gradient(180deg, #059669 0%, #047857 50%, #065f46 100%)",
+					boxShadow: "inset 0 1px 1px rgba(255,255,255,0.15), inset 0 -2px 4px rgba(0,0,0,0.3), 0 2px 8px rgba(16,185,129,0.3)",
+				};
+			}
+			if (variant === "destructive") {
+				return {
+					background: "linear-gradient(180deg, #e11d48 0%, #be123c 50%, #9f1239 100%)",
+					boxShadow: "inset 0 1px 1px rgba(255,255,255,0.15), inset 0 -2px 4px rgba(0,0,0,0.3), 0 2px 8px rgba(244,63,94,0.3)",
+				};
+			}
+			return {
+				background: "linear-gradient(180deg, #0284c7 0%, #0369a1 50%, #075985 100%)",
+				boxShadow: "inset 0 1px 1px rgba(255,255,255,0.15), inset 0 -2px 4px rgba(0,0,0,0.3), 0 2px 8px rgba(14,165,233,0.3)",
+			};
 		}
-		return "text-gray-500";
+		return {
+			background: "linear-gradient(180deg, #3f3f46 0%, #27272a 100%)",
+			boxShadow: "inset 0 2px 4px rgba(0,0,0,0.4), inset 0 -1px 0 rgba(255,255,255,0.05)",
+		};
 	};
 
 	// Get clip path for arrow/chevron shape
@@ -182,21 +239,25 @@ export function StatusProgressBar({
 			<div
 				className={cn(
 					"flex items-stretch",
-					showStatusButton ? "shadow-sm rounded-full overflow-hidden" : ""
+					showStatusButton ? "rounded-full overflow-hidden" : ""
 				)}
+				style={{
+					// Outer container shadow for depth
+					boxShadow: "0 4px 12px -2px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.06)",
+				}}
 			>
 				<ol
 					role="list"
 					className={cn(
 						"flex items-stretch flex-1",
-						showStatusButton ? "" : "rounded-full shadow-sm overflow-hidden"
+						showStatusButton ? "" : "rounded-full overflow-hidden"
 					)}
-					style={{ backgroundColor: "#f1f5f9" }} // Light gray background for upcoming segments
 				>
 					{steps.map((step, stepIdx) => {
 						const stepStatus = getStepStatus(step);
 						const timestamp = getEventTimestamp(step.id);
-						const backgroundColor = getBackgroundColor(stepStatus);
+						const styles = getStepStyles(stepStatus);
+						const darkStyles = getDarkStepStyles(stepStatus);
 						const isFirst = stepIdx === 0;
 						const isLast = stepIdx === steps.length - 1;
 						const isLastWithButton = isLast && showStatusButton;
@@ -218,14 +279,23 @@ export function StatusProgressBar({
 									!isLast && "-mr-[20px]" // Exact overlap to match chevron notch
 								)}
 								style={{
-									backgroundColor: backgroundColor,
-									background: backgroundColor, // Ensure background is set
+									background: styles.background,
+									boxShadow: styles.boxShadow,
 									clipPath: clipPath,
 									WebkitClipPath: clipPath,
 									zIndex,
 								}}
 							>
-								{/* White outline for chevron */}
+								{/* Dark mode overlay - uses CSS to swap styles */}
+								<div
+									className="absolute inset-0 hidden dark:block pointer-events-none"
+									style={{
+										background: darkStyles.background,
+										boxShadow: darkStyles.boxShadow,
+									}}
+								/>
+
+								{/* Chevron separator highlight */}
 								{clipPath && !isLast ? (
 									<svg
 										className="absolute right-0 top-0 w-[20px] h-full pointer-events-none"
@@ -233,38 +303,72 @@ export function StatusProgressBar({
 										preserveAspectRatio="none"
 										viewBox="0 0 20 100"
 									>
+										{/* Shadow line */}
+										<path
+											d="M 2 0 L 22 50 L 2 100"
+											fill="none"
+											stroke="rgba(0,0,0,0.15)"
+											strokeWidth="3"
+											vectorEffect="non-scaling-stroke"
+										/>
+										{/* Highlight line */}
+										<path
+											d="M -1 0 L 19 50 L -1 100"
+											fill="none"
+											stroke="rgba(255,255,255,0.4)"
+											strokeWidth="2"
+											vectorEffect="non-scaling-stroke"
+											className="dark:stroke-white/10"
+										/>
+										{/* Main separator */}
 										<path
 											d="M 0 0 L 20 50 L 0 100"
 											fill="none"
-											stroke="white"
-											strokeWidth="3"
+											stroke="rgba(255,255,255,0.9)"
+											strokeWidth="2"
 											vectorEffect="non-scaling-stroke"
+											className="dark:stroke-white/20"
 										/>
 									</svg>
 								) : null}
 								<div
 									className={cn(
 										"relative flex w-full items-center justify-between",
-										"px-3 py-1.5",
+										"px-3 py-2",
 										!isFirst && "pl-[24px]" // Adjust padding for 20px overlap
 									)}
 								>
-									<span className="flex items-center gap-1.5">
-										{/* Icon/Badge */}
+									<span className="flex items-center gap-2">
+										{/* Icon/Badge with 3D effect */}
 										{stepStatus === "complete" ? (
-											<span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-white/20 ring-2 ring-white/40">
+											<span className={cn(
+												"flex size-7 shrink-0 items-center justify-center rounded-full ring-2",
+												styles.iconBg,
+												styles.iconRing,
+												"shadow-[inset_0_1px_2px_rgba(255,255,255,0.5),0_1px_2px_rgba(0,0,0,0.1)]"
+											)}>
 												<Check
 													aria-hidden="true"
-													className="size-3 text-white stroke-[2.5]"
+													className={cn("size-3.5 stroke-[2.5]", styles.iconColor)}
 												/>
 											</span>
 										) : stepStatus === "current" ? (
-											<span className="flex size-6 shrink-0 items-center justify-center rounded-full border-2 border-white/50 bg-white/10">
-												<Clock className="size-3 text-white" />
+											<span className={cn(
+												"flex size-7 shrink-0 items-center justify-center rounded-full ring-2",
+												styles.iconBg,
+												styles.iconRing,
+												"shadow-[inset_0_1px_2px_rgba(255,255,255,0.5),0_1px_2px_rgba(0,0,0,0.1)]"
+											)}>
+												<Clock className={cn("size-3.5", styles.iconColor)} />
 											</span>
 										) : (
-											<span className="flex size-6 shrink-0 items-center justify-center rounded-full border-2 border-gray-300 bg-white">
-												<span className="text-gray-500 text-[10px] font-medium">
+											<span className={cn(
+												"flex size-7 shrink-0 items-center justify-center rounded-full ring-2",
+												styles.iconBg,
+												styles.iconRing,
+												"shadow-[inset_0_2px_4px_rgba(0,0,0,0.06)]"
+											)}>
+												<span className={cn("text-[10px] font-semibold", styles.iconColor)}>
 													{step.order}
 												</span>
 											</span>
@@ -275,7 +379,7 @@ export function StatusProgressBar({
 											<span
 												className={cn(
 													"text-[10px] font-bold uppercase tracking-wide leading-tight",
-													getLabelColor(stepStatus)
+													styles.labelColor
 												)}
 											>
 												{stepStatus === "complete"
@@ -287,7 +391,7 @@ export function StatusProgressBar({
 											<span
 												className={cn(
 													"text-sm font-bold leading-tight",
-													getTextColor(stepStatus)
+													styles.textColor
 												)}
 											>
 												{step.name}
@@ -299,9 +403,8 @@ export function StatusProgressBar({
 									{timestamp && (
 										<span
 											className={cn(
-												"text-xs font-medium",
-												getTextColor(stepStatus),
-												"opacity-80 ml-1.5"
+												"text-xs font-medium ml-2",
+												styles.labelColor
 											)}
 										>
 											{formatTimestamp(timestamp)}
@@ -317,27 +420,36 @@ export function StatusProgressBar({
 						className="-ml-[5px] relative flex items-center"
 						style={{
 							zIndex: steps.length + 10,
-							backgroundColor: "#f1f5f9", // Force slate-100 in all modes
+							background: "linear-gradient(180deg, #f5f5f4 0%, #e7e5e4 100%)",
+							boxShadow: "inset 0 2px 4px rgba(0,0,0,0.06), inset 0 -1px 0 rgba(255,255,255,0.8)",
 						}}
 					>
+						{/* Dark mode background */}
+						<div
+							className="absolute inset-0 hidden dark:block"
+							style={{
+								background: "linear-gradient(180deg, #3f3f46 0%, #27272a 100%)",
+							}}
+						/>
 						{/* White separator line */}
 						<div
-							className="absolute left-[5px] top-0 h-full"
+							className="absolute left-[5px] top-0 h-full w-[2px]"
 							style={{
 								zIndex: steps.length + 11,
-								backgroundColor: "#ffffff",
+								background: "rgba(255,255,255,0.9)",
 							}}
 						/>
 						<Select value={status} onValueChange={onStatusChange}>
 							<SelectTrigger
-								className="w-auto whitespace-nowrap border-0 transition-all duration-200 font-semibold rounded-none h-full pl-7 pr-6 shadow-none focus:ring-0"
+								className={cn(
+									"relative z-10 w-auto whitespace-nowrap border-0 transition-all duration-200 font-semibold rounded-none h-full pl-7 pr-6 shadow-none focus:ring-0",
+									"bg-transparent text-stone-700 dark:text-zinc-200"
+								)}
 								style={{
 									clipPath:
 										"polygon(20px 0, 100% 0, 100% 100%, 20px 100%, 15px 90%, 10px 75%, 7px 60%, 5px 50%, 7px 40%, 10px 25%, 15px 10%)",
 									WebkitClipPath:
 										"polygon(20px 0, 100% 0, 100% 100%, 20px 100%, 15px 90%, 10px 75%, 7px 60%, 5px 50%, 7px 40%, 10px 25%, 15px 10%)",
-									backgroundColor: "#f1f5f9", // Force slate-100 in all modes
-									color: "#334155", // Force slate-700 text color in all modes
 								}}
 							>
 								{statusButtonLabel}

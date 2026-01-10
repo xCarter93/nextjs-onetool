@@ -226,35 +226,20 @@ export default function Page() {
 							</TourElement>
 						</motion.div>
 
-						{/* Enhanced Dashboard Layout */}
-						<motion.div
-							className="grid grid-cols-1 xl:grid-cols-12 gap-6 lg:gap-8"
-							initial={{ opacity: 0, y: 20 }}
-							animate={{ opacity: 1, y: 0 }}
-							transition={{ duration: 0.5, delay: 0.3 }}
-						>
+						{/* Dashboard Layout with Sticky Activity Sidebar */}
+						<div className="flex flex-col xl:flex-row gap-6 lg:gap-8">
 							{/* Main Content Area */}
-							<div className="xl:col-span-7 space-y-6 lg:space-y-8">
-								{/* Getting Started Section - Tour Step */}
-								<motion.div
-									transition={{ type: "spring", stiffness: 300, damping: 30 }}
-								>
-									<TourElement<HomeTour>
-										TourContext={HomeTourContext}
-										stepId={HomeTour.GETTING_STARTED}
-										title={HOME_TOUR_CONTENT[HomeTour.GETTING_STARTED].title}
-										description={HOME_TOUR_CONTENT[HomeTour.GETTING_STARTED].description}
-										tooltipPosition={HOME_TOUR_CONTENT[HomeTour.GETTING_STARTED].tooltipPosition}
-									>
-										<GettingStarted />
-									</TourElement>
-								</motion.div>
-
-								{/* Tasks Section - Tour Step */}
+							<motion.div
+								className="flex-1 min-w-0 space-y-6 lg:space-y-8"
+								initial={{ opacity: 0, y: 20 }}
+								animate={{ opacity: 1, y: 0 }}
+								transition={{ duration: 0.5, delay: 0.3 }}
+							>
+								{/* Tasks Section - Most actionable, daily priority */}
 								<motion.div
 									initial={{ opacity: 0, y: 20 }}
 									animate={{ opacity: 1, y: 0 }}
-									transition={{ duration: 0.5, delay: 0.5 }}
+									transition={{ duration: 0.5, delay: 0.35 }}
 								>
 									<TourElement<HomeTour>
 										TourContext={HomeTourContext}
@@ -266,14 +251,11 @@ export default function Page() {
 										<HomeTaskList />
 									</TourElement>
 								</motion.div>
-							</div>
 
-							{/* Enhanced Sidebar */}
-							<div className="xl:col-span-5 space-y-6 lg:space-y-8">
-								{/* Revenue Goal - Tour Step */}
+								{/* Revenue Goal - Quick KPI */}
 								<motion.div
-									initial={{ opacity: 0, x: 20 }}
-									animate={{ opacity: 1, x: 0 }}
+									initial={{ opacity: 0, y: 20 }}
+									animate={{ opacity: 1, y: 0 }}
 									transition={{ duration: 0.5, delay: 0.4 }}
 								>
 									<TourElement<HomeTour>
@@ -287,10 +269,10 @@ export default function Page() {
 									</TourElement>
 								</motion.div>
 
-								{/* Activity Feed - Tour Step */}
+								{/* Getting Started Section - Onboarding journey */}
 								<motion.div
-									initial={{ opacity: 0, x: 20 }}
-									animate={{ opacity: 1, x: 0 }}
+									initial={{ opacity: 0, y: 20 }}
+									animate={{ opacity: 1, y: 0 }}
 									transition={{
 										type: "spring",
 										stiffness: 300,
@@ -300,6 +282,31 @@ export default function Page() {
 								>
 									<TourElement<HomeTour>
 										TourContext={HomeTourContext}
+										stepId={HomeTour.GETTING_STARTED}
+										title={HOME_TOUR_CONTENT[HomeTour.GETTING_STARTED].title}
+										description={HOME_TOUR_CONTENT[HomeTour.GETTING_STARTED].description}
+										tooltipPosition={HOME_TOUR_CONTENT[HomeTour.GETTING_STARTED].tooltipPosition}
+									>
+										<GettingStarted />
+									</TourElement>
+								</motion.div>
+							</motion.div>
+
+							{/* Sticky Activity Sidebar - Desktop only */}
+							<motion.div
+								className="hidden xl:block w-[450px] shrink-0"
+								initial={{ opacity: 0, x: 20 }}
+								animate={{ opacity: 1, x: 0 }}
+								transition={{
+									type: "spring",
+									stiffness: 300,
+									damping: 30,
+									delay: 0.4,
+								}}
+							>
+								<div className="sticky top-24">
+									<TourElement<HomeTour>
+										TourContext={HomeTourContext}
 										stepId={HomeTour.ACTIVITY_FEED}
 										title={HOME_TOUR_CONTENT[HomeTour.ACTIVITY_FEED].title}
 										description={HOME_TOUR_CONTENT[HomeTour.ACTIVITY_FEED].description}
@@ -307,9 +314,24 @@ export default function Page() {
 									>
 										<ActivityFeed />
 									</TourElement>
-								</motion.div>
-							</div>
-						</motion.div>
+								</div>
+							</motion.div>
+
+							{/* Activity Feed - Mobile/Tablet (stacks at bottom, no tour - tour only on desktop) */}
+							<motion.div
+								className="xl:hidden"
+								initial={{ opacity: 0, y: 20 }}
+								animate={{ opacity: 1, y: 0 }}
+								transition={{
+									type: "spring",
+									stiffness: 300,
+									damping: 30,
+									delay: 0.55,
+								}}
+							>
+								<ActivityFeed />
+							</motion.div>
+						</div>
 					</>
 				) : (
 					<motion.div
@@ -351,7 +373,7 @@ function TourAutoStart({ tourStarted }: { tourStarted: boolean }) {
 		if (!tourStarted) {
 			hasStartedRef.current = false;
 		}
-	}, [tourStarted, contextValue?.isRegistered, contextValue?.state.isActive]);
+	}, [tourStarted, contextValue]);
 
 	return null;
 }

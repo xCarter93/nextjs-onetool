@@ -302,6 +302,11 @@
 		z-index: 9999 !important;
 	}
 
+	/* Handle sticky containers with active tour elements */
+	.sticky:has(.tour-element-wrapper[data-tour-active="true"]) {
+		z-index: 9999 !important;
+	}
+
 	/* Highlight border using pseudo-element to avoid layout shifts */
 	.tour-element-wrapper[data-tour-active="true"]::after {
 		content: "";
