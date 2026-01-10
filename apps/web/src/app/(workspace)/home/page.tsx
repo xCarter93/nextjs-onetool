@@ -11,6 +11,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@onetool/backend/convex/_generated/api";
 import { motion } from "motion/react";
 import { useAutoTimezone } from "@/hooks/use-auto-timezone";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { LayoutDashboard, CalendarDays } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -40,6 +41,10 @@ export default function Page() {
 
 	// Automatically detect and save timezone if not set
 	useAutoTimezone();
+
+	// Detect desktop breakpoint (xl = 1280px) to conditionally render ActivityFeed
+	// This prevents duplicate queries from rendering both mobile and desktop versions
+	const isDesktop = useMediaQuery("(min-width: 1280px)");
 
 	// Load view preference from localStorage
 	useEffect(() => {
@@ -292,45 +297,45 @@ export default function Page() {
 								</motion.div>
 							</motion.div>
 
-							{/* Sticky Activity Sidebar - Desktop only */}
-							<motion.div
-								className="hidden xl:block w-[450px] shrink-0"
-								initial={{ opacity: 0, x: 20 }}
-								animate={{ opacity: 1, x: 0 }}
-								transition={{
-									type: "spring",
-									stiffness: 300,
-									damping: 30,
-									delay: 0.4,
-								}}
-							>
-								<div className="sticky top-24">
-									<TourElement<HomeTour>
-										TourContext={HomeTourContext}
-										stepId={HomeTour.ACTIVITY_FEED}
-										title={HOME_TOUR_CONTENT[HomeTour.ACTIVITY_FEED].title}
-										description={HOME_TOUR_CONTENT[HomeTour.ACTIVITY_FEED].description}
-										tooltipPosition={HOME_TOUR_CONTENT[HomeTour.ACTIVITY_FEED].tooltipPosition}
-									>
-										<ActivityFeed />
-									</TourElement>
-								</div>
-							</motion.div>
-
-							{/* Activity Feed - Mobile/Tablet (stacks at bottom, no tour - tour only on desktop) */}
-							<motion.div
-								className="xl:hidden"
-								initial={{ opacity: 0, y: 20 }}
-								animate={{ opacity: 1, y: 0 }}
-								transition={{
-									type: "spring",
-									stiffness: 300,
-									damping: 30,
-									delay: 0.55,
-								}}
-							>
-								<ActivityFeed />
-							</motion.div>
+							{/* Activity Feed - Single instance, conditionally rendered for desktop vs mobile */}
+							{isDesktop ? (
+								<motion.div
+									className="w-[450px] shrink-0"
+									initial={{ opacity: 0, x: 20 }}
+									animate={{ opacity: 1, x: 0 }}
+									transition={{
+										type: "spring",
+										stiffness: 300,
+										damping: 30,
+										delay: 0.4,
+									}}
+								>
+									<div className="sticky top-24">
+										<TourElement<HomeTour>
+											TourContext={HomeTourContext}
+											stepId={HomeTour.ACTIVITY_FEED}
+											title={HOME_TOUR_CONTENT[HomeTour.ACTIVITY_FEED].title}
+											description={HOME_TOUR_CONTENT[HomeTour.ACTIVITY_FEED].description}
+											tooltipPosition={HOME_TOUR_CONTENT[HomeTour.ACTIVITY_FEED].tooltipPosition}
+										>
+											<ActivityFeed />
+										</TourElement>
+									</div>
+								</motion.div>
+							) : isDesktop === false ? (
+								<motion.div
+									initial={{ opacity: 0, y: 20 }}
+									animate={{ opacity: 1, y: 0 }}
+									transition={{
+										type: "spring",
+										stiffness: 300,
+										damping: 30,
+										delay: 0.55,
+									}}
+								>
+									<ActivityFeed />
+								</motion.div>
+							) : null}
 						</div>
 					</>
 				) : (
