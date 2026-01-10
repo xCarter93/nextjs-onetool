@@ -1,7 +1,7 @@
 import { query } from "./_generated/server";
 import { v } from "convex/values";
-import { getCurrentUser, getCurrentUserOrgId } from "./lib/auth";
 import type { Doc } from "./_generated/dataModel";
+import { getOptionalOrgId, emptyListResult } from "./lib/queries";
 
 /**
  * List emails sent to a specific client
@@ -10,25 +10,17 @@ export const listByClient = query({
 	args: {
 		clientId: v.id("clients"),
 	},
-	handler: async (ctx, args) => {
-		const user = await getCurrentUser(ctx);
-		if (!user) {
-			return [];
-		}
+	handler: async (ctx, args): Promise<Doc<"emailMessages">[]> => {
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) return emptyListResult<Doc<"emailMessages">>();
 
-		const orgId = await getCurrentUserOrgId(ctx, { require: false });
-		if (!orgId) {
-			return [];
-		}
-
-		// Get emails for this client
+		// Get emails for this client, filtered by org
 		const emails = await ctx.db
 			.query("emailMessages")
 			.withIndex("by_client", (q) => q.eq("clientId", args.clientId))
 			.order("desc")
 			.collect();
 
-		// Filter to only emails from the user's organization
 		return emails.filter((email) => email.orgId === orgId);
 	},
 });
@@ -41,15 +33,8 @@ export const getByResendId = query({
 		resendEmailId: v.string(),
 	},
 	handler: async (ctx, args) => {
-		const user = await getCurrentUser(ctx);
-		if (!user) {
-			return null;
-		}
-
-		const orgId = await getCurrentUserOrgId(ctx, { require: false });
-		if (!orgId) {
-			return null;
-		}
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) return null;
 
 		const email = await ctx.db
 			.query("emailMessages")
@@ -74,23 +59,14 @@ export const getRecentEmails = query({
 		limit: v.optional(v.number()),
 	},
 	handler: async (ctx, args) => {
-		const user = await getCurrentUser(ctx);
-		if (!user) {
-			return [];
-		}
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) return emptyListResult();
 
-		const orgId = await getCurrentUserOrgId(ctx, { require: false });
-		if (!orgId) {
-			return [];
-		}
-
-		const emails = await ctx.db
+		return await ctx.db
 			.query("emailMessages")
 			.withIndex("by_org", (q) => q.eq("orgId", orgId))
 			.order("desc")
 			.take(args.limit || 50);
-
-		return emails;
 	},
 });
 
@@ -102,36 +78,29 @@ export const countUnopened = query({
 		clientId: v.id("clients"),
 	},
 	handler: async (ctx, args) => {
-		const user = await getCurrentUser(ctx);
-		if (!user) {
-			return 0;
-		}
-
-		const orgId = await getCurrentUserOrgId(ctx, { require: false });
-		if (!orgId) {
-			return 0;
-		}
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) return 0;
 
 		// Query for both "sent" and "delivered" emails separately
-		const sentEmails = await ctx.db
-			.query("emailMessages")
-			.withIndex("by_client_status", (q) =>
-				q.eq("clientId", args.clientId).eq("status", "sent")
-			)
-			.collect();
+		const [sentEmails, deliveredEmails] = await Promise.all([
+			ctx.db
+				.query("emailMessages")
+				.withIndex("by_client_status", (q) =>
+					q.eq("clientId", args.clientId).eq("status", "sent")
+				)
+				.collect(),
+			ctx.db
+				.query("emailMessages")
+				.withIndex("by_client_status", (q) =>
+					q.eq("clientId", args.clientId).eq("status", "delivered")
+				)
+				.collect(),
+		]);
 
-		const deliveredEmails = await ctx.db
-			.query("emailMessages")
-			.withIndex("by_client_status", (q) =>
-				q.eq("clientId", args.clientId).eq("status", "delivered")
-			)
-			.collect();
-
-		// Merge results
-		const allEmails = [...sentEmails, ...deliveredEmails];
-
-		// Filter to only emails from the user's organization
-		const orgEmails = allEmails.filter((email) => email.orgId === orgId);
+		// Merge and filter to only emails from the user's organization
+		const orgEmails = [...sentEmails, ...deliveredEmails].filter(
+			(email) => email.orgId === orgId
+		);
 
 		// Count emails that are sent or delivered but not opened
 		return orgEmails.filter((email) => !email.openedAt).length;
@@ -146,15 +115,8 @@ export const getClientEmailStats = query({
 		clientId: v.id("clients"),
 	},
 	handler: async (ctx, args) => {
-		const user = await getCurrentUser(ctx);
-		if (!user) {
-			return null;
-		}
-
-		const orgId = await getCurrentUserOrgId(ctx, { require: false });
-		if (!orgId) {
-			return null;
-		}
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) return null;
 
 		const emails = await ctx.db
 			.query("emailMessages")
@@ -164,7 +126,7 @@ export const getClientEmailStats = query({
 		// Filter to only emails from the user's organization
 		const orgEmails = emails.filter((email) => email.orgId === orgId);
 
-		const stats = {
+		return {
 			total: orgEmails.length,
 			sent: orgEmails.filter((e) => e.status === "sent").length,
 			delivered: orgEmails.filter((e) => e.status === "delivered").length,
@@ -179,8 +141,6 @@ export const getClientEmailStats = query({
 						)
 					: 0,
 		};
-
-		return stats;
 	},
 });
 
@@ -193,15 +153,8 @@ export const getEmailThread = query({
 		threadId: v.string(),
 	},
 	handler: async (ctx, args) => {
-		const user = await getCurrentUser(ctx);
-		if (!user) {
-			return null;
-		}
-
-		const orgId = await getCurrentUserOrgId(ctx, { require: false });
-		if (!orgId) {
-			return null;
-		}
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) return null;
 
 		// Get all messages in this thread by threadId
 		const messagesByThreadId = await ctx.db
@@ -234,7 +187,7 @@ export const getEmailThread = query({
 			});
 
 			// Combine and deduplicate
-			const messageMap = new Map();
+			const messageMap = new Map<string, Doc<"emailMessages">>();
 			[...messagesByThreadId, ...messagesBySubject].forEach((msg) => {
 				messageMap.set(msg._id, msg);
 			});
@@ -251,14 +204,14 @@ export const getEmailThread = query({
 		const enrichedMessages = await Promise.all(
 			orgMessages.map(async (msg) => {
 				let senderName = msg.fromName;
-				let senderAvatar = null;
+				let senderAvatar: string | null = null;
 
 				// If outbound, get user info
 				if (msg.direction === "outbound" && msg.sentBy) {
 					const sender = await ctx.db.get(msg.sentBy);
 					if (sender) {
 						senderName = sender.name;
-						senderAvatar = sender.image;
+						senderAvatar = sender.image ?? null;
 					}
 				}
 
@@ -275,6 +228,19 @@ export const getEmailThread = query({
 });
 
 /**
+ * Thread summary type for grouped email conversations
+ */
+interface EmailThreadSummary {
+	threadId: string;
+	subject: string;
+	latestMessage: string;
+	latestMessageAt: number;
+	messageCount: number;
+	hasUnread: boolean;
+	participants: string[];
+}
+
+/**
  * List email threads for a client (grouped conversations)
  */
 export const listThreadsByClient = query({
@@ -282,15 +248,8 @@ export const listThreadsByClient = query({
 		clientId: v.id("clients"),
 	},
 	handler: async (ctx, args) => {
-		const user = await getCurrentUser(ctx);
-		if (!user) {
-			return [];
-		}
-
-		const orgId = await getCurrentUserOrgId(ctx, { require: false });
-		if (!orgId) {
-			return [];
-		}
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) return emptyListResult<EmailThreadSummary>();
 
 		// Get all emails for this client
 		const emails = await ctx.db
@@ -302,18 +261,7 @@ export const listThreadsByClient = query({
 		const orgEmails = emails.filter((email) => email.orgId === orgId);
 
 		// Group by thread
-		const threadMap = new Map<
-			string,
-			{
-				threadId: string;
-				subject: string;
-				latestMessage: string;
-				latestMessageAt: number;
-				messageCount: number;
-				hasUnread: boolean;
-				participants: string[];
-			}
-		>();
+		const threadMap = new Map<string, EmailThreadSummary>();
 
 		for (const email of orgEmails) {
 			const threadId = email.threadId || email._id;
@@ -348,11 +296,9 @@ export const listThreadsByClient = query({
 		}
 
 		// Convert to array and sort by latest message
-		const threads = Array.from(threadMap.values()).sort(
+		return Array.from(threadMap.values()).sort(
 			(a, b) => b.latestMessageAt - a.latestMessageAt
 		);
-
-		return threads;
 	},
 });
 
@@ -364,15 +310,8 @@ export const getEmailWithAttachments = query({
 		emailMessageId: v.id("emailMessages"),
 	},
 	handler: async (ctx, args) => {
-		const user = await getCurrentUser(ctx);
-		if (!user) {
-			return null;
-		}
-
-		const orgId = await getCurrentUserOrgId(ctx, { require: false });
-		if (!orgId) {
-			return null;
-		}
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) return null;
 
 		const email = await ctx.db.get(args.emailMessageId);
 		if (!email || email.orgId !== orgId) {

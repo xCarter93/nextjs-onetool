@@ -7,7 +7,6 @@ import {
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
-	SelectValue,
 } from "@/components/ui/select";
 
 export type StatusEvent = {
@@ -76,7 +75,7 @@ export function StatusProgressBar({
 			? [
 					...baseSteps.slice(0, -1),
 					{ id: status, name: status, order: baseSteps.length },
-			  ]
+				]
 			: baseSteps;
 
 	// Determine the variant based on final status
@@ -127,8 +126,10 @@ export function StatusProgressBar({
 		if (stepStatus === "complete") {
 			return {
 				// Soft emerald with depth
-				background: "linear-gradient(180deg, #6ee7b7 0%, #34d399 50%, #10b981 100%)",
-				boxShadow: "inset 0 1px 1px rgba(255,255,255,0.3), inset 0 -2px 4px rgba(0,0,0,0.1), 0 2px 4px rgba(16,185,129,0.2)",
+				background:
+					"linear-gradient(180deg, #6ee7b7 0%, #34d399 50%, #10b981 100%)",
+				boxShadow:
+					"inset 0 1px 1px rgba(255,255,255,0.3), inset 0 -2px 4px rgba(0,0,0,0.1), 0 2px 4px rgba(16,185,129,0.2)",
 				textColor: "text-emerald-950",
 				labelColor: "text-emerald-900/70",
 				iconBg: "bg-emerald-200/50",
@@ -139,8 +140,10 @@ export function StatusProgressBar({
 		if (stepStatus === "current") {
 			if (variant === "success") {
 				return {
-					background: "linear-gradient(180deg, #6ee7b7 0%, #34d399 50%, #10b981 100%)",
-					boxShadow: "inset 0 1px 1px rgba(255,255,255,0.3), inset 0 -2px 4px rgba(0,0,0,0.1), 0 2px 4px rgba(16,185,129,0.2)",
+					background:
+						"linear-gradient(180deg, #6ee7b7 0%, #34d399 50%, #10b981 100%)",
+					boxShadow:
+						"inset 0 1px 1px rgba(255,255,255,0.3), inset 0 -2px 4px rgba(0,0,0,0.1), 0 2px 4px rgba(16,185,129,0.2)",
 					textColor: "text-emerald-950",
 					labelColor: "text-emerald-900/70",
 					iconBg: "bg-emerald-200/50",
@@ -151,8 +154,10 @@ export function StatusProgressBar({
 			if (variant === "destructive") {
 				return {
 					// Soft rose/coral with depth
-					background: "linear-gradient(180deg, #fda4af 0%, #fb7185 50%, #f43f5e 100%)",
-					boxShadow: "inset 0 1px 1px rgba(255,255,255,0.3), inset 0 -2px 4px rgba(0,0,0,0.1), 0 2px 4px rgba(244,63,94,0.2)",
+					background:
+						"linear-gradient(180deg, #fda4af 0%, #fb7185 50%, #f43f5e 100%)",
+					boxShadow:
+						"inset 0 1px 1px rgba(255,255,255,0.3), inset 0 -2px 4px rgba(0,0,0,0.1), 0 2px 4px rgba(244,63,94,0.2)",
 					textColor: "text-rose-950",
 					labelColor: "text-rose-900/70",
 					iconBg: "bg-rose-200/50",
@@ -162,8 +167,10 @@ export function StatusProgressBar({
 			}
 			// In-progress: soft sky blue with depth
 			return {
-				background: "linear-gradient(180deg, #7dd3fc 0%, #38bdf8 50%, #0ea5e9 100%)",
-				boxShadow: "inset 0 1px 1px rgba(255,255,255,0.3), inset 0 -2px 4px rgba(0,0,0,0.1), 0 2px 4px rgba(14,165,233,0.2)",
+				background:
+					"linear-gradient(180deg, #7dd3fc 0%, #38bdf8 50%, #0ea5e9 100%)",
+				boxShadow:
+					"inset 0 1px 1px rgba(255,255,255,0.3), inset 0 -2px 4px rgba(0,0,0,0.1), 0 2px 4px rgba(14,165,233,0.2)",
 				textColor: "text-sky-950",
 				labelColor: "text-sky-900/70",
 				iconBg: "bg-sky-200/50",
@@ -174,7 +181,8 @@ export function StatusProgressBar({
 		// Upcoming: soft neutral with recessed look
 		return {
 			background: "linear-gradient(180deg, #f5f5f4 0%, #e7e5e4 100%)",
-			boxShadow: "inset 0 2px 4px rgba(0,0,0,0.06), inset 0 -1px 0 rgba(255,255,255,0.8)",
+			boxShadow:
+				"inset 0 2px 4px rgba(0,0,0,0.06), inset 0 -1px 0 rgba(255,255,255,0.8)",
 			textColor: "text-stone-600 dark:text-zinc-300",
 			labelColor: "text-stone-500 dark:text-zinc-400",
 			iconBg: "bg-white dark:bg-zinc-700",
@@ -187,31 +195,40 @@ export function StatusProgressBar({
 	const getDarkStepStyles = (stepStatus: StepStatus) => {
 		if (stepStatus === "complete") {
 			return {
-				background: "linear-gradient(180deg, #059669 0%, #047857 50%, #065f46 100%)",
-				boxShadow: "inset 0 1px 1px rgba(255,255,255,0.15), inset 0 -2px 4px rgba(0,0,0,0.3), 0 2px 8px rgba(16,185,129,0.3)",
+				background:
+					"linear-gradient(180deg, #059669 0%, #047857 50%, #065f46 100%)",
+				boxShadow:
+					"inset 0 1px 1px rgba(255,255,255,0.15), inset 0 -2px 4px rgba(0,0,0,0.3), 0 2px 8px rgba(16,185,129,0.3)",
 			};
 		}
 		if (stepStatus === "current") {
 			if (variant === "success") {
 				return {
-					background: "linear-gradient(180deg, #059669 0%, #047857 50%, #065f46 100%)",
-					boxShadow: "inset 0 1px 1px rgba(255,255,255,0.15), inset 0 -2px 4px rgba(0,0,0,0.3), 0 2px 8px rgba(16,185,129,0.3)",
+					background:
+						"linear-gradient(180deg, #059669 0%, #047857 50%, #065f46 100%)",
+					boxShadow:
+						"inset 0 1px 1px rgba(255,255,255,0.15), inset 0 -2px 4px rgba(0,0,0,0.3), 0 2px 8px rgba(16,185,129,0.3)",
 				};
 			}
 			if (variant === "destructive") {
 				return {
-					background: "linear-gradient(180deg, #e11d48 0%, #be123c 50%, #9f1239 100%)",
-					boxShadow: "inset 0 1px 1px rgba(255,255,255,0.15), inset 0 -2px 4px rgba(0,0,0,0.3), 0 2px 8px rgba(244,63,94,0.3)",
+					background:
+						"linear-gradient(180deg, #e11d48 0%, #be123c 50%, #9f1239 100%)",
+					boxShadow:
+						"inset 0 1px 1px rgba(255,255,255,0.15), inset 0 -2px 4px rgba(0,0,0,0.3), 0 2px 8px rgba(244,63,94,0.3)",
 				};
 			}
 			return {
-				background: "linear-gradient(180deg, #0284c7 0%, #0369a1 50%, #075985 100%)",
-				boxShadow: "inset 0 1px 1px rgba(255,255,255,0.15), inset 0 -2px 4px rgba(0,0,0,0.3), 0 2px 8px rgba(14,165,233,0.3)",
+				background:
+					"linear-gradient(180deg, #0284c7 0%, #0369a1 50%, #075985 100%)",
+				boxShadow:
+					"inset 0 1px 1px rgba(255,255,255,0.15), inset 0 -2px 4px rgba(0,0,0,0.3), 0 2px 8px rgba(14,165,233,0.3)",
 			};
 		}
 		return {
 			background: "linear-gradient(180deg, #3f3f46 0%, #27272a 100%)",
-			boxShadow: "inset 0 2px 4px rgba(0,0,0,0.4), inset 0 -1px 0 rgba(255,255,255,0.05)",
+			boxShadow:
+				"inset 0 2px 4px rgba(0,0,0,0.4), inset 0 -1px 0 rgba(255,255,255,0.05)",
 		};
 	};
 
@@ -238,12 +255,13 @@ export function StatusProgressBar({
 		<nav aria-label="Progress" className="w-full max-w-5xl mx-auto">
 			<div
 				className={cn(
-					"flex items-stretch",
+					"flex items-stretch rounded-[50px]",
 					showStatusButton ? "rounded-full overflow-hidden" : ""
 				)}
 				style={{
 					// Outer container shadow for depth
-					boxShadow: "0 4px 12px -2px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.06)",
+					boxShadow:
+						"0 4px 12px -2px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.06)",
 				}}
 			>
 				<ol
@@ -341,34 +359,48 @@ export function StatusProgressBar({
 									<span className="flex items-center gap-2">
 										{/* Icon/Badge with 3D effect */}
 										{stepStatus === "complete" ? (
-											<span className={cn(
-												"flex size-7 shrink-0 items-center justify-center rounded-full ring-2",
-												styles.iconBg,
-												styles.iconRing,
-												"shadow-[inset_0_1px_2px_rgba(255,255,255,0.5),0_1px_2px_rgba(0,0,0,0.1)]"
-											)}>
+											<span
+												className={cn(
+													"flex size-7 shrink-0 items-center justify-center rounded-full ring-2",
+													styles.iconBg,
+													styles.iconRing,
+													"shadow-[inset_0_1px_2px_rgba(255,255,255,0.5),0_1px_2px_rgba(0,0,0,0.1)]"
+												)}
+											>
 												<Check
 													aria-hidden="true"
-													className={cn("size-3.5 stroke-[2.5]", styles.iconColor)}
+													className={cn(
+														"size-3.5 stroke-[2.5]",
+														styles.iconColor
+													)}
 												/>
 											</span>
 										) : stepStatus === "current" ? (
-											<span className={cn(
-												"flex size-7 shrink-0 items-center justify-center rounded-full ring-2",
-												styles.iconBg,
-												styles.iconRing,
-												"shadow-[inset_0_1px_2px_rgba(255,255,255,0.5),0_1px_2px_rgba(0,0,0,0.1)]"
-											)}>
+											<span
+												className={cn(
+													"flex size-7 shrink-0 items-center justify-center rounded-full ring-2",
+													styles.iconBg,
+													styles.iconRing,
+													"shadow-[inset_0_1px_2px_rgba(255,255,255,0.5),0_1px_2px_rgba(0,0,0,0.1)]"
+												)}
+											>
 												<Clock className={cn("size-3.5", styles.iconColor)} />
 											</span>
 										) : (
-											<span className={cn(
-												"flex size-7 shrink-0 items-center justify-center rounded-full ring-2",
-												styles.iconBg,
-												styles.iconRing,
-												"shadow-[inset_0_2px_4px_rgba(0,0,0,0.06)]"
-											)}>
-												<span className={cn("text-[10px] font-semibold", styles.iconColor)}>
+											<span
+												className={cn(
+													"flex size-7 shrink-0 items-center justify-center rounded-full ring-2",
+													styles.iconBg,
+													styles.iconRing,
+													"shadow-[inset_0_2px_4px_rgba(0,0,0,0.06)]"
+												)}
+											>
+												<span
+													className={cn(
+														"text-[10px] font-semibold",
+														styles.iconColor
+													)}
+												>
 													{step.order}
 												</span>
 											</span>
@@ -385,8 +417,8 @@ export function StatusProgressBar({
 												{stepStatus === "complete"
 													? "COMPLETED"
 													: stepStatus === "current"
-													? "CURRENT STAGE"
-													: "UPCOMING"}
+														? "CURRENT STAGE"
+														: "UPCOMING"}
 											</span>
 											<span
 												className={cn(
@@ -421,7 +453,8 @@ export function StatusProgressBar({
 						style={{
 							zIndex: steps.length + 10,
 							background: "linear-gradient(180deg, #f5f5f4 0%, #e7e5e4 100%)",
-							boxShadow: "inset 0 2px 4px rgba(0,0,0,0.06), inset 0 -1px 0 rgba(255,255,255,0.8)",
+							boxShadow:
+								"inset 0 2px 4px rgba(0,0,0,0.06), inset 0 -1px 0 rgba(255,255,255,0.8)",
 						}}
 					>
 						{/* Dark mode background */}

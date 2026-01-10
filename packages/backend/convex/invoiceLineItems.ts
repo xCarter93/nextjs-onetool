@@ -2,68 +2,59 @@ import { query, mutation, QueryCtx, MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
 import { getCurrentUserOrgId } from "./lib/auth";
+import { filterUndefined, requireUpdates } from "./lib/crud";
+import { getOptionalOrgId, emptyListResult } from "./lib/queries";
+import {
+	validateInvoiceAccess,
+	validateInvoiceLineItemFields,
+	calculateInvoiceLineItemTotal,
+	getLineItemWithValidation,
+	getLineItemOrThrow,
+	sortLineItems,
+	getNextLineItemSortOrder,
+} from "./lib/lineItems";
 
 /**
- * Invoice Line Item operations with embedded CRUD helpers
- * All invoice line item-specific logic lives in this file for better organization
+ * Invoice Line Item operations
+ *
+ * Uses shared utilities from:
+ * - lib/crud.ts for common CRUD patterns
+ * - lib/queries.ts for query helpers
+ * - lib/lineItems.ts for line item validation and calculations
  */
 
-// Invoice Line Item-specific helper functions
+// ============================================================================
+// Local Helper Functions (entity-specific wrappers)
+// ============================================================================
 
 /**
- * Get an invoice line item by ID with organization validation
+ * Get an invoice line item with org validation (wrapper for shared utility)
  */
-async function getLineItemWithOrgValidation(
+async function getInvoiceLineItemWithValidation(
 	ctx: QueryCtx | MutationCtx,
 	id: Id<"invoiceLineItems">
 ): Promise<Doc<"invoiceLineItems"> | null> {
-	const userOrgId = await getCurrentUserOrgId(ctx);
-	const lineItem = await ctx.db.get(id);
-
-	if (!lineItem) {
-		return null;
-	}
-
-	if (lineItem.orgId !== userOrgId) {
-		throw new Error("Invoice line item does not belong to your organization");
-	}
-
-	return lineItem;
+	return await getLineItemWithValidation(
+		ctx,
+		"invoiceLineItems",
+		id,
+		"Invoice line item"
+	);
 }
 
 /**
- * Get an invoice line item by ID, throwing if not found
+ * Get an invoice line item, throwing if not found (wrapper for shared utility)
  */
-async function getLineItemOrThrow(
+async function getInvoiceLineItemOrThrow(
 	ctx: QueryCtx | MutationCtx,
 	id: Id<"invoiceLineItems">
 ): Promise<Doc<"invoiceLineItems">> {
-	const lineItem = await getLineItemWithOrgValidation(ctx, id);
-	if (!lineItem) {
-		throw new Error("Invoice line item not found");
-	}
-	return lineItem;
-}
-
-/**
- * Validate invoice exists and belongs to user's org
- */
-async function validateInvoiceAccess(
-	ctx: QueryCtx | MutationCtx,
-	invoiceId: Id<"invoices">,
-	existingOrgId?: Id<"organizations">
-): Promise<void> {
-	const userOrgId =
-		existingOrgId ?? (await getCurrentUserOrgId(ctx));
-	const invoice = await ctx.db.get(invoiceId);
-
-	if (!invoice) {
-		throw new Error("Invoice not found");
-	}
-
-	if (invoice.orgId !== userOrgId) {
-		throw new Error("Invoice does not belong to your organization");
-	}
+	return await getLineItemOrThrow(
+		ctx,
+		"invoiceLineItems",
+		id,
+		"Invoice line item"
+	);
 }
 
 /**
@@ -78,37 +69,19 @@ async function createLineItemWithOrg(
 	// Validate invoice access
 	await validateInvoiceAccess(ctx, data.invoiceId);
 
-	const lineItemData = {
+	return await ctx.db.insert("invoiceLineItems", {
 		...data,
 		orgId: userOrgId,
-	};
-
-	return await ctx.db.insert("invoiceLineItems", lineItemData);
-}
-
-/**
- * Update an invoice line item with validation
- */
-async function updateLineItemWithValidation(
-	ctx: MutationCtx,
-	id: Id<"invoiceLineItems">,
-	updates: Partial<Doc<"invoiceLineItems">>
-): Promise<void> {
-	// Validate line item exists and belongs to user's org
-	await getLineItemOrThrow(ctx, id);
-
-	// If invoiceId is being updated, validate the new invoice
-	if (updates.invoiceId) {
-		await validateInvoiceAccess(ctx, updates.invoiceId);
-	}
-
-	// Update the line item
-	await ctx.db.patch(id, updates);
+	});
 }
 
 // Define specific types for invoice line item operations
 type InvoiceLineItemDocument = Doc<"invoiceLineItems">;
 type InvoiceLineItemId = Id<"invoiceLineItems">;
+
+// ============================================================================
+// Queries
+// ============================================================================
 
 /**
  * Get all line items for a specific invoice
@@ -117,19 +90,17 @@ type InvoiceLineItemId = Id<"invoiceLineItems">;
 export const listByInvoice = query({
 	args: { invoiceId: v.id("invoices") },
 	handler: async (ctx, args): Promise<InvoiceLineItemDocument[]> => {
-		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
-		if (!userOrgId) {
-			return [];
-		}
-		await validateInvoiceAccess(ctx, args.invoiceId, userOrgId);
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) return emptyListResult();
+
+		await validateInvoiceAccess(ctx, args.invoiceId, orgId);
 
 		const lineItems = await ctx.db
 			.query("invoiceLineItems")
 			.withIndex("by_invoice", (q) => q.eq("invoiceId", args.invoiceId))
 			.collect();
 
-		// Sort by sortOrder
-		return lineItems.sort((a, b) => a.sortOrder - b.sortOrder);
+		return sortLineItems(lineItems);
 	},
 });
 
@@ -140,14 +111,12 @@ export const listByInvoice = query({
 export const list = query({
 	args: {},
 	handler: async (ctx): Promise<InvoiceLineItemDocument[]> => {
-		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
-		if (!userOrgId) {
-			return [];
-		}
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) return emptyListResult();
 
 		return await ctx.db
 			.query("invoiceLineItems")
-			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
+			.withIndex("by_org", (q) => q.eq("orgId", orgId))
 			.collect();
 	},
 });
@@ -159,13 +128,16 @@ export const list = query({
 export const get = query({
 	args: { id: v.id("invoiceLineItems") },
 	handler: async (ctx, args): Promise<InvoiceLineItemDocument | null> => {
-		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
-		if (!userOrgId) {
-			return null;
-		}
-		return await getLineItemWithOrgValidation(ctx, args.id);
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) return null;
+
+		return await getInvoiceLineItemWithValidation(ctx, args.id);
 	},
 });
+
+// ============================================================================
+// Mutations
+// ============================================================================
 
 /**
  * Create a new invoice line item
@@ -180,26 +152,11 @@ export const create = mutation({
 		sortOrder: v.number(),
 	},
 	handler: async (ctx, args): Promise<InvoiceLineItemId> => {
-		// Validate required fields
-		if (!args.description.trim()) {
-			throw new Error("Description is required");
-		}
-
-		// Validate numeric values
-		if (args.quantity <= 0) {
-			throw new Error("Quantity must be positive");
-		}
-
-		if (args.unitPrice < 0) {
-			throw new Error("Unit price cannot be negative");
-		}
-
-		if (args.sortOrder < 0) {
-			throw new Error("Sort order cannot be negative");
-		}
+		// Validate line item fields
+		validateInvoiceLineItemFields(args);
 
 		// Calculate total
-		const total = args.quantity * args.unitPrice;
+		const total = calculateInvoiceLineItemTotal(args.quantity, args.unitPrice);
 
 		const lineItemId = await createLineItemWithOrg(ctx, {
 			...args,
@@ -227,33 +184,19 @@ export const update = mutation({
 		const { id, ...updates } = args;
 
 		// Validate fields if being updated
-		if (updates.description !== undefined && !updates.description.trim()) {
-			throw new Error("Description cannot be empty");
-		}
+		validateInvoiceLineItemFields(updates, { isUpdate: true });
 
-		if (updates.quantity !== undefined && updates.quantity <= 0) {
-			throw new Error("Quantity must be positive");
-		}
-
-		if (updates.unitPrice !== undefined && updates.unitPrice < 0) {
-			throw new Error("Unit price cannot be negative");
-		}
-
-		if (updates.sortOrder !== undefined && updates.sortOrder < 0) {
-			throw new Error("Sort order cannot be negative");
-		}
-
-		// Filter out undefined values
-		const filteredUpdates = Object.fromEntries(
-			Object.entries(updates).filter(([, value]) => value !== undefined)
-		) as Partial<InvoiceLineItemDocument>;
-
-		if (Object.keys(filteredUpdates).length === 0) {
-			throw new Error("No valid updates provided");
-		}
+		// Filter and validate updates
+		const filteredUpdates = filterUndefined(updates);
+		requireUpdates(filteredUpdates);
 
 		// Get current line item to calculate new total if needed
-		const currentLineItem = await getLineItemOrThrow(ctx, id);
+		const currentLineItem = await getInvoiceLineItemOrThrow(ctx, id);
+
+		// Validate new invoiceId if changing
+		if (filteredUpdates.invoiceId) {
+			await validateInvoiceAccess(ctx, filteredUpdates.invoiceId);
+		}
 
 		// Recalculate total if quantity or unit price changed
 		const quantity = filteredUpdates.quantity ?? currentLineItem.quantity;
@@ -263,10 +206,11 @@ export const update = mutation({
 			filteredUpdates.quantity !== undefined ||
 			filteredUpdates.unitPrice !== undefined
 		) {
-			filteredUpdates.total = quantity * unitPrice;
+			(filteredUpdates as Partial<InvoiceLineItemDocument>).total =
+				calculateInvoiceLineItemTotal(quantity, unitPrice);
 		}
 
-		await updateLineItemWithValidation(ctx, id, filteredUpdates);
+		await ctx.db.patch(id, filteredUpdates);
 
 		return id;
 	},
@@ -279,7 +223,7 @@ export const update = mutation({
 export const remove = mutation({
 	args: { id: v.id("invoiceLineItems") },
 	handler: async (ctx, args): Promise<InvoiceLineItemId> => {
-		await getLineItemOrThrow(ctx, args.id); // Validate access
+		await getInvoiceLineItemOrThrow(ctx, args.id);
 		await ctx.db.delete(args.id);
 		return args.id;
 	},
@@ -308,22 +252,17 @@ export const bulkCreate = mutation({
 		const userOrgId = await getCurrentUserOrgId(ctx);
 		const createdIds: InvoiceLineItemId[] = [];
 
-		for (const itemData of args.lineItems) {
+		for (let i = 0; i < args.lineItems.length; i++) {
+			const itemData = args.lineItems[i];
+
 			// Validate each item
-			if (!itemData.description.trim()) {
-				throw new Error("All descriptions are required");
-			}
-
-			if (itemData.quantity <= 0) {
-				throw new Error("All quantities must be positive");
-			}
-
-			if (itemData.unitPrice < 0) {
-				throw new Error("Unit price cannot be negative");
-			}
+			validateInvoiceLineItemFields(itemData, { prefix: `Item ${i + 1}: ` });
 
 			// Calculate total and create item
-			const total = itemData.quantity * itemData.unitPrice;
+			const total = calculateInvoiceLineItemTotal(
+				itemData.quantity,
+				itemData.unitPrice
+			);
 
 			const lineItemId = await ctx.db.insert("invoiceLineItems", {
 				...itemData,
@@ -353,7 +292,7 @@ export const reorder = mutation({
 
 		// Validate that all line items belong to the invoice
 		for (const lineItemId of args.lineItemIds) {
-			const lineItem = await getLineItemOrThrow(ctx, lineItemId);
+			const lineItem = await getInvoiceLineItemOrThrow(ctx, lineItemId);
 			if (lineItem.invoiceId !== args.invoiceId) {
 				throw new Error("All line items must belong to the specified invoice");
 			}
@@ -375,7 +314,7 @@ export const reorder = mutation({
 export const duplicate = mutation({
 	args: { id: v.id("invoiceLineItems") },
 	handler: async (ctx, args): Promise<InvoiceLineItemId> => {
-		const originalItem = await getLineItemOrThrow(ctx, args.id);
+		const originalItem = await getInvoiceLineItemOrThrow(ctx, args.id);
 
 		// Get the highest sort order for the invoice to append the duplicate
 		const allItems = await ctx.db
@@ -383,10 +322,7 @@ export const duplicate = mutation({
 			.withIndex("by_invoice", (q) => q.eq("invoiceId", originalItem.invoiceId))
 			.collect();
 
-		const maxSortOrder = Math.max(
-			...allItems.map((item) => item.sortOrder),
-			-1
-		);
+		const newSortOrder = getNextLineItemSortOrder(allItems);
 
 		// Create duplicate with incremented sort order
 		const duplicateId = await ctx.db.insert("invoiceLineItems", {
@@ -396,7 +332,7 @@ export const duplicate = mutation({
 			quantity: originalItem.quantity,
 			unitPrice: originalItem.unitPrice,
 			total: originalItem.total,
-			sortOrder: maxSortOrder + 1,
+			sortOrder: newSortOrder,
 		});
 
 		return duplicateId;
@@ -410,8 +346,8 @@ export const duplicate = mutation({
 export const getStats = query({
 	args: { invoiceId: v.id("invoices") },
 	handler: async (ctx, args) => {
-		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
-		if (!userOrgId) {
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) {
 			return {
 				totalItems: 0,
 				totalAmount: 0,
@@ -421,7 +357,8 @@ export const getStats = query({
 				lowestAmount: 0,
 			};
 		}
-		await validateInvoiceAccess(ctx, args.invoiceId, userOrgId);
+
+		await validateInvoiceAccess(ctx, args.invoiceId, orgId);
 
 		const lineItems = await ctx.db
 			.query("invoiceLineItems")

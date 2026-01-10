@@ -1,7 +1,13 @@
-import { query, mutation, QueryCtx, MutationCtx } from "./_generated/server";
+import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
 import { getCurrentUserOrgId, getCurrentUser } from "./lib/auth";
+import {
+	getEntityWithOrgValidation,
+	getEntityOrThrow,
+	filterUndefined,
+} from "./lib/crud";
+import { getOptionalOrgId, emptyListResult } from "./lib/queries";
 
 /**
  * Report operations with CRUD helpers
@@ -52,46 +58,6 @@ const visualizationValidator = v.object({
 	options: v.optional(v.any()),
 });
 
-// Helper functions
-
-/**
- * Get a report by ID with organization validation
- */
-async function getReportWithOrgValidation(
-	ctx: QueryCtx | MutationCtx,
-	id: Id<"reports">
-): Promise<Doc<"reports"> | null> {
-	const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
-	if (!userOrgId) {
-		return null;
-	}
-
-	const report = await ctx.db.get(id);
-	if (!report) {
-		return null;
-	}
-
-	if (report.orgId !== userOrgId) {
-		throw new Error("Report does not belong to your organization");
-	}
-
-	return report;
-}
-
-/**
- * Get a report by ID, throwing if not found
- */
-async function getReportOrThrow(
-	ctx: QueryCtx | MutationCtx,
-	id: Id<"reports">
-): Promise<Doc<"reports">> {
-	const report = await getReportWithOrgValidation(ctx, id);
-	if (!report) {
-		throw new Error("Report not found");
-	}
-	return report;
-}
-
 // ============================================================================
 // Query Operations
 // ============================================================================
@@ -102,14 +68,12 @@ async function getReportOrThrow(
 export const list = query({
 	args: {},
 	handler: async (ctx): Promise<Doc<"reports">[]> => {
-		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
-		if (!userOrgId) {
-			return [];
-		}
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) return emptyListResult();
 
 		const reports = await ctx.db
 			.query("reports")
-			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
+			.withIndex("by_org", (q) => q.eq("orgId", orgId))
 			.collect();
 
 		// Sort by most recently updated
@@ -123,7 +87,7 @@ export const list = query({
 export const get = query({
 	args: { id: v.id("reports") },
 	handler: async (ctx, args): Promise<Doc<"reports"> | null> => {
-		return await getReportWithOrgValidation(ctx, args.id);
+		return await getEntityWithOrgValidation(ctx, "reports", args.id, "Report");
 	},
 });
 
@@ -134,9 +98,7 @@ export const getMyReports = query({
 	args: {},
 	handler: async (ctx): Promise<Doc<"reports">[]> => {
 		const user = await getCurrentUser(ctx);
-		if (!user) {
-			return [];
-		}
+		if (!user) return emptyListResult();
 
 		const reports = await ctx.db
 			.query("reports")
@@ -204,27 +166,13 @@ export const update = mutation({
 		isPublic: v.optional(v.boolean()),
 	},
 	handler: async (ctx, args): Promise<Id<"reports">> => {
-		const report = await getReportOrThrow(ctx, args.id);
+		const report = await getEntityOrThrow(ctx, "reports", args.id, "Report");
 
-		const updates: Partial<Doc<"reports">> = {
+		const { id: _, ...updateFields } = args;
+		const updates = filterUndefined({
+			...updateFields,
 			updatedAt: Date.now(),
-		};
-
-		if (args.name !== undefined) {
-			updates.name = args.name;
-		}
-		if (args.description !== undefined) {
-			updates.description = args.description;
-		}
-		if (args.config !== undefined) {
-			updates.config = args.config;
-		}
-		if (args.visualization !== undefined) {
-			updates.visualization = args.visualization;
-		}
-		if (args.isPublic !== undefined) {
-			updates.isPublic = args.isPublic;
-		}
+		});
 
 		await ctx.db.patch(report._id, updates);
 		return report._id;
@@ -237,7 +185,7 @@ export const update = mutation({
 export const remove = mutation({
 	args: { id: v.id("reports") },
 	handler: async (ctx, args): Promise<void> => {
-		const report = await getReportOrThrow(ctx, args.id);
+		const report = await getEntityOrThrow(ctx, "reports", args.id, "Report");
 		await ctx.db.delete(report._id);
 	},
 });
@@ -253,7 +201,7 @@ export const duplicate = mutation({
 			throw new Error("Not authenticated");
 		}
 
-		const report = await getReportOrThrow(ctx, args.id);
+		const report = await getEntityOrThrow(ctx, "reports", args.id, "Report");
 		const now = Date.now();
 
 		const newReportId = await ctx.db.insert("reports", {

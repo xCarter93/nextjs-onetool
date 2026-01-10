@@ -7,53 +7,46 @@ import {
 } from "./_generated/server";
 import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
-import { getCurrentUserOrgIdOptional, getCurrentUserOrgId } from "./lib/auth";
+import { getCurrentUserOrgId } from "./lib/auth";
 import { ActivityHelpers } from "./lib/activities";
 import { AggregateHelpers } from "./lib/aggregates";
+import {
+	getEntityWithOrgValidation,
+	getEntityOrThrow,
+	filterUndefined,
+	requireUpdates,
+} from "./lib/crud";
+import { getOptionalOrgId, emptyListResult } from "./lib/queries";
 
 /**
- * Client operations with embedded CRUD helpers
- * All client-specific logic lives in this file for better organization
+ * Client operations
+ *
+ * Uses shared CRUD utilities from lib/crud.ts for consistent patterns.
+ * Entity-specific business logic (like aggregates, archiving) remains here.
  */
 
-// Client-specific helper functions
+// ============================================================================
+// Local Helper Functions (entity-specific logic only)
+// ============================================================================
 
 /**
- * Get a client by ID with organization validation
+ * Get a client by ID with organization validation (wrapper for shared utility)
  */
-async function getClientWithOrgValidation(
+async function getClientWithValidation(
 	ctx: QueryCtx | MutationCtx,
 	id: Id<"clients">
 ): Promise<Doc<"clients"> | null> {
-	const userOrgId = await getCurrentUserOrgIdOptional(ctx);
-	if (!userOrgId) {
-		return null;
-	}
-	const client = await ctx.db.get(id);
-
-	if (!client) {
-		return null;
-	}
-
-	if (client.orgId !== userOrgId) {
-		throw new Error("Client does not belong to your organization");
-	}
-
-	return client;
+	return await getEntityWithOrgValidation(ctx, "clients", id, "Client");
 }
 
 /**
- * Get a client by ID, throwing if not found
+ * Get a client by ID, throwing if not found (wrapper for shared utility)
  */
 async function getClientOrThrow(
 	ctx: QueryCtx | MutationCtx,
 	id: Id<"clients">
 ): Promise<Doc<"clients">> {
-	const client = await getClientWithOrgValidation(ctx, id);
-	if (!client) {
-		throw new Error("Client not found");
-	}
-	return client;
+	return await getEntityOrThrow(ctx, "clients", id, "Client");
 }
 
 /**
@@ -64,15 +57,13 @@ async function listClientsForOrg(
 	indexName?: "by_org" | "by_status",
 	includeArchived: boolean = false
 ): Promise<Doc<"clients">[]> {
-	const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
-	if (!userOrgId) {
-		return [];
-	}
+	const orgId = await getOptionalOrgId(ctx);
+	if (!orgId) return emptyListResult();
 
 	if (indexName) {
 		const clients = await ctx.db
 			.query("clients")
-			.withIndex(indexName, (q) => q.eq("orgId", userOrgId))
+			.withIndex(indexName, (q) => q.eq("orgId", orgId))
 			.collect();
 
 		// Filter out archived clients unless explicitly requested
@@ -85,7 +76,7 @@ async function listClientsForOrg(
 
 	const clients = await ctx.db
 		.query("clients")
-		.filter((q) => q.eq(q.field("orgId"), userOrgId))
+		.filter((q) => q.eq(q.field("orgId"), orgId))
 		.collect();
 
 	// Filter out archived clients unless explicitly requested
@@ -181,15 +172,13 @@ export const list = query({
 export const listArchived = query({
 	args: {},
 	handler: async (ctx): Promise<ClientDocument[]> => {
-		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
-		if (!userOrgId) {
-			return [];
-		}
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) return emptyListResult();
 
 		return await ctx.db
 			.query("clients")
 			.withIndex("by_status", (q) =>
-				q.eq("orgId", userOrgId).eq("status", "archived")
+				q.eq("orgId", orgId).eq("status", "archived")
 			)
 			.collect();
 	},
@@ -201,11 +190,10 @@ export const listArchived = query({
 export const get = query({
 	args: { id: v.id("clients") },
 	handler: async (ctx, args): Promise<ClientDocument | null> => {
-		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
-		if (!userOrgId) {
-			return null;
-		}
-		return await getClientWithOrgValidation(ctx, args.id);
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) return null;
+
+		return await getClientWithValidation(ctx, args.id);
 	},
 });
 
@@ -397,14 +385,9 @@ export const update = mutation({
 	handler: async (ctx, args): Promise<ClientId> => {
 		const { id, ...updates } = args;
 
-		// Filter out undefined values to create type-safe partial update
-		const filteredUpdates = Object.fromEntries(
-			Object.entries(updates).filter(([, value]) => value !== undefined)
-		) as Partial<ClientDocument>;
-
-		if (Object.keys(filteredUpdates).length === 0) {
-			throw new Error("No valid updates provided");
-		}
+		// Filter and validate updates
+		const filteredUpdates = filterUndefined(updates);
+		requireUpdates(filteredUpdates);
 
 		await updateClientWithValidation(ctx, id, filteredUpdates);
 
@@ -759,17 +742,14 @@ export const getRecentActivity = query({
 	handler: async (ctx, args): Promise<ClientDocument[]> => {
 		const limit = args.limit || 10;
 
-		// Get user's org ID first
-		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
-		if (!userOrgId) {
-			return [];
-		}
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) return emptyListResult();
 
 		// Get recent client-related activities
 		const activities = await ctx.db
 			.query("activities")
 			.withIndex("by_type", (q) =>
-				q.eq("orgId", userOrgId).eq("activityType", "client_created")
+				q.eq("orgId", orgId).eq("activityType", "client_created")
 			)
 			.order("desc")
 			.take(limit);
@@ -790,6 +770,23 @@ export const getRecentActivity = query({
 /**
  * Get clients with their active project counts for display in lists
  */
+/**
+ * Return type for client with project count
+ */
+type ClientWithProjectCount = {
+	id: string;
+	name: string;
+	location: string;
+	activeProjects: number;
+	lastActivity: string;
+	status: "Active" | "Prospect" | "Paused" | "Archived";
+	primaryContact: {
+		name: string;
+		email: string;
+		jobTitle: string;
+	} | null;
+};
+
 export const listWithProjectCounts = query({
 	args: {
 		status: v.optional(
@@ -802,29 +799,28 @@ export const listWithProjectCounts = query({
 		),
 		includeArchived: v.optional(v.boolean()),
 	},
-	handler: async (ctx, args) => {
+	handler: async (ctx, args): Promise<ClientWithProjectCount[]> => {
 		const includeArchived = args.includeArchived || false;
+
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) return emptyListResult<ClientWithProjectCount>();
 
 		// Get clients based on status filter
 		let clients: Doc<"clients">[];
-		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
-		if (!userOrgId) {
-			return [];
-		}
 
 		if (args.status) {
 			// Use the by_status index to get clients with specific status
 			clients = await ctx.db
 				.query("clients")
 				.withIndex("by_status", (q) =>
-					q.eq("orgId", userOrgId).eq("status", args.status!)
+					q.eq("orgId", orgId).eq("status", args.status!)
 				)
 				.collect();
 		} else {
 			// For all clients, filter out archived unless explicitly requested
 			clients = await ctx.db
 				.query("clients")
-				.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
+				.withIndex("by_org", (q) => q.eq("orgId", orgId))
 				.collect();
 
 			if (!includeArchived) {

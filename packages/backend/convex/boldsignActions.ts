@@ -4,6 +4,39 @@ import { action } from "./_generated/server";
 import { internal, api } from "./_generated/api";
 import { DocumentApi, DocumentSigner, DocumentCC, SendForSign } from "boldsign";
 
+// ============================================================================
+// BoldSign API Configuration
+// ============================================================================
+
+const LOG_PREFIX = "[BoldSign]";
+
+/**
+ * Get the BoldSign API key from environment, throwing if not configured.
+ */
+function getBoldSignApiKey(): string {
+	const apiKey = process.env.BOLDSIGN_API_KEY;
+	if (!apiKey) {
+		throw new Error(
+			"BOLDSIGN_API_KEY is not configured. Please add it to your environment variables."
+		);
+	}
+	return apiKey;
+}
+
+/**
+ * Initialize and configure the BoldSign DocumentApi client.
+ */
+function createDocumentApi(): InstanceType<typeof DocumentApi> {
+	const apiKey = getBoldSignApiKey();
+	const documentApi = new DocumentApi();
+	documentApi.setApiKey(apiKey);
+	return documentApi;
+}
+
+// ============================================================================
+// Actions
+// ============================================================================
+
 // Action to send document via BoldSign
 export const sendDocumentForSignature = action({
 	args: {
@@ -21,16 +54,8 @@ export const sendDocumentForSignature = action({
 		message: v.optional(v.string()),
 	},
 	handler: async (ctx, args) => {
-		// Check if API key is configured
-		const apiKey = process.env.BOLDSIGN_API_KEY;
-		if (!apiKey) {
-			throw new Error(
-				"BOLDSIGN_API_KEY is not configured. Please add it to your environment variables."
-			);
-		}
 		// Initialize BoldSign client
-		const documentApi = new DocumentApi();
-		documentApi.setApiKey(apiKey);
+		const documentApi = createDocumentApi();
 
 		// Fetch quote details
 		const quote = await ctx.runQuery(api.quotes.get, { id: args.quoteId });
@@ -94,16 +119,12 @@ export const sendDocumentForSignature = action({
 
 		// Send document
 		console.log(
-			"Sending document to BoldSign with",
-			signers.length,
-			"signers and",
-			ccs.length,
-			"CCs"
+			`${LOG_PREFIX} Sending document with ${signers.length} signers and ${ccs.length} CCs`
 		);
 		const response = await documentApi.sendDocument(sendForSign);
 
-		console.log("BoldSign response:", {
-			documentId: response.documentId,
+		console.log(`${LOG_PREFIX} Document sent`, {
+			boldsignDocumentId: response.documentId,
 			success: !!response.documentId,
 		});
 
@@ -121,10 +142,9 @@ export const sendDocumentForSignature = action({
 			documentId: args.documentId,
 		});
 
-		console.log(
-			"Document and quote updated with BoldSign info, documentId:",
-			response.documentId
-		);
+		console.log(`${LOG_PREFIX} Document and quote records updated`, {
+			boldsignDocumentId: response.documentId,
+		});
 		return { success: true, documentId: response.documentId || "" };
 	},
 });
@@ -136,18 +156,12 @@ export const downloadCompletedDocument = action({
 		boldsignDocumentId: v.string(),
 	},
 	handler: async (ctx, args) => {
-		// Check if API key is configured
-		const apiKey = process.env.BOLDSIGN_API_KEY;
-		if (!apiKey) {
-			throw new Error(
-				"BOLDSIGN_API_KEY is not configured. Please add it to your environment variables."
-			);
-		}
+		// Validate API key is configured
+		const apiKey = getBoldSignApiKey();
 
-		console.log(
-			"Downloading completed document from BoldSign:",
-			args.boldsignDocumentId
-		);
+		console.log(`${LOG_PREFIX} Downloading completed document`, {
+			boldsignDocumentId: args.boldsignDocumentId,
+		});
 
 		try {
 			// Download the signed PDF from BoldSign API
@@ -193,10 +207,9 @@ export const downloadCompletedDocument = action({
 			const blob = new Blob([pdfBuffer], { type: "application/pdf" });
 			const signedStorageId = await ctx.storage.store(blob);
 
-			console.log(
-				"Signed document stored successfully with ID:",
-				signedStorageId
-			);
+			console.log(`${LOG_PREFIX} Signed document stored`, {
+				signedStorageId,
+			});
 
 			// Update the document record with the signed storage ID
 			await ctx.runMutation(internal.boldsign.updateDocumentWithSignedPdf, {
@@ -206,7 +219,10 @@ export const downloadCompletedDocument = action({
 
 			return { success: true, signedStorageId };
 		} catch (error) {
-			console.error("Error downloading completed document:", error);
+			console.error(`${LOG_PREFIX} Error downloading completed document`, {
+				boldsignDocumentId: args.boldsignDocumentId,
+				error: error instanceof Error ? error.message : String(error),
+			});
 			throw error;
 		}
 	},

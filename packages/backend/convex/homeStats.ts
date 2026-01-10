@@ -1,24 +1,14 @@
 import { v } from "convex/values";
 import { query } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
-import { getCurrentUserOrgId } from "./lib/auth";
 import { DateUtils } from "./lib/shared";
-
-/**
- * Normalize incoming date range args to timestamps (start/end of day).
- */
-const getRangeBounds = (from?: number, to?: number) => {
-	const now = Date.now();
-	const defaultStart = DateUtils.startOfDay(
-		new Date(new Date(now).setDate(1)).getTime()
-	);
-	const defaultEnd = DateUtils.endOfDay(now);
-
-	const start = from ? DateUtils.startOfDay(from) : defaultStart;
-	const end = to ? DateUtils.endOfDay(to) : defaultEnd;
-
-	return { start, end };
-};
+import {
+	getOptionalOrgId,
+	getDateRangeBounds,
+	getMonthComparisonPeriods,
+	getWeekRange,
+	toChartData,
+} from "./lib/queries";
 
 /**
  * Home dashboard statistics queries
@@ -70,68 +60,74 @@ export interface HomeStats {
 }
 
 /**
+ * Helper function to determine change type
+ */
+function getChangeType(change: number): "increase" | "decrease" | "neutral" {
+	if (change > 0) return "increase";
+	if (change < 0) return "decrease";
+	return "neutral";
+}
+
+/**
+ * Empty stats constant for unauthenticated users
+ */
+const EMPTY_HOME_STATS: HomeStats = {
+	totalClients: {
+		current: 0,
+		previous: 0,
+		change: 0,
+		changeType: "neutral",
+	},
+	completedProjects: {
+		current: 0,
+		previous: 0,
+		change: 0,
+		changeType: "neutral",
+		totalValue: 0,
+	},
+	approvedQuotes: {
+		current: 0,
+		previous: 0,
+		change: 0,
+		changeType: "neutral",
+		totalValue: 0,
+	},
+	invoicesSent: {
+		current: 0,
+		previous: 0,
+		change: 0,
+		changeType: "neutral",
+		totalValue: 0,
+		outstanding: 0,
+	},
+	revenueGoal: {
+		percentage: 0,
+		current: 0,
+		target: 0,
+		previousPercentage: 0,
+		changePercentage: 0,
+		changeType: "neutral",
+	},
+	pendingTasks: {
+		total: 0,
+		dueThisWeek: 0,
+	},
+};
+
+/**
  * Get comprehensive home dashboard statistics
  */
 export const getHomeStats = query({
 	args: {},
 	handler: async (ctx): Promise<HomeStats> => {
-		const emptyStats: HomeStats = {
-			totalClients: {
-				current: 0,
-				previous: 0,
-				change: 0,
-				changeType: "neutral",
-			},
-			completedProjects: {
-				current: 0,
-				previous: 0,
-				change: 0,
-				changeType: "neutral",
-				totalValue: 0,
-			},
-			approvedQuotes: {
-				current: 0,
-				previous: 0,
-				change: 0,
-				changeType: "neutral",
-				totalValue: 0,
-			},
-			invoicesSent: {
-				current: 0,
-				previous: 0,
-				change: 0,
-				changeType: "neutral",
-				totalValue: 0,
-				outstanding: 0,
-			},
-			revenueGoal: {
-				percentage: 0,
-				current: 0,
-				target: 0,
-				previousPercentage: 0,
-				changePercentage: 0,
-				changeType: "neutral",
-			},
-			pendingTasks: {
-				total: 0,
-				dueThisWeek: 0,
-			},
-		};
-
-		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		const userOrgId = await getOptionalOrgId(ctx);
 		if (!userOrgId) {
-			return emptyStats;
+			return EMPTY_HOME_STATS;
 		}
-		const now = Date.now();
-		const startOfThisMonth = new Date(new Date(now).setDate(1));
-		startOfThisMonth.setHours(0, 0, 0, 0);
-		const startOfLastMonth = new Date(startOfThisMonth);
-		startOfLastMonth.setMonth(startOfLastMonth.getMonth() - 1);
-		const endOfLastMonth = new Date(startOfThisMonth.getTime() - 1);
 
-		const thisMonthStart = startOfThisMonth.getTime();
-		const lastMonthStart = startOfLastMonth.getTime();
-		const lastMonthEnd = endOfLastMonth.getTime();
+		const { thisMonthStart, lastMonthStart, lastMonthEnd } =
+			getMonthComparisonPeriods();
+		const weekRange = getWeekRange();
 
 		// Get organization to fetch revenue target
 		const organization = await ctx.db.get(userOrgId);
@@ -288,24 +284,13 @@ export const getHomeStats = query({
 			(invoice) => invoice.status === "paid" && invoice.paidAt
 		).length;
 
-		// Calculate pending tasks
-		const today = DateUtils.startOfDay(now);
-		const nextWeek = DateUtils.addDays(today, 7);
+		// Calculate pending tasks using shared week range
 		const pendingTasks = allTasks.filter(
 			(task) => task.status === "pending" || task.status === "in-progress"
 		);
 		const tasksThisWeek = pendingTasks.filter(
-			(task) => task.date >= today && task.date < nextWeek
+			(task) => task.date >= weekRange.start && task.date < weekRange.end
 		).length;
-
-		// Helper function to determine change type
-		const getChangeType = (
-			change: number
-		): "increase" | "decrease" | "neutral" => {
-			if (change > 0) return "increase";
-			if (change < 0) return "decrease";
-			return "neutral";
-		};
 
 		return {
 			totalClients: {
@@ -359,12 +344,11 @@ export const getHomeStats = query({
 export const getPendingTasksCount = query({
 	args: {},
 	handler: async (ctx): Promise<{ count: number; dueThisWeek: number }> => {
-		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		const userOrgId = await getOptionalOrgId(ctx);
 		if (!userOrgId) {
 			return { count: 0, dueThisWeek: 0 };
 		}
-		const today = DateUtils.startOfDay(Date.now());
-		const nextWeek = DateUtils.addDays(today, 7);
+		const weekRange = getWeekRange();
 
 		const pendingTasks = await ctx.db
 			.query("tasks")
@@ -378,7 +362,7 @@ export const getPendingTasksCount = query({
 			.collect();
 
 		const dueThisWeek = pendingTasks.filter(
-			(task) => task.date >= today && task.date < nextWeek
+			(task) => task.date >= weekRange.start && task.date < weekRange.end
 		).length;
 
 		return {
@@ -403,7 +387,7 @@ export const getClientsStats = query({
 		change: number;
 		changeType: "increase" | "decrease" | "neutral";
 	}> => {
-		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		const userOrgId = await getOptionalOrgId(ctx);
 		if (!userOrgId) {
 			return {
 				total: 0,
@@ -413,14 +397,8 @@ export const getClientsStats = query({
 				changeType: "neutral",
 			};
 		}
-		const now = Date.now();
-		const startOfThisMonth = new Date(new Date(now).setDate(1)).getTime();
-		const startOfLastMonth = new Date(
-			new Date(startOfThisMonth).setMonth(
-				new Date(startOfThisMonth).getMonth() - 1
-			)
-		).getTime();
-		const endOfLastMonth = startOfThisMonth - 1;
+		const { thisMonthStart, lastMonthStart, lastMonthEnd } =
+			getMonthComparisonPeriods();
 
 		const allClients = await ctx.db
 			.query("clients")
@@ -428,25 +406,23 @@ export const getClientsStats = query({
 			.collect();
 
 		const thisMonth = allClients.filter(
-			(client) => client._creationTime >= startOfThisMonth
+			(client) => client._creationTime >= thisMonthStart
 		).length;
 
 		const lastMonth = allClients.filter(
 			(client) =>
-				client._creationTime >= startOfLastMonth &&
-				client._creationTime <= endOfLastMonth
+				client._creationTime >= lastMonthStart &&
+				client._creationTime <= lastMonthEnd
 		).length;
 
 		const change = thisMonth - lastMonth;
-		const changeType =
-			change > 0 ? "increase" : change < 0 ? "decrease" : "neutral";
 
 		return {
 			total: allClients.length,
 			thisMonth,
 			lastMonth,
 			change: Math.abs(change),
-			changeType,
+			changeType: getChangeType(change),
 		};
 	},
 });
@@ -464,7 +440,7 @@ export const getRevenueGoalProgress = query({
 		target: number;
 		isOnTrack: boolean;
 	}> => {
-		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		const userOrgId = await getOptionalOrgId(ctx);
 		if (!userOrgId) {
 			return {
 				percentage: 0,
@@ -476,18 +452,17 @@ export const getRevenueGoalProgress = query({
 
 		// Get organization to fetch revenue target
 		const organization = await ctx.db.get(userOrgId);
-
 		const monthlyTarget = organization?.monthlyRevenueTarget || 50000;
 
 		// Get this month's paid invoices
-		const startOfThisMonth = new Date(new Date().setDate(1)).getTime();
+		const { thisMonthStart } = getMonthComparisonPeriods();
 		const paidInvoices = await ctx.db
 			.query("invoices")
 			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
 			.filter((q) =>
 				q.and(
 					q.eq(q.field("status"), "paid"),
-					q.gte(q.field("paidAt"), startOfThisMonth)
+					q.gte(q.field("paidAt"), thisMonthStart)
 				)
 			)
 			.collect();
@@ -539,7 +514,7 @@ export const getClientsCreatedByDateRange = query({
 			status?: "lead" | "active" | "inactive" | "archived";
 		}>;
 	}> => {
-		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		const userOrgId = await getOptionalOrgId(ctx);
 		if (!userOrgId) {
 			return {
 				baselineCount: 0,
@@ -549,7 +524,7 @@ export const getClientsCreatedByDateRange = query({
 			};
 		}
 		const { from, to } = args;
-		const { start, end } = getRangeBounds(from, to);
+		const { start, end } = getDateRangeBounds(from, to);
 
 		// Get organization timezone
 		const organization = await ctx.db.get(userOrgId);
@@ -615,7 +590,7 @@ export const getProjectsCompletedByDateRange = query({
 			_creationTime: number;
 		}>;
 	}> => {
-		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		const userOrgId = await getOptionalOrgId(ctx);
 		if (!userOrgId) {
 			return {
 				baselineCount: 0,
@@ -625,7 +600,7 @@ export const getProjectsCompletedByDateRange = query({
 			};
 		}
 		const { from, to } = args;
-		const { start, end } = getRangeBounds(from, to);
+		const { start, end } = getDateRangeBounds(from, to);
 
 		// Get organization timezone
 		const organization = await ctx.db.get(userOrgId);
@@ -712,7 +687,7 @@ export const getQuotesApprovedByDateRange = query({
 			_creationTime: number;
 		}>;
 	}> => {
-		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		const userOrgId = await getOptionalOrgId(ctx);
 		if (!userOrgId) {
 			return {
 				baselineCount: 0,
@@ -722,7 +697,7 @@ export const getQuotesApprovedByDateRange = query({
 			};
 		}
 		const { from, to } = args;
-		const { start, end } = getRangeBounds(from, to);
+		const { start, end } = getDateRangeBounds(from, to);
 
 		// Get organization timezone
 		const organization = await ctx.db.get(userOrgId);
@@ -791,7 +766,7 @@ export const getInvoicesPaidByDateRange = query({
 			_creationTime: number;
 		}>;
 	}> => {
-		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		const userOrgId = await getOptionalOrgId(ctx);
 		if (!userOrgId) {
 			return {
 				baselineCount: 0,
@@ -801,7 +776,7 @@ export const getInvoicesPaidByDateRange = query({
 			};
 		}
 		const { from, to } = args;
-		const { start, end } = getRangeBounds(from, to);
+		const { start, end } = getDateRangeBounds(from, to);
 
 		// Get organization timezone
 		const organization = await ctx.db.get(userOrgId);
@@ -883,12 +858,12 @@ export const getRevenueByDateRange = query({
 			_creationTime: number;
 		}>
 	> => {
-		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		const userOrgId = await getOptionalOrgId(ctx);
 		if (!userOrgId) {
 			return [];
 		}
 		const { from, to } = args;
-		const { start, end } = getRangeBounds(from, to);
+		const { start, end } = getDateRangeBounds(from, to);
 
 		// Get organization timezone
 		const organization = await ctx.db.get(userOrgId);
@@ -934,12 +909,12 @@ export const getTasksCreatedByDateRange = query({
 			_creationTime: number;
 		}>
 	> => {
-		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		const userOrgId = await getOptionalOrgId(ctx);
 		if (!userOrgId) {
 			return [];
 		}
 		const { from, to } = args;
-		const { start, end } = getRangeBounds(from, to);
+		const { start, end } = getDateRangeBounds(from, to);
 
 		// Get organization timezone
 		const organization = await ctx.db.get(userOrgId);
@@ -983,7 +958,7 @@ export interface JourneyProgress {
 export const getJourneyProgress = query({
 	args: {},
 	handler: async (ctx): Promise<JourneyProgress> => {
-		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
+		const userOrgId = await getOptionalOrgId(ctx);
 		if (!userOrgId) {
 			return {
 				hasOrganization: false,

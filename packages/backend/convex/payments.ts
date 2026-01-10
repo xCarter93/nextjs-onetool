@@ -3,10 +3,21 @@ import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
 import { getCurrentUserOrgId } from "./lib/auth";
 import { generatePublicToken } from "./lib/shared";
+import {
+	getEntityWithOrgValidation,
+	getEntityOrThrow,
+	validateParentAccess,
+	filterUndefined,
+	requireUpdates,
+} from "./lib/crud";
+import { getOptionalOrgId, emptyListResult } from "./lib/queries";
 
 /**
  * Payment operations - individual payment installments for invoices
  * Supports splitting invoices into multiple payments with individual due dates and payment links
+ *
+ * Uses shared CRUD utilities from lib/crud.ts for consistent patterns.
+ * Entity-specific business logic (payment validation, Stripe integration) remains here.
  */
 
 // Type definitions
@@ -15,42 +26,45 @@ type PaymentId = Id<"payments">;
 type InvoiceId = Id<"invoices">;
 
 // ============================================================================
-// Helper Functions
+// Local Helper Functions (entity-specific logic only)
 // ============================================================================
 
 /**
- * Get a payment by ID with organization validation
+ * Get a payment with org validation (wrapper for shared utility)
  */
-async function getPaymentWithOrgValidation(
+async function getPaymentWithValidation(
 	ctx: QueryCtx | MutationCtx,
 	id: PaymentId
 ): Promise<PaymentDocument | null> {
-	const userOrgId = await getCurrentUserOrgId(ctx);
-	const payment = await ctx.db.get(id);
-
-	if (!payment) {
-		return null;
-	}
-
-	if (payment.orgId !== userOrgId) {
-		throw new Error("Payment does not belong to your organization");
-	}
-
-	return payment;
+	return await getEntityWithOrgValidation(ctx, "payments", id, "Payment");
 }
 
 /**
- * Get a payment by ID, throwing if not found
+ * Get a payment, throwing if not found (wrapper for shared utility)
  */
 async function getPaymentOrThrow(
 	ctx: QueryCtx | MutationCtx,
 	id: PaymentId
 ): Promise<PaymentDocument> {
-	const payment = await getPaymentWithOrgValidation(ctx, id);
-	if (!payment) {
-		throw new Error("Payment not found");
-	}
-	return payment;
+	return await getEntityOrThrow(ctx, "payments", id, "Payment");
+}
+
+/**
+ * Validate invoice access (wrapper for shared utility)
+ * Returns the invoice for additional processing
+ */
+async function validateInvoiceAccess(
+	ctx: QueryCtx | MutationCtx,
+	invoiceId: InvoiceId,
+	existingOrgId?: Id<"organizations">
+): Promise<Doc<"invoices">> {
+	return await validateParentAccess(
+		ctx,
+		"invoices",
+		invoiceId,
+		"Invoice",
+		existingOrgId
+	);
 }
 
 /**
@@ -64,28 +78,6 @@ async function getPaymentByPublicTokenInternal(
 		.query("payments")
 		.withIndex("by_public_token", (q) => q.eq("publicToken", publicToken))
 		.unique();
-}
-
-/**
- * Validate invoice exists and belongs to user's org, return the invoice
- */
-async function validateInvoiceAccess(
-	ctx: QueryCtx | MutationCtx,
-	invoiceId: InvoiceId,
-	existingOrgId?: Id<"organizations">
-): Promise<Doc<"invoices">> {
-	const userOrgId = existingOrgId ?? (await getCurrentUserOrgId(ctx));
-	const invoice = await ctx.db.get(invoiceId);
-
-	if (!invoice) {
-		throw new Error("Invoice not found");
-	}
-
-	if (invoice.orgId !== userOrgId) {
-		throw new Error("Invoice does not belong to your organization");
-	}
-
-	return invoice;
 }
 
 /**
@@ -136,7 +128,12 @@ async function validatePaymentSum(
 	ctx: QueryCtx | MutationCtx,
 	invoiceId: InvoiceId,
 	paymentAmounts: number[]
-): Promise<{ valid: boolean; sum: number; invoiceTotal: number; difference: number }> {
+): Promise<{
+	valid: boolean;
+	sum: number;
+	invoiceTotal: number;
+	difference: number;
+}> {
 	// Calculate actual invoice total from line items (source of truth)
 	const invoiceTotal = await calculateInvoiceTotalFromLineItems(ctx, invoiceId);
 
@@ -154,6 +151,63 @@ async function validatePaymentSum(
 	};
 }
 
+/**
+ * Validate payment amount is positive
+ */
+function validatePaymentAmount(amount: number): void {
+	if (amount <= 0) {
+		throw new Error("Payment amount must be positive");
+	}
+}
+
+/**
+ * Validate sort order is non-negative
+ */
+function validateSortOrder(sortOrder: number): void {
+	if (sortOrder < 0) {
+		throw new Error("Sort order cannot be negative");
+	}
+}
+
+/**
+ * Check if all payments for an invoice are paid
+ */
+async function checkAllPaymentsPaid(
+	ctx: MutationCtx,
+	invoiceId: InvoiceId,
+	currentPaymentId: PaymentId
+): Promise<boolean> {
+	const allPayments = await ctx.db
+		.query("payments")
+		.withIndex("by_invoice", (q) => q.eq("invoiceId", invoiceId))
+		.collect();
+
+	return allPayments.every(
+		(p) => p._id === currentPaymentId || p.status === "paid"
+	);
+}
+
+/**
+ * Update invoice status to paid if all payments are complete
+ */
+async function updateInvoiceStatusIfFullyPaid(
+	ctx: MutationCtx,
+	invoiceId: InvoiceId,
+	paymentId: PaymentId
+): Promise<void> {
+	const allPaid = await checkAllPaymentsPaid(ctx, invoiceId, paymentId);
+
+	if (allPaid) {
+		const invoice = await ctx.db.get(invoiceId);
+		if (invoice && invoice.status !== "paid") {
+			await ctx.db.patch(invoiceId, {
+				status: "paid",
+				paidAt: Date.now(),
+			});
+		}
+	}
+}
+
 // ============================================================================
 // Queries
 // ============================================================================
@@ -164,12 +218,10 @@ async function validatePaymentSum(
 export const listByInvoice = query({
 	args: { invoiceId: v.id("invoices") },
 	handler: async (ctx, args): Promise<PaymentDocument[]> => {
-		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
-		if (!userOrgId) {
-			return [];
-		}
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) return emptyListResult();
 
-		await validateInvoiceAccess(ctx, args.invoiceId, userOrgId);
+		await validateInvoiceAccess(ctx, args.invoiceId, orgId);
 
 		const payments = await ctx.db
 			.query("payments")
@@ -187,11 +239,10 @@ export const listByInvoice = query({
 export const get = query({
 	args: { id: v.id("payments") },
 	handler: async (ctx, args): Promise<PaymentDocument | null> => {
-		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
-		if (!userOrgId) {
-			return null;
-		}
-		return await getPaymentWithOrgValidation(ctx, args.id);
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) return null;
+
+		return await getPaymentWithValidation(ctx, args.id);
 	},
 });
 
@@ -202,7 +253,10 @@ export const get = query({
 export const getByPublicToken = query({
 	args: { publicToken: v.string() },
 	handler: async (ctx, args) => {
-		const payment = await getPaymentByPublicTokenInternal(ctx, args.publicToken);
+		const payment = await getPaymentByPublicTokenInternal(
+			ctx,
+			args.publicToken
+		);
 		if (!payment) {
 			return null;
 		}
@@ -266,8 +320,8 @@ export const getByPublicToken = query({
 export const getInvoiceSummary = query({
 	args: { invoiceId: v.id("invoices") },
 	handler: async (ctx, args) => {
-		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
-		if (!userOrgId) {
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) {
 			return {
 				totalPayments: 0,
 				paidCount: 0,
@@ -278,7 +332,7 @@ export const getInvoiceSummary = query({
 			};
 		}
 
-		await validateInvoiceAccess(ctx, args.invoiceId, userOrgId);
+		await validateInvoiceAccess(ctx, args.invoiceId, orgId);
 
 		const payments = await ctx.db
 			.query("payments")
@@ -289,10 +343,14 @@ export const getInvoiceSummary = query({
 
 		const paidPayments = payments.filter((p) => p.status === "paid");
 		const pendingPayments = payments.filter(
-			(p) => p.status === "pending" || p.status === "sent" || p.status === "overdue"
+			(p) =>
+				p.status === "pending" || p.status === "sent" || p.status === "overdue"
 		);
 
-		const paidAmount = paidPayments.reduce((sum, p) => sum + p.paymentAmount, 0);
+		const paidAmount = paidPayments.reduce(
+			(sum, p) => sum + p.paymentAmount,
+			0
+		);
 
 		return {
 			totalPayments: payments.length,
@@ -326,22 +384,9 @@ export const create = mutation({
 		// Validate invoice access
 		await validateInvoiceAccess(ctx, args.invoiceId, userOrgId);
 
-		// Validate payment amount
-		if (args.paymentAmount <= 0) {
-			throw new Error("Payment amount must be positive");
-		}
-
-		// Validate due date is in the future (or today)
-		const today = new Date();
-		today.setHours(0, 0, 0, 0);
-		if (args.dueDate < today.getTime()) {
-			// Allow past due dates for flexibility, but this could be changed
-		}
-
-		// Validate sort order
-		if (args.sortOrder < 0) {
-			throw new Error("Sort order cannot be negative");
-		}
+		// Validate payment amount and sort order
+		validatePaymentAmount(args.paymentAmount);
+		validateSortOrder(args.sortOrder);
 
 		const paymentId = await ctx.db.insert("payments", {
 			orgId: userOrgId,
@@ -388,18 +433,13 @@ export const update = mutation({
 		}
 
 		// Validate payment amount if provided
-		if (updates.paymentAmount !== undefined && updates.paymentAmount <= 0) {
-			throw new Error("Payment amount must be positive");
+		if (updates.paymentAmount !== undefined) {
+			validatePaymentAmount(updates.paymentAmount);
 		}
 
-		// Filter out undefined values
-		const filteredUpdates = Object.fromEntries(
-			Object.entries(updates).filter(([, value]) => value !== undefined)
-		) as Partial<PaymentDocument>;
-
-		if (Object.keys(filteredUpdates).length === 0) {
-			throw new Error("No valid updates provided");
-		}
+		// Filter and validate updates
+		const filteredUpdates = filterUndefined(updates);
+		requireUpdates(filteredUpdates);
 
 		await ctx.db.patch(id, filteredUpdates);
 
@@ -448,7 +488,7 @@ export const configurePayments = mutation({
 		const userOrgId = await getCurrentUserOrgId(ctx);
 
 		// Validate invoice access
-		const invoice = await validateInvoiceAccess(ctx, args.invoiceId, userOrgId);
+		await validateInvoiceAccess(ctx, args.invoiceId, userOrgId);
 
 		// Get existing payments
 		const existingPayments = await ctx.db
@@ -466,7 +506,11 @@ export const configurePayments = mutation({
 		const allPaymentAmounts = [...newPaymentAmounts, ...paidPaymentAmounts];
 
 		// Validate that payments sum equals invoice total
-		const validation = await validatePaymentSum(ctx, args.invoiceId, allPaymentAmounts);
+		const validation = await validatePaymentSum(
+			ctx,
+			args.invoiceId,
+			allPaymentAmounts
+		);
 		if (!validation.valid) {
 			throw new Error(
 				`Payment amounts must equal invoice total. ` +
@@ -563,16 +607,18 @@ export const markPaidByPublicToken = mutation({
 		// Find payment by public token
 		const payment = await ctx.db
 			.query("payments")
-			.withIndex("by_public_token", (q) => q.eq("publicToken", args.publicToken))
+			.withIndex("by_public_token", (q) =>
+				q.eq("publicToken", args.publicToken)
+			)
 			.unique();
 
 		if (!payment) {
 			throw new Error("Payment not found");
 		}
 
-		// Check if already paid
+		// Check if already paid (idempotent)
 		if (payment.status === "paid") {
-			return payment._id; // Idempotent - return success
+			return payment._id;
 		}
 
 		// Update payment to paid
@@ -583,26 +629,8 @@ export const markPaidByPublicToken = mutation({
 			stripePaymentIntentId: args.stripePaymentIntentId,
 		});
 
-		// Check if all payments for this invoice are now paid
-		const allPayments = await ctx.db
-			.query("payments")
-			.withIndex("by_invoice", (q) => q.eq("invoiceId", payment.invoiceId))
-			.collect();
-
-		const allPaid = allPayments.every(
-			(p) => p._id === payment._id || p.status === "paid"
-		);
-
-		// If all payments are paid, update invoice status
-		if (allPaid) {
-			const invoice = await ctx.db.get(payment.invoiceId);
-			if (invoice && invoice.status !== "paid") {
-				await ctx.db.patch(payment.invoiceId, {
-					status: "paid",
-					paidAt: Date.now(),
-				});
-			}
-		}
+		// Update invoice status if all payments are complete
+		await updateInvoiceStatusIfFullyPaid(ctx, payment.invoiceId, payment._id);
 
 		return payment._id;
 	},

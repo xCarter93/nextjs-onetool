@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { query, mutation, QueryCtx, MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
@@ -6,51 +5,50 @@ import { getCurrentUserOrgId } from "./lib/auth";
 import { ActivityHelpers } from "./lib/activities";
 import { AggregateHelpers } from "./lib/aggregates";
 import { generatePublicToken } from "./lib/shared";
+import {
+	getEntityWithOrgValidation,
+	getEntityOrThrow,
+	validateParentAccess,
+	filterUndefined,
+	requireUpdates,
+} from "./lib/crud";
+import { getOptionalOrgId, emptyListResult } from "./lib/queries";
 
 /**
- * Invoice operations with embedded CRUD helpers
- * All invoice-specific logic lives in this file for better organization
+ * Invoice operations
+ *
+ * Uses shared CRUD utilities from lib/crud.ts for consistent patterns.
+ * Entity-specific business logic (like payment handling, status transitions,
+ * aggregate updates, and invoice number generation) remains here.
  */
 
-// Invoice-specific helper functions
+// ============================================================================
+// Local Helper Functions (entity-specific logic only)
+// ============================================================================
 
 /**
- * Get an invoice by ID with organization validation
+ * Get an invoice with org validation (wrapper for shared utility)
  */
 async function getInvoiceWithOrgValidation(
 	ctx: QueryCtx | MutationCtx,
 	id: Id<"invoices">
 ): Promise<Doc<"invoices"> | null> {
-	const userOrgId = await getCurrentUserOrgId(ctx);
-	const invoice = await ctx.db.get(id);
-
-	if (!invoice) {
-		return null;
-	}
-
-	if (invoice.orgId !== userOrgId) {
-		throw new Error("Invoice does not belong to your organization");
-	}
-
-	return invoice;
+	return await getEntityWithOrgValidation(ctx, "invoices", id, "Invoice");
 }
 
 /**
- * Get an invoice by ID, throwing if not found
+ * Get an invoice, throwing if not found (wrapper for shared utility)
  */
 async function getInvoiceOrThrow(
 	ctx: QueryCtx | MutationCtx,
 	id: Id<"invoices">
 ): Promise<Doc<"invoices">> {
-	const invoice = await getInvoiceWithOrgValidation(ctx, id);
-	if (!invoice) {
-		throw new Error("Invoice not found");
-	}
-	return invoice;
+	return await getEntityOrThrow(ctx, "invoices", id, "Invoice");
 }
 
 /**
  * Get an invoice by public token (for client access)
+ * Entity-specific: no auth required for public invoice links
  */
 async function getInvoiceByPublicToken(
 	ctx: QueryCtx,
@@ -63,23 +61,14 @@ async function getInvoiceByPublicToken(
 }
 
 /**
- * Validate client exists and belongs to user's org
+ * Validate client access (wrapper for shared utility)
  */
 async function validateClientAccess(
 	ctx: QueryCtx | MutationCtx,
 	clientId: Id<"clients">,
 	existingOrgId?: Id<"organizations">
 ): Promise<void> {
-	const userOrgId = existingOrgId ?? (await getCurrentUserOrgId(ctx));
-	const client = await ctx.db.get(clientId);
-
-	if (!client) {
-		throw new Error("Client not found");
-	}
-
-	if (client.orgId !== userOrgId) {
-		throw new Error("Client does not belong to your organization");
-	}
+	await validateParentAccess(ctx, "clients", clientId, "Client", existingOrgId);
 }
 
 /**
@@ -178,6 +167,10 @@ function createEmptyInvoiceStats(): InvoiceStats {
 	};
 }
 
+// ============================================================================
+// Queries
+// ============================================================================
+
 /**
  * Get all invoices for the current user's organization
  * Totals are calculated dynamically from line items to ensure accuracy
@@ -197,10 +190,8 @@ export const list = query({
 		projectId: v.optional(v.id("projects")),
 	},
 	handler: async (ctx, args): Promise<InvoiceDocument[]> => {
-		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
-		if (!userOrgId) {
-			return [];
-		}
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) return emptyListResult();
 
 		let invoices: InvoiceDocument[];
 
@@ -208,19 +199,19 @@ export const list = query({
 			invoices = await ctx.db
 				.query("invoices")
 				.withIndex("by_status", (q) =>
-					q.eq("orgId", userOrgId).eq("status", args.status!)
+					q.eq("orgId", orgId).eq("status", args.status!)
 				)
 				.collect();
 		} else {
 			invoices = await ctx.db
 				.query("invoices")
-				.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
+				.withIndex("by_org", (q) => q.eq("orgId", orgId))
 				.collect();
 		}
 
 		// Apply additional filters
 		if (args.clientId) {
-			await validateClientAccess(ctx, args.clientId, userOrgId);
+			await validateClientAccess(ctx, args.clientId, orgId);
 			invoices = invoices.filter(
 				(invoice) => invoice.clientId === args.clientId
 			);
@@ -235,7 +226,7 @@ export const list = query({
 		// Fetch all line items for these invoices in one query
 		const allLineItems = await ctx.db
 			.query("invoiceLineItems")
-			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
+			.withIndex("by_org", (q) => q.eq("orgId", orgId))
 			.collect();
 
 		// Group line items by invoice ID for efficient lookup
@@ -283,14 +274,11 @@ export const list = query({
 export const get = query({
 	args: { id: v.id("invoices") },
 	handler: async (ctx, args): Promise<InvoiceDocument | null> => {
-		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
-		if (!userOrgId) {
-			return null;
-		}
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) return null;
+
 		const invoice = await getInvoiceWithOrgValidation(ctx, args.id);
-		if (!invoice) {
-			return null;
-		}
+		if (!invoice) return null;
 
 		// Calculate totals from line items
 		const { subtotal, total } = await calculateInvoiceTotals(ctx, args.id);
@@ -343,8 +331,13 @@ export const getByPublicToken = query({
 	},
 });
 
+// ============================================================================
+// Mutations
+// ============================================================================
+
 /**
  * Public: mark an invoice as paid after hosted Checkout success.
+ * Entity-specific: uses public token flow, no auth required
  */
 export const markPaidByPublicToken = mutation({
 	args: {
@@ -371,7 +364,12 @@ export const markPaidByPublicToken = mutation({
 
 		// Public flow: avoid requiring an authenticated user to log activity.
 		try {
-			await ActivityHelpers.invoicePaid(ctx, invoice);
+			const client = await ctx.db.get(invoice.clientId);
+			await ActivityHelpers.invoicePaid(
+				ctx,
+				invoice,
+				client?.companyName || "Unknown Client"
+			);
 		} catch (err) {
 			console.warn("Invoice paid activity logging skipped:", err);
 		}
@@ -471,14 +469,9 @@ export const update = mutation({
 	handler: async (ctx, args): Promise<InvoiceId> => {
 		const { id, ...updates } = args;
 
-		// Filter out undefined values
-		const filteredUpdates = Object.fromEntries(
-			Object.entries(updates).filter(([, value]) => value !== undefined)
-		) as Partial<InvoiceDocument>;
-
-		if (Object.keys(filteredUpdates).length === 0) {
-			throw new Error("No valid updates provided");
-		}
+		// Filter and validate updates
+		const filteredUpdates = filterUndefined(updates) as Partial<InvoiceDocument>;
+		requireUpdates(filteredUpdates);
 
 		// Get current invoice to check for status changes
 		const currentInvoice = await getInvoiceOrThrow(ctx, id);
@@ -560,7 +553,6 @@ export const markPaid = mutation({
 		await ctx.db.patch(args.id, {
 			status: "paid",
 			paidAt: Date.now(),
-			paymentMethod: args.paymentMethod,
 		});
 
 		// Log activity
@@ -611,13 +603,12 @@ export const remove = mutation({
 export const getStats = query({
 	args: {},
 	handler: async (ctx): Promise<InvoiceStats> => {
-		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
-		if (!userOrgId) {
-			return createEmptyInvoiceStats();
-		}
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) return createEmptyInvoiceStats();
+
 		const invoices = await ctx.db
 			.query("invoices")
-			.withIndex("by_org", (q) => q.eq("orgId", userOrgId))
+			.withIndex("by_org", (q) => q.eq("orgId", orgId))
 			.collect();
 
 		const stats: InvoiceStats = {
@@ -675,16 +666,15 @@ export const getStats = query({
 export const getOverdue = query({
 	args: {},
 	handler: async (ctx): Promise<InvoiceDocument[]> => {
-		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
-		if (!userOrgId) {
-			return [];
-		}
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) return emptyListResult();
+
 		const now = Date.now();
 
 		const invoices = await ctx.db
 			.query("invoices")
 			.withIndex("by_due_date", (q) =>
-				q.eq("orgId", userOrgId).lt("dueDate", now)
+				q.eq("orgId", orgId).lt("dueDate", now)
 			)
 			.collect();
 
@@ -868,15 +858,11 @@ export const createFromQuote = mutation({
 export const getWithPayments = query({
 	args: { id: v.id("invoices") },
 	handler: async (ctx, args) => {
-		const userOrgId = await getCurrentUserOrgId(ctx, { require: false });
-		if (!userOrgId) {
-			return null;
-		}
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) return null;
 
 		const invoice = await getInvoiceWithOrgValidation(ctx, args.id);
-		if (!invoice) {
-			return null;
-		}
+		if (!invoice) return null;
 
 		// Calculate totals from line items
 		const { subtotal, total } = await calculateInvoiceTotals(ctx, args.id);
