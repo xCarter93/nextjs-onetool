@@ -57,6 +57,8 @@ export interface QuotePDFProps {
 	client?: Client | null;
 	items: QuoteLineItem[];
 	organization?: Organization | null;
+	countersigner?: { name: string; email: string } | null;
+	signingOrder?: "client_first" | "org_first";
 }
 
 const styles = StyleSheet.create({
@@ -316,7 +318,13 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({
 	client,
 	items,
 	organization,
+	countersigner,
+	signingOrder = "client_first",
 }) => {
+	// Calculate signer numbers based on signing order
+	const clientSignerNum = signingOrder === "org_first" ? 2 : 1;
+	const orgSignerNum = signingOrder === "org_first" ? 1 : 2;
+
 	// Format client address
 	const clientAddress = client
 		? [
@@ -480,25 +488,49 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({
 					</View>
 				)}
 
-				{/* Signature Section with BoldSign text tags */}
+				{/* Client Signature Section with BoldSign text tags */}
 				<View style={styles.signatureSection} wrap={false}>
 					<View style={styles.signatureBox}>
-						<Text style={styles.signatureLabel}>Signature:</Text>
-						{/* BoldSign text tag - no placeholder for sign fields */}
+						<Text style={styles.signatureLabel}>Client Signature:</Text>
+						{/* BoldSign text tag - signer number based on signing order */}
 						<Text style={styles.boldSignText}>
-							{`{{sign|1|*||client_signature}}`}
+							{`{{sign|${clientSignerNum}|*||client_signature}}`}
 						</Text>
 						<View style={styles.signatureLine} />
 					</View>
 					<View style={styles.signatureBox}>
 						<Text style={styles.signatureLabel}>Date:</Text>
-						{/* BoldSign text tag - no placeholder for date fields */}
+						{/* BoldSign text tag - date field for client */}
 						<Text style={styles.boldSignText}>
-							{`{{date|1|*||date_signed}}`}
+							{`{{date|${clientSignerNum}|*||client_date_signed}}`}
 						</Text>
 						<View style={styles.signatureLine} />
 					</View>
 				</View>
+
+				{/* Organization Countersignature Section (only when countersigner is provided) */}
+				{countersigner && (
+					<View style={styles.signatureSection} wrap={false}>
+						<View style={styles.signatureBox}>
+							<Text style={styles.signatureLabel}>
+								Authorized by {organization?.name || "Organization"}:
+							</Text>
+							{/* BoldSign text tag - signer number based on signing order */}
+							<Text style={styles.boldSignText}>
+								{`{{sign|${orgSignerNum}|*||org_signature}}`}
+							</Text>
+							<View style={styles.signatureLine} />
+						</View>
+						<View style={styles.signatureBox}>
+							<Text style={styles.signatureLabel}>Date:</Text>
+							{/* BoldSign text tag - date field for organization */}
+							<Text style={styles.boldSignText}>
+								{`{{date|${orgSignerNum}|*||org_date_signed}}`}
+							</Text>
+							<View style={styles.signatureLine} />
+						</View>
+					</View>
+				)}
 			</Page>
 		</Document>
 	);

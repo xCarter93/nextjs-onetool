@@ -334,6 +334,13 @@ export default defineSchema({
 
 		// Reference to the latest document version
 		latestDocumentId: v.optional(v.id("documents")),
+
+		// Countersignature settings
+		requiresCountersignature: v.optional(v.boolean()),
+		countersignerId: v.optional(v.id("users")),
+		signingOrder: v.optional(
+			v.union(v.literal("client_first"), v.literal("org_first"))
+		),
 	})
 		.index("by_org", ["orgId"])
 		.index("by_client", ["clientId"])
@@ -486,6 +493,7 @@ export default defineSchema({
 						name: v.string(),
 						email: v.string(),
 						signerType: v.string(), // "Signer" or "CC"
+						signerOrder: v.optional(v.number()), // 1-based signing order
 					})
 				),
 				sentAt: v.optional(v.number()),

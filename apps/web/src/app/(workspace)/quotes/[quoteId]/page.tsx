@@ -37,11 +37,17 @@ import type { Id } from "@onetool/backend/convex/_generated/dataModel";
 import type { Id as StorageId } from "@onetool/backend/convex/_generated/dataModel";
 import { useEffect, useState, useMemo } from "react";
 import { DocumentSelectionModal } from "@/app/(workspace)/quotes/components/document-selection-modal";
-import { SendEmailPopover } from "@/app/(workspace)/quotes/components/send-email-popover";
-import { SignatureProgressBar } from "@/app/(workspace)/quotes/components/signature-progress-bar";
-import Accordion from "@/components/ui/accordion";
+import { SendEmailSheet } from "@/app/(workspace)/quotes/components/send-email-sheet";
+import { SignatureStatusCard } from "@/app/(workspace)/quotes/components/signature-status-card";
+import { CountersignerConfig } from "@/app/(workspace)/quotes/components/countersigner-config";
 import { MentionSection } from "@/components/shared/mention-section";
 import { StatusProgressBar } from "@/components/shared/status-progress-bar";
+import {
+	StyledTabs,
+	StyledTabsList,
+	StyledTabsTrigger,
+	StyledTabsContent,
+} from "@/components/ui/styled/styled-tabs";
 import { Recipient } from "@/types/quote";
 
 type QuoteStatus = "draft" | "sent" | "approved" | "declined" | "expired";
@@ -140,6 +146,12 @@ export default function QuoteDetailPage() {
 		quote ? { documentType: "quote", documentId: quote._id } : "skip"
 	);
 
+	// Countersigner query
+	const countersigner = useQuery(
+		api.users.get,
+		quote?.countersignerId ? { id: quote.countersignerId } : "skip"
+	);
+
 	// Mutations
 	const updateQuote = useMutation(api.quotes.update);
 	const generateUploadUrl = useMutation(api.documents.generateUploadUrl);
@@ -166,8 +178,11 @@ export default function QuoteDetailPage() {
 	// Document selection modal state
 	const [showDocumentModal, setShowDocumentModal] = useState(false);
 
-	// Signature popover state
-	const [sendEmailPopoverOpen, setSendEmailPopoverOpen] = useState(false);
+	// Send email sheet state
+	const [sendEmailSheetOpen, setSendEmailSheetOpen] = useState(false);
+
+	// Active tab state
+	const [activeTab, setActiveTab] = useState("details");
 
 	// Get the currently selected version's URL (or latest if none selected)
 	const selectedDocument = useMemo(() => {
@@ -416,6 +431,12 @@ export default function QuoteDetailPage() {
 								}
 							: undefined
 					}
+					countersigner={
+						quote.requiresCountersignature && countersigner
+							? { name: countersigner.name || countersigner.email, email: countersigner.email }
+							: null
+					}
+					signingOrder={quote.signingOrder}
 				/>
 			);
 			const quoteBlob = await pdf(element).toBlob();
@@ -584,7 +605,7 @@ export default function QuoteDetailPage() {
 				message,
 			});
 			toast.success("Sent!", "Quote sent for signature via BoldSign");
-			setSendEmailPopoverOpen(false);
+			setSendEmailSheetOpen(false);
 		} catch (error) {
 			const message = error instanceof Error ? error.message : "Unknown error";
 			toast.error("Send failed", message);
@@ -643,11 +664,19 @@ export default function QuoteDetailPage() {
 							</div>
 						</div>
 
-						{/* Two Column Layout */}
-						<div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
-							{/* Main Content - Left Column */}
-							<div className="xl:col-span-3 space-y-8">
-								{/* Client and Project Details */}
+						{/* Tabbed Layout */}
+						<StyledTabs value={activeTab} onValueChange={setActiveTab}>
+							<StyledTabsList>
+								<StyledTabsTrigger value="details">Quote Details</StyledTabsTrigger>
+								<StyledTabsTrigger value="signatures">Signatures</StyledTabsTrigger>
+								<StyledTabsTrigger value="communication">Team Communication</StyledTabsTrigger>
+							</StyledTabsList>
+
+							<div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
+								{/* Main Content - Left Column */}
+								<div className="xl:col-span-3">
+									<StyledTabsContent value="details" className="space-y-8 mt-0">
+										{/* Client and Project Details */}
 								<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-xl shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50">
 									<Card className="bg-transparent border-none shadow-none ring-0">
 										<CardHeader>
@@ -896,140 +925,6 @@ export default function QuoteDetailPage() {
 									</Card>
 								</div>
 
-								{/* Signature Status */}
-								{documentsWithSignatures &&
-									documentsWithSignatures.length > 0 && (
-										<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-xl shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50">
-											<Card className="bg-transparent border-none shadow-none ring-0">
-												<CardHeader>
-													<CardTitle className="flex items-center gap-2 text-xl">
-														<FileText className="h-5 w-5" />
-														Signature Status
-													</CardTitle>
-												</CardHeader>
-												<CardContent>
-													<Accordion
-														items={documentsWithSignatures.map((doc) => {
-															// Get the most recent timestamp for last update
-															const lastUpdate =
-																doc.boldsign.completedAt ||
-																doc.boldsign.declinedAt ||
-																doc.boldsign.revokedAt ||
-																doc.boldsign.expiredAt ||
-																doc.boldsign.signedAt ||
-																doc.boldsign.viewedAt ||
-																doc.boldsign.sentAt ||
-																doc.generatedAt;
-
-															// Status badge variant
-															const statusVariant =
-																doc.boldsign.status === "Completed"
-																	? "default"
-																	: doc.boldsign.status === "Declined" ||
-																		  doc.boldsign.status === "Revoked" ||
-																		  doc.boldsign.status === "Expired"
-																		? "destructive"
-																		: "secondary";
-
-															const formattedDate = new Date(
-																lastUpdate
-															).toLocaleDateString("en-US", {
-																month: "short",
-																day: "numeric",
-																hour: "2-digit",
-																minute: "2-digit",
-															});
-
-															return {
-																title: `Version ${doc.version} - ${doc.boldsign.status} - ${formattedDate}`,
-																content: (
-																	<div className="space-y-4">
-																		{/* Status badges at top of content */}
-																		<div className="flex items-center gap-3 pb-3 border-b border-gray-200 dark:border-gray-700">
-																			<Badge
-																				variant="outline"
-																				className="text-xs"
-																			>
-																				v{doc.version}
-																			</Badge>
-																			<Badge
-																				variant={statusVariant}
-																				className="text-xs"
-																			>
-																				{doc.boldsign.status}
-																			</Badge>
-																			<span className="text-xs text-gray-500 dark:text-gray-400 ml-auto">
-																				Last updated: {formattedDate}
-																			</span>
-																		</div>
-
-																		<SignatureProgressBar
-																			status={doc.boldsign.status}
-																			events={[
-																				{
-																					type: "Sent",
-																					timestamp: doc.boldsign.sentAt,
-																				},
-																				{
-																					type: "Viewed",
-																					timestamp: doc.boldsign.viewedAt,
-																				},
-																				{
-																					type: "Signed",
-																					timestamp: doc.boldsign.signedAt,
-																				},
-																				{
-																					type: doc.boldsign.status,
-																					timestamp:
-																						doc.boldsign.completedAt ||
-																						doc.boldsign.declinedAt ||
-																						doc.boldsign.revokedAt ||
-																						doc.boldsign.expiredAt,
-																				},
-																			]}
-																		/>
-
-																		{/* Recipients info */}
-																		<div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-																			<p className="font-medium mb-3 text-sm text-gray-900 dark:text-white">
-																				Sent to:
-																			</p>
-																			<ul className="space-y-2">
-																				{doc.boldsign.sentTo.map(
-																					(recipient, i) => (
-																						<li
-																							key={i}
-																							className="flex items-center justify-between text-sm"
-																						>
-																							<span className="text-gray-700 dark:text-gray-300">
-																								<span className="font-medium">
-																									{recipient.name}
-																								</span>{" "}
-																								<span className="text-gray-500 dark:text-gray-400">
-																									({recipient.email})
-																								</span>
-																							</span>
-																							<Badge
-																								variant="outline"
-																								className="text-xs"
-																							>
-																								{recipient.signerType}
-																							</Badge>
-																						</li>
-																					)
-																				)}
-																			</ul>
-																		</div>
-																	</div>
-																),
-															};
-														})}
-													/>
-												</CardContent>
-											</Card>
-										</div>
-									)}
-
 								{/* Line Items */}
 								<div className="bg-card dark:bg-card backdrop-blur-md border border-border dark:border-border rounded-xl shadow-lg dark:shadow-black/50 ring-1 ring-border/30 dark:ring-border/50">
 									<Card className="bg-transparent border-none shadow-none ring-0">
@@ -1225,9 +1120,37 @@ export default function QuoteDetailPage() {
 										</CardContent>
 									</Card>
 								</div>
-							</div>
+									</StyledTabsContent>
 
-							{/* Quote Details Sidebar - Right Column */}
+									<StyledTabsContent value="signatures" className="space-y-8 mt-0">
+										{/* Countersignature Configuration */}
+										<CountersignerConfig
+											quoteId={quoteId}
+											requiresCountersignature={quote?.requiresCountersignature}
+											countersignerId={quote?.countersignerId}
+											signingOrder={quote?.signingOrder}
+											primaryContact={primaryContact}
+										/>
+
+										{/* Signature Status */}
+										<SignatureStatusCard
+											documentsWithSignatures={documentsWithSignatures}
+										/>
+									</StyledTabsContent>
+
+									<StyledTabsContent value="communication" className="space-y-8 mt-0">
+										<MentionSection
+											entityType="quote"
+											entityId={quoteId}
+											entityName={
+												quote?.title ||
+												`Quote #${quote?.quoteNumber || quoteId.slice(-6)}`
+											}
+										/>
+									</StyledTabsContent>
+								</div>
+
+								{/* Quote Details Sidebar - Right Column */}
 							<div className="xl:col-span-1">
 								<div className="sticky top-24 space-y-6">
 									{/* Quote Details */}
@@ -1472,19 +1395,8 @@ export default function QuoteDetailPage() {
 								</div>
 							</div>
 						</div>
+						</StyledTabs>
 					</div>
-				</div>
-
-				{/* Team Communication Section */}
-				<div className="px-6 mb-8">
-					<MentionSection
-						entityType="quote"
-						entityId={quoteId}
-						entityName={
-							quote?.title ||
-							`Quote #${quote?.quoteNumber || quoteId.slice(-6)}`
-						}
-					/>
 				</div>
 			</div>
 
@@ -1541,7 +1453,7 @@ export default function QuoteDetailPage() {
 						label: "Send to Client",
 						intent: "outline",
 						icon: <Mail className="h-4 w-4" />,
-						onClick: () => setSendEmailPopoverOpen(true),
+						onClick: () => setSendEmailSheetOpen(true),
 						position: "right" as const,
 					},
 					{
@@ -1562,17 +1474,21 @@ export default function QuoteDetailPage() {
 				onConfirm={(selectedIds) => handleGeneratePdf(selectedIds)}
 			/>
 
-			{/* Send Email Popover - positioned at bottom right of screen to align with footer button */}
-			<SendEmailPopover
-				isOpen={sendEmailPopoverOpen}
-				onOpenChange={setSendEmailPopoverOpen}
+			{/* Send Email Sheet */}
+			<SendEmailSheet
+				isOpen={sendEmailSheetOpen}
+				onOpenChange={setSendEmailSheetOpen}
 				onConfirm={handleSendForSignature}
 				primaryContact={primaryContact}
 				quoteNumber={quote?.quoteNumber || quote?._id.slice(-6)}
 				documentVersion={latestDocument?.version}
-			>
-				<div className="fixed bottom-4 right-6 pointer-events-none" />
-			</SendEmailPopover>
+				countersigner={
+					quote?.requiresCountersignature && countersigner
+						? { name: countersigner.name || countersigner.email, email: countersigner.email }
+						: null
+				}
+				signingOrder={quote?.signingOrder}
+			/>
 		</div>
 	);
 }
