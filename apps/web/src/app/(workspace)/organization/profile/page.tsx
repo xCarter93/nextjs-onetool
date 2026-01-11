@@ -31,6 +31,10 @@ import {
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
+import {
+	AddressAutocomplete,
+	type AddressData,
+} from "@/components/ui/address-autocomplete";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { StyledButton } from "@/components/ui/styled/styled-button";
@@ -82,6 +86,9 @@ type BusinessFormState = {
 	addressCity: string;
 	addressState: string;
 	addressZip: string;
+	addressCountry: string;
+	latitude: number | null;
+	longitude: number | null;
 	companySize: string;
 	logoInvertInDarkMode: boolean;
 };
@@ -106,6 +113,9 @@ const initialBusinessForm: BusinessFormState = {
 	addressCity: "",
 	addressState: "",
 	addressZip: "",
+	addressCountry: "United States",
+	latitude: null,
+	longitude: null,
 	companySize: "",
 	logoInvertInDarkMode: true,
 };
@@ -291,15 +301,19 @@ export default function OrganizationProfilePage() {
 		}
 
 		if (!businessDirty) {
+			// Use structured fields if available, otherwise parse from legacy address
 			const { street, city, state, zip } = parseAddress(organization?.address);
 			setBusinessForm({
 				email: organization?.email ?? "",
 				website: organization?.website?.replace(/^https?:\/\//i, "") ?? "",
 				phone: organization?.phone ?? "",
-				addressStreet: street,
-				addressCity: city,
-				addressState: state,
-				addressZip: zip,
+				addressStreet: organization?.addressStreet ?? street,
+				addressCity: organization?.addressCity ?? city,
+				addressState: organization?.addressState ?? state,
+				addressZip: organization?.addressZip ?? zip,
+				addressCountry: organization?.addressCountry ?? "United States",
+				latitude: organization?.latitude ?? null,
+				longitude: organization?.longitude ?? null,
 				companySize: organization?.companySize ?? "",
 				logoInvertInDarkMode: organization?.logoInvertInDarkMode ?? true,
 			});
@@ -381,7 +395,15 @@ export default function OrganizationProfilePage() {
 				email: businessForm.email.trim(),
 				phone: businessForm.phone.trim(),
 				website: normalizedWebsite,
-				address: combineAddress(),
+				// Structured address fields
+				addressStreet: businessForm.addressStreet.trim() || undefined,
+				addressCity: businessForm.addressCity.trim() || undefined,
+				addressState: businessForm.addressState.trim() || undefined,
+				addressZip: businessForm.addressZip.trim() || undefined,
+				addressCountry: businessForm.addressCountry.trim() || undefined,
+				// Geocoding (from Mapbox Address Autofill)
+				latitude: businessForm.latitude ?? undefined,
+				longitude: businessForm.longitude ?? undefined,
 				companySize: businessForm.companySize as "1-10" | "10-100" | "100+",
 				logoUrl: clerkOrganization?.imageUrl ?? undefined,
 				logoInvertInDarkMode: businessForm.logoInvertInDarkMode,
@@ -404,7 +426,6 @@ export default function OrganizationProfilePage() {
 	}, [
 		businessForm,
 		clerkOrganization?.imageUrl,
-		combineAddress,
 		isOwner,
 		toast,
 		updateOrganization,
@@ -862,18 +883,31 @@ export default function OrganizationProfilePage() {
 										</label>
 										<div className="grid gap-4 sm:grid-cols-2">
 											<div className="sm:col-span-2">
-												<Input
+												<AddressAutocomplete
 													value={businessForm.addressStreet}
-													onChange={(event) => {
+													onChange={(value) => {
 														setBusinessDirty(true);
 														setBusinessForm((prev) => ({
 															...prev,
-															addressStreet: event.target.value,
+															addressStreet: value,
+														}));
+													}}
+													onAddressSelect={(address: AddressData) => {
+														setBusinessDirty(true);
+														setBusinessForm((prev) => ({
+															...prev,
+															addressStreet: address.streetAddress,
+															addressCity: address.city,
+															addressState: address.state,
+															addressZip: address.zipCode,
+															addressCountry: address.country,
+															latitude: address.latitude,
+															longitude: address.longitude,
 														}));
 													}}
 													disabled={!isOwner || savingBusiness}
 													className="w-full border-border dark:border-border bg-background dark:bg-background focus:bg-background dark:focus:bg-background transition-colors shadow-sm ring-1 ring-border/10"
-													placeholder="123 Business St"
+													placeholder="Start typing your business address..."
 												/>
 											</div>
 											<div>

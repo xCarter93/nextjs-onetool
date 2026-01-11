@@ -9,6 +9,10 @@ import { useRouter } from "next/navigation";
 import ProgressBar, { ProgressStep } from "@/components/shared/progress-bar";
 import SelectService from "@/components/shared/choice-set";
 import { Input } from "@/components/ui/input";
+import {
+	AddressAutocomplete,
+	type AddressData,
+} from "@/components/ui/address-autocomplete";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useAutoTimezone } from "@/hooks/use-auto-timezone";
@@ -28,6 +32,9 @@ interface FormData {
 	addressCity: string;
 	addressState: string;
 	addressZip: string;
+	addressCountry: string;
+	latitude: number | null;
+	longitude: number | null;
 	companySize: string;
 	logoInvertInDarkMode: boolean;
 }
@@ -67,6 +74,9 @@ export default function CompleteOrganizationMetadata() {
 		addressCity: "",
 		addressState: "",
 		addressZip: "",
+		addressCountry: "United States",
+		latitude: null,
+		longitude: null,
 		companySize: "",
 		logoInvertInDarkMode: true,
 	});
@@ -547,15 +557,15 @@ export default function CompleteOrganizationMetadata() {
 				email: formData.email.trim() || undefined,
 				website: normalizedWebsite ? `https://${normalizedWebsite}` : undefined,
 				phone: formData.phone.trim() || undefined,
-				address:
-					[
-						formData.addressStreet.trim(),
-						formData.addressCity.trim(),
-						formData.addressState.trim(),
-						formData.addressZip.trim(),
-					]
-						.filter(Boolean)
-						.join(", ") || undefined,
+				// Structured address fields
+				addressStreet: formData.addressStreet.trim() || undefined,
+				addressCity: formData.addressCity.trim() || undefined,
+				addressState: formData.addressState.trim() || undefined,
+				addressZip: formData.addressZip.trim() || undefined,
+				addressCountry: formData.addressCountry.trim() || undefined,
+				// Geocoding (from Mapbox Address Autofill)
+				latitude: formData.latitude ?? undefined,
+				longitude: formData.longitude ?? undefined,
 				companySize: formData.companySize as "1-10" | "10-100" | "100+",
 				logoUrl: clerkOrganization?.imageUrl || undefined,
 				logoInvertInDarkMode: formData.logoInvertInDarkMode,
@@ -830,13 +840,25 @@ export default function CompleteOrganizationMetadata() {
 					</label>
 					<div className="grid gap-4 sm:grid-cols-2">
 						<div className="sm:col-span-2">
-							<Input
+							<AddressAutocomplete
 								value={formData.addressStreet}
-								onChange={(e) =>
-									setFormData({ ...formData, addressStreet: e.target.value })
+								onChange={(value) =>
+									setFormData({ ...formData, addressStreet: value })
 								}
+								onAddressSelect={(address: AddressData) => {
+									setFormData({
+										...formData,
+										addressStreet: address.streetAddress,
+										addressCity: address.city,
+										addressState: address.state,
+										addressZip: address.zipCode,
+										addressCountry: address.country,
+										latitude: address.latitude,
+										longitude: address.longitude,
+									});
+								}}
 								className="w-full border-border dark:border-border bg-background dark:bg-background focus:bg-background dark:focus:bg-background transition-colors shadow-sm ring-1 ring-border/10"
-								placeholder="123 Business St"
+								placeholder="Start typing your business address..."
 							/>
 						</div>
 						<div>

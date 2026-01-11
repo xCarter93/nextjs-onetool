@@ -1,5 +1,5 @@
 import { createEnv } from "@t3-oss/env-nextjs";
-import { z } from 'zod/v3';
+import { z } from "zod";
 
 export const env = createEnv({
 	server: {
@@ -16,6 +16,7 @@ export const env = createEnv({
 		RESEND_API_KEY: z.string().min(1),
 		RESEND_WEBHOOK_SECRET: z.string().min(1),
 		STRIPE_APPLICATION_FEE_CENTS: z.string().optional().default("100"),
+		MAPBOX_API_KEY: z.string().min(1),
 	},
 	client: {
 		NEXT_PUBLIC_CONVEX_URL: z.string().min(1),
@@ -24,6 +25,7 @@ export const env = createEnv({
 		NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().min(1),
 		NEXT_PUBLIC_POSTHOG_KEY: z.string().min(1),
 		NEXT_PUBLIC_POSTHOG_HOST: z.string().url(),
+		NEXT_PUBLIC_MAPBOX_API_KEY: z.string().min(1),
 	},
 	experimental__runtimeEnv: {
 		NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:
@@ -35,5 +37,6 @@ export const env = createEnv({
 			process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
 		NEXT_PUBLIC_POSTHOG_KEY: process.env.NEXT_PUBLIC_POSTHOG_KEY,
 		NEXT_PUBLIC_POSTHOG_HOST: process.env.NEXT_PUBLIC_POSTHOG_HOST,
+		NEXT_PUBLIC_MAPBOX_API_KEY: process.env.NEXT_PUBLIC_MAPBOX_API_KEY,
 	},
 });

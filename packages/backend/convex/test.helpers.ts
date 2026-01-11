@@ -301,7 +301,12 @@ export async function createTestClientProperty(
 		city?: string;
 		state?: string;
 		zipCode?: string;
+		country?: string;
 		isPrimary?: boolean;
+		// Geocoding fields (from Mapbox Address Autofill)
+		latitude?: number;
+		longitude?: number;
+		formattedAddress?: string;
 	} = {}
 ): Promise<Id<"clientProperties">> {
 	return await ctx.db.insert("clientProperties", {
@@ -313,6 +318,67 @@ export async function createTestClientProperty(
 		city: overrides.city ?? "Test City",
 		state: overrides.state ?? "TS",
 		zipCode: overrides.zipCode ?? "12345",
+		country: overrides.country,
 		isPrimary: overrides.isPrimary ?? false,
+		// Geocoding fields
+		latitude: overrides.latitude,
+		longitude: overrides.longitude,
+		formattedAddress: overrides.formattedAddress,
 	});
+}
+
+/**
+ * Creates a test organization with structured address fields
+ */
+export async function createTestOrgWithAddress(
+	ctx: { db: MutationCtx["db"] },
+	overrides: {
+		userName?: string;
+		userEmail?: string;
+		orgName?: string;
+		clerkUserId?: string;
+		clerkOrgId?: string;
+		// Structured address fields
+		addressStreet?: string;
+		addressCity?: string;
+		addressState?: string;
+		addressZip?: string;
+		addressCountry?: string;
+		// Geocoding fields
+		latitude?: number;
+		longitude?: number;
+	} = {}
+): Promise<TestOrgSetup> {
+	const clerkUserId = overrides.clerkUserId ?? `user_${Date.now()}`;
+	const clerkOrgId = overrides.clerkOrgId ?? `org_${Date.now()}`;
+
+	const userId = await ctx.db.insert("users", {
+		name: overrides.userName ?? "Test User",
+		email: overrides.userEmail ?? "test@example.com",
+		image: "https://example.com/image.jpg",
+		externalId: clerkUserId,
+	});
+
+	const orgId = await ctx.db.insert("organizations", {
+		clerkOrganizationId: clerkOrgId,
+		name: overrides.orgName ?? "Test Org",
+		ownerUserId: userId,
+		// Structured address fields
+		addressStreet: overrides.addressStreet,
+		addressCity: overrides.addressCity,
+		addressState: overrides.addressState,
+		addressZip: overrides.addressZip,
+		addressCountry: overrides.addressCountry,
+		// Geocoding fields
+		latitude: overrides.latitude,
+		longitude: overrides.longitude,
+	});
+
+	await ctx.db.insert("organizationMemberships", {
+		orgId,
+		userId,
+		role: "admin",
+	});
+
+	return { userId, orgId, clerkUserId, clerkOrgId };
 }
