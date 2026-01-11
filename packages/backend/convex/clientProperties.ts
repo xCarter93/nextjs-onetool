@@ -141,6 +141,68 @@ export const list = query({
 });
 
 /**
+ * Get all geocoded properties for the organization with client info (for map display)
+ */
+export const listGeocodedWithClients = query({
+	args: {},
+	handler: async (ctx) => {
+		const orgId = await getOptionalOrgId(ctx);
+		if (!orgId) return { properties: [], totalCount: 0, geocodedCount: 0 };
+
+		const allProperties = await ctx.db
+			.query("clientProperties")
+			.withIndex("by_org", (q) => q.eq("orgId", orgId))
+			.collect();
+
+		const totalCount = allProperties.length;
+
+		// Filter to only geocoded properties
+		const geocodedProperties = allProperties.filter(
+			(p) => p.latitude !== undefined && p.longitude !== undefined
+		);
+
+		// Get unique client IDs
+		const clientIds = [...new Set(geocodedProperties.map((p) => p.clientId))];
+
+		// Fetch all clients in parallel
+		const clients = await Promise.all(
+			clientIds.map((id) => ctx.db.get(id))
+		);
+
+		// Create a map for quick lookup
+		const clientMap = new Map(
+			clients
+				.filter((c): c is NonNullable<typeof c> => c !== null)
+				.map((c) => [c._id, c])
+		);
+
+		// Enrich properties with client info
+		const properties = geocodedProperties.map((p) => {
+			const client = clientMap.get(p.clientId);
+			return {
+				_id: p._id,
+				clientId: p.clientId,
+				clientCompanyName: client?.companyName ?? "Unknown Client",
+				propertyName: p.propertyName,
+				streetAddress: p.streetAddress,
+				city: p.city,
+				state: p.state,
+				zipCode: p.zipCode,
+				formattedAddress: p.formattedAddress,
+				latitude: p.latitude!,
+				longitude: p.longitude!,
+			};
+		});
+
+		return {
+			properties,
+			totalCount,
+			geocodedCount: geocodedProperties.length,
+		};
+	},
+});
+
+/**
  * Get a specific client property by ID
  */
 // TODO: Candidate for deletion if confirmed unused.

@@ -59,6 +59,8 @@ interface MetricChartProps {
 	height?: number;
 	dateRange?: DateRange;
 	onDateRangeChange?: (range?: DateRange) => void;
+	/** Optional floating action button rendered in bottom-right of card */
+	floatingAction?: React.ReactNode;
 }
 
 const CustomTooltip = ({ active, payload, metrics }: TooltipProps) => {
@@ -98,6 +100,7 @@ export default function LineChart6({
 	height = 360,
 	dateRange,
 	onDateRangeChange,
+	floatingAction,
 }: MetricChartProps) {
 	const firstMetricKey = metrics[0]?.key ?? "";
 	const [internalMetric, setInternalMetric] = useState<string>(
@@ -194,7 +197,7 @@ export default function LineChart6({
 	return (
 		<Card
 			className={cn(
-				"w-full border border-border/60 bg-card/70 shadow-sm ring-1 ring-border/40 backdrop-blur-sm",
+				"relative w-full border border-border/60 bg-card/70 shadow-sm ring-1 ring-border/40 backdrop-blur-sm",
 				className
 			)}
 		>
@@ -409,6 +412,11 @@ export default function LineChart6({
 					</LineChart>
 				</ChartContainer>
 			</CardContent>
+
+			{/* Floating Action Button */}
+			{floatingAction && (
+				<div className="absolute bottom-4 left-4 z-10">{floatingAction}</div>
+			)}
 		</Card>
 	);
 }
