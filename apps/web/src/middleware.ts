@@ -13,6 +13,7 @@ const isPublicRoute = createRouteMatcher([
 	"/",
 	"/privacy-policy",
 	"/terms-of-service",
+	"/data-security",
 	"/communities(.*)", // Public community pages
 	"/api/communities(.*)", // Public community API routes
 ]);
