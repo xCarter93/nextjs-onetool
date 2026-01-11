@@ -203,6 +203,10 @@ export const create = mutation({
 		zipCode: v.string(),
 		country: v.optional(v.string()),
 		isPrimary: v.boolean(),
+		// Geocoding fields (from Mapbox Address Autofill)
+		latitude: v.optional(v.number()),
+		longitude: v.optional(v.number()),
+		formattedAddress: v.optional(v.string()),
 	},
 	handler: async (ctx, args): Promise<ClientPropertyId> => {
 		// Validate required address fields are not empty
@@ -260,6 +264,10 @@ export const update = mutation({
 		zipCode: v.optional(v.string()),
 		country: v.optional(v.string()),
 		isPrimary: v.optional(v.boolean()),
+		// Geocoding fields (from Mapbox Address Autofill)
+		latitude: v.optional(v.number()),
+		longitude: v.optional(v.number()),
+		formattedAddress: v.optional(v.string()),
 	},
 	handler: async (ctx, args): Promise<ClientPropertyId> => {
 		const { id, ...updates } = args;
@@ -442,6 +450,10 @@ export const bulkCreate = mutation({
 				zipCode: v.string(),
 				country: v.optional(v.string()),
 				isPrimary: v.boolean(),
+				// Geocoding fields (from Mapbox Address Autofill)
+				latitude: v.optional(v.number()),
+				longitude: v.optional(v.number()),
+				formattedAddress: v.optional(v.string()),
 			})
 		),
 	},

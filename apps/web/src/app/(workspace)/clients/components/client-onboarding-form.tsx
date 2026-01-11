@@ -16,6 +16,10 @@ import {
 	FieldLegend,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import {
+	AddressAutocomplete,
+	type AddressData,
+} from "@/components/ui/address-autocomplete";
 import { Textarea } from "@/components/ui/textarea";
 import {
 	Select,
@@ -73,6 +77,10 @@ export interface ClientFormData {
 		postalCode: string;
 		country: string;
 		isPrimary: boolean;
+		// Geocoding fields (from Mapbox Address Autofill)
+		latitude: number | null;
+		longitude: number | null;
+		formattedAddress: string;
 	}>;
 
 	// Classification
@@ -126,6 +134,9 @@ const initialFormData: ClientFormData = {
 			postalCode: "",
 			country: "",
 			isPrimary: true,
+			latitude: null,
+			longitude: null,
+			formattedAddress: "",
 		},
 	],
 
@@ -163,6 +174,9 @@ const createEmptyProperty = (isPrimary = false) => ({
 	postalCode: "",
 	country: "",
 	isPrimary,
+	latitude: null as number | null,
+	longitude: null as number | null,
+	formattedAddress: "",
 });
 
 // Zod validation schema
@@ -212,6 +226,10 @@ const formSchema = z.object({
 				postalCode: z.string(),
 				country: z.string(),
 				isPrimary: z.boolean(),
+				// Geocoding fields (from Mapbox Address Autofill)
+				latitude: z.number().nullable(),
+				longitude: z.number().nullable(),
+				formattedAddress: z.string(),
 			})
 		)
 		.refine(
@@ -1072,18 +1090,52 @@ export const ClientOnboardingForm: React.FC<ClientOnboardingFormProps> = ({
 																									>
 																										Street address *
 																									</FieldLabel>
-																									<Input
+																									<AddressAutocomplete
 																										id={field.name}
 																										name={field.name}
 																										value={field.state.value}
 																										onBlur={field.handleBlur}
-																										onChange={(e) =>
-																											field.handleChange(
-																												e.target.value
-																											)
+																										onChange={(value) =>
+																											field.handleChange(value)
 																										}
+																										onAddressSelect={(
+																											address: AddressData
+																										) => {
+																											// Update street address
+																											field.handleChange(
+																												address.streetAddress
+																											);
+																											// Update other address fields
+																											form.setFieldValue(
+																												"properties[0].city",
+																												address.city
+																											);
+																											form.setFieldValue(
+																												"properties[0].region",
+																												address.state
+																											);
+																											form.setFieldValue(
+																												"properties[0].postalCode",
+																												address.zipCode
+																											);
+																											form.setFieldValue(
+																												"properties[0].country",
+																												address.country
+																											);
+																											form.setFieldValue(
+																												"properties[0].latitude",
+																												address.latitude
+																											);
+																											form.setFieldValue(
+																												"properties[0].longitude",
+																												address.longitude
+																											);
+																											form.setFieldValue(
+																												"properties[0].formattedAddress",
+																												address.formattedAddress
+																											);
+																										}}
 																										aria-invalid={isInvalid}
-																										autoComplete="street-address"
 																										disabled={isLoading}
 																									/>
 																									{isInvalid && (
@@ -1254,16 +1306,51 @@ export const ClientOnboardingForm: React.FC<ClientOnboardingFormProps> = ({
 																								>
 																									Street address
 																								</FieldLabel>
-																								<Input
+																								<AddressAutocomplete
 																									id={field.name}
 																									name={field.name}
 																									value={field.state.value}
 																									onBlur={field.handleBlur}
-																									onChange={(e) =>
-																										field.handleChange(
-																											e.target.value
-																										)
+																									onChange={(value) =>
+																										field.handleChange(value)
 																									}
+																									onAddressSelect={(
+																										address: AddressData
+																									) => {
+																										// Update street address
+																										field.handleChange(
+																											address.streetAddress
+																										);
+																										// Update other address fields
+																										form.setFieldValue(
+																											`properties[${actualIndex}].city`,
+																											address.city
+																										);
+																										form.setFieldValue(
+																											`properties[${actualIndex}].region`,
+																											address.state
+																										);
+																										form.setFieldValue(
+																											`properties[${actualIndex}].postalCode`,
+																											address.zipCode
+																										);
+																										form.setFieldValue(
+																											`properties[${actualIndex}].country`,
+																											address.country
+																										);
+																										form.setFieldValue(
+																											`properties[${actualIndex}].latitude`,
+																											address.latitude
+																										);
+																										form.setFieldValue(
+																											`properties[${actualIndex}].longitude`,
+																											address.longitude
+																										);
+																										form.setFieldValue(
+																											`properties[${actualIndex}].formattedAddress`,
+																											address.formattedAddress
+																										);
+																									}}
 																									aria-invalid={isInvalid}
 																									placeholder="Optional"
 																									disabled={isLoading}

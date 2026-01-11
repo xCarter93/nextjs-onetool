@@ -41,11 +41,22 @@ export default defineSchema({
 		website: v.optional(v.string()),
 		logoUrl: v.optional(v.string()),
 		logoInvertInDarkMode: v.optional(v.boolean()),
-		address: v.optional(v.string()),
+		address: v.optional(v.string()), // DEPRECATED: Use structured address fields below
 		phone: v.optional(v.string()),
 		companySize: v.optional(
 			v.union(v.literal("1-10"), v.literal("10-100"), v.literal("100+"))
 		),
+
+		// Structured address fields (replaces legacy `address` string)
+		addressStreet: v.optional(v.string()),
+		addressCity: v.optional(v.string()),
+		addressState: v.optional(v.string()),
+		addressZip: v.optional(v.string()),
+		addressCountry: v.optional(v.string()),
+
+		// Geocoding (from Mapbox Address Autofill)
+		latitude: v.optional(v.number()),
+		longitude: v.optional(v.number()),
 
 		// Email receiving configuration
 		receivingAddress: v.optional(v.string()), // Unique receiving email address (e.g., "org-abc123@inbound.onetool.biz")
@@ -198,6 +209,11 @@ export default defineSchema({
 
 		// Additional info
 		isPrimary: v.boolean(), // Mark primary property
+
+		// Geocoding (from Mapbox Address Autofill)
+		latitude: v.optional(v.number()),
+		longitude: v.optional(v.number()),
+		formattedAddress: v.optional(v.string()), // Full formatted address from Mapbox
 	})
 		.index("by_client", ["clientId"])
 		.index("by_org", ["orgId"])

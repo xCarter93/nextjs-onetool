@@ -144,7 +144,7 @@ export const completeMetadata = mutation({
 	args: {
 		email: v.optional(v.string()),
 		website: v.optional(v.string()),
-		address: v.optional(v.string()),
+		address: v.optional(v.string()), // DEPRECATED: Use structured address fields
 		phone: v.optional(v.string()),
 		companySize: v.optional(
 			v.union(v.literal("1-10"), v.literal("10-100"), v.literal("100+"))
@@ -152,6 +152,15 @@ export const completeMetadata = mutation({
 		monthlyRevenueTarget: v.optional(v.number()),
 		logoUrl: v.optional(v.string()),
 		logoInvertInDarkMode: v.optional(v.boolean()),
+		// Structured address fields (replaces legacy `address` string)
+		addressStreet: v.optional(v.string()),
+		addressCity: v.optional(v.string()),
+		addressState: v.optional(v.string()),
+		addressZip: v.optional(v.string()),
+		addressCountry: v.optional(v.string()),
+		// Geocoding fields (from Mapbox Address Autofill)
+		latitude: v.optional(v.number()),
+		longitude: v.optional(v.number()),
 	},
 	handler: async (ctx, args) => {
 		const user = await getCurrentUserOrThrow(ctx);
@@ -167,11 +176,18 @@ export const completeMetadata = mutation({
 			throw new Error("Only organization owner can complete metadata");
 		}
 
+		// Build legacy address string from structured fields for backward compatibility
+		const legacyAddress = args.addressStreet
+			? [args.addressStreet, args.addressCity, args.addressState, args.addressZip]
+					.filter(Boolean)
+					.join(", ")
+			: args.address;
+
 		// Update the organization with metadata
 		await ctx.db.patch(userOrgId, {
 			email: args.email,
 			website: args.website,
-			address: args.address,
+			address: legacyAddress,
 			phone: args.phone,
 			companySize: args.companySize,
 			monthlyRevenueTarget: args.monthlyRevenueTarget,
@@ -179,6 +195,15 @@ export const completeMetadata = mutation({
 			logoInvertInDarkMode:
 				args.logoInvertInDarkMode ?? organization.logoInvertInDarkMode ?? true,
 			isMetadataComplete: true,
+			// Structured address fields
+			addressStreet: args.addressStreet,
+			addressCity: args.addressCity,
+			addressState: args.addressState,
+			addressZip: args.addressZip,
+			addressCountry: args.addressCountry,
+			// Geocoding
+			latitude: args.latitude,
+			longitude: args.longitude,
 		});
 
 		// Log activity
@@ -308,13 +333,22 @@ export const update = mutation({
 		logoUrl: v.optional(v.string()),
 		logoInvertInDarkMode: v.optional(v.boolean()),
 		logoStorageId: v.optional(v.id("_storage")),
-		address: v.optional(v.string()),
+		address: v.optional(v.string()), // DEPRECATED: Use structured address fields
 		phone: v.optional(v.string()),
 		companySize: v.optional(
 			v.union(v.literal("1-10"), v.literal("10-100"), v.literal("100+"))
 		),
 		monthlyRevenueTarget: v.optional(v.number()),
 		timezone: v.optional(v.string()), // IANA timezone (e.g., "America/New_York")
+		// Structured address fields (replaces legacy `address` string)
+		addressStreet: v.optional(v.string()),
+		addressCity: v.optional(v.string()),
+		addressState: v.optional(v.string()),
+		addressZip: v.optional(v.string()),
+		addressCountry: v.optional(v.string()),
+		// Geocoding fields (from Mapbox Address Autofill)
+		latitude: v.optional(v.number()),
+		longitude: v.optional(v.number()),
 	},
 	handler: async (ctx, args) => {
 		const user = await getCurrentUserOrThrow(ctx);
@@ -333,9 +367,19 @@ export const update = mutation({
 			);
 		}
 
-		// Filter out undefined values
+		// Build legacy address string from structured fields for backward compatibility
+		const legacyAddress = args.addressStreet
+			? [args.addressStreet, args.addressCity, args.addressState, args.addressZip]
+					.filter(Boolean)
+					.join(", ")
+			: args.address;
+
+		// Filter out undefined values, but always use computed legacyAddress if structured fields provided
 		const updates = Object.fromEntries(
-			Object.entries(args).filter(([, value]) => value !== undefined)
+			Object.entries({
+				...args,
+				address: legacyAddress,
+			}).filter(([, value]) => value !== undefined)
 		);
 
 		if (Object.keys(updates).length === 0) {

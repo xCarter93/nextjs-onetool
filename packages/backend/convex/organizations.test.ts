@@ -1093,4 +1093,239 @@ describe("Organizations", () => {
 			});
 		});
 	});
+
+	describe("Structured Address Fields", () => {
+		it("should update organization with structured address fields", async () => {
+			const { orgId } = await t.run(async (ctx) => {
+				const userId = await ctx.db.insert("users", {
+					name: "Test User",
+					email: "test@example.com",
+					image: "https://example.com/image.jpg",
+					externalId: "user_123",
+				});
+
+				const orgId = await ctx.db.insert("organizations", {
+					clerkOrganizationId: "org_123",
+					name: "Test Org",
+					ownerUserId: userId,
+				});
+
+				await ctx.db.insert("organizationMemberships", {
+					orgId,
+					userId,
+					role: "admin",
+				});
+
+				return { orgId };
+			});
+
+			const asUser = t.withIdentity({
+				subject: "user_123",
+				activeOrgId: "org_123",
+			});
+
+			await asUser.mutation(api.organizations.update, {
+				addressStreet: "1600 Pennsylvania Avenue NW",
+				addressCity: "Washington",
+				addressState: "DC",
+				addressZip: "20500",
+				addressCountry: "United States",
+			});
+
+			const organization = await asUser.query(api.organizations.get, {});
+			expect(organization).toMatchObject({
+				addressStreet: "1600 Pennsylvania Avenue NW",
+				addressCity: "Washington",
+				addressState: "DC",
+				addressZip: "20500",
+				addressCountry: "United States",
+			});
+		});
+
+		it("should compute legacy address from structured fields for backward compatibility", async () => {
+			const { orgId } = await t.run(async (ctx) => {
+				const userId = await ctx.db.insert("users", {
+					name: "Test User",
+					email: "test@example.com",
+					image: "https://example.com/image.jpg",
+					externalId: "user_123",
+				});
+
+				const orgId = await ctx.db.insert("organizations", {
+					clerkOrganizationId: "org_123",
+					name: "Test Org",
+					ownerUserId: userId,
+				});
+
+				await ctx.db.insert("organizationMemberships", {
+					orgId,
+					userId,
+					role: "admin",
+				});
+
+				return { orgId };
+			});
+
+			const asUser = t.withIdentity({
+				subject: "user_123",
+				activeOrgId: "org_123",
+			});
+
+			await asUser.mutation(api.organizations.update, {
+				addressStreet: "123 Main Street",
+				addressCity: "San Francisco",
+				addressState: "CA",
+				addressZip: "94102",
+			});
+
+			const organization = await asUser.query(api.organizations.get, {});
+			// Legacy address should be computed from structured fields
+			expect(organization?.address).toBe(
+				"123 Main Street, San Francisco, CA, 94102"
+			);
+		});
+
+		it("should store geocoding coordinates via update", async () => {
+			const { orgId } = await t.run(async (ctx) => {
+				const userId = await ctx.db.insert("users", {
+					name: "Test User",
+					email: "test@example.com",
+					image: "https://example.com/image.jpg",
+					externalId: "user_123",
+				});
+
+				const orgId = await ctx.db.insert("organizations", {
+					clerkOrganizationId: "org_123",
+					name: "Test Org",
+					ownerUserId: userId,
+				});
+
+				await ctx.db.insert("organizationMemberships", {
+					orgId,
+					userId,
+					role: "admin",
+				});
+
+				return { orgId };
+			});
+
+			const asUser = t.withIdentity({
+				subject: "user_123",
+				activeOrgId: "org_123",
+			});
+
+			await asUser.mutation(api.organizations.update, {
+				addressStreet: "1600 Pennsylvania Avenue NW",
+				addressCity: "Washington",
+				addressState: "DC",
+				addressZip: "20500",
+				latitude: 38.8977,
+				longitude: -77.0365,
+			});
+
+			const organization = await asUser.query(api.organizations.get, {});
+			expect(organization?.latitude).toBe(38.8977);
+			expect(organization?.longitude).toBe(-77.0365);
+		});
+	});
+
+	describe("completeMetadata with Structured Address", () => {
+		it("should accept structured address fields during onboarding", async () => {
+			const { orgId } = await t.run(async (ctx) => {
+				const userId = await ctx.db.insert("users", {
+					name: "Test User",
+					email: "test@example.com",
+					image: "https://example.com/image.jpg",
+					externalId: "user_123",
+				});
+
+				const orgId = await ctx.db.insert("organizations", {
+					clerkOrganizationId: "org_123",
+					name: "Test Org",
+					ownerUserId: userId,
+					isMetadataComplete: false,
+				});
+
+				await ctx.db.insert("organizationMemberships", {
+					orgId,
+					userId,
+					role: "admin",
+				});
+
+				return { orgId };
+			});
+
+			const asUser = t.withIdentity({
+				subject: "user_123",
+				activeOrgId: "org_123",
+			});
+
+			await asUser.mutation(api.organizations.completeMetadata, {
+				email: "org@example.com",
+				addressStreet: "500 Terry Francine Street",
+				addressCity: "San Francisco",
+				addressState: "CA",
+				addressZip: "94158",
+				addressCountry: "United States",
+				latitude: 37.7749,
+				longitude: -122.4194,
+			});
+
+			const organization = await asUser.query(api.organizations.get, {});
+			expect(organization).toMatchObject({
+				email: "org@example.com",
+				addressStreet: "500 Terry Francine Street",
+				addressCity: "San Francisco",
+				addressState: "CA",
+				addressZip: "94158",
+				addressCountry: "United States",
+				latitude: 37.7749,
+				longitude: -122.4194,
+				isMetadataComplete: true,
+			});
+		});
+
+		it("should preserve backward compatibility with legacy address field", async () => {
+			const { orgId } = await t.run(async (ctx) => {
+				const userId = await ctx.db.insert("users", {
+					name: "Test User",
+					email: "test@example.com",
+					image: "https://example.com/image.jpg",
+					externalId: "user_123",
+				});
+
+				const orgId = await ctx.db.insert("organizations", {
+					clerkOrganizationId: "org_123",
+					name: "Test Org",
+					ownerUserId: userId,
+					isMetadataComplete: false,
+				});
+
+				await ctx.db.insert("organizationMemberships", {
+					orgId,
+					userId,
+					role: "admin",
+				});
+
+				return { orgId };
+			});
+
+			const asUser = t.withIdentity({
+				subject: "user_123",
+				activeOrgId: "org_123",
+			});
+
+			// Use legacy address field instead of structured fields
+			await asUser.mutation(api.organizations.completeMetadata, {
+				email: "org@example.com",
+				address: "123 Legacy Street, Old Town, CA 90210",
+			});
+
+			const organization = await asUser.query(api.organizations.get, {});
+			expect(organization?.address).toBe(
+				"123 Legacy Street, Old Town, CA 90210"
+			);
+			expect(organization?.isMetadataComplete).toBe(true);
+		});
+	});
 });

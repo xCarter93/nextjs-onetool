@@ -21,6 +21,10 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+	AddressAutocomplete,
+	type AddressData,
+} from "@/components/ui/address-autocomplete";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
 	BuildingOffice2Icon,
@@ -41,6 +45,10 @@ type Property = {
 	country?: string;
 	isPrimary: boolean;
 	isNew?: boolean; // Track if this is a new item not yet saved
+	// Geocoding fields (from Mapbox Address Autofill)
+	latitude?: number | null;
+	longitude?: number | null;
+	formattedAddress?: string;
 };
 
 interface PropertyTableProps {
@@ -103,6 +111,9 @@ export function PropertyTable({
 			country: "",
 			isPrimary: false,
 			isNew: true,
+			latitude: null,
+			longitude: null,
+			formattedAddress: "",
 		};
 
 		setLocalProperties((prev) => [...prev, newProperty]);
@@ -143,6 +154,10 @@ export function PropertyTable({
 				zipCode: property.zipCode || "ZIP Required",
 				country: property.country,
 				isPrimary: property.isPrimary,
+				// Include geocoding fields
+				latitude: property.latitude ?? undefined,
+				longitude: property.longitude ?? undefined,
+				formattedAddress: property.formattedAddress,
 			});
 
 			// Remove from local items
@@ -171,6 +186,10 @@ export function PropertyTable({
 					zipCode: property.zipCode,
 					country: property.country,
 					isPrimary: property.isPrimary,
+					// Include geocoding fields
+					latitude: property.latitude ?? undefined,
+					longitude: property.longitude ?? undefined,
+					formattedAddress: property.formattedAddress,
 				});
 				setEditingId(null);
 				onChange?.();
@@ -311,15 +330,30 @@ function PropertyRow({
 		onSave(editedProperty);
 	};
 
+	const handleAddressSelect = (address: AddressData) => {
+		setEditedProperty((prev) => ({
+			...prev,
+			streetAddress: address.streetAddress,
+			city: address.city,
+			state: address.state,
+			zipCode: address.zipCode,
+			country: address.country,
+			latitude: address.latitude,
+			longitude: address.longitude,
+			formattedAddress: address.formattedAddress,
+		}));
+	};
+
 	if (isEditing) {
 		return (
 			<TableRow
 				className={`bg-blue-50/50 dark:bg-blue-900/10 border-l-4 border-l-blue-500 ${property.isNew ? "bg-yellow-50/50 dark:bg-yellow-900/10" : ""}`}
 			>
 				<TableCell>
-					<Input
+					<AddressAutocomplete
 						value={editedProperty.streetAddress}
-						onChange={(e) => handleFieldChange("streetAddress", e.target.value)}
+						onChange={(value) => handleFieldChange("streetAddress", value)}
+						onAddressSelect={handleAddressSelect}
 						placeholder="Street address..."
 						className="w-full"
 					/>

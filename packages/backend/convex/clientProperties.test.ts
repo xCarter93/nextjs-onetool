@@ -767,4 +767,182 @@ describe("ClientProperties", () => {
 			expect(allProperties).toHaveLength(6);
 		});
 	});
+
+	describe("geocoding fields", () => {
+		it("should create property with geocoding data from Mapbox", async () => {
+			const { clerkUserId, clerkOrgId, clientId } = await t.run(async (ctx) => {
+				const testOrg = await createTestOrg(ctx);
+				const clientId = await createTestClient(ctx, testOrg.orgId);
+				return { ...testOrg, clientId };
+			});
+
+			const asUser = t.withIdentity(createTestIdentity(clerkUserId, clerkOrgId));
+
+			const propertyId = await asUser.mutation(api.clientProperties.create, {
+				clientId,
+				streetAddress: "1600 Pennsylvania Avenue NW",
+				city: "Washington",
+				state: "DC",
+				zipCode: "20500",
+				country: "United States",
+				isPrimary: true,
+				latitude: 38.8977,
+				longitude: -77.0365,
+				formattedAddress: "1600 Pennsylvania Avenue NW, Washington, DC 20500, United States",
+			});
+
+			const property = await asUser.query(api.clientProperties.get, {
+				id: propertyId,
+			});
+
+			expect(property).toMatchObject({
+				streetAddress: "1600 Pennsylvania Avenue NW",
+				city: "Washington",
+				state: "DC",
+				zipCode: "20500",
+				country: "United States",
+				latitude: 38.8977,
+				longitude: -77.0365,
+				formattedAddress: "1600 Pennsylvania Avenue NW, Washington, DC 20500, United States",
+			});
+		});
+
+		it("should allow creating property without geocoding data", async () => {
+			const { clerkUserId, clerkOrgId, clientId } = await t.run(async (ctx) => {
+				const testOrg = await createTestOrg(ctx);
+				const clientId = await createTestClient(ctx, testOrg.orgId);
+				return { ...testOrg, clientId };
+			});
+
+			const asUser = t.withIdentity(createTestIdentity(clerkUserId, clerkOrgId));
+
+			const propertyId = await asUser.mutation(api.clientProperties.create, {
+				clientId,
+				streetAddress: "123 No Geocode St",
+				city: "Somewhere",
+				state: "XX",
+				zipCode: "00000",
+				isPrimary: false,
+			});
+
+			const property = await asUser.query(api.clientProperties.get, {
+				id: propertyId,
+			});
+
+			expect(property?.streetAddress).toBe("123 No Geocode St");
+			expect(property?.latitude).toBeUndefined();
+			expect(property?.longitude).toBeUndefined();
+			expect(property?.formattedAddress).toBeUndefined();
+		});
+
+		it("should update geocoding fields independently", async () => {
+			const { clerkUserId, clerkOrgId, propertyId } = await t.run(async (ctx) => {
+				const testOrg = await createTestOrg(ctx);
+				const clientId = await createTestClient(ctx, testOrg.orgId);
+				const propertyId = await createTestClientProperty(
+					ctx,
+					testOrg.orgId,
+					clientId,
+					{ streetAddress: "Original Address" }
+				);
+				return { ...testOrg, propertyId };
+			});
+
+			const asUser = t.withIdentity(createTestIdentity(clerkUserId, clerkOrgId));
+
+			// Update only geocoding fields
+			await asUser.mutation(api.clientProperties.update, {
+				id: propertyId,
+				latitude: 40.7128,
+				longitude: -74.006,
+				formattedAddress: "New York, NY, USA",
+			});
+
+			const property = await asUser.query(api.clientProperties.get, {
+				id: propertyId,
+			});
+
+			expect(property?.streetAddress).toBe("Original Address");
+			expect(property?.latitude).toBe(40.7128);
+			expect(property?.longitude).toBe(-74.006);
+			expect(property?.formattedAddress).toBe("New York, NY, USA");
+		});
+
+		it("should store country field in create", async () => {
+			const { clerkUserId, clerkOrgId, clientId } = await t.run(async (ctx) => {
+				const testOrg = await createTestOrg(ctx);
+				const clientId = await createTestClient(ctx, testOrg.orgId);
+				return { ...testOrg, clientId };
+			});
+
+			const asUser = t.withIdentity(createTestIdentity(clerkUserId, clerkOrgId));
+
+			const propertyId = await asUser.mutation(api.clientProperties.create, {
+				clientId,
+				streetAddress: "10 Downing Street",
+				city: "London",
+				state: "England",
+				zipCode: "SW1A 2AA",
+				country: "United Kingdom",
+				isPrimary: false,
+			});
+
+			const property = await asUser.query(api.clientProperties.get, {
+				id: propertyId,
+			});
+
+			expect(property?.country).toBe("United Kingdom");
+		});
+
+		it("should include geocoding fields in bulkCreate", async () => {
+			const { clerkUserId, clerkOrgId, clientId } = await t.run(async (ctx) => {
+				const testOrg = await createTestOrg(ctx);
+				const clientId = await createTestClient(ctx, testOrg.orgId);
+				return { ...testOrg, clientId };
+			});
+
+			const asUser = t.withIdentity(createTestIdentity(clerkUserId, clerkOrgId));
+
+			const propertyIds = await asUser.mutation(api.clientProperties.bulkCreate, {
+				clientId,
+				properties: [
+					{
+						streetAddress: "100 Geocoded St",
+						city: "Test City",
+						state: "TS",
+						zipCode: "12345",
+						isPrimary: false,
+						latitude: 34.0522,
+						longitude: -118.2437,
+						formattedAddress: "100 Geocoded St, Test City, TS 12345",
+					},
+					{
+						streetAddress: "200 No Geocode St",
+						city: "Other City",
+						state: "OC",
+						zipCode: "67890",
+						isPrimary: true,
+					},
+				],
+			});
+
+			expect(propertyIds).toHaveLength(2);
+
+			const properties = await asUser.query(api.clientProperties.listByClient, {
+				clientId,
+			});
+
+			const geocodedProperty = properties.find(
+				(p) => p.streetAddress === "100 Geocoded St"
+			);
+			expect(geocodedProperty?.latitude).toBe(34.0522);
+			expect(geocodedProperty?.longitude).toBe(-118.2437);
+
+			const noGeocodeProperty = properties.find(
+				(p) => p.streetAddress === "200 No Geocode St"
+			);
+			expect(noGeocodeProperty?.latitude).toBeUndefined();
+			expect(noGeocodeProperty?.longitude).toBeUndefined();
+		});
+	});
 });
